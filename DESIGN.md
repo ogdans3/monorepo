@@ -43,12 +43,17 @@ On each new swipe, search for a cycle back to the swiper (recursive CTE / BFS). 
 
 No accept flow in v1 — a found cycle is surfaced as a match; participants coordinate the trade themselves.
 
+## Chat
+
+One **group thread per match** (all participants together — a chain trade only works if everyone syncs). Text-only in v1. Exact handoff details get agreed here, not stored on the profile.
+
 ## Data model (sketch)
 
-- `users` — anonymous (device-scoped) until claimed; `rating` (aggregate from reviews)
+- `users` — anonymous (device-scoped) until claimed. On claim: display_name, email *or* phone (one contact channel), location (town/county — coarse, no street address); `rating` (aggregate from reviews)
 - `items` — owner, title, description, media (images; video later), estimated_price (user-set), category/tags, condition, location (coarse), status (available/traded)
 - `swipes` — from_user, from_item, target_item
 - `matches` — ordered participants + per-hop give/get
+- `messages` — match, sender, body (group thread per match)
 - `reviews` — match, rater, ratee, score, comment (given after a completed trade)
 - `invites` — deep-link token, inviter
 
