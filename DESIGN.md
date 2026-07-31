@@ -14,6 +14,8 @@ A bartering platform where users trade items directly. Swipe on items you want; 
 - **Backend**: Node + TypeScript
 - **Web**: SvelteKit (landing + invite handling)
 - **DB**: Postgres
+- **Media**: Backblaze B2, delivered via Cloudflare (`items.media` holds URLs)
+- **Push**: FCM + APNs
 - **Repo**: monorepo — `app/`, `backend/`, `web/`, `shared/`
 
 ## UX
@@ -39,27 +41,41 @@ A match is a **cycle** in this graph:
 - **Direct (2-cycle)**: A wants B's item and B wants A's → mutual swap.
 - **Chain (n-cycle)**: A→B→C→…→A. Each person gives the next what they want, gets what they want.
 
-On each new swipe, search for a cycle back to the swiper (recursive CTE / BFS). **Depth is capped** (e.g. 5 hops) to keep the search tractable. On a hit, record the match and notify all participants.
+On each new swipe, search for a cycle back to the swiper (recursive CTE / BFS). **Depth is capped** (e.g. 5 hops) to keep the search tractable. On a hit, record a `pending` match and push-notify all participants.
 
-No accept flow in v1 — a found cycle is surfaced as a match; participants coordinate the trade themselves.
+### Accept flow
+
+Every participant must accept (same for a 2-cycle or an n-hop chain).
+
+- Match found → `pending`; involved items become `reserved` (hidden from the feed so they can't be double-matched). Each participant sees "waiting for other party to accept."
+- All accept → match `accepted`, items flip to `traded`.
+- **De-accept** reverses your acceptance → match back to `pending`, items back to `reserved`. Any single de-accept holds the whole trade.
 
 ## Chat
 
 One **group thread per match** (all participants together — a chain trade only works if everyone syncs). Text-only in v1. Exact handoff details get agreed here, not stored on the profile.
 
+## Trust & safety
+
+Invite-only limits abuse; on top of that, users can **report** a user or item and **block** a user (blocked users' items are hidden and can't match). Reports are reviewed manually for the MVP.
+
 ## Data model (sketch)
 
 - `users` — anonymous (device-scoped) until claimed. On claim: display_name, email *or* phone (one contact channel), location (town/county — coarse, no street address); `rating` (aggregate from reviews)
-- `items` — owner, title, description, media (images; video later), estimated_price (user-set), category/tags, condition, location (coarse), status (available/traded)
+- `items` — owner, title, description, media (image URLs; video later), estimated_price (user-set), category/tags, condition, location (coarse), status (available/reserved/traded)
 - `swipes` — from_user, from_item, target_item
-- `matches` — ordered participants + per-hop give/get
+- `matches` — ordered participants + per-hop give/get, state (pending/accepted)
+- `match_participants` — match, user, accepted (bool)
 - `messages` — match, sender, body (group thread per match)
-- `reviews` — match, rater, ratee, score, comment (given after a completed trade)
+- `reviews` — match, rater, ratee, score, comment (after a completed trade)
+- `reports` / `blocks` — reporter/blocker, target (user or item), reason
 - `invites` — deep-link token, inviter
 
 ## Next steps
 
-1. Monorepo scaffold + Postgres schema
-2. Swipe endpoint + 2-cycle match
+1. Monorepo scaffold + Postgres schema + B2/Cloudflare media upload
+2. Swipe endpoint + 2-cycle match + accept flow
 3. Bounded n-cycle search
-4. Invite deep-link + anonymous account flow
+4. Chat + push notifications
+5. Invite deep-link + anonymous account flow
+6. Report/block
