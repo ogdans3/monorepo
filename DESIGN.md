@@ -20,6 +20,12 @@ A bartering platform where users trade items directly. Swipe on items you want; 
 
 Add an item, then swipe on items you want. **Tinder-style** left/right swipe for v1 — cleanest yes/no signal for matching. (Collage grid and TikTok-style feed are alternatives to revisit.)
 
+## Discovery
+
+Free-text **search** on the main page — no recommendation algorithm in v1. Users pull what they want; the swipe feed is "swipe through the search results."
+
+Postgres-native, no extra infra: `tsvector` full-text over title/description/tags (GIN index) + `pg_trgm` for typo tolerance, with category/location/condition filters on top. Query layer can be swapped later if ranking ever needs more.
+
 ## Matching
 
 A swipe = "I want *their* item and offer *mine* in return" — a directed edge:
