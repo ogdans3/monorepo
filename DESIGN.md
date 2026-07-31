@@ -39,10 +39,11 @@ No accept flow in v1 — a found cycle is surfaced as a match; participants coor
 
 ## Data model (sketch)
 
-- `users` — anonymous (device-scoped) until claimed
-- `items` — owner, photos, title, status (available/traded)
+- `users` — anonymous (device-scoped) until claimed; `rating` (aggregate from reviews)
+- `items` — owner, title, description, media (images; video later), estimated_price (user-set), category/tags, condition, location (coarse), status (available/traded)
 - `swipes` — from_user, from_item, target_item
 - `matches` — ordered participants + per-hop give/get
+- `reviews` — match, rater, ratee, score, comment (given after a completed trade)
 - `invites` — deep-link token, inviter
 
 ## Next steps
