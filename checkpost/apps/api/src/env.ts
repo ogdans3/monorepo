@@ -52,7 +52,13 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     const detail = parsed.error.issues
       .map((i) => `  ${i.path.join('.') || '(root)'}: ${i.message}`)
       .join('\n');
-    throw new Error(`Invalid environment:\n${detail}`);
+    // The overwhelmingly common cause is a fresh clone with no .env, so say so
+    // rather than making someone go and read the schema.
+    throw new Error(
+      `Invalid environment:\n${detail}\n\n` +
+        'If this is a fresh checkout, run `cp .env.example .env` from the ' +
+        'project root and start again.',
+    );
   }
   return parsed.data;
 }

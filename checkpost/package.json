@@ -8,13 +8,14 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter \"./apps/api\" --filter \"./apps/web\" dev",
-    "dev:api": "pnpm --filter @checkpost/api dev",
-    "dev:web": "pnpm --filter @checkpost/web dev",
+    "build:contract": "pnpm --filter @checkpost/contract build",
+    "dev": "pnpm run build:contract && pnpm --parallel --filter @checkpost/contract --filter @checkpost/api --filter @checkpost/web dev",
+    "dev:api": "pnpm run build:contract && pnpm --parallel --filter @checkpost/contract --filter @checkpost/api dev",
+    "dev:web": "pnpm run build:contract && pnpm --parallel --filter @checkpost/contract --filter @checkpost/web dev",
     "dev:app": "cd apps/app && flutter run",
-    "build": "pnpm --filter @checkpost/contract build && pnpm --filter @checkpost/api build && pnpm --filter @checkpost/web build",
-    "test": "pnpm --filter @checkpost/api test",
-    "typecheck": "pnpm -r typecheck",
+    "build": "pnpm run build:contract && pnpm --filter @checkpost/api build && pnpm --filter @checkpost/web build",
+    "test": "pnpm run build:contract && pnpm --filter @checkpost/api test",
+    "typecheck": "pnpm run build:contract && pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "db:up": "docker compose up -d db",
     "db:push": "pnpm --filter @checkpost/api db:push",
@@ -25,8 +26,5 @@
   },
   "devDependencies": {
     "typescript": "^5.9.2"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
   }
 }

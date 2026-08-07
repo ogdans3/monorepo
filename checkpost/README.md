@@ -17,10 +17,10 @@ packages/   contract (shared Zod schemas + limits)
 ## Get it running
 
 ```bash
-cp .env.example .env
+cp .env.example .env   # the API reads this. Without it, it says so by name
 pnpm install
-pnpm db:up          # Postgres in Docker on :5433
-pnpm dev            # api on :4000, web on :5173
+pnpm db:up             # Postgres in Docker on :5433
+pnpm dev               # api on :4000, web on :5173
 
 # the app, against your local API
 pnpm dev:app        # or: cd apps/app && flutter run \
@@ -37,6 +37,9 @@ pnpm typecheck
 ```
 
 The API applies its migrations at boot, so there is no separate setup step.
+`pnpm dev` builds `packages/contract` first and then watches it, because both
+the API and the web app import it and neither can start until it has been
+compiled once.
 
 ## The three ideas the whole thing hangs on
 

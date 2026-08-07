@@ -2,3 +2,9 @@ packages:
   - 'apps/api'
   - 'apps/web'
   - 'packages/*'
+
+# esbuild needs its postinstall to fetch a platform binary, and without this
+# pnpm blocks it and tsx and vite fail to start. This lived in package.json
+# under "pnpm" until pnpm 10 moved the setting here.
+onlyBuiltDependencies:
+  - esbuild
