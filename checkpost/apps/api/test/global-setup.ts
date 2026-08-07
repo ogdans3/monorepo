@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import { runMigrations } from '../src/db/migrate.js';
+import { assertDisposableDatabase } from './guard.js';
 
 /**
  * Tests run against a real Postgres. The ordering guarantees, the partial
@@ -17,6 +18,11 @@ export const TEST_DATABASE_URL =
 const TEST_DB_NAME = new URL(TEST_DATABASE_URL).pathname.slice(1);
 
 export default async function setup(): Promise<void> {
+  // Checked here as well as in setup.ts, because this file creates the database
+  // and runs migrations before any test file is loaded.
+  assertDisposableDatabase(TEST_DATABASE_URL);
+  assertDisposableDatabase(ADMIN_URL.replace(/\/postgres$/, '/checkpost_test'));
+
   process.env.DATABASE_URL = TEST_DATABASE_URL;
   process.env.NODE_ENV = 'test';
   process.env.RUN_REAPER = '0';

@@ -43,6 +43,12 @@ iPhone viewport in WebKit, which is the engine iOS actually uses. It needs the
 stack up and `npx playwright install webkit` once.
 
 The API applies its migrations at boot, so there is no separate setup step.
+
+`DATABASE_URL` is used by the host tools and by the API container alike, so a
+hosted database works for both unchanged and `pnpm db:up` is only needed for the
+tests. **The test suite refuses to run against anything that is not local, or
+whose name does not say "test"**, because it truncates every table between
+cases. See `apps/api/test/guard.ts`.
 `pnpm dev` builds `packages/contract` first and then watches it, because both
 the API and the web app import it and neither can start until it has been
 compiled once.
@@ -71,6 +77,18 @@ WebSockets carry changes but are only a *hint*: clients also reconcile with
 `GET /changes?since=` on connect and on resume, which is why a dropped
 connection is a non-event and why the API scales past one instance without a
 message bus.
+
+## The operator console
+
+`GET /v1/admin`, behind HTTP Basic auth, showing counts, every list, and two
+actions per list. It exists **only when `ADMIN_USER` and `ADMIN_PASSWORD` are
+both set**. There is deliberately no fallback password, because an admin
+surface that appears by default is a way to hand somebody your database.
+
+It cannot show you a share URL, and that is not an oversight. Only the SHA-256
+of a token ever reaches the database, which is exactly what makes a leaked
+backup harmless. **Issue new link** is the only honest way to get a working URL
+out of it, and it kills the old one, which the page says before you press it.
 
 ## Where things are written down
 
@@ -108,6 +126,28 @@ the web server never holds a copy of anyone's checklist.
 nothing. Clients on the other instance find out a beat later instead of
 instantly. When "a beat later" stops being good enough, swap `RealtimeHub` for
 one backed by Postgres `LISTEN/NOTIFY`. The interface is the seam.
+
+## Running it on the AI Central dashboard
+
+The dashboard scans the top level of `~/git` for a compose file, and does not
+look inside directories, so this project is reached through a relative symlink
+made once on the host:
+
+```bash
+ln -s monorepo/checkpost ~/git/checkpost
+```
+
+Relative on purpose. The dashboard container mounts the git directory, and an
+absolute symlink would point outside that mount and break inside the container.
+`.dashboard.yaml` names the front-door service and port.
+
+**One project gets one public hostname**, and Checkpost wants two: the browser
+client calls the API cross-origin, so both have to be reachable. The front door
+is currently the **API**, which makes `https://checkpost.<host>/v1/admin` the
+operator console and lets the Flutter app work. Serving the browser client
+publicly needs a second hostname, either by pointing `compose_service` at `web`
+and giving the API its own Caddy block, or the other way round. Until that is
+decided, the browser client is a local-development thing.
 
 ## Before it can ship
 

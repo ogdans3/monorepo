@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import formbody from '@fastify/formbody';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -8,6 +9,7 @@ import type { Env } from './env.js';
 import { ApiError } from './lib/errors.js';
 import { registerContext } from './plugins/context.js';
 import { RealtimeHub } from './realtime/hub.js';
+import { adminRoutes } from './routes/admin.js';
 import { itemRoutes } from './routes/items.js';
 import { listRoutes } from './routes/lists.js';
 import { metaRoutes } from './routes/meta.js';
@@ -20,6 +22,12 @@ declare module 'fastify' {
     hub: RealtimeHub;
     listService: ListService;
     rateLimits: { create: number; rotate: number };
+    adminConfig: {
+      adminUser: string;
+      adminPassword: string;
+      webOrigin: string;
+      databaseHost: string;
+    };
   }
 }
 
@@ -42,6 +50,14 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
     genReqId: () => crypto.randomUUID(),
   });
 
+  app.decorate('adminConfig', {
+    adminUser: env.ADMIN_USER,
+    adminPassword: env.ADMIN_PASSWORD,
+    webOrigin: env.PUBLIC_WEB_ORIGIN,
+    // Shown on the console so it is obvious which database you are looking at.
+    // Host only: a password must never reach a rendered page.
+    databaseHost: safeHost(env.DATABASE_URL),
+  });
   app.decorate('rateLimits', {
     create: env.RATE_LIMIT_CREATE_MAX,
     rotate: env.RATE_LIMIT_ROTATE_MAX,
@@ -71,6 +87,10 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
     errorResponseBuilder: () =>
       new ApiError('too_many_requests', 'Slow down for a moment, then try again.'),
   });
+
+  // The admin console posts plain HTML forms, which Fastify does not parse
+  // without this. Nothing else in the API accepts form encoding.
+  await app.register(formbody);
 
   await app.register(websocket, {
     options: { maxPayload: 4 * 1024 },
@@ -105,6 +125,7 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
       await scope.register(listRoutes);
       await scope.register(itemRoutes);
       await scope.register(realtimeRoutes);
+      await scope.register(adminRoutes);
     },
     { prefix: `/${API_VERSION}` },
   );
@@ -117,6 +138,15 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
       await closeDb();
     },
   };
+}
+
+/** Hostname of a connection string, never its credentials. */
+function safeHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return 'unknown host';
+  }
 }
 
 function buildLogger(env: Env) {

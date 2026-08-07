@@ -1,0 +1,9 @@
+name: Checkpost
+description: Shared checklists that live at a link. No accounts.
+
+# The front door is the API, so https://checkpost.<host>/v1/admin is the
+# operator console and https://checkpost.<host>/v1/health is the health check.
+# The web client is a second service in the same compose file and needs its own
+# hostname to be reachable from a browser. See the deployment note in README.md.
+compose_service: api
+compose_port: 3000

@@ -52,6 +52,15 @@ keys, and both test suites assert the same properties. Postgres sorts
 `position` with an explicit `COLLATE "C"` in every query and index. Keep it
 there.
 
+**The test suite truncates every table.** `apps/api/test/guard.ts` refuses any
+database that is not local or whose name does not say "test". Do not weaken it.
+`DATABASE_URL` now points at a hosted database with real lists in it.
+
+**Correlated subqueries must be written as literal SQL.** Interpolating Drizzle
+columns into a `sql` template inside a subquery renders them unqualified, so
+`where list_id = id` compares the inner table to itself. It does not error, it
+just reports zero. `AdminService.recentLists` has the shape to copy.
+
 ## Design rules that are not negotiable
 
 From `PRODUCT.md` / `DESIGN.md`, restated because they get eroded first:

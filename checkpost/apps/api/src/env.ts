@@ -36,6 +36,14 @@ const envSchema = z.object({
     .default('1')
     .transform((v) => v !== '0' && v.toLowerCase() !== 'false'),
 
+  /**
+   * The operator console at /v1/admin exists only when both are set. There is
+   * deliberately no fallback password: an admin surface that appears by default
+   * is a way to hand somebody your database.
+   */
+  ADMIN_USER: z.string().default(''),
+  ADMIN_PASSWORD: z.string().default(''),
+
   /** Requests per IP per minute across the whole API. */
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   /** New lists per IP per hour. The one endpoint that grows the database. */
