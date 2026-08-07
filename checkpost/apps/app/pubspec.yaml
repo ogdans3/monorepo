@@ -1,0 +1,39 @@
+name: checkpost
+description: A shared checklist that lives at a link. No accounts.
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Deep links: checkpost://l/<token> and https://checkpost.app/l/<token>.
+  app_links: ^7.0.0
+  http: ^1.6.0
+  # The QR code is a first-class way to share a list across a table.
+  qr_flutter: ^4.1.0
+  share_plus: ^13.3.0
+  # Local index of the lists this device knows about. There are no accounts,
+  # so this file is the entire "my lists".
+  shared_preferences: ^2.5.5
+  web_socket_channel: ^3.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    # Self-hosted rather than fetched at runtime: a checklist app should not
+    # tell a font CDN which lists you open. SIL OFL 1.1, licence shipped
+    # alongside the file.
+    - family: Schibsted Grotesk
+      fonts:
+        - asset: assets/fonts/SchibstedGrotesk-Variable.ttf

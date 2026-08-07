@@ -1,0 +1,36 @@
+node_modules/
+dist/
+build/
+.svelte-kit/
+.output/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+# Flutter / Dart
+apps/app/.dart_tool/
+apps/app/.flutter-plugins
+apps/app/.flutter-plugins-dependencies
+apps/app/build/
+apps/app/ios/Pods/
+apps/app/ios/.symlinks/
+apps/app/ios/Flutter/Flutter.podspec
+apps/app/ios/Flutter/ephemeral/
+apps/app/android/.gradle/
+apps/app/android/local.properties
+apps/app/android/key.properties
+apps/app/**/*.g.dart
+apps/app/**/*.freezed.dart
+*.iml
+
+# Editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.log
+coverage/
+apps/web/.svelte-kit/
+apps/app/test/failures/

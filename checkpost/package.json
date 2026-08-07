@@ -1,0 +1,32 @@
+{
+  "name": "checkpost",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared checklists that live at a link. No accounts.",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/api\" --filter \"./apps/web\" dev",
+    "dev:api": "pnpm --filter @checkpost/api dev",
+    "dev:web": "pnpm --filter @checkpost/web dev",
+    "dev:app": "cd apps/app && flutter run",
+    "build": "pnpm --filter @checkpost/contract build && pnpm --filter @checkpost/api build && pnpm --filter @checkpost/web build",
+    "test": "pnpm --filter @checkpost/api test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "db:up": "docker compose up -d db",
+    "db:push": "pnpm --filter @checkpost/api db:push",
+    "db:generate": "pnpm --filter @checkpost/api db:generate",
+    "db:migrate": "pnpm --filter @checkpost/api db:migrate",
+    "app:analyze": "cd apps/app && flutter analyze",
+    "app:test": "cd apps/app && flutter test"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
