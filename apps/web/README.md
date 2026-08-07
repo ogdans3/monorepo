@@ -28,16 +28,29 @@ or strip the path. That is the one leak this app cannot close by itself.
 
 ## Before launch
 
-Two files under `static/.well-known/` carry placeholders and must be filled in
-or app links will silently fall back to this page forever:
+Two files carry placeholders and must be filled in, or app links will silently
+fall back to this page forever:
 
 | File | Replace |
 |---|---|
-| `assetlinks.json` | `REPLACE_WITH_RELEASE_SIGNING_SHA256` — `keytool -list -v -keystore <release>.jks` |
-| `apple-app-site-association` | `REPLACE_WITH_TEAM_ID` — your Apple Developer Team ID |
+| `static/.well-known/assetlinks.json` | `REPLACE_WITH_RELEASE_SIGNING_SHA256` — `keytool -list -v -keystore <release>.jks` |
+| `src/lib/apple-app-site-association.json` | `REPLACE_WITH_TEAM_ID` — your Apple Developer Team ID |
 
-`apple-app-site-association` must be served as `application/json` with no
-extension; `adapter-node` does this for static files already.
+**Why the Apple file is not in `static/`.** iOS demands it at exactly
+`/.well-known/apple-app-site-association`, extensionless, served as
+`application/json`. A static file cannot do both — there is no extension for
+the static handler to infer a type from — and SvelteKit's router ignores
+directories beginning with a dot, so it cannot be a route either. `src/hooks.ts`
+reroutes that path to `src/routes/aasa/+server.ts`, which sets the header
+itself. Get the content type wrong and Universal Links silently never work:
+no error, links just keep opening this page forever.
+
+Verify after any deploy:
+
+```bash
+curl -sI https://checkpost.app/.well-known/apple-app-site-association | grep -i content-type
+# content-type: application/json
+```
 
 ## Environment
 
