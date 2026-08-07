@@ -120,8 +120,12 @@ class _TextSheetState extends State<_TextSheet> {
                 maxLength: widget.maxLength,
                 maxLines: null,
                 buildCounter:
-                    (_, {required currentLength, required isFocused, maxLength}) =>
-                        null,
+                    (
+                      _, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
                 onSubmitted: (_) => _submit(),
                 onChanged: (_) {
                   if (_error != null) setState(() => _error = null);

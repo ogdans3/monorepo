@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 /// The wire model, mirroring `packages/contract/src/index.ts`.
-/// See `docs/API.md`; that document and this file are the contract.
+/// See `docs/API.md`. That document and this file are the contract.
 
-/// A share token: 32 random bytes, base64url — 43 characters.
+/// A share token: 32 random bytes, base64url, giving 43 characters.
 final shareTokenPattern = RegExp(r'^[A-Za-z0-9_-]{43}$');
 
 /// Pulls a token out of anything a person might paste: the bare token, an
@@ -71,7 +71,7 @@ class ChecklistItem {
   final bool checked;
   final DateTime? checkedAt;
 
-  /// Opaque fractional index. Compare with [String.compareTo] — byte order,
+  /// Opaque fractional index. Compare with [String.compareTo] for byte order,
   /// exactly what Postgres produces under `COLLATE "C"`.
   final String position;
   final DateTime createdAt;
@@ -161,7 +161,7 @@ class ChangeEvent {
   final ChangeType type;
   final int revision;
 
-  /// The device that made the change; null for anonymous writers. A client
+  /// The device that made the change, or null for anonymous writers. A client
   /// skips events it caused itself, because it already applied them.
   final String? actor;
   final DateTime at;
@@ -176,8 +176,8 @@ class ChangeEvent {
   );
 }
 
-/// Either the events a client missed, or — if the log no longer reaches back
-/// far enough to prove what was missed — a whole fresh snapshot.
+/// Either the events a client missed, or a whole fresh snapshot when the log
+/// no longer reaches back far enough to prove what was missed.
 @immutable
 sealed class Changes {
   const Changes();
@@ -225,7 +225,7 @@ class SavedList {
   final String title;
 
   /// Cached counts so the home screen has something true to show before the
-  /// network answers — an empty skeleton on every launch would be a lie about
+  /// network answers. An empty skeleton on every launch would be a lie about
   /// how much this app knows.
   final int doneCount;
   final int totalCount;

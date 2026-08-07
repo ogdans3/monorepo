@@ -30,7 +30,7 @@ enum ListStatus {
 /// One open list.
 ///
 /// Every edit lands on local state first and is sent afterwards. The user never
-/// waits on a spinner to tick a box; the network is allowed to correct us, and
+/// waits on a spinner to tick a box. The network is allowed to correct us, and
 /// when it does we say so rather than silently reverting.
 class ListController extends ChangeNotifier {
   ListController({
@@ -60,7 +60,7 @@ class ListController extends ChangeNotifier {
   bool _disposed = false;
 
   /// Ids whose section move is deferred, so a row you just ticked stays under
-  /// your thumb long enough to see — and to untick.
+  /// your thumb long enough to see, and to untick.
   final Set<String> _settling = {};
   final Map<String, Timer> _settleTimers = {};
 
@@ -87,10 +87,14 @@ class ListController extends ChangeNotifier {
   Stream<String> get tokenChanges => _tokenChanges.stream;
 
   List<ChecklistItem> get items => _items;
-  List<ChecklistItem> get openItems =>
-      [for (final item in _items) if (!_showAsDone(item)) item];
-  List<ChecklistItem> get doneItems =>
-      [for (final item in _items) if (_showAsDone(item)) item];
+  List<ChecklistItem> get openItems => [
+    for (final item in _items)
+      if (!_showAsDone(item)) item,
+  ];
+  List<ChecklistItem> get doneItems => [
+    for (final item in _items)
+      if (_showAsDone(item)) item,
+  ];
 
   int get doneCount => _items.where((item) => item.checked).length;
   int get totalCount => _items.length;
@@ -109,11 +113,13 @@ class ListController extends ChangeNotifier {
   /// Loads the list and opens its change feed.
   Future<void> open() async {
     await load();
-    if (_status == ListStatus.ready || _status == ListStatus.offline) _connect();
+    if (_status == ListStatus.ready || _status == ListStatus.offline) {
+      _connect();
+    }
   }
 
   /// Fetches the snapshot without opening a socket. Split out from [open] so a
-  /// caller — or a test — can have the list without the connection.
+  /// caller, or a test, can have the list without the connection.
   Future<void> load() async {
     try {
       _apply(await api.snapshot(_token));
@@ -121,7 +127,7 @@ class ListController extends ChangeNotifier {
     } on ApiException catch (error) {
       _handleApiError(error);
     } on OfflineException {
-      // Keep whatever we already had; a blank screen is worse than stale.
+      // Keep whatever we already had. A blank screen is worse than stale.
       _status = ListStatus.offline;
     }
     _notify();
@@ -132,8 +138,8 @@ class ListController extends ChangeNotifier {
     _realtime?.dispose();
     final realtime = _realtimeFactory(_token);
     _realtime = realtime;
-    // A null client means "no live feed" — used by tests, and the seam any
-    // future no-socket mode would use. Everything still works; changes just
+    // A null client means "no live feed". Used by tests, and the seam any
+    // future no-socket mode would use. Everything still works. Changes just
     // arrive on reconcile instead of instantly.
     if (realtime == null) return;
     _frames = realtime.frames.listen(_onFrame);
@@ -217,7 +223,7 @@ class ListController extends ChangeNotifier {
     );
   }
 
-  /// Adds an item to the end of the list. Returns immediately — the row is on
+  /// Adds an item to the end of the list. Returns immediately. The row is on
   /// screen before the request leaves the device.
   Future<void> addItem(String text) async {
     final trimmed = text.trim();
@@ -286,7 +292,9 @@ class ListController extends ChangeNotifier {
   Future<void> rename(String title) async {
     final trimmed = title.trim();
     final previous = _list;
-    if (previous == null || trimmed.isEmpty || trimmed == previous.title) return;
+    if (previous == null || trimmed.isEmpty || trimmed == previous.title) {
+      return;
+    }
     _list = previous.copyWith(title: trimmed);
     _notify();
 
@@ -302,7 +310,10 @@ class ListController extends ChangeNotifier {
     final removed = _items.where((item) => item.checked).toList();
     if (removed.isEmpty) return;
     final previous = _items;
-    _items = [for (final item in _items) if (!item.checked) item];
+    _items = [
+      for (final item in _items)
+        if (!item.checked) item,
+    ];
     _notify();
 
     await _write(
@@ -313,7 +324,7 @@ class ListController extends ChangeNotifier {
   }
 
   /// Replaces the share link. Everyone else is disconnected the moment this
-  /// returns; this device reconnects with the token it just received.
+  /// returns. This device reconnects with the token it just received.
   Future<String> rotateLink() async {
     final rotated = await api.rotateLink(_token);
     _token = rotated.token;
@@ -425,7 +436,7 @@ class ListController extends ChangeNotifier {
         break;
       case ChangeType.unknown:
         // A newer server than this build. Ignoring an event we do not
-        // understand is safe; reconcile will catch anything that mattered.
+        // understand is safe. Reconcile will catch anything that mattered.
         break;
     }
   }
@@ -442,7 +453,10 @@ class ListController extends ChangeNotifier {
   }
 
   void _remove(String id) {
-    _items = [for (final item in _items) if (item.id != id) item];
+    _items = [
+      for (final item in _items)
+        if (item.id != id) item,
+    ];
     _settleTimers.remove(id)?.cancel();
     _settling.remove(id);
     _washTimers.remove(id)?.cancel();

@@ -60,7 +60,7 @@ export async function listRoutes(app: FastifyInstance): Promise<void> {
 
   /**
    * Replaces the share link. Everyone holding the old one is disconnected and
-   * gets a 410 on their next request — that is the entire point of the feature,
+   * gets a 410 on their next request. That is the entire point of the feature,
    * so it is a hard cut, not a grace period.
    */
   app.post(

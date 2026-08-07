@@ -10,7 +10,7 @@ import 'sheets/confirm_sheet.dart';
 import 'sheets/text_sheet.dart';
 import 'widgets/bits.dart';
 
-/// Your lists — every list this device knows a link to, most recent first.
+/// Your lists. Every list this device knows a link to, most recent first.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({required this.library, super.key});
 
@@ -98,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       title: 'Remove “${list.title}” from this device?',
       consequence:
-          'The list itself is untouched — anyone else with the link still has '
+          'The list itself is untouched. Anyone else with the link still has '
           'it. But this device forgets the link, and unless you have it saved '
           'somewhere else you will not get back in.',
       confirmLabel: 'Remove from this device',
@@ -128,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
               title: 'No lists yet',
               body:
                   'A list is a link. Make one, send the link to whoever needs '
-                  'it, and you are both on the same list — no accounts, nothing '
+                  'it, and you are both on the same list. No accounts, nothing '
                   'to sign up for.',
               actions: [
                 SizedBox(
@@ -265,7 +265,7 @@ class _ListRow extends StatelessWidget {
                               minHeight: 3,
                               backgroundColor: colors.line,
                               // A meter, not a score. No percentage, no
-                              // celebration — this is a fact about the list.
+                              // celebration. This is a fact about the list.
                               color: colors.primary,
                             ),
                           ),

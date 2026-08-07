@@ -4,13 +4,13 @@ A shared checklist that lives at a link.
 
 Make a list, send the link. Everyone who has it sees the same list and can tick
 things off, at the same time, from anywhere. There are no accounts, no invites
-and no passwords — the link *is* the access. If a link ends up somewhere it
+and no passwords. The link *is* the access. If a link ends up somewhere it
 shouldn't, you replace it and the old one dies.
 
 ```
 apps/api    Node · Fastify · Drizzle · Postgres · WebSockets
 apps/app    Flutter (iOS + Android)
-apps/web    SvelteKit — landing page and the share-link handoff
+apps/web    SvelteKit landing page and the share-link handoff
 packages/   contract (shared Zod schemas + limits)
 ```
 
@@ -40,14 +40,14 @@ The API applies its migrations at boot, so there is no separate setup step.
 
 ## The three ideas the whole thing hangs on
 
-**1. The link is the credential.** A share token is 32 random bytes, base64url
-— 43 characters, ~192 bits. The server stores only its SHA-256, so a database
-dump yields no working links. There is no list id in any URL; a token resolves
-to exactly one list and nothing else is reachable.
+**1. The link is the credential.** A share token is 32 random bytes, base64url,
+giving 43 characters and ~192 bits. The server stores only its SHA-256, so a
+database dump yields no working links. There is no list id in any URL. A token
+resolves to exactly one list and nothing else is reachable.
 
 **2. A replaced link is a hard cut.** Rotation revokes the old token
-immediately and disconnects every socket holding it — no grace period, because
-a grace period would defeat the feature. The old link then answers `410 Gone`,
+immediately and disconnects every socket holding it. There is no grace period,
+because a grace period would defeat the feature. The old link then answers `410 Gone`,
 not `401`, so the app can say *"this link was replaced, ask for the new one"*
 instead of the useless *"invalid link"*.
 
@@ -77,8 +77,8 @@ message bus.
 
 **Losing the app's local index loses your way back in.** There are no accounts,
 so `shared_preferences` on the device is the only record that a list exists.
-The list itself survives — anyone else with the link still has it — but that
-device cannot get back in without the link. This is inherent to "no users", and
+The list itself survives, since anyone else with the link still has it, but
+that device cannot get back in without the link. This is inherent to "no users", and
 it is why the share sheet is a first-class screen rather than a setting.
 
 **Nothing has an owner, so nothing is ever tidied up by a person.** A
@@ -92,17 +92,17 @@ its logs. But `/l/<token>` reaches the web server as a path. If you put that
 behind a reverse proxy, turn off access logging for `/l/` or strip the path.
 
 **Realtime fan-out is in-process.** A second API instance costs correctness
-nothing — clients on the other instance find out a beat later instead of
+nothing. Clients on the other instance find out a beat later instead of
 instantly. When "a beat later" stops being good enough, swap `RealtimeHub` for
-one backed by Postgres `LISTEN/NOTIFY`; the interface is the seam.
+one backed by Postgres `LISTEN/NOTIFY`. The interface is the seam.
 
 ## Before it can ship
 
 - Fill in `apps/web/static/.well-known/assetlinks.json` (release signing
   SHA-256) and `apple-app-site-association` (Team ID), and enable Associated
   Domains on the App ID in Xcode. Until then app links fall through to the web
-  handoff page — a working fallback, not a dead end.
-- Set `PUBLIC_APP_STORE_URL` / `PUBLIC_PLAY_STORE_URL` once the app is listed;
-  while they are empty the site says so plainly instead of showing dead buttons.
+  handoff page, which is a working fallback rather than a dead end.
+- Set `PUBLIC_APP_STORE_URL` / `PUBLIC_PLAY_STORE_URL` once the app is listed.
+  While they are empty the site says so plainly instead of showing dead buttons.
 - `MIGRATE_ON_BOOT=1` is right for one API container. With more than one, turn
   it off and run `pnpm db:migrate` as a release step.

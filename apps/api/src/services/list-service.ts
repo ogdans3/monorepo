@@ -55,7 +55,7 @@ export class ListService {
   }
 
   /**
-   * Turns a bearer token into a list. A token we have never seen is a 401; a
+   * Turns a bearer token into a list. A token we have never seen is a 401. A
    * token we *have* seen but revoked is a 410, so the app can say "this link
    * was replaced" instead of the useless "invalid link".
    */
@@ -75,7 +75,7 @@ export class ListService {
       throw ApiError.gone('This link was replaced. Ask whoever shared it for the new one.');
     }
     // The link outlives its list, so "deleted" is distinguishable from "never
-    // existed" — the app can say which, instead of a shrug.
+    // existed". The app can say which, instead of a shrug.
     if (!row.listId) throw ApiError.gone('This list has been deleted.');
     return { listId: row.listId, linkId: row.id, token };
   }
@@ -282,7 +282,7 @@ export class ListService {
         .from(items)
         .where(and(eq(items.id, itemId), eq(items.listId, ctx.listId)))
         .limit(1);
-      if (!current) throw ApiError.notFound('That item is gone — someone else removed it.');
+      if (!current) throw ApiError.notFound('That item is gone. Someone else removed it.');
 
       const patch: Partial<typeof items.$inferInsert> = { updatedAt: new Date() };
       if (body.text !== undefined) patch.text = body.text;
@@ -296,7 +296,7 @@ export class ListService {
       }
 
       const [row] = await tx.update(items).set(patch).where(eq(items.id, itemId)).returning();
-      if (!row) throw ApiError.notFound('That item is gone — someone else removed it.');
+      if (!row) throw ApiError.notFound('That item is gone. Someone else removed it.');
       const item = toItem(row);
       return {
         result: item,
@@ -314,7 +314,7 @@ export class ListService {
         .returning({ id: items.id });
       if (deleted.length === 0) {
         // Deleting something already deleted is what two people tapping the
-        // same row looks like. It is not an error; the end state is correct.
+        // same row looks like. It is not an error, and the end state is correct.
         return { result: undefined, event: null };
       }
       return {
@@ -339,7 +339,7 @@ export class ListService {
 
   /**
    * Issues a new link and kills the old one. Everyone else's socket is closed
-   * with `revoked: rotated`; the device that rotated keeps working because its
+   * with `revoked: rotated`. The device that rotated keeps working because its
    * socket is registered against a different (now current) link.
    */
   async rotateLink(ctx: LinkContext, actor: string | null): Promise<{ token: string }> {
@@ -375,7 +375,7 @@ export class ListService {
 
     // Evict holders of the link that was just revoked. The rotating device is
     // still registered under `ctx.linkId`, which is exactly the one we revoked,
-    // so it is disconnected too — and reconnects with the token it just got.
+    // so it is disconnected too, and reconnects with the token it just got.
     this.hub.evictLink(ctx.listId, ctx.linkId, 'rotated');
     void newLinkId;
     return { token };
@@ -387,7 +387,7 @@ export class ListService {
 
   /**
    * Finally forgets links whose list is long gone. Until this runs they answer
-   * "this list has been deleted"; afterwards they are simply invalid, which is
+   * "this list has been deleted". Afterwards they are simply invalid, which is
    * the honest answer once nobody could reasonably still be looking.
    */
   async pruneOrphanLinks(graceDays = 30): Promise<number> {
@@ -433,7 +433,7 @@ export class ListService {
    *
    * The `UPDATE lists SET revision = revision + 1` is the first statement on
    * purpose. It takes the list's row lock, so concurrent writers to the same
-   * list queue up here rather than racing over item positions — and because
+   * list queue up here rather than racing over item positions. And because
    * READ COMMITTED gives each subsequent statement a fresh snapshot, the second
    * writer sees the first writer's rows once it acquires the lock.
    */
@@ -476,7 +476,7 @@ export class ListService {
 
   /**
    * Picks an ordering key from the requested neighbours. `afterId`/`beforeId`
-   * name the item you dropped next to; we look up what is currently on the
+   * name the item you dropped next to. We look up what is currently on the
    * other side of it and land in between.
    */
   async #positionFor(
@@ -505,7 +505,7 @@ export class ListService {
 
     if (!anchor) {
       // The neighbour was deleted out from under us mid-drag. Appending is the
-      // least surprising recovery; the item still lands in the list.
+      // least surprising recovery, and the item still lands in the list.
       const last = await this.#edgePosition(tx, listId, 'last', excludeId);
       return keyBetween(last, null);
     }

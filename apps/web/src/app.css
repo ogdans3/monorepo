@@ -1,6 +1,6 @@
 /*
  * Checkpost design tokens. The values here are the same ones in DESIGN.md and
- * in apps/app/lib/design/tokens.dart — three files, one palette. Change them
+ * in apps/app/lib/design/tokens.dart. Three files, one palette. Change them
  * together or they will drift.
  */
 
@@ -52,7 +52,7 @@
   --fast: 160ms;
   --base: 220ms;
 
-  /* Semantic scale — no arbitrary 9999s anywhere in this codebase. */
+  /* Semantic scale. No arbitrary 9999s anywhere in this codebase. */
   --z-sticky: 10;
   --z-overlay: 20;
 }
@@ -116,7 +116,7 @@ a {
 }
 
 :focus-visible {
-  /* The accent is 5.3:1 on white and 6.8:1 on the dark surface — a focus ring
+  /* The accent is 5.3:1 on white and 6.8:1 on the dark surface. A focus ring
      has to clear 3:1 to be a ring at all, and most brand rings don't. */
   outline: 2px solid var(--primary);
   outline-offset: 3px;

@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * The product, running. Not a screenshot — the same row anatomy the app
+   * The product, running. Not a screenshot, but the same row anatomy the app
    * ships (checkbox, text, right-edge affordance) so the landing page teaches
    * the gesture before anyone installs anything.
    */
@@ -165,8 +165,8 @@
     transition: color var(--base) var(--ease);
   }
 
-  /* Checked is carried by three signals — the mark, the strikethrough and the
-     dimming — so the accent is confirmation, never the only cue.
+  /* Checked is carried by three signals: the mark, the strikethrough and the
+     dimming. The accent is confirmation, never the only cue.
      The rule is painted as a background gradient rather than a pseudo-element
      so it wipes across the words themselves and wraps with them, instead of
      ruling the full width of the row. */
@@ -236,8 +236,8 @@
       animation: none;
     }
 
-    /* The wash is information, not decoration, so it stays — as a flat tint
-       with no transition rather than a fade. */
+    /* The wash is information, not decoration, so it stays. It becomes a flat
+       tint with no transition rather than a fade. */
     .row.just {
       animation: wash 900ms steps(1, end);
     }

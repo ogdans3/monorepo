@@ -4,7 +4,7 @@ import '../data/api_client.dart';
 import '../data/library_store.dart';
 import '../data/models.dart';
 
-/// "Your lists" — the index of every list this device knows a link to.
+/// "Your lists": the index of every list this device knows a link to.
 ///
 /// Ordered most-recently-opened first, because the list you want is almost
 /// always the one you just had.
@@ -73,7 +73,7 @@ class LibraryController extends ChangeNotifier {
       totalCount: snapshot.items.length,
       lastOpenedAt: DateTime.now(),
     );
-    // Same list arriving on a new link — replace the old token rather than
+    // Same list arriving on a new link. Replace the old token rather than
     // showing the list twice.
     await _upsert(saved, replacingId: existing?.id);
     return saved;
@@ -101,8 +101,8 @@ class LibraryController extends ChangeNotifier {
     await _upsert(updated);
   }
 
-  /// Removes the list from this device only. The list itself is untouched —
-  /// anyone else holding the link still has it.
+  /// Removes the list from this device only. The list itself is untouched.
+  /// Anyone else holding the link still has it.
   Future<void> forget(String id) async {
     _lists = [
       for (final list in _lists)

@@ -8,8 +8,8 @@ import 'check_mark.dart';
 /// One line of the checklist.
 ///
 /// Anatomy: checkbox · text · right-edge affordance. Tapping the row or the
-/// box ticks it off; swiping the row, or tapping the right edge, opens it.
-/// The chevron is always drawn — this is a touch product, and a
+/// box ticks it off. Swiping the row, or tapping the right edge, opens it.
+/// The chevron is always drawn, because this is a touch product and a
 /// hover-revealed affordance is no affordance at all.
 class ItemRow extends StatelessWidget {
   const ItemRow({
@@ -56,7 +56,9 @@ class ItemRow extends StatelessWidget {
                 Semantics(
                   checked: item.checked,
                   label: item.text,
-                  child: ExcludeSemantics(child: CheckMark(checked: item.checked)),
+                  child: ExcludeSemantics(
+                    child: CheckMark(checked: item.checked),
+                  ),
                 ),
                 const SizedBox(width: Space.md + 1),
                 Expanded(
@@ -85,7 +87,9 @@ class ItemRow extends StatelessWidget {
                           item.note.trim(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: text.bodySmall?.copyWith(color: colors.inkMuted),
+                          style: text.bodySmall?.copyWith(
+                            color: colors.inkMuted,
+                          ),
                         ),
                       ],
                     ],
@@ -120,8 +124,8 @@ class ItemRow extends StatelessWidget {
     return AnimatedContainer(
       duration: instant ? Duration.zero : Motion.base,
       curve: Motion.curve,
-      // The wash is information, not decoration — it is how you notice what
-      // somebody else did — so it survives Reduce Motion as a flat tint.
+      // The wash is information, not decoration. It is how you notice what
+      // somebody else did, so it survives Reduce Motion as a flat tint.
       color: washing ? colors.primaryQuiet : colors.bg,
       child: Dismissible(
         key: ValueKey('swipe-${item.id}'),
@@ -129,7 +133,7 @@ class ItemRow extends StatelessWidget {
         dismissThresholds: const {DismissDirection.startToEnd: 0.4},
         background: _SwipeHint(colors: colors),
         confirmDismiss: (_) async {
-          // Swipe opens the item; it never destroys anything. Returning false
+          // Swipe opens the item, and never destroys anything. Returning false
           // springs the row back, which is the correct end state.
           onOpen();
           return false;

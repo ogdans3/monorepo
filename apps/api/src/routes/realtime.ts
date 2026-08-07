@@ -91,7 +91,7 @@ export async function realtimeRoutes(app: FastifyInstance): Promise<void> {
 
       socket.on('message', (raw: Buffer) => {
         // The socket is a read path. Every mutation goes over HTTP, where it is
-        // idempotent, retryable and rate limited — so the only frame we accept
+        // idempotent, retryable and rate limited, so the only frame we accept
         // is a liveness ping.
         let parsed: unknown;
         try {

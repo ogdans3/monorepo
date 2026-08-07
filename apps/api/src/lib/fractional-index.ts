@@ -1,5 +1,5 @@
 /**
- * Fractional indexing — ordering keys that can always be inserted between.
+ * Fractional indexing: ordering keys that can always be inserted between.
  *
  * Two people adding an item to the same spot at the same time must not have to
  * agree on an integer. Instead every item carries an opaque string key, and

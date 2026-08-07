@@ -15,7 +15,7 @@ import {
 const now = sql`now()`;
 
 /**
- * A list. It has no owner — possession of an active share link is the entire
+ * A list. It has no owner. Possession of an active share link is the entire
  * authorisation model.
  */
 export const lists = pgTable('lists', {
@@ -37,7 +37,7 @@ export const lists = pgTable('lists', {
 /**
  * Share links, past and present. Only the SHA-256 of the token is stored, so a
  * database dump does not yield working links. Rotation revokes the current row
- * and inserts a new one; the history is kept so a rotated link can answer
+ * and inserts a new one. The history is kept so a rotated link can answer
  * `410 Gone` ("this link was replaced") instead of a bare 401.
  */
 export const shareLinks = pgTable(
@@ -47,7 +47,7 @@ export const shareLinks = pgTable(
     /**
      * Null once the list is gone. The link row deliberately outlives its list
      * so a deleted list can answer "this list has been deleted" instead of the
-     * useless "invalid link" — see PRODUCT.md, "no dead ends".
+     * useless "invalid link". See PRODUCT.md, "no dead ends".
      */
     listId: uuid('list_id').references(() => lists.id, { onDelete: 'set null' }),
     tokenHash: text('token_hash').notNull(),
@@ -93,7 +93,7 @@ export const items = pgTable(
 /**
  * Per-list change log. Clients reconnect with `?since=<revision>` and replay
  * what they missed instead of refetching the whole list. Rows older than
- * EVENT_RETENTION_DAYS are reaped; asking for something older gets a full
+ * EVENT_RETENTION_DAYS are reaped, and asking for something older gets a full
  * snapshot back instead.
  */
 export const listEvents = pgTable(

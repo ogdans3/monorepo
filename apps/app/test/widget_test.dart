@@ -32,10 +32,8 @@ void main() {
     );
   }
 
-  LibraryController libraryWith(List<SavedList> lists) => LibraryController(
-    store: MemoryLibraryStore(lists),
-    api: server.client(),
-  );
+  LibraryController libraryWith(List<SavedList> lists) =>
+      LibraryController(store: MemoryLibraryStore(lists), api: server.client());
 
   SavedList savedList({int done = 0, int total = 0}) => SavedList(
     id: server.listId,
@@ -47,7 +45,9 @@ void main() {
   );
 
   group('home screen', () {
-    testWidgets('the empty state teaches the product, not the void', (tester) async {
+    testWidgets('the empty state teaches the product, not the void', (
+      tester,
+    ) async {
       final library = libraryWith(const []);
       await library.load();
       await tester.pumpWidget(wrap(HomeScreen(library: library)));
@@ -85,14 +85,19 @@ void main() {
   });
 
   group('list screen', () {
-    Future<void> openList(WidgetTester tester, LibraryController library) async {
+    Future<void> openList(
+      WidgetTester tester,
+      LibraryController library,
+    ) async {
       await library.load();
       await tester.pumpWidget(
-        wrap(ListScreen(
-          library: library,
-          listId: server.listId,
-          realtimeFactory: noRealtime,
-        )),
+        wrap(
+          ListScreen(
+            library: library,
+            listId: server.listId,
+            realtimeFactory: noRealtime,
+          ),
+        ),
       );
       // Snapshot arrives, then the frame that shows it.
       await tester.pump();
@@ -100,7 +105,9 @@ void main() {
     }
 
     testWidgets('shows the list and its items', (tester) async {
-      server..addItem('Firewood')..addItem('Coffee', checked: true);
+      server
+        ..addItem('Firewood')
+        ..addItem('Coffee', checked: true);
       final library = libraryWith([savedList(total: 2, done: 1)]);
       await openList(tester, library);
 
@@ -134,18 +141,20 @@ void main() {
       expect(server.items.single['checked'], isTrue);
     });
 
-    testWidgets('checked text is struck through, not just dimmed', (tester) async {
+    testWidgets('checked text is struck through, not just dimmed', (
+      tester,
+    ) async {
       server.addItem('Coffee', checked: true);
       final library = libraryWith([savedList(total: 1, done: 1)]);
       await openList(tester, library);
 
-      final style = tester
-          .widget<Text>(find.text('Coffee'))
-          .style;
-      // Colour alone is never the signal — this is the colour-blind-safe
+      final style = tester.widget<Text>(find.text('Coffee')).style;
+      // Colour alone is never the signal. This is the colour-blind-safe
       // requirement from PRODUCT.md, asserted rather than hoped for.
       expect(
-        DefaultTextStyle.of(tester.element(find.text('Coffee'))).style.decoration ??
+        DefaultTextStyle.of(
+              tester.element(find.text('Coffee')),
+            ).style.decoration ??
             style?.decoration,
         TextDecoration.lineThrough,
       );
@@ -195,7 +204,7 @@ void main() {
       await openList(tester, library);
 
       expect(find.textContaining('Offline'), findsOneWidget);
-      // The composer is still there — you can keep working.
+      // The composer is still there, so you can keep working.
       expect(find.byType(TextField), findsWidgets);
     });
 
@@ -206,24 +215,26 @@ void main() {
       final library = libraryWith([savedList(total: 1)]);
       await openList(tester, library);
 
-      // No socket in a widget test, so presence stays at one — and one person
+      // No socket in a widget test, so presence stays at one, and one person
       // on a list is not news.
       expect(find.textContaining('here'), findsNothing);
     });
   });
 
   group('theme', () {
-    testWidgets('renders in dark mode without losing the accent', (tester) async {
+    testWidgets('renders in dark mode without losing the accent', (
+      tester,
+    ) async {
       server.addItem('Firewood');
       final library = libraryWith([savedList(total: 1)]);
       await library.load();
       await tester.pumpWidget(
         wrap(
           ListScreen(
-          library: library,
-          listId: server.listId,
-          realtimeFactory: noRealtime,
-        ),
+            library: library,
+            listId: server.listId,
+            realtimeFactory: noRealtime,
+          ),
           brightness: Brightness.dark,
         ),
       );

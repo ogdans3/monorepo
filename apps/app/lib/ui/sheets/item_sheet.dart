@@ -10,7 +10,7 @@ import 'sheet_scaffold.dart';
 /// What the right-hand edge of a row opens: the item itself.
 ///
 /// Editing happens here rather than inline because a checklist row has to stay
-/// a one-tap target — turning every row into a text field would cost the
+/// a one-tap target. Turning every row into a text field would cost the
 /// gesture the whole product is built around.
 class ItemSheetResult {
   const ItemSheetResult({this.text, this.note, this.deleted = false});
@@ -129,7 +129,8 @@ class _ItemSheetState extends State<_ItemSheet> {
             _Field(
               label: 'Note',
               controller: _note,
-              hint: 'Anything worth remembering — size, aisle, who’s bringing it',
+              hint:
+                  'Anything worth remembering. Size, aisle, who’s bringing it',
               maxLength: 4000,
               minLines: 3,
             ),

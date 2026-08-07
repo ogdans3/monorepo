@@ -8,7 +8,7 @@ export default {
     adapter: adapter({ out: 'build' }),
     csp: {
       // The landing page loads nothing from anywhere else. Self-hosted font,
-      // no analytics, no third-party script — a page that hands over a share
+      // no analytics, no third-party script. A page that hands over a share
       // link has no business making outbound requests.
       mode: 'auto',
       directives: {

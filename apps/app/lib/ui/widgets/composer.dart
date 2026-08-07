@@ -89,8 +89,12 @@ class _ComposerState extends State<Composer> {
                   minLines: 1,
                   maxLength: 500,
                   buildCounter:
-                      (_, {required currentLength, required isFocused, maxLength}) =>
-                          null,
+                      (
+                        _, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => null,
                   onSubmitted: (_) => _submit(),
                   style: text.bodyLarge,
                   decoration: InputDecoration(
@@ -137,7 +141,7 @@ class _AddButton extends StatelessWidget {
           height: Space.minTarget,
           decoration: BoxDecoration(
             // Disabled is a full-strength shape at low contrast, not a washed
-            // out accent — heavy colour on an inactive control is a lie.
+            // out accent. Heavy colour on an inactive control is a lie.
             color: enabled ? colors.primary : colors.surface,
             borderRadius: Radii.mdAll,
           ),

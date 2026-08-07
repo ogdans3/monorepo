@@ -7,7 +7,8 @@ import '../../design/tokens.dart';
 ///
 /// The mark is *drawn*, stroke by stroke, rather than faded in. It is the one
 /// piece of motion in this product allowed to be pleasing rather than merely
-/// functional — it is the thing the user came for. 180ms, ease-out, no bounce.
+/// functional, because it is the thing the user came for. 180ms, ease-out, no
+/// bounce.
 class CheckMark extends StatelessWidget {
   const CheckMark({required this.checked, this.size = 24, super.key});
 
@@ -35,7 +36,7 @@ class CheckMark extends StatelessWidget {
             ),
             borderRadius: Radii.smAll,
             border: Border.all(
-              // inkFaint is 3.7:1 — a control boundary has to clear 3:1 to be
+              // inkFaint is 3.7:1. A control boundary has to clear 3:1 to be
               // a boundary at all, and the usual pale grey does not.
               color: Color.lerp(colors.inkFaint, colors.primary, progress)!,
               width: 1.5,

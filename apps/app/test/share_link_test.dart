@@ -6,8 +6,8 @@ void main() {
 
   group('parseShareToken', () {
     test('accepts every shape a person might paste', () {
-      // Whatever arrives — the bare token, the link from a chat, the deep link
-      // the OS hands us — has to land on the same list.
+      // Whatever arrives, whether the bare token, the link from a chat or the
+      // deep link the OS hands us, has to land on the same list.
       expect(parseShareToken(token), token);
       expect(parseShareToken('https://checkpost.app/l/$token'), token);
       expect(parseShareToken('http://localhost:5173/l/$token'), token);
@@ -21,7 +21,7 @@ void main() {
       expect(parseShareToken('https://checkpost.app'), isNull);
       expect(parseShareToken('https://checkpost.app/l/tooshort'), isNull);
       expect(parseShareToken('just some text'), isNull);
-      // 42 characters — one short. Silently accepting a truncated paste would
+      // 42 characters, one short. Silently accepting a truncated paste would
       // send someone to a confusing 401 instead of "check the whole link".
       expect(parseShareToken(token.substring(1)), isNull);
     });

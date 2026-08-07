@@ -15,8 +15,8 @@ export const API_VERSION = 'v1';
 // ---------------------------------------------------------------------------
 
 /**
- * Share tokens are 32 random bytes, base64url-encoded — 43 characters, ~192
- * bits of entropy. They are the *only* credential in the system, so they are
+ * Share tokens are 32 random bytes, base64url-encoded, giving 43 characters and
+ * ~192 bits of entropy. They are the *only* credential in the system, so they are
  * long on purpose: a link must be safe to leave in a group chat forever, and
  * must be infeasible to enumerate. The server stores only their SHA-256, so a
  * database leak does not hand out working links.
@@ -27,7 +27,7 @@ export const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 export const shareTokenSchema = z.string().regex(SHARE_TOKEN_PATTERN, 'invalid share token');
 
-/** `https://checkpost.app/l/<token>` — the canonical share URL. */
+/** `https://checkpost.app/l/<token>` is the canonical share URL. */
 export const SHARE_PATH_PREFIX = '/l/';
 
 export function shareUrl(origin: string, token: string): string {
@@ -132,7 +132,7 @@ export const changesResponseSchema = z.discriminatedUnion('kind', [
     revision: z.number().int().nonnegative(),
     events: z.array(changeEventSchema),
   }),
-  /** The requested `since` is older than retention — take a fresh snapshot. */
+  /** The requested `since` is older than retention, so take a fresh snapshot. */
   z.object({
     kind: z.literal('resync'),
     snapshot: snapshotSchema,
@@ -244,7 +244,7 @@ export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 // Headers
 // ---------------------------------------------------------------------------
 
-/** `Authorization: Bearer <share token>` — the only auth there is. */
+/** `Authorization: Bearer <share token>` is the only auth there is. */
 export const AUTH_HEADER = 'authorization';
 /** Ephemeral per-device id used to suppress a client's echo of its own writes. */
 export const CLIENT_ID_HEADER = 'x-checkpost-client';

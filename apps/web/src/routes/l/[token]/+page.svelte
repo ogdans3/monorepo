@@ -22,7 +22,7 @@
 </script>
 
 <svelte:head>
-  <title>A list was shared with you — Checkpost</title>
+  <title>A list was shared with you. Checkpost</title>
   <!-- A share link in a search index is a leaked list. -->
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <meta name="referrer" content="no-referrer" />
@@ -44,7 +44,7 @@
 
     <h1>Someone shared a list with you.</h1>
     <p class="lede">
-      Checkpost lists live in the app. Open this link there and you'll be on the list — no account,
+      Checkpost lists live in the app. Open this link there and you'll be on the list. No account,
       nothing to fill in.
     </p>
 
@@ -58,7 +58,7 @@
       </div>
     {:else}
       <p class="or">
-        The app isn't in the stores yet. Keep this link — it will still work when it lands.
+        The app isn't in the stores yet. Keep this link. It will still work when it lands.
       </p>
     {/if}
 
@@ -70,7 +70,7 @@
       </button>
       <p class="status" role="status">
         {#if copied}Link copied.{/if}
-        {#if copyFailed}Couldn't copy automatically — select the link above.{/if}
+        {#if copyFailed}Couldn't copy automatically. Select the link above.{/if}
       </p>
     </div>
   </div>

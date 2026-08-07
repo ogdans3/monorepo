@@ -15,12 +15,14 @@ class CheckpostTheme extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(CheckpostTheme oldWidget) => colors != oldWidget.colors;
+  bool updateShouldNotify(CheckpostTheme oldWidget) =>
+      colors != oldWidget.colors;
 }
 
 const _fontFamily = 'Schibsted Grotesk';
 
-/// Fixed rem-equivalent scale, ratio ≈ 1.2. Not fluid — phones do not resize.
+/// Fixed rem-equivalent scale, ratio ≈ 1.2. Not fluid, because phones do not
+/// resize.
 ///
 /// The family is named on every style rather than left to `ThemeData.fontFamily`
 /// alone: styles copied into `appBarTheme`, `snackBarTheme` and the button
@@ -47,7 +49,11 @@ TextTheme _textTheme(CheckpostColors c) => TextTheme(
   ),
   // body
   bodyLarge: TextStyle(
-    fontFamily: _fontFamily,fontSize: 16, height: 23 / 16, color: c.ink),
+    fontFamily: _fontFamily,
+    fontSize: 16,
+    height: 23 / 16,
+    color: c.ink,
+  ),
   // bodyMedium
   titleMedium: TextStyle(
     fontFamily: _fontFamily,
@@ -66,7 +72,11 @@ TextTheme _textTheme(CheckpostColors c) => TextTheme(
   ),
   // caption
   bodySmall: TextStyle(
-    fontFamily: _fontFamily,fontSize: 13, height: 17 / 13, color: c.inkMuted),
+    fontFamily: _fontFamily,
+    fontSize: 13,
+    height: 17 / 13,
+    color: c.inkMuted,
+  ),
 );
 
 ThemeData buildTheme(CheckpostColors c, Brightness brightness) {
@@ -87,7 +97,7 @@ ThemeData buildTheme(CheckpostColors c, Brightness brightness) {
       // There is deliberately no second red: with a rose accent, a separate
       // destructive colour would muddy the palette and dilute the accent's
       // meaning. Destructive actions are gated behind a sheet that spells out
-      // the consequence — words carry the warning, not hue.
+      // the consequence. Words carry the warning, not hue.
       error: c.primary,
       onError: c.onPrimary,
       surface: c.bg,

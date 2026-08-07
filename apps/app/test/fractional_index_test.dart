@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// The Dart twin of `apps/api/test/fractional-index.test.ts`. Both
 /// implementations must produce byte-identical keys, so both suites assert the
-/// same properties — if they ever diverge, the client and the server would
+/// same properties. If they ever diverge, the client and the server would
 /// silently disagree about the order of a list.
 void main() {
   test('starts at a known key', () {

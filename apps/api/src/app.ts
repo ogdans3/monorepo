@@ -66,8 +66,8 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
     // Keyed by caller, not by token: rate limiting exists to stop abuse from
     // one source, and several people legitimately share one token.
     keyGenerator: (request) => request.ip,
-    // The plugin throws whatever this returns, so it has to be a real error —
-    // otherwise the limit surfaces as an unhandled 500 instead of a 429.
+    // The plugin throws whatever this returns, so it has to be a real error.
+    // Otherwise the limit surfaces as an unhandled 500 instead of a 429.
     errorResponseBuilder: () =>
       new ApiError('too_many_requests', 'Slow down for a moment, then try again.'),
   });

@@ -2,12 +2,12 @@ import postgres from 'postgres';
 import { runMigrations } from '../src/db/migrate.js';
 
 /**
- * Tests run against a real Postgres — the ordering guarantees, the partial
+ * Tests run against a real Postgres. The ordering guarantees, the partial
  * unique index and the row-lock serialisation are all database behaviour, and
  * mocking them would only test the mock.
  *
- * Point TEST_DATABASE_URL somewhere else if you keep Postgres on another port;
- * the default matches `docker compose up -d db`.
+ * Point TEST_DATABASE_URL somewhere else if you keep Postgres on another port.
+ * The default matches `docker compose up -d db`.
  */
 const ADMIN_URL =
   process.env.TEST_ADMIN_DATABASE_URL ?? 'postgres://checkpost:checkpost@localhost:5433/postgres';

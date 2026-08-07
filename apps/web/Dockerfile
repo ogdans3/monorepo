@@ -1,4 +1,4 @@
-# Build context is the repo root — the web app shares packages/contract.
+# Build context is the repo root, because the web app shares packages/contract.
 FROM node:22-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"

@@ -29,14 +29,15 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     // The bundled brand font, so the goldens show the real typography rather
     // than the test framework's placeholder blocks.
-    await (FontLoader('Schibsted Grotesk')
-          ..addFont(rootBundle.load('assets/fonts/SchibstedGrotesk-Variable.ttf')))
+    await (FontLoader('Schibsted Grotesk')..addFont(
+          rootBundle.load('assets/fonts/SchibstedGrotesk-Variable.ttf'),
+        ))
         .load();
-    // Without this, every icon in the goldens is an empty box — which makes
+    // Without this, every icon in the goldens is an empty box, which makes
     // the snapshots useless for reviewing the very affordances they exist for.
-    await (FontLoader('MaterialIcons')
-          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
-        .load();
+    await (FontLoader(
+      'MaterialIcons',
+    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
 
   setUp(() => server = FakeServer(title: 'Cabin, Friday'));
@@ -102,13 +103,13 @@ void main() {
     lastOpenedAt: DateTime(2026, 8, 6).subtract(Duration(days: daysAgo)),
   );
 
-  testWidgets('home — empty', (tester) async {
+  testWidgets('home, empty', (tester) async {
     final library = libraryWith(const []);
     await library.load();
     await shoot(tester, 'home-empty', () => HomeScreen(library: library));
   });
 
-  testWidgets('home — with lists', (tester) async {
+  testWidgets('home, with lists', (tester) async {
     final library = libraryWith([
       saved(id: server.listId, title: 'Cabin, Friday', done: 2, total: 5),
       saved(
@@ -120,7 +121,7 @@ void main() {
       ),
       saved(
         id: '44444444-4444-4444-8444-444444444444',
-        title: 'Before the flight — passports, chargers, the dog',
+        title: 'Before the flight: passports, chargers, the dog',
         total: 12,
         daysAgo: 4,
       ),
@@ -129,7 +130,7 @@ void main() {
     await shoot(tester, 'home-lists', () => HomeScreen(library: library));
   });
 
-  testWidgets('list — open and done items', (tester) async {
+  testWidgets('list, open and done items', (tester) async {
     server
       ..addItem('Firewood')
       ..addItem('Coffee, and the good one', note: 'The dark bag, not the tin')
@@ -144,14 +145,14 @@ void main() {
       tester,
       'list',
       () => ListScreen(
-          library: library,
-          listId: server.listId,
-          realtimeFactory: noRealtime,
-        ),
+        library: library,
+        listId: server.listId,
+        realtimeFactory: noRealtime,
+      ),
     );
   });
 
-  testWidgets('list — empty', (tester) async {
+  testWidgets('list, empty', (tester) async {
     final library = libraryWith([
       saved(id: server.listId, title: 'Cabin, Friday'),
     ]);
@@ -160,10 +161,10 @@ void main() {
       tester,
       'list-empty',
       () => ListScreen(
-          library: library,
-          listId: server.listId,
-          realtimeFactory: noRealtime,
-        ),
+        library: library,
+        listId: server.listId,
+        realtimeFactory: noRealtime,
+      ),
     );
   });
 
@@ -173,7 +174,8 @@ void main() {
       'share',
       () => Scaffold(
         body: ShareSheet(
-          url: 'https://checkpost.app/l/ObWVf6kPcePDbI5XEY0jmbSPqKmzEqKCPP8cxIRGR7g',
+          url:
+              'https://checkpost.app/l/ObWVf6kPcePDbI5XEY0jmbSPqKmzEqKCPP8cxIRGR7g',
           listTitle: 'Cabin, Friday',
           onRotate: () async => 'https://checkpost.app/l/x',
         ),

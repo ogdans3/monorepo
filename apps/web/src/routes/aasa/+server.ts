@@ -6,7 +6,7 @@ import type { RequestHandler } from './$types';
  *
  * iOS fetches this through Apple's CDN and insists on `application/json` with
  * no extension in the path. Get either wrong and Universal Links silently never
- * work — no error, links just keep opening the browser.
+ * work. There is no error. Links just keep opening the browser.
  */
 export const GET: RequestHandler = () =>
   new Response(JSON.stringify(association), {

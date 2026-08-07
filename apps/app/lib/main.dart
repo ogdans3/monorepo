@@ -18,7 +18,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // One client id per install, minted once. It says nothing about the device
-  // or its owner; it exists so the change feed can tell us which events we
+  // or its owner. It exists so the change feed can tell us which events we
   // caused ourselves.
   final clientId = await ClientIdStore().read(newClientId);
   final api = CheckpostApi(clientId: clientId);
@@ -57,7 +57,7 @@ class _CheckpostAppState extends State<CheckpostApp> {
     unawaited(_listenForLinks());
   }
 
-  /// A share link opened anywhere on the device lands here — both the verified
+  /// A share link opened anywhere on the device lands here. Both the verified
   /// https app link and the `checkpost://` fallback.
   Future<void> _listenForLinks() async {
     final links = widget.appLinks ?? AppLinks();
@@ -65,8 +65,8 @@ class _CheckpostAppState extends State<CheckpostApp> {
       final initial = await links.getInitialLink();
       if (initial != null) await _handleLink(initial);
     } catch (_) {
-      // A platform that cannot report the launch link is not a fatal problem —
-      // the "Open a link" action still works.
+      // A platform that cannot report the launch link is not a fatal problem.
+      // The "Open a link" action still works.
     }
     _links = links.uriLinkStream.listen(
       (uri) => unawaited(_handleLink(uri)),
@@ -78,7 +78,7 @@ class _CheckpostAppState extends State<CheckpostApp> {
     final token = parseShareToken(uri.toString());
     if (token == null) return;
 
-    // Already on this list? Just open it — re-fetching would be a round trip
+    // Already on this list? Just open it. Re-fetching would be a round trip
     // for nothing, and the list screen reconciles anyway.
     final known = widget.library.byToken(token);
     if (known != null) {
@@ -133,7 +133,7 @@ class _CheckpostAppState extends State<CheckpostApp> {
         scaffoldMessengerKey: _messenger,
         theme: buildTheme(CheckpostColors.light, Brightness.light),
         darkTheme: buildTheme(CheckpostColors.dark, Brightness.dark),
-        // Light is the design's home — daylight, a phone flat on a counter —
+        // Light is the design's home, daylight and a phone flat on a counter,
         // but the OS setting always wins.
         themeMode: ThemeMode.system,
         builder: (context, child) {

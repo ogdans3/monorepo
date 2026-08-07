@@ -16,11 +16,11 @@ interface Room {
  * In-process fan-out of list changes to connected sockets.
  *
  * Deliberately not a cross-process bus. Checkpost writes go through Postgres
- * first and the socket is only a *hint* — every client also reconciles with
+ * first and the socket is only a *hint*. Every client also reconciles with
  * `GET /changes?since=` on reconnect and on focus. That means a second API
  * instance costs correctness nothing: clients on the other instance find out a
  * beat later instead of instantly. When "a beat later" stops being good enough,
- * swap this class for one backed by Postgres `LISTEN/NOTIFY`; the interface is
+ * swap this class for one backed by Postgres `LISTEN/NOTIFY`. The interface is
  * the seam.
  */
 export class RealtimeHub {
@@ -34,7 +34,7 @@ export class RealtimeHub {
     }
     room.subscribers.add(subscriber);
     room.linkIds.set(subscriber, linkId);
-    // The joiner learns the count from its own `hello`; telling it twice would
+    // The joiner learns the count from its own `hello`. Telling it twice would
     // leave a stale presence frame queued ahead of the greeting.
     this.#announcePresence(listId, subscriber);
     return () => this.unsubscribe(listId, subscriber);
@@ -66,7 +66,7 @@ export class RealtimeHub {
   /**
    * Disconnects everyone still holding a link that no longer works. The device
    * that performed the rotation keeps its socket, because it already knows the
-   * new token — `keepLinkId` is how we tell them apart.
+   * new token. `revokedLinkId` is how we tell them apart.
    */
   evictLink(listId: string, revokedLinkId: string, reason: 'rotated' | 'deleted'): void {
     const room = this.#rooms.get(listId);

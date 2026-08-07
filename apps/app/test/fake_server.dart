@@ -9,8 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 /// An in-memory stand-in for the Checkpost API, wired in through `http`'s
-/// MockClient so the tests exercise the real [CheckpostApi] — its headers, its
-/// JSON, its error mapping — rather than a hand-rolled double.
+/// MockClient so the tests exercise the real [CheckpostApi], with its headers,
+/// its JSON and its error mapping, rather than a hand-rolled double.
 ///
 /// It implements the same contract as `docs/API.md`, including the bits the
 /// client's behaviour actually depends on: 410 for a replaced link, echoing
@@ -34,7 +34,7 @@ class FakeServer {
   /// Set to make every call look like a dead connection.
   bool offline = false;
 
-  /// Tokens that used to work. They answer 410, not 401 — the difference is
+  /// Tokens that used to work. They answer 410, not 401. The difference is
   /// what lets the app say "this link was replaced".
   final Set<String> revoked = {};
 
@@ -62,7 +62,9 @@ class FakeServer {
     String note = '',
   }) {
     final item = {
-      'id': id ?? '22222222-2222-4222-8222-${items.length.toString().padLeft(12, '0')}',
+      'id':
+          id ??
+          '22222222-2222-4222-8222-${items.length.toString().padLeft(12, '0')}',
       'listId': listId,
       'text': text,
       'note': note,
@@ -119,7 +121,11 @@ class FakeServer {
     }
 
     if (presented == null) {
-      return _error(401, 'unauthorized', 'This request needs a valid share link.');
+      return _error(
+        401,
+        'unauthorized',
+        'This request needs a valid share link.',
+      );
     }
     if (revoked.contains(presented)) {
       return _error(
@@ -137,7 +143,8 @@ class FakeServer {
     }
 
     if (path.endsWith('/list/changes')) {
-      final since = int.tryParse(request.url.queryParameters['since'] ?? '0') ?? 0;
+      final since =
+          int.tryParse(request.url.queryParameters['since'] ?? '0') ?? 0;
       return _json(200, {
         'kind': 'events',
         'revision': revision,
@@ -226,9 +233,10 @@ class FakeServer {
     headers: {'content-type': 'application/json; charset=utf-8'},
   );
 
-  http.Response _error(int status, String code, String message) => _json(status, {
-    'error': {'code': code, 'message': message},
-  });
+  http.Response _error(int status, String code, String message) =>
+      _json(status, {
+        'error': {'code': code, 'message': message},
+      });
 }
 
 /// Builds a `ChecklistItem` without needing a server.
@@ -254,5 +262,5 @@ ChecklistItem itemOf({
 ///
 /// Widget and golden tests must not dial a real server: it would leave
 /// reconnect timers pending after the tree is torn down, and make every
-/// assertion depend on the network. Changes still arrive — via reconcile.
+/// assertion depend on the network. Changes still arrive, via reconcile.
 RealtimeClient? noRealtime(String token) => null;

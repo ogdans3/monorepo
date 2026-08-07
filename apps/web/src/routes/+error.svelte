@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-  <title>Not found — Checkpost</title>
+  <title>Not found. Checkpost</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 

@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-  <title>Checkpost — a shared checklist that lives at a link</title>
+  <title>Checkpost. A shared checklist that lives at a link</title>
   <meta
     name="description"
     content="Make a list, send the link. Everyone who has it can tick things off, at the same time. No accounts. Replace the link whenever you want."
@@ -40,7 +40,7 @@
       </h1>
       <p class="lede">
         Write the list. Send the link. Everyone who has it sees the same list and can tick things
-        off — at the same time, from anywhere. Nobody signs up for anything.
+        off, at the same time, from anywhere. Nobody signs up for anything.
       </p>
 
       <div class="actions">
@@ -57,7 +57,7 @@
 
     <div class="demo">
       <DemoList />
-      <p class="hint">Go on — tick something.</p>
+      <p class="hint">Go on. Tick something.</p>
     </div>
   </section>
 
@@ -73,7 +73,7 @@
       <h2>Everyone edits at once</h2>
       <p>
         Ticks, new items and edits land on everyone's phone as they happen. The app shows you how
-        many people are on the list right now — no names, no avatars, no accounts.
+        many people are on the list right now. No names, no avatars, no accounts.
       </p>
     </div>
     <div class="beat">
@@ -89,7 +89,7 @@
     <div class="rotate-inner">
       <h2>Sent it to the wrong group chat?</h2>
       <p>
-        Replace the link. The old one stops working the instant you do — anyone still holding it is
+        Replace the link. The old one stops working the instant you do. Anyone still holding it is
         told the link was replaced, and everyone you actually meant to share with gets the new one.
       </p>
       <p class="fine">
@@ -286,7 +286,7 @@
   }
 
   .rotate .fine {
-    /* A transparency of the text colour, not a grey — grey on a saturated
+    /* A transparency of the text colour, not a grey. Grey on a saturated
        field always reads as dirty. */
     color: oklch(1 0 0 / 0.76);
     font-size: 1rem;

@@ -7,7 +7,7 @@ export type Database = ReturnType<typeof createDb>['db'];
 export function createDb(url: string, options: { max?: number } = {}) {
   const sql = postgres(url, {
     max: options.max ?? 10,
-    // Timestamps come back as Date; everything crossing the wire is serialised
+    // Timestamps come back as Date. Everything crossing the wire is serialised
     // to ISO strings in one place (src/serialize.ts) so clients see one format.
     transform: undefined,
     onnotice: () => {},

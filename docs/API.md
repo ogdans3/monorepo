@@ -5,7 +5,7 @@ Base path `/v1`. All bodies and responses are JSON.
 The canonical machine-readable definition is
 [`packages/contract/src/index.ts`](../packages/contract/src/index.ts). The Dart
 client cannot import it, so this document is the twin that client is written
-against; change them together.
+against. Change them together.
 
 ## Authentication
 
@@ -41,7 +41,7 @@ link that has been deliberately retired, and say so.
   links.
 - Share URL: `https://<web origin>/l/<token>`
 - Deep link: `checkpost://l/<token>`
-- Tokens are never accepted in a query string — query strings survive in access
+- Tokens are never accepted in a query string. Query strings survive in access
   logs and proxy caches, and this token is the entire credential. Request URLs
   are additionally scrubbed of anything token-shaped before logging.
 
@@ -79,7 +79,7 @@ Full snapshot: the list plus every item, already in display order.
 ### `DELETE /v1/list`
 
 `204`. Deletes the list and its items. Every connected socket receives
-`{"type":"revoked","reason":"deleted"}`; the link then answers `410` until the
+`{"type":"revoked","reason":"deleted"}`. The link then answers `410` until the
 reaper eventually forgets it.
 
 ### `POST /v1/list/rotate`
@@ -91,10 +91,10 @@ Replaces the share link.
 { "token": "…new 43 chars…", "url": "https://checkpost.app/l/…" }
 ```
 
-The old link is revoked immediately — no grace period, because a grace period
-would defeat the feature. Every socket authenticated with the old link is sent
-`{"type":"revoked","reason":"rotated"}` and closed, including the caller's; the
-caller reconnects with the token it just received.
+The old link is revoked immediately. There is no grace period, because a grace
+period would defeat the feature. Every socket authenticated with the old link is
+sent `{"type":"revoked","reason":"rotated"}` and closed, including the caller's.
+The caller reconnects with the token it just received.
 
 ### `GET /v1/list/changes?since=<revision>`
 
@@ -111,7 +111,7 @@ missed and returns a snapshot instead:
 { "kind": "resync", "snapshot": { "list": { … }, "items": [ … ] } }
 ```
 
-Capped at 500 events per call; ask again with the highest revision you got.
+Capped at 500 events per call. Ask again with the highest revision you got.
 
 ### Items
 
@@ -119,17 +119,17 @@ Capped at 500 events per call; ask again with the highest revision you got.
 |---|---|---|---|
 | `POST` | `/v1/list/items` | `{ id?, text, note?, afterId?, beforeId? }` | `201` `Item` |
 | `PATCH` | `/v1/list/items/:itemId` | `{ text?, note?, checked?, afterId?, beforeId? }` | `200` `Item` |
-| `DELETE` | `/v1/list/items/:itemId` | — | `204` |
-| `POST` | `/v1/list/items/clear-checked` | — | `200` `{ removed: string[] }` |
+| `DELETE` | `/v1/list/items/:itemId` | none | `204` |
+| `POST` | `/v1/list/items/clear-checked` | none | `200` `{ removed: string[] }` |
 
 **Placement.** Omit `afterId`/`beforeId` to append. `afterId: "<id>"` inserts
-immediately after that item; `beforeId: "<id>"` immediately before it;
+immediately after that item, `beforeId: "<id>"` immediately before it, and
 `beforeId: null` sends it to the very top. The two are mutually exclusive. If
 the named neighbour was deleted mid-drag, the item is appended rather than
 rejected.
 
 **Idempotency.** Supply `id` (a client-generated UUID) on create. A retried
-request returns the existing item instead of creating a second one — which is
+request returns the existing item instead of creating a second one. That is
 what makes optimistic UI safe on a flaky connection.
 
 **Deleting twice is fine.** Two people tapping the same row both get `204`.
@@ -141,11 +141,11 @@ Liveness (no database) and readiness (`select 1`).
 
 ## Realtime
 
-`GET /v1/list/socket` — a WebSocket, and a **read path only**. Every mutation
+`GET /v1/list/socket` is a WebSocket, and a **read path only**. Every mutation
 goes over HTTP, where it is idempotent, retryable and rate limited.
 
-Authenticate with the `Authorization` header, or — for clients that cannot set
-headers on a handshake — with the subprotocol pair
+Authenticate with the `Authorization` header, or, for clients that cannot set
+headers on a handshake, with the subprotocol pair
 `["checkpost.bearer", "<token>"]`.
 
 Server → client frames:
@@ -214,9 +214,9 @@ Messages are written for a person and are safe to show verbatim.
 Nothing has an owner, so nothing is ever deleted by a person tidying up their
 account. A background reaper is the only bound on the database:
 
-- change-log rows older than `EVENT_RETENTION_DAYS` (default 14) — clients past
-  that get a snapshot instead;
-- lists untouched for `LIST_TTL_DAYS` (default 365) — any read or write resets
-  the clock;
+- change-log rows older than `EVENT_RETENTION_DAYS` (default 14). Clients past
+  that get a snapshot instead.
+- lists untouched for `LIST_TTL_DAYS` (default 365). Any read or write resets
+  the clock.
 - links whose list has been gone for 30 days, after which they answer `401`
   rather than `410`.

@@ -1,4 +1,4 @@
-# Build context is the repo root — the API depends on packages/contract.
+# Build context is the repo root, because the API depends on packages/contract.
 FROM node:22-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
@@ -24,7 +24,7 @@ COPY apps/api/package.json apps/api/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
 COPY --from=build /app/packages/contract/dist packages/contract/dist
 COPY --from=build /app/apps/api/dist apps/api/dist
-# Migrations are applied at boot; the image carries the SQL that matches it.
+# Migrations are applied at boot. The image carries the SQL that matches it.
 COPY apps/api/drizzle apps/api/drizzle
 
 USER node

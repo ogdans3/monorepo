@@ -9,7 +9,7 @@ abstract final class AppConfig {
     defaultValue: 'https://api.checkpost.app',
   );
 
-  /// Where share links point. Only used when the server has not told us — the
+  /// Where share links point. Only used when the server has not told us. The
   /// API returns the canonical URL with every token it mints.
   static const webOrigin = String.fromEnvironment(
     'CHECKPOST_WEB_ORIGIN',

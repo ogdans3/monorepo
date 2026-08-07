@@ -37,7 +37,7 @@ class RealtimeRevoked extends RealtimeFrame {
   final String reason;
 }
 
-/// The socket dropped. Not an error the user needs to see — the client
+/// The socket dropped. Not an error the user needs to see. The client
 /// reconnects and reconciles.
 class RealtimeDisconnected extends RealtimeFrame {
   const RealtimeDisconnected();
@@ -157,7 +157,9 @@ class RealtimeClient {
         // Do not reconnect: this token is dead, and hammering the server with
         // a credential it just retired helps nobody.
         _revoked = true;
-        _controller.add(RealtimeRevoked(json['reason'] as String? ?? 'rotated'));
+        _controller.add(
+          RealtimeRevoked(json['reason'] as String? ?? 'rotated'),
+        );
         dispose();
       default:
         break;

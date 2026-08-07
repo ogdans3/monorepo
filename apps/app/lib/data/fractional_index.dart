@@ -1,13 +1,14 @@
-/// Fractional indexing — the Dart twin of
+/// Fractional indexing: the Dart twin of
 /// `apps/api/src/lib/fractional-index.ts`.
 ///
 /// The client needs this so an optimistically-inserted row lands in the right
 /// place before the server has answered. Both implementations must produce
-/// byte-identical keys; the API's tests and this file's tests cover the same
+/// byte-identical keys, and the API's tests and this file's tests cover the same
 /// cases on purpose.
 library;
 
-const _digits = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const _digits =
+    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 const _zero = '0';
 const _last = 'z';
 

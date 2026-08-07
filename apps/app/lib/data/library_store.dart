@@ -7,7 +7,7 @@ import 'models.dart';
 /// Persistence for the device's list index.
 ///
 /// There are no accounts, so this is the only record that a list exists. Lose
-/// it and the lists are still there — but only for whoever still holds a link.
+/// it and the lists are still there, but only for whoever still holds a link.
 /// That trade is the product, not a bug, and it is why the share sheet puts the
 /// link in front of you rather than burying it.
 abstract interface class LibraryStore {
@@ -35,7 +35,7 @@ class PrefsLibraryStore implements LibraryStore {
       ];
     } catch (_) {
       // A corrupt index must not brick the app. Losing the index is survivable
-      // (the lists themselves are on the server); a crash loop is not.
+      // (the lists themselves are on the server), but a crash loop is not.
       return const [];
     }
   }

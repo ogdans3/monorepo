@@ -27,8 +27,8 @@ const envSchema = z.object({
     .transform((v) => v !== '0' && v.toLowerCase() !== 'false'),
 
   /**
-   * Apply pending migrations at boot. Right for a single-instance deployment;
-   * turn it off and run `pnpm db:migrate` as a release step once there is more
+   * Apply pending migrations at boot. Right for a single-instance deployment.
+   * Turn it off and run `pnpm db:migrate` as a release step once there is more
    * than one API container.
    */
   MIGRATE_ON_BOOT: z
@@ -38,7 +38,7 @@ const envSchema = z.object({
 
   /** Requests per IP per minute across the whole API. */
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
-  /** New lists per IP per hour — the one endpoint that grows the database. */
+  /** New lists per IP per hour. The one endpoint that grows the database. */
   RATE_LIMIT_CREATE_MAX: z.coerce.number().int().positive().default(30),
   /** Link replacements per IP per hour. */
   RATE_LIMIT_ROTATE_MAX: z.coerce.number().int().positive().default(10),

@@ -30,7 +30,7 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// The device could not reach the server — as opposed to the server saying no.
+/// The device could not reach the server, as opposed to the server saying no.
 class OfflineException implements Exception {
   OfflineException([this.cause]);
   final Object? cause;
@@ -128,7 +128,10 @@ class CheckpostApi {
             )
             as Map<String, dynamic>;
     return (
-      snapshot: Snapshot.fromJson({'list': json['list'], 'items': json['items']}),
+      snapshot: Snapshot.fromJson({
+        'list': json['list'],
+        'items': json['items'],
+      }),
       token: json['token'] as String,
       url: json['url'] as String,
     );

@@ -3,7 +3,7 @@ import { SHARE_TOKEN_BYTES, SHARE_TOKEN_PATTERN } from '@checkpost/contract';
 
 /**
  * A share token is the only credential Checkpost has. 32 random bytes,
- * base64url — 43 characters, ~192 bits. Long enough that a link can sit in a
+ * base64url, giving 43 characters and ~192 bits. Long enough that a link can sit in a
  * group chat forever and that enumeration is not a threat model.
  */
 export function generateShareToken(): string {
@@ -12,7 +12,7 @@ export function generateShareToken(): string {
 
 /**
  * Only the hash is persisted. A leaked database backup therefore contains no
- * usable links — which matters more here than in a password system, because the
+ * usable links. That matters more here than in a password system, because the
  * token *is* the account.
  *
  * SHA-256 rather than a slow KDF is deliberate and safe: the input is 192 bits
@@ -37,7 +37,7 @@ export function hashesEqual(a: string, b: string): boolean {
 
 /**
  * Pulls the bearer token out of an Authorization header.
- * Returns null for anything malformed — callers answer 401 either way.
+ * Returns null for anything malformed. Callers answer 401 either way.
  */
 export function bearerFrom(header: string | undefined): string | null {
   if (!header) return null;

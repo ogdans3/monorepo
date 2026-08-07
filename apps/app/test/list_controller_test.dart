@@ -20,8 +20,13 @@ void main() {
 
   group('loading', () {
     test('shows the list, in position order', () async {
-      server..addItem('Tent')..addItem('Stove');
-      final controller = ListController(api: server.client(), token: server.token);
+      server
+        ..addItem('Tent')
+        ..addItem('Stove');
+      final controller = ListController(
+        api: server.client(),
+        token: server.token,
+      );
       await controller.load();
 
       expect(controller.status, ListStatus.ready);
@@ -65,21 +70,28 @@ void main() {
       controller.dispose();
     });
 
-    test('a ticked row stays put briefly, then moves to the done shelf', () async {
-      server..addItem('Tent')..addItem('Stove');
-      final controller = controllerFor(server);
-      await controller.load();
+    test(
+      'a ticked row stays put briefly, then moves to the done shelf',
+      () async {
+        server
+          ..addItem('Tent')
+          ..addItem('Stove');
+        final controller = controllerFor(server);
+        await controller.load();
 
-      await controller.toggle(controller.items.first);
-      // Still under the thumb, so it can be un-ticked by looking at it.
-      expect(controller.openItems.map((i) => i.text), ['Tent', 'Stove']);
-      expect(controller.doneItems, isEmpty);
+        await controller.toggle(controller.items.first);
+        // Still under the thumb, so it can be un-ticked by looking at it.
+        expect(controller.openItems.map((i) => i.text), ['Tent', 'Stove']);
+        expect(controller.doneItems, isEmpty);
 
-      await Future<void>.delayed(Motion.settleGrace + const Duration(milliseconds: 60));
-      expect(controller.openItems.map((i) => i.text), ['Stove']);
-      expect(controller.doneItems.map((i) => i.text), ['Tent']);
-      controller.dispose();
-    });
+        await Future<void>.delayed(
+          Motion.settleGrace + const Duration(milliseconds: 60),
+        );
+        expect(controller.openItems.map((i) => i.text), ['Stove']);
+        expect(controller.doneItems.map((i) => i.text), ['Tent']);
+        controller.dispose();
+      },
+    );
 
     test('a new item appears immediately and keeps its id', () async {
       final controller = controllerFor(server);
@@ -90,7 +102,7 @@ void main() {
       final optimisticId = controller.items.single.id;
 
       await pending;
-      // The id the client invented is the id the server stored — which is what
+      // The id the client invented is the id the server stored. That is what
       // makes a retry safe rather than a duplicate.
       expect(controller.items.single.id, optimisticId);
       expect(server.items.single['id'], optimisticId);
@@ -124,26 +136,32 @@ void main() {
       server.offline = true;
       await controller.toggle(controller.items.single);
 
-      // The edit is still true on this device; reconcile settles it later.
+      // The edit is still true on this device, and reconcile settles it later.
       expect(controller.items.single.checked, isTrue);
       expect(controller.status, ListStatus.offline);
       controller.dispose();
     });
 
-    test('a deleted item goes back where it was if the server refuses', () async {
-      server..addItem('A')..addItem('B')..addItem('C');
-      final controller = controllerFor(server);
-      await controller.load();
+    test(
+      'a deleted item goes back where it was if the server refuses',
+      () async {
+        server
+          ..addItem('A')
+          ..addItem('B')
+          ..addItem('C');
+        final controller = controllerFor(server);
+        await controller.load();
 
-      server
-        ..failNextStatus = 500
-        ..failNextCode = 'internal'
-        ..failNextMessage = 'Something broke on our side. Try again.';
+        server
+          ..failNextStatus = 500
+          ..failNextCode = 'internal'
+          ..failNextMessage = 'Something broke on our side. Try again.';
 
-      await controller.deleteItem(controller.items[1]);
-      expect(controller.items.map((i) => i.text), ['A', 'B', 'C']);
-      controller.dispose();
-    });
+        await controller.deleteItem(controller.items[1]);
+        expect(controller.items.map((i) => i.text), ['A', 'B', 'C']);
+        controller.dispose();
+      },
+    );
   });
 
   group('changes from other people', () {
@@ -153,7 +171,9 @@ void main() {
       await controller.load();
 
       final added = server.addItem('Stove');
-      server.recordEvent('item.created', {'item': added}, actor: 'someone-else');
+      server.recordEvent('item.created', {
+        'item': added,
+      }, actor: 'someone-else');
 
       await controller.reconcile();
       expect(controller.items.map((i) => i.text), ['Tent', 'Stove']);
@@ -195,23 +215,30 @@ void main() {
       final controller = controllerFor(server);
       await controller.load();
 
-      server.recordEvent('list.updated', {'title': 'Cabin, Friday'}, actor: 'them');
+      server.recordEvent('list.updated', {
+        'title': 'Cabin, Friday',
+      }, actor: 'them');
       await controller.reconcile();
 
       expect(controller.list?.title, 'Cabin, Friday');
       controller.dispose();
     });
 
-    test('an event type this build does not know is ignored, not fatal', () async {
-      final controller = controllerFor(server);
-      await controller.load();
+    test(
+      'an event type this build does not know is ignored, not fatal',
+      () async {
+        final controller = controllerFor(server);
+        await controller.load();
 
-      server.recordEvent('item.teleported', {'nonsense': true}, actor: 'them');
-      await controller.reconcile();
+        server.recordEvent('item.teleported', {
+          'nonsense': true,
+        }, actor: 'them');
+        await controller.reconcile();
 
-      expect(controller.status, ListStatus.ready);
-      controller.dispose();
-    });
+        expect(controller.status, ListStatus.ready);
+        controller.dispose();
+      },
+    );
   });
 
   group('replacing the link', () {
@@ -235,7 +262,10 @@ void main() {
     test('the old link is Gone for whoever still holds it', () async {
       final controller = controllerFor(server);
       await controller.load();
-      final stale = ListController(api: server.client(), token: controller.token);
+      final stale = ListController(
+        api: server.client(),
+        token: controller.token,
+      );
 
       await controller.rotateLink();
       await stale.load();
@@ -248,7 +278,10 @@ void main() {
 
   group('clearing the done shelf', () {
     test('removes only checked items', () async {
-      server..addItem('A', checked: true)..addItem('B')..addItem('C', checked: true);
+      server
+        ..addItem('A', checked: true)
+        ..addItem('B')
+        ..addItem('C', checked: true);
       final controller = controllerFor(server);
       await controller.load();
 

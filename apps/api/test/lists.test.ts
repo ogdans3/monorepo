@@ -68,7 +68,7 @@ describe('access control', () => {
     const b = await newList(h.app, 'B', ['b1']);
     expect(texts(await snapshot(h.app, a.token))).toEqual(['a1']);
     expect(texts(await snapshot(h.app, b.token))).toEqual(['b1']);
-    // A token grants exactly one list; there is no id to swap in a URL.
+    // A token grants exactly one list, and there is no id to swap in a URL.
     const response = await call(h.app, 'PATCH', '/v1/list', {
       token: a.token,
       body: { title: 'hijack' },
@@ -148,7 +148,7 @@ describe('items', () => {
     expect((await call(h.app, 'DELETE', `/v1/list/items/${id}`, { token: list.token })).status).toBe(
       204,
     );
-    // Two people tapping the same row is not an error; the end state is right.
+    // Two people tapping the same row is not an error, and the end state is right.
     expect((await call(h.app, 'DELETE', `/v1/list/items/${id}`, { token: list.token })).status).toBe(
       204,
     );
@@ -304,7 +304,7 @@ describe('replacing the link', () => {
     expect(next).toMatch(SHARE_TOKEN_PATTERN);
     expect(url).toBe(`https://checkpost.test/l/${next}`);
 
-    // The old link is Gone, not Unauthorized — the app can say why.
+    // The old link is Gone, not Unauthorized, so the app can say why.
     const old = await call(h.app, 'GET', '/v1/list', { token: list.token });
     expect(old.status).toBe(410);
 

@@ -53,7 +53,7 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
     final saved = widget.library.byId(widget.listId);
     if (saved == null) {
       _missing = true;
-      // Nothing to build a controller around; the build method explains it.
+      // Nothing to build a controller around. The build method explains it.
       _controller = ListController(
         api: _apiOf(context),
         token: 'x' * 43,
@@ -71,7 +71,7 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
     );
     _messages = _controller.messages.listen(_say);
     _tokens = _controller.tokenChanges.listen((token) {
-      // Rotation minted a new link — persist it before anything else, because
+      // Rotation minted a new link. Persist it before anything else, because
       // losing it here would lock this device out of its own list.
       unawaited(widget.library.record(id: widget.listId, token: token));
     });
@@ -280,7 +280,10 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
                   _ => null,
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'rename', child: Text('Rename list')),
+                  const PopupMenuItem(
+                    value: 'rename',
+                    child: Text('Rename list'),
+                  ),
                   PopupMenuItem(
                     value: 'clear',
                     enabled: _controller.doneCount > 0,
@@ -373,7 +376,7 @@ class _Body extends StatelessWidget {
           EmptyState(
             title: 'Nothing on the list yet',
             body:
-                'Type below and press enter. Keep going — the field stays put '
+                'Type below and press enter. Keep going. The field stays put '
                 'so you can add several without stopping.',
           ),
         ],
@@ -457,7 +460,7 @@ class _DeadEnd extends StatelessWidget {
             : deleted
             ? 'Someone on the list deleted it. There is nothing left to open.'
             : 'Someone replaced the share link. Ask them for the new one and '
-                  'open it — you will be back on the list straight away.',
+                  'open it. You will be back on the list straight away.',
         actions: [
           FilledButton(
             onPressed: onLeave,

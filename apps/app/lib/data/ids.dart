@@ -6,7 +6,7 @@ final _random = Random.secure();
 ///
 /// Written by hand rather than pulled in as a dependency: the app needs
 /// exactly this one function, so that an optimistically-added row and the row
-/// the server stores are the same row — which is what makes a retry safe.
+/// the server stores are the same row. That is what makes a retry safe.
 String newUuidV4() {
   final bytes = List<int>.generate(16, (_) => _random.nextInt(256));
   bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
@@ -19,7 +19,8 @@ String newUuidV4() {
 /// An opaque per-install id for the `X-Checkpost-Client` header. Matches the
 /// API's `[A-Za-z0-9_-]{4,64}` and says nothing about the device or its owner.
 String newClientId() {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const alphabet =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   return List.generate(
     24,
     (_) => alphabet[_random.nextInt(alphabet.length)],

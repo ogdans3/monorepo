@@ -3,7 +3,7 @@ import type { Handle } from '@sveltejs/kit';
 /**
  * A share link in a log line is a leaked list, and this server is the one
  * place a token travels in a URL path. Nothing here writes the path anywhere,
- * and these headers stop it leaking sideways — out through a `Referer` to a
+ * and these headers stop it leaking sideways: out through a `Referer` to a
  * store, or into a shared cache.
  */
 export const handle: Handle = async ({ event, resolve }) => {

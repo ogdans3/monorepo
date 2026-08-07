@@ -59,8 +59,8 @@ class _ShareSheetState extends State<ShareSheet> {
       context,
       title: 'Replace this link?',
       consequence:
-          'The current link stops working immediately. Anyone still using it — '
-          'including your own other devices — is told the link was replaced and '
+          'The current link stops working immediately. Anyone still using it, '
+          'including your own other devices, is told the link was replaced and '
           'has to be sent the new one. There is no undo.',
       confirmLabel: 'Replace the link',
     );
@@ -105,7 +105,7 @@ class _ShareSheetState extends State<ShareSheet> {
           children: [
             Text(
               'Anyone with this link can read and edit the list. There is no '
-              'sign-up — the link is the key.',
+              'sign-up. The link is the key.',
               style: text.bodyLarge?.copyWith(color: colors.inkMuted),
             ),
             const SizedBox(height: Space.xl),
@@ -141,7 +141,7 @@ class _ShareSheetState extends State<ShareSheet> {
                       height: 208,
                       child: Center(
                         child: Text(
-                          'Could not draw the QR code — use the link below.',
+                          'Could not draw the QR code. Use the link below.',
                           textAlign: TextAlign.center,
                           style: text.bodySmall,
                         ),
@@ -162,7 +162,7 @@ class _ShareSheetState extends State<ShareSheet> {
                 _url,
                 // The one place monospace appears: a token you might read
                 // aloud or check character by character. 'monospace' resolves
-                // on Android; the fallbacks cover iOS and macOS.
+                // on Android, and the fallbacks cover iOS and macOS.
                 style: text.bodySmall?.copyWith(
                   fontFamily: 'monospace',
                   fontFamilyFallback: const ['Menlo', 'Courier New', 'Courier'],
@@ -199,7 +199,10 @@ class _ShareSheetState extends State<ShareSheet> {
             const SizedBox(height: Space.xxl),
             Divider(color: colors.line),
             const SizedBox(height: Space.lg),
-            Text('If it ended up somewhere it shouldn’t', style: text.labelLarge),
+            Text(
+              'If it ended up somewhere it shouldn’t',
+              style: text.labelLarge,
+            ),
             const SizedBox(height: Space.xs + 2),
             Text(
               'Replace the link and the old one stops working for everyone, at '

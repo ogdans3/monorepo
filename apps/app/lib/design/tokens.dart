@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 /// The palette, the scale and the motion, in one place.
 ///
 /// These are the same values as `DESIGN.md` and `apps/web/src/app.css`. Three
-/// files, one design system — change them together or they drift.
+/// files, one design system. Change them together or they drift.
 class CheckpostColors {
   const CheckpostColors({
     required this.bg,
@@ -29,7 +29,7 @@ class CheckpostColors {
   final Color ink;
   final Color inkMuted;
 
-  /// UI boundaries only — 3.7:1 on white. Never body text.
+  /// UI boundaries only, at 3.7:1 on white. Never body text.
   final Color inkFaint;
   final Color primary;
   final Color primaryHover;
@@ -106,7 +106,7 @@ abstract final class Radii {
 
 /// Curves and durations. Ease-out only: no bounce, no elastic.
 abstract final class Motion {
-  /// ease-out-quart — the curve the whole product moves on.
+  /// ease-out-quart, the curve the whole product moves on.
   static const curve = Cubic(0.22, 1, 0.36, 1);
 
   static const fast = Duration(milliseconds: 160);
@@ -116,7 +116,7 @@ abstract final class Motion {
   static const check = Duration(milliseconds: 180);
 
   /// How long a just-ticked row stays put before it drifts to the done shelf,
-  /// so you can see what you did — and undo it by looking.
+  /// so you can see what you did, and undo it by looking.
   static const settleGrace = Duration(milliseconds: 400);
 
   /// How long a change someone else made stays highlighted.

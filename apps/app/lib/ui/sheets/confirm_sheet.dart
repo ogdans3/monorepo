@@ -6,7 +6,7 @@ import 'sheet_scaffold.dart';
 
 /// Confirmation for the things that cannot be undone.
 ///
-/// There is no destructive red in this palette — a second red alongside a rose
+/// There is no destructive red in this palette. A second red alongside a rose
 /// accent would muddy both. The consequence is therefore stated in words, in
 /// full, before the button that causes it. Words carry the warning, not hue.
 Future<bool> confirmSheet(

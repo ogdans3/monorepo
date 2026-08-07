@@ -7,7 +7,7 @@ import '../../design/tokens.dart';
 /// content that gets out of the way of the keyboard.
 ///
 /// Sheets are rationed. Modals are usually laziness, so only two things earn
-/// one here — opening an item, and confirming something you cannot undo.
+/// one here: opening an item, and confirming something you cannot undo.
 class SheetScaffold extends StatelessWidget {
   const SheetScaffold({
     required this.title,

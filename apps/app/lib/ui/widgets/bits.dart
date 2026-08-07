@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../design/theme.dart';
 import '../../design/tokens.dart';
 
-/// How many people are on this list, including you. A dot and a count — never
-/// avatars, never names. There are no accounts to put a face to.
+/// How many people are on this list, including you. A dot and a count, never
+/// avatars and never names. There are no accounts to put a face to.
 class PresencePill extends StatelessWidget {
   const PresencePill({required this.count, super.key});
 
@@ -60,10 +60,10 @@ class OfflineBanner extends StatelessWidget {
         vertical: Space.sm,
       ),
       child: Text(
-        'Offline — your changes are saved here and will sync when you’re back.',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: colors.inkMuted,
-        ),
+        'Offline. Your changes are saved here and will sync when you’re back.',
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
       ),
     );
   }
@@ -190,9 +190,9 @@ class ShelfHeader extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: colors.inkMuted,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: colors.inkMuted),
             ),
           ),
           ?trailing,
