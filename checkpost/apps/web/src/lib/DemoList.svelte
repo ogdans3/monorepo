@@ -7,11 +7,11 @@
   type Row = { id: number; text: string; done: boolean };
 
   let rows = $state<Row[]>([
-    { id: 1, text: 'Book the ferry', done: true },
-    { id: 2, text: 'Cabin key from Marit', done: true },
     { id: 3, text: 'Firewood', done: false },
     { id: 4, text: 'Coffee, and the good one', done: false },
-    { id: 5, text: 'Someone remember the cards', done: false }
+    { id: 5, text: 'Someone remember the cards', done: false },
+    { id: 1, text: 'Book the ferry', done: true },
+    { id: 2, text: 'Cabin key from Marit', done: true }
   ]);
 
   let lastToggled = $state<number | null>(null);

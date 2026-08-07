@@ -12,8 +12,14 @@ COPY apps/web/package.json apps/web/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM deps AS build
+# Baked in at build time: the client calls this origin and the Content Security
+# Policy names it. They have to be the same value, so they come from one place.
+ARG PUBLIC_API_ORIGIN="http://localhost:4000"
 ARG PUBLIC_APP_STORE_URL=""
 ARG PUBLIC_PLAY_STORE_URL=""
+ENV PUBLIC_API_ORIGIN=$PUBLIC_API_ORIGIN
+ENV PUBLIC_APP_STORE_URL=$PUBLIC_APP_STORE_URL
+ENV PUBLIC_PLAY_STORE_URL=$PUBLIC_PLAY_STORE_URL
 COPY packages/contract packages/contract
 COPY apps/web apps/web
 RUN pnpm --filter @checkpost/contract build && pnpm --filter @checkpost/web build

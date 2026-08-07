@@ -1,6 +1,27 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import DemoList from '$lib/DemoList.svelte';
+  import { api } from '$lib/api';
   import { appStoreUrl, playStoreUrl, storesLive } from '$lib/config';
+
+  let creating = $state(false);
+  let failed = $state<string | null>(null);
+
+  async function newList() {
+    if (creating) return;
+    creating = true;
+    failed = null;
+    try {
+      const created = await api.createList('Untitled list');
+      await goto(`/l/${created.token}`);
+    } catch (error) {
+      failed =
+        error instanceof Error && 'message' in error
+          ? error.message
+          : 'Could not make a list. Try again.';
+      creating = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -44,15 +65,22 @@
       </p>
 
       <div class="actions">
+        <button class="btn" onclick={newList} disabled={creating}>
+          {creating ? 'Making it…' : 'Make a list'}
+        </button>
         {#if storesLive}
-          {#if appStoreUrl}<a class="btn" href={appStoreUrl}>Get it for iPhone</a>{/if}
-          {#if playStoreUrl}<a class="btn ghost" href={playStoreUrl}>Get it for Android</a>{/if}
-        {:else}
-          <p class="soon">
-            Checkpost is in the workshop. The app lands on the App Store and Google Play shortly.
-          </p>
+          {#if appStoreUrl}<a class="btn ghost" href={appStoreUrl}>iPhone app</a>{/if}
+          {#if playStoreUrl}<a class="btn ghost" href={playStoreUrl}>Android app</a>{/if}
         {/if}
       </div>
+
+      <p class="soon" role="status">
+        {#if failed}
+          {failed}
+        {:else}
+          Works right here in the browser. There is an app too, on the way to the stores.
+        {/if}
+      </p>
     </div>
 
     <div class="demo">
@@ -72,8 +100,9 @@
     <div class="beat">
       <h2>Everyone edits at once</h2>
       <p>
-        Ticks, new items and edits land on everyone's phone as they happen. The app shows you how
-        many people are on the list right now. No names, no avatars, no accounts.
+        Ticks, new items and edits land on everyone's phone as they happen, in the browser and in
+        the app alike. You can see how many people are on the list right now. No names, no
+        avatars, no accounts.
       </p>
     </div>
     <div class="beat">
@@ -186,8 +215,13 @@
   .btn {
     display: inline-flex;
     align-items: center;
-    min-height: 48px;
-    padding: 0 22px;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 26px;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
     border-radius: var(--radius-md);
     background: var(--primary);
     color: var(--on-primary);
@@ -217,8 +251,16 @@
   }
 
   .soon {
+    margin-top: 14px;
+    min-height: 1.4em;
     color: var(--ink-muted);
-    max-width: 36ch;
+    font-size: 0.9rem;
+    max-width: 40ch;
+  }
+
+  .btn:disabled {
+    opacity: 0.7;
+    cursor: default;
   }
 
   .demo {

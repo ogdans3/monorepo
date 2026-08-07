@@ -10,7 +10,7 @@ shouldn't, you replace it and the old one dies.
 ```
 apps/api    Node · Fastify · Drizzle · Postgres · WebSockets
 apps/app    Flutter (iOS + Android)
-apps/web    SvelteKit landing page and the share-link handoff
+apps/web    SvelteKit landing page, and the list in a browser
 packages/   contract (shared Zod schemas + limits)
 ```
 
@@ -35,7 +35,12 @@ pnpm test           # API suite (needs Postgres up)
 pnpm app:test       # Flutter suite
 pnpm app:analyze
 pnpm typecheck
+pnpm test:e2e       # the browser client, against a running stack
 ```
+
+`pnpm test:e2e` drives a real browser against the real API and database, on an
+iPhone viewport in WebKit, which is the engine iOS actually uses. It needs the
+stack up and `npx playwright install webkit` once.
 
 The API applies its migrations at boot, so there is no separate setup step.
 `pnpm dev` builds `packages/contract` first and then watches it, because both
@@ -75,7 +80,7 @@ message bus.
 | [DESIGN.md](DESIGN.md) | Palette (with measured contrast), type, space, motion |
 | [docs/API.md](docs/API.md) | The wire contract, in full |
 | [apps/app/README.md](apps/app/README.md) | How the client behaves on a bad network |
-| [apps/web/README.md](apps/web/README.md) | What the handoff page deliberately does not do |
+| [apps/web/README.md](apps/web/README.md) | The browser client, and what it deliberately does not do |
 
 ## Trade-offs worth knowing before you build on this
 
@@ -95,6 +100,10 @@ tokens in an `Authorization` header only, and scrubs anything token-shaped from
 its logs. But `/l/<token>` reaches the web server as a path. If you put that
 behind a reverse proxy, turn off access logging for `/l/` or strip the path.
 
+The web client keeps the rest of the property: the list route is client-rendered
+only, so the request for list data goes straight from the browser to the API and
+the web server never holds a copy of anyone's checklist.
+
 **Realtime fan-out is in-process.** A second API instance costs correctness
 nothing. Clients on the other instance find out a beat later instead of
 instantly. When "a beat later" stops being good enough, swap `RealtimeHub` for
@@ -104,8 +113,8 @@ one backed by Postgres `LISTEN/NOTIFY`. The interface is the seam.
 
 - Fill in `apps/web/static/.well-known/assetlinks.json` (release signing
   SHA-256) and `apple-app-site-association` (Team ID), and enable Associated
-  Domains on the App ID in Xcode. Until then app links fall through to the web
-  handoff page, which is a working fallback rather than a dead end.
+  Domains on the App ID in Xcode. Until then app links open the list in the
+  browser, which is a working fallback rather than a dead end.
 - Set `PUBLIC_APP_STORE_URL` / `PUBLIC_PLAY_STORE_URL` once the app is listed.
   While they are empty the site says so plainly instead of showing dead buttons.
 - `MIGRATE_ON_BOOT=1` is right for one API container. With more than one, turn

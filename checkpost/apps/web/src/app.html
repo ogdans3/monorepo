@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- viewport-fit=cover turns on env(safe-area-inset-*), and
+      interactive-widget=resizes-content makes the on-screen keyboard shrink the
+      layout instead of covering it. iOS ignores the latter, which is what
+      $lib/keyboard.ts is for. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#110e0f" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />

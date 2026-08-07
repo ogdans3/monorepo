@@ -28,6 +28,12 @@ there is nothing to guess at or increment.
 The 401/410 split is the whole point: the app can tell a mistyped link from a
 link that has been deliberately retired, and say so.
 
+### Browsers
+
+The web client calls this API directly from the browser, so `CORS_ORIGINS` has
+to name the web origin or every request fails a preflight. `authorization`,
+`content-type` and `x-checkpost-client` are the allowed request headers.
+
 ### Optional headers
 
 | Header | Purpose |
@@ -146,7 +152,9 @@ goes over HTTP, where it is idempotent, retryable and rate limited.
 
 Authenticate with the `Authorization` header, or, for clients that cannot set
 headers on a handshake, with the subprotocol pair
-`["checkpost.bearer", "<token>"]`.
+`["checkpost.bearer", "<token>"]`. Browsers are the reason the second form
+exists, and the server echoes `checkpost.bearer` back as the selected
+subprotocol.
 
 Server → client frames:
 

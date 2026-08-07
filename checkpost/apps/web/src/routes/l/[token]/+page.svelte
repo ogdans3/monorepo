@@ -1,217 +1,658 @@
 <script lang="ts">
-  import { appStoreUrl, playStoreUrl, storesLive } from '$lib/config';
+  import type { Item } from '@checkpost/contract';
+  import { LIMITS } from '@checkpost/contract';
+  import ItemRow from '$lib/ItemRow.svelte';
+  import ItemSheet from '$lib/ItemSheet.svelte';
+  import ShareSheet from '$lib/ShareSheet.svelte';
+  import Sheet from '$lib/Sheet.svelte';
+  import { ListSession } from '$lib/list-session.svelte';
+  import { trackKeyboard } from '$lib/keyboard';
+  import { untrack } from 'svelte';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
 
-  let copied = $state(false);
-  let copyFailed = $state(false);
+  // One session per token. The route only ever mounts with the token it was
+  // loaded for, so reading it once is the whole story.
+  const session = new ListSession(untrack(() => data.token));
 
-  async function copy() {
-    copyFailed = false;
-    try {
-      await navigator.clipboard.writeText(data.fullLink);
-      copied = true;
-      setTimeout(() => (copied = false), 2400);
-    } catch {
-      // Clipboard access is refused often enough (insecure context, Safari
-      // permissions) that "nothing happened" is not an acceptable outcome.
-      copyFailed = true;
+  let draft = $state('');
+  let composer = $state<HTMLTextAreaElement | null>(null);
+  let scroller = $state<HTMLElement | null>(null);
+  let openItem = $state<Item | null>(null);
+  let sharing = $state(false);
+  let menu = $state(false);
+  let renaming = $state(false);
+  let titleDraft = $state('');
+  let confirmingClear = $state(false);
+  let confirmingDelete = $state(false);
+
+  $effect(() => {
+    void session.open();
+    const untrack = trackKeyboard();
+    return () => {
+      session.stop();
+      untrack();
+    };
+  });
+
+  const shareUrl = $derived(
+    session.token === data.token ? data.shareUrl : `${location.origin}/l/${session.token}`,
+  );
+
+  async function submit(event?: Event) {
+    event?.preventDefault();
+    const text = draft.trim();
+    if (!text) return;
+    draft = '';
+    // Straight back to an empty field, still focused. Type, enter, type.
+    composer?.focus();
+    await session.add(text);
+    requestAnimationFrame(() => scroller?.scrollTo({ top: scroller.scrollHeight }));
+  }
+
+  function keydown(event: KeyboardEvent) {
+    // Enter submits, shift-enter is a newline, which is what a hardware
+    // keyboard expects and costs a touch keyboard nothing.
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void submit();
     }
+  }
+
+  function startRename() {
+    titleDraft = session.list?.title ?? '';
+    menu = false;
+    renaming = true;
   }
 </script>
 
 <svelte:head>
-  <title>A list was shared with you. Checkpost</title>
+  <title>{session.list?.title ?? 'Checkpost'}</title>
   <!-- A share link in a search index is a leaked list. -->
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <meta name="referrer" content="no-referrer" />
 </svelte:head>
 
-<main>
-  <div class="card">
-    <svg class="mark" viewBox="0 0 32 32" width="34" height="34" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="currentColor" />
-      <path
-        d="M9 16.6 13.8 21.4 23 12.2"
-        fill="none"
-        stroke="var(--bg)"
-        stroke-width="3.2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-
-    <h1>Someone shared a list with you.</h1>
-    <p class="lede">
-      Checkpost lists live in the app. Open this link there and you'll be on the list. No account,
-      nothing to fill in.
+{#if session.status === 'gone' || session.status === 'invalid'}
+  <main class="dead">
+    <h1>
+      {session.status === 'invalid'
+        ? "That link isn't valid"
+        : session.goneReason === 'deleted'
+          ? 'This list was deleted'
+          : 'This link was replaced'}
+    </h1>
+    <p>
+      {session.status === 'invalid'
+        ? 'Check that you copied the whole thing, or ask for the link again.'
+        : session.goneReason === 'deleted'
+          ? 'Someone on the list deleted it. There is nothing left to open.'
+          : 'Someone replaced the share link. Ask them for the new one and open it. You will be back on the list straight away.'}
     </p>
+    <a href="/">Back to Checkpost</a>
+  </main>
+{:else}
+  <div class="app">
+    <header>
+      <button type="button" class="title" onclick={startRename} disabled={!session.list}>
+        <h1>{session.list?.title ?? ' '}</h1>
+      </button>
 
-    <a class="btn" href={data.deepLink} data-sveltekit-reload>Open in Checkpost</a>
+      {#if session.presence > 1}
+        <span class="presence" aria-label="{session.presence} people on this list">
+          <span class="dot" aria-hidden="true"></span>
+          {session.presence}
+        </span>
+      {/if}
 
-    {#if storesLive}
-      <p class="or">Don't have it yet?</p>
-      <div class="stores">
-        {#if appStoreUrl}<a class="btn ghost" href={appStoreUrl}>App Store</a>{/if}
-        {#if playStoreUrl}<a class="btn ghost" href={playStoreUrl}>Google Play</a>{/if}
-      </div>
-    {:else}
-      <p class="or">
-        The app isn't in the stores yet. Keep this link. It will still work when it lands.
-      </p>
+      <button
+        type="button"
+        class="icon"
+        onclick={() => (sharing = true)}
+        aria-label="Share this list"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+          <path
+            d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm10-2h2v2h-2v-2zm4 0h2v2h-2v-2zm-4 4h2v2h-2v-2zm4 0h2v2h-2v-2zm-2 2h2v2h-2v-2zm4 0h2v2h-2v-2z"
+          />
+        </svg>
+      </button>
+
+      <button type="button" class="icon" onclick={() => (menu = true)} aria-label="More">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+          <circle cx="12" cy="5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle
+            cx="12"
+            cy="19"
+            r="1.8"
+          />
+        </svg>
+      </button>
+    </header>
+
+    {#if session.status === 'offline'}
+      <p class="banner">Offline. Your changes are saved here and will sync when you're back.</p>
     {/if}
 
-    <div class="link">
-      <p class="label" id="link-label">Or paste this into Checkpost yourself</p>
-      <code aria-labelledby="link-label">{data.fullLink}</code>
-      <button type="button" onclick={copy}>
-        {copied ? 'Copied' : 'Copy link'}
-      </button>
-      <p class="status" role="status">
-        {#if copied}Link copied.{/if}
-        {#if copyFailed}Couldn't copy automatically. Select the link above.{/if}
-      </p>
-    </div>
-  </div>
+    <main bind:this={scroller}>
+      {#if session.status === 'loading'}
+        <ul class="skeleton" aria-hidden="true">
+          {#each [62, 44, 71] as width (width)}
+            <li><span class="box"></span><span class="bar" style:width="{width}%"></span></li>
+          {/each}
+        </ul>
+      {:else if !session.items.length}
+        <div class="empty">
+          <h2>Nothing on the list yet</h2>
+          <p>Type below and press enter. Keep going, the field stays put so you can add several without stopping.</p>
+        </div>
+      {:else}
+        <ul class="rows">
+          {#each session.openItems as item (item.id)}
+            <ItemRow
+              {item}
+              washing={session.isWashing(item.id)}
+              onToggle={() => session.toggle(item)}
+              onOpen={() => (openItem = item)}
+            />
+          {/each}
+        </ul>
 
-  <p class="warn">
-    Anyone with this link can read and edit the list. Treat it like a key, and replace it from the
-    app if it ends up somewhere it shouldn't.
+        {#if session.doneItems.length}
+          <div class="shelf">
+            <span>Done · {session.doneItems.length}</span>
+            <button type="button" onclick={() => (confirmingClear = true)}>Clear</button>
+          </div>
+          <ul class="rows">
+            {#each session.doneItems as item (item.id)}
+              <ItemRow
+                {item}
+                washing={session.isWashing(item.id)}
+                onToggle={() => session.toggle(item)}
+                onOpen={() => (openItem = item)}
+              />
+            {/each}
+          </ul>
+        {/if}
+      {/if}
+    </main>
+
+    <form class="composer" onsubmit={submit}>
+      <textarea
+        bind:this={composer}
+        bind:value={draft}
+        onkeydown={keydown}
+        rows="1"
+        maxlength={LIMITS.itemText}
+        placeholder="Add something"
+        enterkeyhint="done"
+        aria-label="Add an item"
+      ></textarea>
+      <button type="submit" disabled={!draft.trim()} aria-label="Add item">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path
+            d="M12 19V5M5 12l7-7 7 7"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </form>
+  </div>
+{/if}
+
+{#if session.message}
+  <p class="toast" role="status">
+    {session.message}
+    <button type="button" onclick={() => (session.message = null)} aria-label="Dismiss">×</button>
   </p>
-</main>
+{/if}
+
+{#if openItem}
+  {@const item = openItem}
+  <ItemSheet
+    {item}
+    onclose={() => (openItem = null)}
+    onsave={(patch) => session.edit(item, patch)}
+    onremove={() => session.remove(item)}
+  />
+{/if}
+
+{#if sharing}
+  <ShareSheet
+    url={shareUrl}
+    title={session.list?.title ?? 'Checkpost list'}
+    onclose={() => (sharing = false)}
+    onrotate={() => session.rotate()}
+  />
+{/if}
+
+{#if renaming}
+  <Sheet title="Rename list" onclose={() => (renaming = false)}>
+    <!-- svelte-ignore a11y_autofocus -->
+    <input
+      class="rename"
+      bind:value={titleDraft}
+      maxlength={LIMITS.listTitle}
+      autofocus
+      onkeydown={(event) => {
+        if (event.key === 'Enter') {
+          session.rename(titleDraft);
+          renaming = false;
+        }
+      }}
+    />
+    <button
+      type="button"
+      class="wide"
+      onclick={() => {
+        session.rename(titleDraft);
+        renaming = false;
+      }}>Save name</button
+    >
+  </Sheet>
+{/if}
+
+{#if menu}
+  <Sheet title="This list" onclose={() => (menu = false)}>
+    <ul class="menu">
+      <li><button type="button" onclick={startRename}>Rename list</button></li>
+      <li>
+        <button
+          type="button"
+          disabled={!session.doneCount}
+          onclick={() => {
+            menu = false;
+            confirmingClear = true;
+          }}>Clear done items</button
+        >
+      </li>
+      <li><a href={data.deepLink} rel="external">Open in the app</a></li>
+      <li>
+        <button
+          type="button"
+          onclick={() => {
+            menu = false;
+            confirmingDelete = true;
+          }}>Delete list for everyone</button
+        >
+      </li>
+    </ul>
+  </Sheet>
+{/if}
+
+{#if confirmingClear}
+  <Sheet title="Clear {session.doneCount} done" onclose={() => (confirmingClear = false)}>
+    <p class="fine">They are removed for everyone on the list, straight away. There is no undo.</p>
+    <button
+      type="button"
+      class="wide"
+      onclick={() => {
+        session.clearChecked();
+        confirmingClear = false;
+      }}>Clear them</button
+    >
+    <button type="button" class="wide quiet" onclick={() => (confirmingClear = false)}>Keep them</button>
+  </Sheet>
+{/if}
+
+{#if confirmingDelete}
+  <Sheet title="Delete this list?" onclose={() => (confirmingDelete = false)}>
+    <p class="fine">
+      The list and everything on it is gone for everyone, immediately. The link stops working.
+      There is no undo.
+    </p>
+    <button
+      type="button"
+      class="wide"
+      onclick={() => {
+        session.deleteList();
+        confirmingDelete = false;
+      }}>Delete the list</button
+    >
+    <button type="button" class="wide quiet" onclick={() => (confirmingDelete = false)}>Keep it</button>
+  </Sheet>
+{/if}
 
 <style>
-  main {
+  /* A fixed app shell. The page itself never scrolls, only the list does, which
+     is what stops iOS from rubber-banding the composer off the screen. */
+  .app {
+    position: fixed;
+    inset: 0;
     display: grid;
-    justify-items: center;
-    gap: 24px;
-    min-height: 100dvh;
-    align-content: center;
-    padding: 40px 20px 56px;
+    grid-template-rows: auto auto 1fr auto;
+    background: var(--bg);
   }
 
-  .card {
-    width: min(100%, 30rem);
+  header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 4px 4px 16px;
+    padding-top: calc(4px + env(safe-area-inset-top, 0px));
+    border-bottom: 1px solid var(--line);
+  }
+
+  .title {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 4px;
+    border: 0;
+    background: none;
     text-align: left;
-  }
-
-  .mark {
-    color: var(--primary);
-    display: block;
-    margin-bottom: 24px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
   h1 {
-    font-size: clamp(1.9rem, 6vw, 2.5rem);
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .presence {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 6px;
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--primary);
+  }
+
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .banner {
+    padding: 8px 20px;
+    background: var(--surface);
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+  }
+
+  main {
+    overflow-y: auto;
+    /* Keeps a bounce inside the list rather than dragging the whole page. */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rows {
+    list-style: none;
+  }
+
+  /* The separator belongs to the list, not to a row, so it stays put while a
+     row slides under the finger. Rows are a child component, hence :global. */
+  .rows :global(li + li) {
+    border-top: 1px solid var(--line);
+  }
+
+  .shelf {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding: 8px 8px 8px 20px;
+    background: var(--surface);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .shelf span {
+    flex: 1;
+  }
+
+  .shelf button {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    font: inherit;
+    color: var(--ink-muted);
+    cursor: pointer;
+  }
+
+  .composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 8px 8px 8px 16px;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    box-shadow: 0 -2px 12px oklch(0.2 0.01 350 / 0.06);
+    /* Clears the home indicator, and rides above the on-screen keyboard. */
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px) + var(--keyboard, 0px));
+  }
+
+  .composer textarea {
+    flex: 1;
+    /* 16px minimum, or iOS zooms the page the moment this takes focus. */
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    padding: 13px 0;
+    resize: none;
+    field-sizing: content;
+    max-height: 7rem;
+  }
+
+  .composer textarea::placeholder {
+    color: var(--ink-muted);
+  }
+
+  .composer textarea:focus-visible {
+    outline: none;
+  }
+
+  .composer button {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    flex: none;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--primary);
+    color: var(--on-primary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background var(--fast) var(--ease);
+  }
+
+  /* A full-strength shape at low contrast, not a washed-out accent. Heavy
+     colour on an inactive control is a lie about what it will do. */
+  .composer button:disabled {
+    background: var(--surface);
+    color: var(--ink-faint);
+    cursor: default;
+  }
+
+  .skeleton {
+    list-style: none;
+  }
+
+  .skeleton li {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    height: 56px;
+    padding: 0 20px;
+  }
+
+  .skeleton .box {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-hover);
+    flex: none;
+  }
+
+  .skeleton .bar {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--surface-hover);
+  }
+
+  .empty {
+    padding: 56px 32px;
+  }
+
+  .empty h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .empty p {
+    margin-top: 8px;
+    max-width: 34ch;
+    color: var(--ink-muted);
+  }
+
+  .dead {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 12px;
+    min-height: 100dvh;
+    max-width: 30rem;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  .dead h1 {
+    font-size: clamp(1.8rem, 6vw, 2.3rem);
     font-weight: 700;
     letter-spacing: -0.03em;
   }
 
-  .lede {
-    margin-top: 14px;
+  .dead p {
     color: var(--ink-muted);
   }
 
-  .btn {
+  .dead a {
+    margin-top: 8px;
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px) + var(--keyboard, 0px));
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
+    width: min(calc(100% - 32px), 28rem);
+    padding: 12px 8px 12px 16px;
+    border-radius: var(--radius-md);
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 0.9rem;
+    z-index: var(--z-overlay);
+  }
+
+  .toast button {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .menu {
+    list-style: none;
+  }
+
+  .menu button,
+  .menu a {
+    display: flex;
+    align-items: center;
+    width: 100%;
     min-height: 52px;
-    margin-top: 28px;
-    padding: 0 24px;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--ink);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .menu button:disabled {
+    color: var(--ink-faint);
+    cursor: default;
+  }
+
+  .menu li + li {
+    border-top: 1px solid var(--line);
+  }
+
+  .rename {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+  }
+
+  .wide {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 12px;
+    border: 0;
     border-radius: var(--radius-md);
     background: var(--primary);
     color: var(--on-primary);
-    font-weight: 600;
-    text-decoration: none;
-    transition: background var(--fast) var(--ease);
-  }
-
-  .btn:hover {
-    background: var(--primary-hover);
-  }
-
-  .btn.ghost {
-    flex: 1;
-    margin-top: 0;
-    background: none;
-    color: var(--ink);
-    box-shadow: inset 0 0 0 1px var(--line-strong);
-  }
-
-  .btn.ghost:hover {
-    background: var(--surface);
-  }
-
-  .or {
-    margin-top: 22px;
-    font-size: 0.9rem;
-    color: var(--ink-muted);
-  }
-
-  .stores {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-  }
-
-  .link {
-    margin-top: 32px;
-    padding: 16px;
-    background: var(--surface);
-    border-radius: var(--radius-md);
-  }
-
-  .label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--ink-muted);
-  }
-
-  code {
-    display: block;
-    margin-top: 8px;
-    font-family: var(--mono);
-    font-size: 0.78rem;
-    line-height: 1.5;
-    /* The token is one long unbroken word; without this it overflows the card
-       on every phone there is. */
-    overflow-wrap: anywhere;
-    color: var(--ink);
-    user-select: all;
-  }
-
-  .link button {
-    margin-top: 12px;
-    min-height: 40px;
-    padding: 0 16px;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: var(--bg);
-    box-shadow: inset 0 0 0 1px var(--line-strong);
-    color: var(--ink);
     font: inherit;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: background var(--fast) var(--ease);
   }
 
-  .link button:hover {
-    background: var(--surface-hover);
-  }
-
-  .status {
-    min-height: 1.2em;
-    margin-top: 8px;
-    font-size: 0.8rem;
+  .wide.quiet {
+    background: none;
     color: var(--ink-muted);
   }
 
-  .warn {
-    width: min(100%, 30rem);
-    font-size: 0.85rem;
+  .fine {
     color: var(--ink-muted);
   }
 </style>

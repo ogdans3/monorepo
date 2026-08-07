@@ -111,6 +111,14 @@ p {
   text-wrap: pretty;
 }
 
+/* Lists here are layout, not prose. The browser's 40px indent and 1em margins
+   push every checklist row away from the left edge of a phone. */
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+}
+
 a {
   color: inherit;
 }

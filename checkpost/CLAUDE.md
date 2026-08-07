@@ -8,7 +8,7 @@ Checkpost is a shared checklist that lives at a link. Read `README.md` first.
 ```
 apps/api      Fastify + Drizzle + Postgres + ws   (@checkpost/api)
 apps/app      Flutter, iOS + Android
-apps/web      SvelteKit landing + /l/[token] handoff  (@checkpost/web)
+apps/web      SvelteKit landing + the list in a browser  (@checkpost/web)
 packages/     contract: Zod schemas, limits, token helpers
 ```
 
@@ -18,8 +18,18 @@ outside it and uses `flutter pub`.
 ## Invariants. Break these and things go subtly wrong
 
 **Tokens never appear in a URL the API sees.** `Authorization: Bearer` only,
-never a query string. The one exception is `/l/<token>` on the web app, which
-is why that route is `no-store`, `noindex`, and disallowed in `robots.txt`.
+never a query string. Not even for the WebSocket, where browsers cannot set
+headers and the token rides `Sec-WebSocket-Protocol` instead. The one exception
+is `/l/<token>` on the web app, which is why that route is `no-store`,
+`noindex`, and disallowed in `robots.txt`.
+
+**The web server never sees list data.** The list route is `ssr = false` on
+purpose, so the browser calls the API directly. Do not add a server `load` or a
+proxy endpoint for list content, however convenient it looks.
+
+**`PUBLIC_API_ORIGIN` is read in two places that must agree**: the client, and
+the Content Security Policy in `svelte.config.js`. If they diverge the browser
+blocks every request with no obvious cause. Both read the project root `.env`.
 
 **Only the SHA-256 of a token is stored.** Never persist a raw token
 server-side.
@@ -85,6 +95,7 @@ setState-during-build crash survived a full test suite because every test built
 pnpm db:up && pnpm test    # API, against real Postgres, not a mock
 pnpm app:analyze && pnpm app:test
 pnpm typecheck
+pnpm dev && pnpm test:e2e  # the browser client, against the running stack
 ```
 
 - The API suite runs against a real database on purpose: the partial unique
@@ -95,6 +106,10 @@ pnpm typecheck
   `realtimeFactory: noRealtime`, or reconnect timers outlive the widget tree.
 - Goldens (`apps/app/test/goldens/`) are design regression tests. Regenerate
   with `flutter test --update-goldens` and read the diff as a review.
+- The web e2e suite runs on an iPhone viewport in **WebKit**, because that is
+  the engine iOS uses and it is where the keyboard and viewport bugs live. It
+  needs the real stack up. Every case in it broke at least once during the
+  build, which is why each one is written down.
 
 ## Conventions
 

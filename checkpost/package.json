@@ -16,6 +16,7 @@
     "build": "pnpm run build:contract && pnpm --filter @checkpost/api build && pnpm --filter @checkpost/web build",
     "test": "pnpm run build:contract && pnpm --filter @checkpost/api test",
     "typecheck": "pnpm run build:contract && pnpm -r typecheck",
+    "test:e2e": "pnpm --filter @checkpost/web test:e2e",
     "lint": "pnpm -r lint",
     "db:up": "docker compose up -d db",
     "db:push": "pnpm --filter @checkpost/api db:push",

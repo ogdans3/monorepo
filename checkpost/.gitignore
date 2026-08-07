@@ -34,3 +34,5 @@ apps/app/**/*.freezed.dart
 coverage/
 apps/web/.svelte-kit/
 apps/app/test/failures/
+apps/web/test-results/
+apps/web/playwright-report/
