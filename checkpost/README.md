@@ -23,11 +23,12 @@ pnpm db:up             # Postgres in Docker on :5433
 pnpm dev               # api on :4000, web on :5173
 
 # the app, against your local API
-pnpm dev:app        # or: cd apps/app && flutter run \
-                    #       --dart-define=CHECKPOST_API_ORIGIN=http://10.0.2.2:4000
+pnpm dev:app           # or: cd apps/app && flutter run
 ```
 
-`10.0.2.2` is how the Android emulator reaches the host machine.
+A debug build of the app points at the local API already, picking the right
+host for the target. See [apps/app/README.md](apps/app/README.md) for physical
+devices, which need your machine's LAN address.
 
 ```bash
 pnpm test           # API suite (needs Postgres up)

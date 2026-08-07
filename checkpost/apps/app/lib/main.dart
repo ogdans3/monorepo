@@ -92,7 +92,7 @@ class _CheckpostAppState extends State<CheckpostApp> {
     } on ApiException catch (error) {
       _say(error.message);
     } on OfflineException {
-      _say('Can’t reach Checkpost right now. Open the link again in a moment.');
+      _say(offlineMessage('Open the link again in a moment.'));
     }
   }
 

@@ -1,20 +1,41 @@
-/// Build-time configuration.
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
+
+/// Where the app talks to.
 ///
-/// Override with `--dart-define`, e.g.
-/// `flutter run --dart-define=CHECKPOST_API_ORIGIN=http://10.0.2.2:4000`
-/// (10.0.2.2 is how the Android emulator reaches the host machine).
+/// A debug build points at a local API by default, because that is what a debug
+/// build is for. Shipping a default of `https://api.checkpost.app` meant every
+/// simulator failed with "can't reach Checkpost" until you happened to know
+/// about a `--dart-define`, which is a bad first five minutes.
+///
+/// Override any of it explicitly:
+/// ```
+/// flutter run --dart-define=CHECKPOST_API_ORIGIN=http://192.168.1.20:4000
+/// ```
 abstract final class AppConfig {
-  static const apiOrigin = String.fromEnvironment(
-    'CHECKPOST_API_ORIGIN',
-    defaultValue: 'https://api.checkpost.app',
-  );
+  static const _apiOverride = String.fromEnvironment('CHECKPOST_API_ORIGIN');
+  static const _webOverride = String.fromEnvironment('CHECKPOST_WEB_ORIGIN');
+
+  static const productionApiOrigin = 'https://api.checkpost.app';
+  static const productionWebOrigin = 'https://checkpost.app';
+
+  /// The Android emulator reaches the host machine on 10.0.2.2. The iOS
+  /// simulator, and every desktop target, share the host's loopback.
+  static String get _localHost =>
+      !kIsWeb && Platform.isAndroid ? '10.0.2.2' : 'localhost';
+
+  static String get apiOrigin {
+    if (_apiOverride.isNotEmpty) return _apiOverride;
+    return kReleaseMode ? productionApiOrigin : 'http://$_localHost:4000';
+  }
 
   /// Where share links point. Only used when the server has not told us. The
   /// API returns the canonical URL with every token it mints.
-  static const webOrigin = String.fromEnvironment(
-    'CHECKPOST_WEB_ORIGIN',
-    defaultValue: 'https://checkpost.app',
-  );
+  static String get webOrigin {
+    if (_webOverride.isNotEmpty) return _webOverride;
+    return kReleaseMode ? productionWebOrigin : 'http://$_localHost:5173';
+  }
 
   static const apiVersion = 'v1';
 

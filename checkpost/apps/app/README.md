@@ -4,16 +4,32 @@ The Flutter client. Two screens, your lists and one list, plus the share sheet,
 which is where the actual product lives.
 
 ```bash
-flutter run --dart-define=CHECKPOST_API_ORIGIN=http://10.0.2.2:4000 \
-            --dart-define=CHECKPOST_WEB_ORIGIN=http://localhost:5173
+flutter run                     # debug talks to a local API already
 flutter analyze
 flutter test
 flutter test --update-goldens   # regenerate the design snapshots
 ```
 
-`10.0.2.2` is how the Android emulator reaches the host. On a physical device
-use your machine's LAN address, and remember the API must be reachable from
-the phone.
+A **debug build points at a local API by default**, so `flutter run` works
+against `pnpm dev` with no flags. It picks the right host for the target:
+`localhost:4000` on the iOS simulator and on desktop, `10.0.2.2:4000` on the
+Android emulator, which is how that emulator reaches the host machine. A
+release build uses production.
+
+On a **physical device** neither host is reachable, so point it at your
+machine's LAN address:
+
+```bash
+flutter run --dart-define=CHECKPOST_API_ORIGIN=http://192.168.1.20:4000 \
+            --dart-define=CHECKPOST_WEB_ORIGIN=http://192.168.1.20:5173
+```
+
+The API listens on `0.0.0.0`, so it will accept that, but the phone and the
+machine have to be on the same network.
+
+When the app cannot reach the server, a debug build names the origin it tried
+rather than saying "check your connection", because that is never the real
+problem while developing.
 
 ## How it is put together
 

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'config.dart';
@@ -38,6 +39,17 @@ class OfflineException implements Exception {
   @override
   String toString() => 'Offline';
 }
+
+/// What to tell someone when the server cannot be reached.
+///
+/// A debug build names the origin it tried. "Check your connection" is useless
+/// advice when the real answer is that the API is not running, or that this
+/// build is pointed at the wrong host, and that is nearly always the case
+/// while developing. Release builds keep the plain sentence.
+String offlineMessage([String nextStep = 'Check your connection.']) =>
+    kDebugMode
+    ? 'Can’t reach the API at ${AppConfig.apiOrigin}. Is it running?'
+    : 'Can’t reach Checkpost right now. $nextStep';
 
 /// Everything the app knows how to ask the server.
 ///

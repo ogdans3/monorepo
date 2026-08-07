@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } on ApiException catch (error) {
       _say(error.message);
     } on OfflineException {
-      _say('Can’t reach Checkpost right now. Check your connection.');
+      _say(offlineMessage());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
