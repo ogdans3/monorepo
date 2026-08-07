@@ -33,3 +33,4 @@ apps/app/**/*.freezed.dart
 *.log
 coverage/
 apps/web/.svelte-kit/
+apps/app/test/failures/
