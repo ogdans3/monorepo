@@ -1,0 +1,67 @@
+name: checkpost
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-checkpost}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-checkpost}
+      POSTGRES_DB: ${POSTGRES_DB:-checkpost}
+      # Database locale is deliberately left at the image default: every query
+      # and index that touches `items.position` states `COLLATE "C"` explicitly,
+      # so ordering is byte-wise regardless of how this cluster was initialised.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8'
+    ports:
+      - '${POSTGRES_PORT:-5433}:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-checkpost} -d ${POSTGRES_DB:-checkpost}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-checkpost}:${POSTGRES_PASSWORD:-checkpost}@db:5432/${POSTGRES_DB:-checkpost}
+      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-http://localhost:5173}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      LIST_TTL_DAYS: ${LIST_TTL_DAYS:-365}
+      EVENT_RETENTION_DAYS: ${EVENT_RETENTION_DAYS:-14}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - '${API_PORT:-4000}:3000'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/v1/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://localhost:4000}
+        PUBLIC_APP_STORE_URL: ${PUBLIC_APP_STORE_URL:-}
+        PUBLIC_PLAY_STORE_URL: ${PUBLIC_PLAY_STORE_URL:-}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - '${WEB_PORT:-5173}:3000'
+
+volumes:
+  db-data:
