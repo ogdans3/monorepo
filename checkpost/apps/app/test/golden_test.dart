@@ -85,8 +85,16 @@ void main() {
     }
   }
 
-  LibraryController libraryWith(List<SavedList> lists) =>
-      LibraryController(store: MemoryLibraryStore(lists), api: server.client());
+  LibraryController libraryWith(List<SavedList> lists) {
+    final library = LibraryController(
+      store: MemoryLibraryStore(lists),
+      api: server.client(),
+    );
+    // Writes to the index are debounced, so a test that ends mid-burst would
+    // leave a live timer behind and fail on the pending-timer check.
+    addTearDown(library.flush);
+    return library;
+  }
 
   SavedList saved({
     required String id,

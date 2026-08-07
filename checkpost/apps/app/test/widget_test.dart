@@ -32,8 +32,16 @@ void main() {
     );
   }
 
-  LibraryController libraryWith(List<SavedList> lists) =>
-      LibraryController(store: MemoryLibraryStore(lists), api: server.client());
+  LibraryController libraryWith(List<SavedList> lists) {
+    final library = LibraryController(
+      store: MemoryLibraryStore(lists),
+      api: server.client(),
+    );
+    // Writes to the index are debounced, so a test that ends mid-burst would
+    // leave a live timer behind and fail on the pending-timer check.
+    addTearDown(library.flush);
+    return library;
+  }
 
   SavedList savedList({int done = 0, int total = 0}) => SavedList(
     id: server.listId,
@@ -81,6 +89,50 @@ void main() {
       await tester.pump();
 
       expect(find.text('All 4 done'), findsOneWidget);
+    });
+  });
+
+  group('opening a list from home', () {
+    testWidgets('does not mark the home screen dirty while it is building', (
+      tester,
+    ) async {
+      // The regression this exists for: ListScreen.initState touched the
+      // library, the library notified its listeners, and the home screen was
+      // one of them, halfway through building the route transition. That threw
+      // "setState() called during build" on a real device every single time.
+      //
+      // The earlier tests missed it because they mounted ListScreen directly,
+      // with no home screen listening underneath. This one navigates the way a
+      // person does.
+      server.addItem('Firewood');
+      final library = libraryWith([savedList(total: 1)]);
+      await library.load();
+      await tester.pumpWidget(
+        wrap(HomeScreen(library: library, realtimeFactory: noRealtime)),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Cabin, Friday'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Firewood'), findsOneWidget);
+    });
+
+    testWidgets('records the visit once the frame is done', (tester) async {
+      final library = libraryWith([savedList(total: 1)]);
+      await library.load();
+      final before = library.lists.single.lastOpenedAt;
+
+      await tester.pumpWidget(
+        wrap(HomeScreen(library: library, realtimeFactory: noRealtime)),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Cabin, Friday'));
+      await tester.pumpAndSettle();
+
+      expect(library.lists.single.lastOpenedAt.isAfter(before), isTrue);
+      expect(tester.takeException(), isNull);
     });
   });
 

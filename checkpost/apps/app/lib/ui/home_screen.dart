@@ -5,6 +5,7 @@ import '../data/models.dart';
 import '../design/theme.dart';
 import '../design/tokens.dart';
 import '../state/library_controller.dart';
+import '../state/list_controller.dart';
 import 'list_screen.dart';
 import 'sheets/confirm_sheet.dart';
 import 'sheets/text_sheet.dart';
@@ -12,9 +13,13 @@ import 'widgets/bits.dart';
 
 /// Your lists. Every list this device knows a link to, most recent first.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({required this.library, super.key});
+  const HomeScreen({required this.library, this.realtimeFactory, super.key});
 
   final LibraryController library;
+
+  /// Forwarded to every list opened from here. Overridden in tests to keep the
+  /// live feed out of the way.
+  final RealtimeFactory? realtimeFactory;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -88,7 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _open(SavedList list) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ListScreen(library: widget.library, listId: list.id),
+        builder: (_) => ListScreen(
+          library: widget.library,
+          listId: list.id,
+          realtimeFactory: widget.realtimeFactory,
+        ),
       ),
     );
   }

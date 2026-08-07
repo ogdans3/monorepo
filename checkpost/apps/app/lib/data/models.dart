@@ -255,6 +255,24 @@ class SavedList {
     'lastOpenedAt': lastOpenedAt.toIso8601String(),
   };
 
+  /// Value equality, so the controller can tell a real change from a repeat.
+  /// An open list reports its state constantly, and without this every report
+  /// counted as a change and rebuilt the home screen behind it.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SavedList &&
+          other.id == id &&
+          other.token == token &&
+          other.title == title &&
+          other.doneCount == doneCount &&
+          other.totalCount == totalCount &&
+          other.lastOpenedAt == lastOpenedAt;
+
+  @override
+  int get hashCode =>
+      Object.hash(id, token, title, doneCount, totalCount, lastOpenedAt);
+
   factory SavedList.fromJson(Map<String, dynamic> json) => SavedList(
     id: json['id'] as String,
     token: json['token'] as String,

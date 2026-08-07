@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 import 'tokens.dart';
@@ -87,7 +88,14 @@ ThemeData buildTheme(CheckpostColors c, Brightness brightness) {
     fontFamily: _fontFamily,
     scaffoldBackgroundColor: c.bg,
     canvasColor: c.bg,
-    splashFactory: InkSparkle.splashFactory,
+    // InkSparkle is Material 3's default on Android and it runs a fragment
+    // shader, which has to compile the first time it is used and shows up as a
+    // stutter on the very first tap. On iOS a spreading ripple is not the
+    // platform idiom anyway, and this product's feedback for a tap is the
+    // checkmark drawing itself, not decoration around it.
+    splashFactory: defaultTargetPlatform == TargetPlatform.iOS
+        ? NoSplash.splashFactory
+        : InkRipple.splashFactory,
     colorScheme: ColorScheme(
       brightness: brightness,
       primary: c.primary,

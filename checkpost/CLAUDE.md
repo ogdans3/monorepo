@@ -62,6 +62,23 @@ From `PRODUCT.md` / `DESIGN.md`, restated because they get eroded first:
   forward, in the product's voice: what happened, no apology, no exclamation
   marks.
 
+## Flutter rules learned the hard way
+
+**Never touch `LibraryController` during a build.** It notifies its listeners,
+and the home screen is one of them, sitting underneath every open list. Doing
+it from `initState` throws "setState() called during build" on a real device.
+Use a post-frame callback. `ListScreen.initState` shows the shape.
+
+**`record` is called on every change to an open list**, including every timer
+tick, so it has to stay cheap. `SavedList` has value equality and the
+controller drops reports that change nothing. Disk writes are debounced by
+400ms, except a new token, which is written straight away because losing it
+locks the device out of its own list.
+
+**Widget tests must mount the screen the way a person reaches it.** The
+setState-during-build crash survived a full test suite because every test built
+`ListScreen` directly, with no home screen listening underneath. Navigate.
+
 ## Testing
 
 ```bash

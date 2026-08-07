@@ -73,11 +73,19 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
     _tokens = _controller.tokenChanges.listen((token) {
       // Rotation minted a new link. Persist it before anything else, because
       // losing it here would lock this device out of its own list.
-      unawaited(widget.library.record(id: widget.listId, token: token));
+      widget.library.record(id: widget.listId, token: token);
     });
     _controller.addListener(_persist);
     unawaited(_controller.open());
-    unawaited(widget.library.record(id: widget.listId, touch: true));
+
+    // Touching the library notifies its listeners, and the home screen is one
+    // of them, sitting underneath this route. Doing that from initState means
+    // marking a widget dirty while the framework is already building, which
+    // throws. It can wait one frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.library.record(id: widget.listId, touch: true);
+    });
   }
 
   CheckpostApi _apiOf(BuildContext context) => CheckpostApiScope.of(context);
@@ -94,13 +102,13 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
   void _persist() {
     final list = _controller.list;
     if (list == null) return;
-    unawaited(
-      widget.library.record(
-        id: widget.listId,
-        title: list.title,
-        doneCount: _controller.doneCount,
-        totalCount: _controller.totalCount,
-      ),
+    // Fires on every change to the list, including timer ticks. The library
+    // drops it on the floor when nothing actually changed.
+    widget.library.record(
+      id: widget.listId,
+      title: list.title,
+      doneCount: _controller.doneCount,
+      totalCount: _controller.totalCount,
     );
   }
 
@@ -119,6 +127,10 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
     _controller.removeListener(_persist);
     _controller.dispose();
     _scroll.dispose();
+    // Closing a list is exactly when its summary should reach disk, and it
+    // settles the debounce rather than leaving a timer running behind a screen
+    // nobody is looking at any more.
+    unawaited(widget.library.flush());
     super.dispose();
   }
 
