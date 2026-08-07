@@ -25,9 +25,10 @@ line?** If not, something has leaked across the boundary and needs undoing.
 
 ## What lives at the root
 
-This README, and nothing else. The root is not a place to put anything
-"shared", because there is no such thing here. A project needs a `.gitignore`,
-a CI config or a Makefile, it gets its own, inside its own folder.
+This README and `CLAUDE.md`, which restates the rule for agents. That is all.
+The root is not a place to put anything "shared", because there is no such
+thing here. If a project needs a `.gitignore`, a CI config or a Makefile, it
+gets its own, inside its own folder.
 
 ## Adding a project
 
