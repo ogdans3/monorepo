@@ -62,9 +62,19 @@ the warning, not hue.
 
 ## Typography
 
-**One family: Inter** (`Inter`, variable, weights 400/500/600), with the
+**One family: Schibsted Grotesk** (variable, 400–800), self-hosted, with the
 platform sans as fallback. Product UI does not need a display/body pairing, and
-a display face in a checklist row would be a costume.
+a display face in a checklist row would be a costume — but the reflex pick
+(Inter) would make the app look like every other one, so the family is a
+grotesque with actual character: slightly narrow, high x-height, a hard-edged
+`t` and `a` that stay legible at 13px and turn sharp at display sizes. One
+family carries the landing page's 5rem statement and the app's 13px counts.
+
+Fallback stack: `-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+sans-serif`. The web build self-hosts two subset woff2 files (latin,
+latin-ext); the app bundles the variable TTF. Neither ever calls out to
+fonts.googleapis.com — a checklist app should not tell Google which lists you
+open. Licence: SIL OFL 1.1, shipped alongside the files.
 
 Fixed scale, ratio ≈ 1.2. No fluid clamping — phones do not resize.
 

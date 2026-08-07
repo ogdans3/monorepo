@@ -32,3 +32,4 @@ apps/app/**/*.freezed.dart
 .DS_Store
 *.log
 coverage/
+apps/web/.svelte-kit/

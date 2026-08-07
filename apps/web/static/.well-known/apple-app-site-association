@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["REPLACE_WITH_TEAM_ID.app.checkpost"],
+        "components": [
+          {
+            "/": "/l/*",
+            "comment": "Share links open the app directly; everything else stays in the browser."
+          }
+        ]
+      }
+    ]
+  }
+}

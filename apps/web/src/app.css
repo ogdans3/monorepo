@@ -1,0 +1,135 @@
+/*
+ * Checkpost design tokens. The values here are the same ones in DESIGN.md and
+ * in apps/app/lib/design/tokens.dart — three files, one palette. Change them
+ * together or they will drift.
+ */
+
+@font-face {
+  font-family: 'Schibsted Grotesk';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/schibsted-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Schibsted Grotesk';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/schibsted-grotesk-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  color-scheme: light dark;
+
+  --bg: oklch(1 0 0);
+  --surface: oklch(0.972 0.006 350);
+  --surface-hover: oklch(0.945 0.009 350);
+  --line: oklch(0.898 0.011 350);
+  --line-strong: oklch(0.83 0.014 350);
+  --ink: oklch(0.2 0.01 350);
+  --ink-muted: oklch(0.505 0.015 350);
+  --ink-faint: oklch(0.62 0.014 350);
+  --primary: oklch(0.555 0.193 2);
+  --primary-hover: oklch(0.5 0.19 2);
+  --primary-quiet: oklch(0.955 0.03 2);
+  --on-primary: oklch(1 0 0);
+
+  --font: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1); /* ease-out-quart */
+  --fast: 160ms;
+  --base: 220ms;
+
+  /* Semantic scale — no arbitrary 9999s anywhere in this codebase. */
+  --z-sticky: 10;
+  --z-overlay: 20;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(0.168 0.006 350);
+    --surface: oklch(0.218 0.009 350);
+    --surface-hover: oklch(0.262 0.011 350);
+    --line: oklch(0.305 0.012 350);
+    --line-strong: oklch(0.4 0.014 350);
+    --ink: oklch(0.955 0.004 350);
+    --ink-muted: oklch(0.715 0.016 350);
+    --ink-faint: oklch(0.58 0.015 350);
+    --primary: oklch(0.705 0.165 2);
+    --primary-hover: oklch(0.755 0.155 2);
+    --primary-quiet: oklch(0.285 0.055 2);
+    --on-primary: oklch(0.168 0.006 350);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.55;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  text-wrap: balance;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  /* The accent is 5.3:1 on white and 6.8:1 on the dark surface — a focus ring
+     has to clear 3:1 to be a ring at all, and most brand rings don't. */
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
