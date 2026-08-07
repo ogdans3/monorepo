@@ -1,9 +1,11 @@
 name: Checkpost
 description: Shared checklists that live at a link. No accounts.
 
-# The front door is the API, so https://checkpost.<host>/v1/admin is the
-# operator console and https://checkpost.<host>/v1/health is the health check.
-# The web client is a second service in the same compose file and needs its own
-# hostname to be reachable from a browser. See the deployment note in README.md.
-compose_service: api
+# The dashboard's one hostname goes to the browser client, because a share link
+# is the product and https://checkpost.<host>/l/<token> is what people are sent.
+#
+# The API has its own hostname instead, checkpost-api.<host>, through a Caddy
+# site block. It needs one: the browser calls it cross-origin, and its change
+# feed is a websocket, which the dashboard's own proxy cannot carry.
+compose_service: web
 compose_port: 3000

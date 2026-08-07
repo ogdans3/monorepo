@@ -52,6 +52,15 @@ keys, and both test suites assert the same properties. Postgres sorts
 `position` with an explicit `COLLATE "C"` in every query and index. Keep it
 there.
 
+**Deploy through the dashboard, never by hand.** `docker compose up` recreates
+the front-door container and drops it off the `aicentral` network, which is
+what the proxy resolves. Only the dashboard's start path reattaches it, so a
+manual deploy takes the public site down with a 502.
+
+**No BuildKit-only syntax in the Dockerfiles.** The dashboard's docker CLI has
+no buildx and falls back to the classic builder, which fails outright on
+`RUN --mount`. It has to build anywhere.
+
 **The test suite truncates every table.** `apps/api/test/guard.ts` refuses any
 database that is not local or whose name does not say "test". Do not weaken it.
 `DATABASE_URL` now points at a hosted database with real lists in it.

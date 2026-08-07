@@ -1,12 +1,16 @@
-import { env } from '$env/dynamic/public';
+import { PUBLIC_API_ORIGIN } from '$env/static/public';
 import type { ChangesResponse, Item, List, Snapshot } from '@checkpost/contract';
 
 /**
- * Baked at build time, and the same value the Content Security Policy names in
- * `svelte.config.js`. If these two ever disagree the browser blocks every
- * request with no obvious cause, so they read one variable.
+ * Static, not dynamic, and that is the whole point.
+ *
+ * The Content Security Policy in `svelte.config.js` is built from this same
+ * variable at build time. Reading it from the runtime environment instead let
+ * the two drift: the policy named the real API while the client fell back to
+ * localhost, so every request was blocked by our own header with no obvious
+ * cause. Baking both from one value makes that impossible.
  */
-export const apiOrigin = env.PUBLIC_API_ORIGIN || 'http://localhost:4000';
+export const apiOrigin = PUBLIC_API_ORIGIN || 'http://localhost:4000';
 
 const apiBase = `${apiOrigin.replace(/\/+$/, '')}/v1`;
 

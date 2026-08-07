@@ -113,6 +113,12 @@ background reaper is the only bound on the database: change-log rows past
 `EVENT_RETENTION_DAYS` (14), lists untouched for `LIST_TTL_DAYS` (365, reset by
 any read or write), and links whose list has been gone for 30 days.
 
+**Do not publish the API on 0.0.0.0 behind a proxy.** `trustProxy` is on, so
+the API believes `X-Forwarded-For`. If the port is also reachable directly, that
+header can be forged and the rate limiter walked straight past. Set `API_BIND`
+to the docker bridge gateway on any host with a proxy in front. The default is
+`0.0.0.0`, which is right for local development and wrong for a server.
+
 **A token in a URL path is the one leak the app cannot close.** The API takes
 tokens in an `Authorization` header only, and scrubs anything token-shaped from
 its logs. But `/l/<token>` reaches the web server as a path. If you put that

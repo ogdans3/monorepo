@@ -45,7 +45,13 @@ services:
       EVENT_RETENTION_DAYS: ${EVENT_RETENTION_DAYS:-14}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - '${API_PORT:-4000}:3000'
+      # Bind address is a variable so a deployment can keep this off the public
+      # internet. Published on 0.0.0.0 the API is reachable directly, around
+      # whatever proxy sits in front of it, and `trustProxy` then means anyone
+      # can forge X-Forwarded-For and walk past the rate limiter.
+      # On the server set API_BIND=172.17.0.1, the docker bridge gateway, which
+      # is what host.docker.internal resolves to inside the proxy container.
+      - '${API_BIND:-0.0.0.0}:${API_PORT:-4000}:3000'
     healthcheck:
       test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/v1/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
@@ -66,7 +72,7 @@ services:
       NODE_ENV: production
       PORT: 3000
     ports:
-      - '${WEB_PORT:-5173}:3000'
+      - '${WEB_BIND:-0.0.0.0}:${WEB_PORT:-5173}:3000'
 
 volumes:
   db-data:

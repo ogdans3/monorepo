@@ -178,17 +178,21 @@
     </main>
 
     <form class="composer" onsubmit={submit}>
+      <!-- Disabled until the list is here. `add` needs the list id, so typing
+           before the snapshot arrived used to be swallowed in silence, which on
+           a slow connection is exactly when someone starts typing. -->
       <textarea
         bind:this={composer}
         bind:value={draft}
         onkeydown={keydown}
+        disabled={!session.list}
         rows="1"
         maxlength={LIMITS.itemText}
-        placeholder="Add something"
+        placeholder={session.list ? 'Add something' : 'Loading…'}
         enterkeyhint="done"
         aria-label="Add an item"
       ></textarea>
-      <button type="submit" disabled={!draft.trim()} aria-label="Add item">
+      <button type="submit" disabled={!draft.trim() || !session.list} aria-label="Add item">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
           <path
             d="M12 19V5M5 12l7-7 7 7"
@@ -328,8 +332,15 @@
     background: var(--bg);
   }
 
+  /* Grid, not flex. A <button> refuses to shrink below its content inside a
+     flex row in WebKit, so a long list name pushed the share and menu buttons
+     clean off the right of the screen. `minmax(0, 1fr)` on the first column is
+     the reliable way to say "this one gives". */
   header {
-    display: flex;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-columns: auto;
     align-items: center;
     gap: 4px;
     padding: 4px 4px 4px 16px;
@@ -338,8 +349,9 @@
   }
 
   .title {
-    flex: 1;
     min-width: 0;
+    width: 100%;
+    overflow: hidden;
     padding: 10px 4px;
     border: 0;
     background: none;
@@ -349,6 +361,7 @@
   }
 
   h1 {
+    width: 100%;
     font-size: 1.25rem;
     font-weight: 600;
     letter-spacing: -0.02em;

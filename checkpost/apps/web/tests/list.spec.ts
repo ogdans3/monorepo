@@ -9,12 +9,32 @@ import { expect, test, type Page } from '@playwright/test';
  * default list indent that pushed every row off the left of a phone.
  */
 
+const made: string[] = [];
+
 async function makeList(page: Page): Promise<string> {
   await page.goto('/');
   await page.getByRole('button', { name: 'Make a list' }).click();
   await page.waitForURL(/\/l\/[A-Za-z0-9_-]{43}/);
-  return page.url();
+  const url = page.url();
+  made.push(url.split('/l/')[1]!);
+  return url;
 }
+
+/**
+ * These tests create real lists, and the API may well be pointed at a hosted
+ * database, so every one of them is deleted again rather than left behind as
+ * litter somebody has to clear out by hand.
+ */
+test.afterEach(async ({ request }) => {
+  const apiOrigin = process.env.API_ORIGIN ?? 'http://localhost:4000';
+  for (const token of made.splice(0)) {
+    // A rotated link means the token is already dead, and a 410 here is a pass.
+    // The list is gone either way.
+    await request
+      .delete(`${apiOrigin}/v1/list`, { headers: { authorization: `Bearer ${token}` } })
+      .catch(() => {});
+  }
+});
 
 async function addItem(page: Page, text: string) {
   const field = page.getByLabel('Add an item');
@@ -90,6 +110,21 @@ test('a replaced link is a plain sentence with a way out', async ({ page, contex
   await stale.goto(url);
   await expect(stale.getByRole('heading')).toContainText('This link was replaced');
   await expect(stale.getByRole('link', { name: 'Back to Checkpost' })).toBeVisible();
+});
+
+test('a long list name never pushes the buttons off the screen', async ({ page }) => {
+  await makeList(page);
+  await page.locator('button.title').click();
+  await page.locator('input.rename').fill('Del 1: Foto i Oslo (11 stk, alle bilder) og litt til');
+  await page.locator('input.rename').press('Enter');
+  await expect(page.locator('h1')).toContainText('Del 1');
+
+  const viewport = page.viewportSize()!;
+  for (const label of ['Share this list', 'More']) {
+    const box = await page.getByRole('button', { name: label }).boundingBox();
+    expect(box, label).not.toBeNull();
+    expect(box!.x + box!.width, label).toBeLessThanOrEqual(viewport.width);
+  }
 });
 
 test('an unreadable token is a 404, not a request', async ({ page }) => {

@@ -5,11 +5,14 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 WORKDIR /app
 
+# No BuildKit cache mounts anywhere in here. They save a few seconds and cost
+# portability: a host whose docker CLI has no buildx falls back to the classic
+# builder, which fails outright on `RUN --mount`. This has to build anywhere.
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/contract/package.json packages/contract/
 COPY apps/web/package.json apps/web/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 # Baked in at build time: the client calls this origin and the Content Security
