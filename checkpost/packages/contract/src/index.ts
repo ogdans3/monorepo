@@ -48,6 +48,48 @@ export function parseShareToken(input: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// What a link is allowed to do
+// ---------------------------------------------------------------------------
+
+/**
+ * A link carries its own access. One list can have several live links at
+ * different levels, which is the point: you send read to the people who only
+ * need to look, and keep admin for yourself.
+ *
+ * `read`, `write` and `admin` are a ladder, each including the one before.
+ * `copy` is not on that ladder at all. It is a template link, and the only
+ * thing it can do is mint a fresh list for whoever opens it. It cannot read
+ * the list it came from.
+ */
+export const accessSchema = z.enum(['read', 'write', 'admin', 'copy']);
+export type Access = z.infer<typeof accessSchema>;
+
+/** Levels a person can be granted directly, in increasing order. */
+export const DIRECT_ACCESS = ['read', 'write', 'admin'] as const;
+export type DirectAccess = (typeof DIRECT_ACCESS)[number];
+
+const RANK: Record<Access, number> = { read: 1, write: 2, admin: 3, copy: 0 };
+
+/** True when `held` is at least `needed`. A copy link never satisfies either. */
+export function allows(held: Access, needed: DirectAccess): boolean {
+  return RANK[held] >= RANK[needed];
+}
+
+export const ACCESS_LABELS: Record<Access, string> = {
+  read: 'Can look',
+  write: 'Can tick and add',
+  admin: 'Can do everything',
+  copy: 'Gets their own copy',
+};
+
+export const ACCESS_BLURBS: Record<Access, string> = {
+  read: 'Sees the list and every change to it, and cannot alter anything.',
+  write: 'Ticks things off, adds, edits and removes items, and renames the list.',
+  admin: 'Everything, including making and revoking links, and deleting the list.',
+  copy: 'Opening it makes them a private copy with nothing ticked off. They cannot see this list, or each other, and you never see theirs.',
+};
+
+// ---------------------------------------------------------------------------
 // Limits
 // ---------------------------------------------------------------------------
 
@@ -58,6 +100,8 @@ export const LIMITS = {
   itemsPerList: 500,
   /** Max events returned by one `GET /changes` page. */
   changesPage: 500,
+  /** Live links per list. Enough for any real sharing, bounded against abuse. */
+  linksPerList: 20,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -98,8 +142,48 @@ export type Item = z.infer<typeof itemSchema>;
 export const snapshotSchema = z.object({
   list: listSchema,
   items: z.array(itemSchema),
+  /** What the link this was fetched with is allowed to do. */
+  access: accessSchema,
 });
 export type Snapshot = z.infer<typeof snapshotSchema>;
+
+/**
+ * A link, as the admin surface sees it. There is no token here and there never
+ * can be: only its SHA-256 is stored, which is what makes a leaked backup
+ * harmless. A token is visible exactly once, when it is made.
+ */
+export const shareLinkSchema = z.object({
+  id: z.string().uuid(),
+  access: accessSchema,
+  label: z.string(),
+  createdAt: z.string().datetime(),
+  /** True for the link this request was made with. */
+  isCurrent: z.boolean(),
+});
+export type ShareLink = z.infer<typeof shareLinkSchema>;
+
+export const createLinkBodySchema = z
+  .object({
+    access: accessSchema,
+    label: z.string().trim().max(60).optional(),
+  })
+  .strict();
+export type CreateLinkBody = z.infer<typeof createLinkBodySchema>;
+
+export const newLinkResponseSchema = z.object({
+  link: shareLinkSchema,
+  /** Shown once. Not stored anywhere it can be read back. */
+  token: shareTokenSchema,
+  url: z.string().url(),
+});
+export type NewLinkResponse = z.infer<typeof newLinkResponseSchema>;
+
+/** What a copy link will make, without handing over the list it came from. */
+export const copyPreviewSchema = z.object({
+  title: z.string(),
+  itemCount: z.number().int().nonnegative(),
+});
+export type CopyPreview = z.infer<typeof copyPreviewSchema>;
 
 // ---------------------------------------------------------------------------
 // Change events
@@ -229,6 +313,10 @@ export const errorResponseSchema = z.object({
     code: z.enum([
       'bad_request',
       'unauthorized',
+      /** Valid link, but not allowed to do this. */
+      'forbidden',
+      /** Valid link, but its only purpose is minting a copy. */
+      'copy_link',
       'not_found',
       'gone',
       'too_many_requests',

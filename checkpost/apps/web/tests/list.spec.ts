@@ -101,8 +101,8 @@ test('a replaced link is a plain sentence with a way out', async ({ page, contex
   await addItem(page, 'Firewood');
 
   await page.getByRole('button', { name: 'Share this list' }).click();
-  await page.getByRole('button', { name: 'Replace link' }).click();
-  await page.getByRole('button', { name: 'Replace the link' }).click();
+  await page.getByRole('button', { name: 'Replace my link' }).first().click();
+  await page.getByRole('button', { name: 'Replace my link' }).last().click();
   await expect(page.getByText('Link replaced.')).toBeVisible();
 
   // Anyone still holding the old link is told what happened, not shown a shrug.
@@ -125,6 +125,92 @@ test('a long list name never pushes the buttons off the screen', async ({ page }
     expect(box, label).not.toBeNull();
     expect(box!.x + box!.width, label).toBeLessThanOrEqual(viewport.width);
   }
+});
+
+/** Mints a link at a level using the admin link that made the list. */
+async function mintLink(page: Page, label: string): Promise<string> {
+  await page.getByRole('button', { name: 'Share this list' }).click();
+  await page.getByRole('button', { name: 'Make a link', exact: true }).click();
+  await page.getByText(label, { exact: true }).click();
+  await page.getByRole('button', { name: 'Make the link' }).click();
+  await expect(page.getByText('shown once', { exact: false })).toBeVisible();
+  const url = (await page.locator('code').innerText()).trim();
+  made.push(url.split('/l/')[1]!);
+  await page.getByRole('button', { name: 'Close' }).click();
+  return url;
+}
+
+test('a read link can look and cannot touch', async ({ page, context }) => {
+  await makeList(page);
+  await addItem(page, 'Firewood');
+
+  const readUrl = await mintLink(page, 'Can look');
+
+  const reader = await context.newPage();
+  await reader.goto(readUrl);
+  await expect(reader.getByText('Firewood', { exact: true })).toBeVisible();
+  await expect(reader.getByText('Read only')).toBeVisible();
+
+  // No way in. No composer, and the controls are off rather than merely
+  // ignoring you, which is also why this asserts rather than clicking.
+  await expect(reader.getByLabel('Add an item')).toHaveCount(0);
+  await expect(reader.locator('button.tick').first()).toBeDisabled();
+  await expect(reader.locator('button.edge').first()).toBeDisabled();
+  await expect(reader.locator('li.row.done')).toHaveCount(0);
+
+  // And the owner's view still shows it unticked, so nothing slipped through.
+  await expect(page.locator('li.row.done')).toHaveCount(0);
+});
+
+test('a write link can tick but cannot manage links', async ({ page, context }) => {
+  await makeList(page);
+  await addItem(page, 'Firewood');
+
+  const writeUrl = await mintLink(page, 'Can tick and add');
+
+  const writer = await context.newPage();
+  await writer.goto(writeUrl);
+  await expect(writer.getByText('Firewood', { exact: true })).toBeVisible();
+  await expect(writer.getByText('Read only')).toHaveCount(0);
+
+  await writer.getByText('Firewood', { exact: true }).click();
+  await expect(writer.locator('.shelf')).toContainText('Done · 1');
+  // It reaches the other tab, so it really was written.
+  await expect(page.locator('.shelf')).toContainText('Done · 1');
+
+  // Managing access is where it stops.
+  await writer.getByRole('button', { name: 'Share this list' }).click();
+  await expect(writer.getByText('Only a link that can do everything')).toBeVisible();
+  await expect(writer.getByRole('button', { name: 'Make a link', exact: true })).toHaveCount(0);
+});
+
+test('a copy link hands over a private copy and hides the original', async ({ page, context }) => {
+  await makeList(page);
+  await addItem(page, 'Passport');
+  await addItem(page, 'Charger');
+  await page.getByText('Passport', { exact: true }).click();
+  await expect(page.locator('.shelf')).toContainText('Done · 1');
+
+  const copyUrl = await mintLink(page, 'Gets their own copy');
+
+  const taker = await context.newPage();
+  await taker.goto(copyUrl);
+  // It says what it will make, and does not show the list itself.
+  await expect(taker.getByRole('heading')).toContainText('Take your own copy');
+  await expect(taker.getByText('Passport', { exact: true })).toHaveCount(0);
+
+  await taker.getByRole('button', { name: 'Make my copy' }).click();
+  await taker.waitForURL((url) => url.pathname !== new URL(copyUrl).pathname);
+  made.push(taker.url().split('/l/')[1]!);
+
+  // Everything is there, and nothing arrived already done.
+  await expect(taker.getByText('Passport', { exact: true })).toBeVisible();
+  await expect(taker.getByText('Charger', { exact: true })).toBeVisible();
+  await expect(taker.locator('.shelf')).toHaveCount(0);
+
+  // The two lists are strangers from here on.
+  await addItem(taker, 'Only mine');
+  await expect(page.getByText('Only mine', { exact: true })).toHaveCount(0);
 });
 
 test('an unreadable token is a 404, not a request', async ({ page }) => {

@@ -17,6 +17,7 @@ class ItemRow extends StatelessWidget {
     required this.onToggle,
     required this.onOpen,
     this.washing = false,
+    this.readOnly = false,
     super.key,
   });
 
@@ -27,6 +28,9 @@ class ItemRow extends StatelessWidget {
   /// Somebody else just changed this row.
   final bool washing;
 
+  /// A read link. The row shows everything and responds to nothing.
+  final bool readOnly;
+
   @override
   Widget build(BuildContext context) {
     final colors = CheckpostTheme.of(context);
@@ -36,7 +40,7 @@ class ItemRow extends StatelessWidget {
     final row = Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onToggle,
+        onTap: readOnly ? null : onToggle,
         splashColor: colors.primaryQuiet.withValues(alpha: 0.5),
         highlightColor: colors.surfaceHover,
         child: ConstrainedBox(
@@ -97,23 +101,26 @@ class ItemRow extends StatelessWidget {
                 ),
                 // 44dp of always-present chevron: the non-gesture way to open
                 // an item, so nothing here is swipe-only.
-                Semantics(
-                  button: true,
-                  label: 'Open ${item.text}',
-                  child: InkResponse(
-                    onTap: onOpen,
-                    radius: 24,
-                    child: SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
-                        color: colors.inkFaint,
+                if (readOnly)
+                  const SizedBox(width: Space.sm)
+                else
+                  Semantics(
+                    button: true,
+                    label: 'Open ${item.text}',
+                    child: InkResponse(
+                      onTap: onOpen,
+                      radius: 24,
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 20,
+                          color: colors.inkFaint,
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -127,19 +134,21 @@ class ItemRow extends StatelessWidget {
       // The wash is information, not decoration. It is how you notice what
       // somebody else did, so it survives Reduce Motion as a flat tint.
       color: washing ? colors.primaryQuiet : colors.bg,
-      child: Dismissible(
-        key: ValueKey('swipe-${item.id}'),
-        direction: DismissDirection.startToEnd,
-        dismissThresholds: const {DismissDirection.startToEnd: 0.4},
-        background: _SwipeHint(colors: colors),
-        confirmDismiss: (_) async {
-          // Swipe opens the item, and never destroys anything. Returning false
-          // springs the row back, which is the correct end state.
-          onOpen();
-          return false;
-        },
-        child: row,
-      ),
+      child: readOnly
+          ? row
+          : Dismissible(
+              key: ValueKey('swipe-${item.id}'),
+              direction: DismissDirection.startToEnd,
+              dismissThresholds: const {DismissDirection.startToEnd: 0.4},
+              background: _SwipeHint(colors: colors),
+              confirmDismiss: (_) async {
+                // Swipe opens the item, and never destroys anything. Returning false
+                // springs the row back, which is the correct end state.
+                onOpen();
+                return false;
+              },
+              child: row,
+            ),
     );
   }
 }

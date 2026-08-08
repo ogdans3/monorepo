@@ -2,11 +2,13 @@ import { and, asc, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import {
   LIMITS,
   shareUrl,
+  type Access,
   type ChangeEvent,
   type CreateItemBody,
   type CreateListBody,
   type Item,
   type List,
+  type ShareLink,
   type Snapshot,
   type UpdateItemBody,
 } from '@checkpost/contract';
@@ -25,6 +27,7 @@ export interface LinkContext {
   listId: string;
   linkId: string;
   token: string;
+  access: Access;
 }
 
 type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
@@ -65,6 +68,7 @@ export class ListService {
         id: shareLinks.id,
         listId: shareLinks.listId,
         revokedAt: shareLinks.revokedAt,
+        access: shareLinks.access,
       })
       .from(shareLinks)
       .where(eq(shareLinks.tokenHash, hashShareToken(token)))
@@ -77,14 +81,19 @@ export class ListService {
     // The link outlives its list, so "deleted" is distinguishable from "never
     // existed". The app can say which, instead of a shrug.
     if (!row.listId) throw ApiError.gone('This list has been deleted.');
-    return { listId: row.listId, linkId: row.id, token };
+    return {
+      listId: row.listId,
+      linkId: row.id,
+      token,
+      access: row.access as Access,
+    };
   }
 
   // -------------------------------------------------------------------------
   // Reads
   // -------------------------------------------------------------------------
 
-  async snapshot(listId: string): Promise<Snapshot> {
+  async snapshot(listId: string, access: Access = 'admin'): Promise<Snapshot> {
     const [listRow] = await this.db.select().from(lists).where(eq(lists.id, listId)).limit(1);
     if (!listRow) throw ApiError.gone('This list has been deleted.');
     const itemRows = await this.db
@@ -92,7 +101,8 @@ export class ListService {
       .from(items)
       .where(eq(items.listId, listId))
       .orderBy(asc(POSITION_ORDER));
-    return { list: toList(listRow), items: itemRows.map(toItem) };
+    // The client renders what it is allowed to do, so it is told.
+    return { list: toList(listRow), items: itemRows.map(toItem), access };
   }
 
   /**
@@ -103,6 +113,7 @@ export class ListService {
   async changesSince(
     listId: string,
     since: number,
+    access: Access = 'admin',
   ): Promise<
     | { kind: 'events'; revision: number; events: ChangeEvent[] }
     | { kind: 'resync'; snapshot: Snapshot }
@@ -127,7 +138,7 @@ export class ListService {
     // `since + 1` is the first revision the client needs. If the log no longer
     // reaches back that far, replaying it would leave a hole.
     if (!oldest || oldest.revision > since + 1) {
-      return { kind: 'resync', snapshot: await this.snapshot(listId) };
+      return { kind: 'resync', snapshot: await this.snapshot(listId, access) };
     }
 
     const rows = await this.db
@@ -175,7 +186,14 @@ export class ListService {
       const [listRow] = await tx.insert(lists).values({ title: body.title }).returning();
       if (!listRow) throw ApiError.badRequest('Could not create the list.');
 
-      await tx.insert(shareLinks).values({ listId: listRow.id, tokenHash: hashShareToken(token) });
+      // Whoever makes a list gets admin on it. Every other level exists only
+      // because an admin chose to hand it out.
+      await tx.insert(shareLinks).values({
+        listId: listRow.id,
+        tokenHash: hashShareToken(token),
+        access: 'admin',
+        label: 'Made the list',
+      });
 
       let itemRows: Item[] = [];
       const seeds = body.items ?? [];
@@ -337,29 +355,129 @@ export class ListService {
     return result;
   }
 
+  // -------------------------------------------------------------------------
+  // Links
+  // -------------------------------------------------------------------------
+
+  async links(ctx: LinkContext): Promise<ShareLink[]> {
+    const rows = await this.db
+      .select({
+        id: shareLinks.id,
+        access: shareLinks.access,
+        label: shareLinks.label,
+        createdAt: shareLinks.createdAt,
+      })
+      .from(shareLinks)
+      .where(and(eq(shareLinks.listId, ctx.listId), isNull(shareLinks.revokedAt)))
+      .orderBy(asc(shareLinks.createdAt));
+
+    // No token here, and there cannot be one: only its hash was ever stored.
+    return rows.map((row) => ({
+      id: row.id,
+      access: row.access as Access,
+      label: row.label,
+      createdAt: row.createdAt.toISOString(),
+      isCurrent: row.id === ctx.linkId,
+    }));
+  }
+
+  /** Mints a link at a chosen level. The token is returned once and forgotten. */
+  async createLink(
+    ctx: LinkContext,
+    access: Access,
+    label: string,
+  ): Promise<{ link: ShareLink; token: string }> {
+    const live = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(shareLinks)
+      .where(and(eq(shareLinks.listId, ctx.listId), isNull(shareLinks.revokedAt)));
+    if (Number(live[0]?.count ?? 0) >= LIMITS.linksPerList) {
+      throw ApiError.limitReached(
+        `A list holds ${LIMITS.linksPerList} live links. Revoke one you are not using.`,
+      );
+    }
+
+    const token = generateShareToken();
+    const [row] = await this.db
+      .insert(shareLinks)
+      .values({
+        listId: ctx.listId,
+        tokenHash: hashShareToken(token),
+        access,
+        label: label.slice(0, 60),
+      })
+      .returning();
+    if (!row) throw ApiError.badRequest('Could not make the link.');
+
+    return {
+      token,
+      link: {
+        id: row.id,
+        access: row.access as Access,
+        label: row.label,
+        createdAt: row.createdAt.toISOString(),
+        isCurrent: false,
+      },
+    };
+  }
+
   /**
-   * Issues a new link and kills the old one. Everyone else's socket is closed
-   * with `revoked: rotated`. The device that rotated keeps working because its
-   * socket is registered against a different (now current) link.
+   * Revokes one link. Whoever holds it is disconnected and gets a 410 on their
+   * next request, which is the point of the feature, so it is a hard cut.
+   */
+  async revokeLink(ctx: LinkContext, linkId: string): Promise<void> {
+    const revoked = await this.db
+      .update(shareLinks)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(shareLinks.id, linkId),
+          eq(shareLinks.listId, ctx.listId),
+          isNull(shareLinks.revokedAt),
+        ),
+      )
+      .returning({ id: shareLinks.id });
+    if (revoked.length === 0) throw ApiError.notFound('That link is already gone.');
+    this.hub.evictLink(ctx.listId, linkId, 'rotated');
+  }
+
+  /**
+   * Replaces the link this request was made with, keeping its level, and leaves
+   * every other link on the list alone.
+   *
+   * That last part is what access changed. When a list could only have one
+   * link, replacing it meant replacing all of them. Now that you can hand out a
+   * read link and keep an admin one, quietly killing the others would be the
+   * surprising behaviour rather than the safe one.
    */
   async rotateLink(ctx: LinkContext, actor: string | null): Promise<{ token: string }> {
     const token = generateShareToken();
-    const newLinkId = await this.db.transaction(async (tx) => {
+    await this.db.transaction(async (tx) => {
       const [bumped] = await tx
         .update(lists)
-        .set({ revision: sql`${lists.revision} + 1`, updatedAt: new Date(), lastActiveAt: new Date() })
+        .set({
+          revision: sql`${lists.revision} + 1`,
+          updatedAt: new Date(),
+          lastActiveAt: new Date(),
+        })
         .where(eq(lists.id, ctx.listId))
         .returning({ revision: lists.revision });
       if (!bumped) throw ApiError.gone('This list has been deleted.');
 
-      await tx
+      const [old] = await tx
         .update(shareLinks)
         .set({ revokedAt: new Date() })
-        .where(and(eq(shareLinks.listId, ctx.listId), isNull(shareLinks.revokedAt)));
+        .where(and(eq(shareLinks.id, ctx.linkId), isNull(shareLinks.revokedAt)))
+        .returning({ access: shareLinks.access, label: shareLinks.label });
 
       const [link] = await tx
         .insert(shareLinks)
-        .values({ listId: ctx.listId, tokenHash: hashShareToken(token) })
+        .values({
+          listId: ctx.listId,
+          tokenHash: hashShareToken(token),
+          access: old?.access ?? ctx.access,
+          label: old?.label ?? '',
+        })
         .returning({ id: shareLinks.id });
       if (!link) throw ApiError.badRequest('Could not replace the link.');
 
@@ -370,15 +488,85 @@ export class ListService {
         actor,
         data: {},
       });
-      return link.id;
     });
 
-    // Evict holders of the link that was just revoked. The rotating device is
-    // still registered under `ctx.linkId`, which is exactly the one we revoked,
-    // so it is disconnected too, and reconnects with the token it just got.
+    // Evicts holders of the link just revoked, including the caller, which
+    // reconnects with the token it has just been handed.
     this.hub.evictLink(ctx.listId, ctx.linkId, 'rotated');
-    void newLinkId;
     return { token };
+  }
+
+  // -------------------------------------------------------------------------
+  // Copy links
+  // -------------------------------------------------------------------------
+
+  /** What a copy link is about to make, without exposing the list itself. */
+  async copyPreview(ctx: LinkContext): Promise<{ title: string; itemCount: number }> {
+    const [row] = await this.db
+      .select({
+        title: lists.title,
+        itemCount: sql<number>`(select count(*)::int from items i where i.list_id = lists.id)`,
+      })
+      .from(lists)
+      .where(eq(lists.id, ctx.listId))
+      .limit(1);
+    if (!row) throw ApiError.gone('This list has been deleted.');
+    return { title: row.title, itemCount: Number(row.itemCount) };
+  }
+
+  /**
+   * Takes a copy of the list behind a copy link and hands the caller admin on
+   * it. Nothing is ticked off, because a template is a thing to work through
+   * rather than a record of somebody else's progress.
+   *
+   * The two lists are strangers afterwards. No shared rows, no shared links,
+   * and no events crossing between them.
+   */
+  async copyFromLink(ctx: LinkContext): Promise<{ snapshot: Snapshot; token: string }> {
+    const token = generateShareToken();
+    const listId = await this.db.transaction(async (tx) => {
+      const [source] = await tx
+        .select({ title: lists.title })
+        .from(lists)
+        .where(eq(lists.id, ctx.listId))
+        .limit(1);
+      if (!source) throw ApiError.gone('This list has been deleted.');
+
+      const [copy] = await tx.insert(lists).values({ title: source.title }).returning();
+      if (!copy) throw ApiError.badRequest('Could not make the copy.');
+
+      const sourceItems = await tx
+        .select()
+        .from(items)
+        .where(eq(items.listId, ctx.listId))
+        .orderBy(asc(POSITION_ORDER));
+
+      if (sourceItems.length > 0) {
+        await tx.insert(items).values(
+          sourceItems.map((item) => ({
+            listId: copy.id,
+            text: item.text,
+            note: item.note,
+            // Positions carry over so the copy reads in the same order, and
+            // nothing carries over ticked.
+            position: item.position,
+            checked: false,
+            checkedAt: null,
+          })),
+        );
+      }
+
+      await tx.insert(shareLinks).values({
+        listId: copy.id,
+        tokenHash: hashShareToken(token),
+        access: 'admin',
+        label: 'Made from a copy link',
+      });
+
+      return copy.id;
+    });
+
+    return { snapshot: await this.snapshot(listId, 'admin'), token };
   }
 
   // -------------------------------------------------------------------------

@@ -4,11 +4,14 @@
   let {
     item,
     washing = false,
+    readonly = false,
     onToggle,
     onOpen,
   }: {
     item: Item;
     washing?: boolean;
+    /** A read link. The row still shows everything, and nothing responds. */
+    readonly?: boolean;
     onToggle: () => void;
     onOpen: () => void;
   } = $props();
@@ -28,6 +31,7 @@
   const MAX = 96;
 
   function down(event: PointerEvent) {
+    if (readonly) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     startX = event.clientX;
     startY = event.clientY;
@@ -85,7 +89,13 @@
   </span>
 
   <div class="sheet">
-    <button type="button" class="tick" onclick={onToggle} aria-pressed={item.checked}>
+    <button
+      type="button"
+      class="tick"
+      onclick={onToggle}
+      disabled={readonly}
+      aria-pressed={item.checked}
+    >
       <span class="box" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="15" height="15">
           <path
@@ -104,7 +114,13 @@
       </span>
     </button>
 
-    <button type="button" class="edge" onclick={onOpen} aria-label="Open {item.text}">
+    <button
+      type="button"
+      class="edge"
+      onclick={onOpen}
+      disabled={readonly}
+      aria-label="Open {item.text}"
+    >
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
         <path
           d="M9 5l7 7-7 7"
@@ -254,6 +270,17 @@
     color: var(--ink-faint);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* A read link still sees everything. The affordances stop responding rather
+     than disappearing, so the list does not look different for no reason, and
+     the chevron goes because there is nothing behind it. */
+  .tick:disabled {
+    cursor: default;
+  }
+
+  .edge:disabled {
+    visibility: hidden;
   }
 
   @media (prefers-reduced-motion: reduce) {

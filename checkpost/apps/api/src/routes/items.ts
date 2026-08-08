@@ -2,14 +2,15 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createItemBodySchema, updateItemBodySchema } from '@checkpost/contract';
 import { ApiError } from '../lib/errors.js';
-import { linkOf, requireLink } from '../plugins/context.js';
+import { linkOf, requireAccess } from '../plugins/context.js';
 import { parseBody } from './parse.js';
 
 const itemParamsSchema = z.object({ itemId: z.string().uuid() });
 
 export async function itemRoutes(app: FastifyInstance): Promise<void> {
   const service = app.listService;
-  const authed = requireLink(app);
+  // Everything in here changes the list, so nothing below read is enough.
+  const authed = requireAccess(app, 'write');
 
   app.post('/list/items', { preHandler: authed }, async (request, reply) => {
     const body = parseBody(createItemBodySchema, request.body);

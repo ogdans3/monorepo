@@ -8,13 +8,19 @@
   import { ListSession } from '$lib/list-session.svelte';
   import { trackKeyboard } from '$lib/keyboard';
   import { untrack } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { ACCESS_LABELS } from '@checkpost/contract';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
 
-  // One session per token. The route only ever mounts with the token it was
-  // loaded for, so reading it once is the whole story.
-  const session = new ListSession(untrack(() => data.token));
+  /**
+   * One session per token, rebuilt when the address bar moves to a different
+   * list. SvelteKit reuses this component when only the route parameter
+   * changes, so creating the session once meant that taking a copy navigated to
+   * the new list and then went on showing the old one.
+   */
+  let session = $state(new ListSession(untrack(() => data.token)));
 
   let draft = $state('');
   let composer = $state<HTMLTextAreaElement | null>(null);
@@ -26,13 +32,21 @@
   let titleDraft = $state('');
   let confirmingClear = $state(false);
   let confirmingDelete = $state(false);
+  let copying = $state(false);
+  let copyFailed = $state<string | null>(null);
 
   $effect(() => {
-    void session.open();
-    const untrack = trackKeyboard();
+    // Reruns when the token changes, and the cleanup stops the session it
+    // replaces. Everything below reads the local `current`, never the state
+    // variable, so the teardown can never stop the wrong one.
+    const current = untrack(() => session).token === data.token
+      ? untrack(() => session)
+      : (session = new ListSession(data.token));
+    void current.open();
+    const stopTrackingKeyboard = trackKeyboard();
     return () => {
-      session.stop();
-      untrack();
+      current.stop();
+      stopTrackingKeyboard();
     };
   });
 
@@ -60,6 +74,20 @@
     }
   }
 
+  $effect(() => {
+    // A new list means none of the previous list's sheets or drafts apply.
+    void data.token;
+    draft = '';
+    openItem = null;
+    sharing = false;
+    menu = false;
+    renaming = false;
+    confirmingClear = false;
+    confirmingDelete = false;
+    copying = false;
+    copyFailed = null;
+  });
+
   function startRename() {
     titleDraft = session.list?.title ?? '';
     menu = false;
@@ -74,7 +102,34 @@
   <meta name="referrer" content="no-referrer" />
 </svelte:head>
 
-{#if session.status === 'gone' || session.status === 'invalid'}
+{#if session.status === 'copy'}
+  <main class="dead">
+    <h1>Take your own copy</h1>
+    <p>
+      This link hands you a private copy of <strong>{session.copy?.title}</strong>, all
+      {session.copy?.itemCount} of it, with nothing ticked off. It is yours alone. Whoever sent it
+      never sees your copy, and you never see theirs.
+    </p>
+    <button
+      type="button"
+      class="cta"
+      disabled={copying}
+      onclick={async () => {
+        copying = true;
+        copyFailed = null;
+        try {
+          await goto(await session.takeCopy());
+        } catch (error) {
+          copyFailed = error instanceof Error ? error.message : 'Could not make your copy.';
+          copying = false;
+        }
+      }}
+    >
+      {copying ? 'Making your copy…' : 'Make my copy'}
+    </button>
+    <p class="fine" role="status">{copyFailed ?? ''}</p>
+  </main>
+{:else if session.status === 'gone' || session.status === 'invalid'}
   <main class="dead">
     <h1>
       {session.status === 'invalid'
@@ -95,9 +150,18 @@
 {:else}
   <div class="app">
     <header>
-      <button type="button" class="title" onclick={startRename} disabled={!session.list}>
+      <button
+        type="button"
+        class="title"
+        onclick={startRename}
+        disabled={!session.list || !session.canWrite}
+      >
         <h1>{session.list?.title ?? ' '}</h1>
       </button>
+
+      {#if session.list && !session.canWrite}
+        <span class="badge">Read only</span>
+      {/if}
 
       {#if session.presence > 1}
         <span class="presence" aria-label="{session.presence} people on this list">
@@ -144,7 +208,14 @@
       {:else if !session.items.length}
         <div class="empty">
           <h2>Nothing on the list yet</h2>
-          <p>Type below and press enter. Keep going, the field stays put so you can add several without stopping.</p>
+          <p>
+            {#if session.canWrite}
+              Type below and press enter. Keep going, the field stays put so you can add several
+              without stopping.
+            {:else}
+              Whoever it belongs to has not put anything on it. This link can only look.
+            {/if}
+          </p>
         </div>
       {:else}
         <ul class="rows">
@@ -152,6 +223,7 @@
             <ItemRow
               {item}
               washing={session.isWashing(item.id)}
+              readonly={!session.canWrite}
               onToggle={() => session.toggle(item)}
               onOpen={() => (openItem = item)}
             />
@@ -161,13 +233,16 @@
         {#if session.doneItems.length}
           <div class="shelf">
             <span>Done · {session.doneItems.length}</span>
-            <button type="button" onclick={() => (confirmingClear = true)}>Clear</button>
+            {#if session.canWrite}
+              <button type="button" onclick={() => (confirmingClear = true)}>Clear</button>
+            {/if}
           </div>
           <ul class="rows">
             {#each session.doneItems as item (item.id)}
               <ItemRow
                 {item}
                 washing={session.isWashing(item.id)}
+                readonly={!session.canWrite}
                 onToggle={() => session.toggle(item)}
                 onOpen={() => (openItem = item)}
               />
@@ -177,8 +252,9 @@
       {/if}
     </main>
 
-    <form class="composer" onsubmit={submit}>
-      <!-- Disabled until the list is here. `add` needs the list id, so typing
+    {#if session.canWrite}
+      <form class="composer" onsubmit={submit}>
+        <!-- Disabled until the list is here. `add` needs the list id, so typing
            before the snapshot arrived used to be swallowed in silence, which on
            a slow connection is exactly when someone starts typing. -->
       <textarea
@@ -203,8 +279,13 @@
             stroke-linejoin="round"
           />
         </svg>
-      </button>
-    </form>
+        </button>
+      </form>
+    {:else if session.list}
+      <p class="composer readonly">
+        This link can look at the list, and cannot change it.
+      </p>
+    {/if}
   </div>
 {/if}
 
@@ -229,8 +310,12 @@
   <ShareSheet
     url={shareUrl}
     title={session.list?.title ?? 'Checkpost list'}
+    canAdmin={session.canAdmin}
     onclose={() => (sharing = false)}
     onrotate={() => session.rotate()}
+    onlinks={() => session.links()}
+    oncreate={(access, label) => session.createLink(access, label)}
+    onrevoke={(linkId) => session.revokeLink(linkId)}
   />
 {/if}
 
@@ -263,27 +348,34 @@
 {#if menu}
   <Sheet title="This list" onclose={() => (menu = false)}>
     <ul class="menu">
-      <li><button type="button" onclick={startRename}>Rename list</button></li>
-      <li>
-        <button
-          type="button"
-          disabled={!session.doneCount}
-          onclick={() => {
-            menu = false;
-            confirmingClear = true;
-          }}>Clear done items</button
-        >
-      </li>
+      {#if session.canWrite}
+        <li><button type="button" onclick={startRename}>Rename list</button></li>
+        <li>
+          <button
+            type="button"
+            disabled={!session.doneCount}
+            onclick={() => {
+              menu = false;
+              confirmingClear = true;
+            }}>Clear done items</button
+          >
+        </li>
+      {/if}
       <li><a href={data.deepLink} rel="external">Open in the app</a></li>
-      <li>
-        <button
-          type="button"
-          onclick={() => {
-            menu = false;
-            confirmingDelete = true;
-          }}>Delete list for everyone</button
-        >
-      </li>
+      {#if session.canAdmin}
+        <li>
+          <button
+            type="button"
+            onclick={() => {
+              menu = false;
+              confirmingDelete = true;
+            }}>Delete list for everyone</button
+          >
+        </li>
+      {/if}
+      {#if !session.canWrite}
+        <li class="note">This link can look at the list, and cannot change it.</li>
+      {/if}
     </ul>
   </Sheet>
 {/if}
@@ -547,6 +639,52 @@
   .empty p {
     margin-top: 8px;
     max-width: 34ch;
+    color: var(--ink-muted);
+  }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .composer.readonly {
+    display: block;
+    padding: 16px 20px;
+    color: var(--ink-muted);
+    font-size: 0.88rem;
+  }
+
+  .menu .note {
+    padding: 12px 4px;
+    color: var(--ink-muted);
+    font-size: 0.88rem;
+  }
+
+  .cta {
+    min-height: 52px;
+    margin-top: 8px;
+    padding: 0 24px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--primary);
+    color: var(--on-primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .cta:disabled {
+    opacity: 0.7;
+  }
+
+  .dead .fine {
+    min-height: 1.3em;
+    font-size: 0.88rem;
     color: var(--ink-muted);
   }
 

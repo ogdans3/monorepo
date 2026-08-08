@@ -25,6 +25,12 @@ class ApiException implements Exception {
   /// This link was replaced, or the list was deleted.
   bool get isGone => code == 'gone';
 
+  /// A real link, but not one allowed to do this.
+  bool get isForbidden => code == 'forbidden';
+
+  /// A template link. It mints copies and cannot open the list it came from.
+  bool get isCopyLink => code == 'copy_link';
+
   bool get isRateLimited => code == 'too_many_requests';
 
   @override

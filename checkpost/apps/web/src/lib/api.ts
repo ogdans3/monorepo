@@ -1,5 +1,14 @@
 import { PUBLIC_API_ORIGIN } from '$env/static/public';
-import type { ChangesResponse, Item, List, Snapshot } from '@checkpost/contract';
+import type {
+  Access,
+  ChangesResponse,
+  CopyPreview,
+  Item,
+  List,
+  NewLinkResponse,
+  ShareLink,
+  Snapshot,
+} from '@checkpost/contract';
 
 /**
  * Static, not dynamic, and that is the whole point.
@@ -33,6 +42,16 @@ export class ApiError extends Error {
   /** This link was replaced, or the list was deleted. */
   get isGone() {
     return this.code === 'gone';
+  }
+
+  /** A real link, but not one allowed to do this. */
+  get isForbidden() {
+    return this.code === 'forbidden';
+  }
+
+  /** Not an error so much as an offer: this link mints a copy and nothing else. */
+  get isCopyLink() {
+    return this.code === 'copy_link';
   }
 }
 
@@ -132,4 +151,21 @@ export const api = {
 
   clearChecked: (token: string) =>
     send<{ removed: string[] }>('POST', '/list/items/clear-checked', { token }),
+
+  // Links. Admin only, and never returning a token except the once.
+  links: (token: string) => send<ShareLink[]>('GET', '/list/links', { token }),
+
+  createLink: (token: string, access: Access, label: string) =>
+    send<NewLinkResponse>('POST', '/list/links', { token, body: { access, label } }),
+
+  revokeLink: (token: string, linkId: string) =>
+    send<void>('DELETE', `/list/links/${linkId}`, { token }),
+
+  // Copy links.
+  copyPreview: (token: string) => send<CopyPreview>('GET', '/list/copy', { token }),
+
+  takeCopy: (token: string) =>
+    send<{ list: List; items: Item[]; token: string; url: string }>('POST', '/list/copy', {
+      token,
+    }),
 };

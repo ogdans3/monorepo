@@ -25,6 +25,10 @@ enum ListStatus {
 
   /// The link is not valid at all.
   invalid,
+
+  /// A template link. It cannot open this list, only make a copy of it, and
+  /// the app cannot yet take that copy.
+  copyOnly,
 }
 
 /// One open list.
@@ -55,6 +59,7 @@ class ListController extends ChangeNotifier {
   Checklist? _list;
   List<ChecklistItem> _items = const [];
   ListStatus _status = ListStatus.loading;
+  Access _access = Access.read;
   String? _goneReason;
   int _presence = 1;
   bool _disposed = false;
@@ -75,6 +80,11 @@ class ListController extends ChangeNotifier {
 
   Checklist? get list => _list;
   ListStatus get status => _status;
+
+  /// What this link may do. Until the server says otherwise, assume the least.
+  Access get access => _access;
+  bool get canWrite => _access.canWrite;
+  bool get canAdmin => _access.canAdmin;
   String? get goneReason => _goneReason;
 
   /// How many people are on this list, including you. Never names, never faces.
@@ -382,6 +392,10 @@ class ListController extends ChangeNotifier {
   }
 
   void _handleApiError(ApiException error) {
+    if (error.isCopyLink) {
+      _status = ListStatus.copyOnly;
+      return;
+    }
     if (error.isGone) {
       _status = ListStatus.gone;
       _goneReason ??= 'rotated';
@@ -396,6 +410,7 @@ class ListController extends ChangeNotifier {
   void _apply(Snapshot snapshot) {
     _list = snapshot.list;
     _items = _sorted(snapshot.items);
+    _access = snapshot.access;
   }
 
   void _applyEvent(ChangeEvent event, {required bool remote}) {

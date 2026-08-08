@@ -8,6 +8,13 @@
       "when": 1786105179386,
       "tag": "0000_smiling_bromley",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786210860637,
+      "tag": "0001_flimsy_sunspot",
+      "breakpoints": true
     }
   ]
 }

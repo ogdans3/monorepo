@@ -21,6 +21,9 @@ class FakeServer {
   final String title;
 
   String token = 'a' * 43;
+
+  /// What the main token may do. Tests set it to render a read-only list.
+  String access = 'admin';
   String listId = '11111111-1111-4111-8111-111111111111';
   int revision = 0;
   final List<Map<String, dynamic>> items = [];
@@ -139,7 +142,16 @@ class FakeServer {
     }
 
     if (path.endsWith('/list') && request.method == 'GET') {
-      return _json(200, {'list': listJson, 'items': items});
+      if (access == 'copy') {
+        return _error(403, 'copy_link', 'This link makes you your own copy.');
+      }
+      return _json(200, {'list': listJson, 'items': items, 'access': access});
+    }
+
+    // Everything past here changes something, so a read link is refused the
+    // same way the real API refuses it.
+    if (access == 'read' && request.method != 'GET') {
+      return _error(403, 'forbidden', 'This link can only look at the list.');
     }
 
     if (path.endsWith('/list/changes')) {

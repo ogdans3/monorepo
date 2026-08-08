@@ -244,7 +244,9 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
         final colors = CheckpostTheme.of(context);
         final status = _controller.status;
 
-        if (status == ListStatus.gone || status == ListStatus.invalid) {
+        if (status == ListStatus.gone ||
+            status == ListStatus.invalid ||
+            status == ListStatus.copyOnly) {
           return _DeadEnd(
             status: status,
             reason: _controller.goneReason,
@@ -259,7 +261,7 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
         return Scaffold(
           appBar: AppBar(
             title: InkWell(
-              onTap: list == null ? null : _rename,
+              onTap: list == null || !_controller.canWrite ? null : _rename,
               borderRadius: Radii.smAll,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -274,6 +276,14 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
               ),
             ),
             actions: [
+              if (list != null && !_controller.canWrite)
+                Padding(
+                  padding: const EdgeInsets.only(right: Space.sm),
+                  child: Text(
+                    'Read only',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
               PresencePill(count: _controller.presence),
               IconButton(
                 onPressed: list == null ? null : _share,
@@ -336,21 +346,46 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
                         ),
                       ),
               ),
-              Composer(
-                enabled: list != null,
-                onSubmit: (text) {
-                  _controller.addItem(text);
-                  // Land at the bottom, where the new row is.
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!_scroll.hasClients) return;
-                    _scroll.animateTo(
-                      _scroll.position.maxScrollExtent,
-                      duration: Motion.base,
-                      curve: Motion.curve,
-                    );
-                  });
-                },
-              ),
+              // A field you are not allowed to submit is a lie, so a read link
+              // gets a sentence instead of a disabled composer.
+              if (!_controller.canWrite && list != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(
+                    Space.gutter,
+                    Space.lg,
+                    Space.gutter,
+                    Space.lg,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: colors.line)),
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Text(
+                      'This link can look at the list, and cannot change it.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+                    ),
+                  ),
+                )
+              else
+                Composer(
+                  enabled: list != null,
+                  onSubmit: (text) {
+                    _controller.addItem(text);
+                    // Land at the bottom, where the new row is.
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!_scroll.hasClients) return;
+                      _scroll.animateTo(
+                        _scroll.position.maxScrollExtent,
+                        duration: Motion.base,
+                        curve: Motion.curve,
+                      );
+                    });
+                  },
+                ),
             ],
           ),
         );
@@ -399,6 +434,7 @@ class _Body extends StatelessWidget {
       key: ValueKey(item.id),
       item: item,
       washing: controller.isWashing(item.id),
+      readOnly: !controller.canWrite,
       onToggle: () => controller.toggle(item),
       onOpen: () => onOpenItem(item),
     );
@@ -458,16 +494,22 @@ class _DeadEnd extends StatelessWidget {
   Widget build(BuildContext context) {
     final deleted = reason == 'deleted';
     final invalid = status == ListStatus.invalid;
+    final copyOnly = status == ListStatus.copyOnly;
 
     return Scaffold(
       appBar: AppBar(),
       body: EmptyState(
-        title: invalid
+        title: copyOnly
+            ? 'This link hands out copies'
+            : invalid
             ? 'That link isn’t valid'
             : deleted
             ? 'This list was deleted'
             : 'This link was replaced',
-        body: invalid
+        body: copyOnly
+            ? 'Opening it makes you a private copy of somebody else’s list. '
+                  'Open it in a browser to take that copy. The app cannot yet.'
+            : invalid
             ? 'Check that you copied the whole thing, or ask for the link again.'
             : deleted
             ? 'Someone on the list deleted it. There is nothing left to open.'

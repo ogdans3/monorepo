@@ -16,8 +16,31 @@ token as a bearer credential:
 Authorization: Bearer <43-character token>
 ```
 
-The token resolves to exactly one list. There is no list id in any URL, so
-there is nothing to guess at or increment.
+The token resolves to exactly one list, **at exactly one level**. There is no
+list id in any URL, so there is nothing to guess at or increment.
+
+## What a link may do
+
+One list has many live links, at different levels. That is the point: you send
+read to the people who only need to look and keep admin for yourself.
+
+| `access` | Can |
+|---|---|
+| `read` | Fetch the snapshot, the change log and the socket. Nothing else. |
+| `write` | Everything `read` can, plus items and the list title. |
+| `admin` | Everything, plus making and revoking links, rotating, and deleting the list. |
+| `copy` | Exactly one thing: mint a fresh list for whoever opens it. |
+
+`read`, `write` and `admin` are a ladder. **`copy` is not on it.** A copy link
+cannot read the list it came from, or its changes, or its socket. Every one of
+those answers `403 copy_link`, which clients turn into an offer to take a copy
+rather than into an error.
+
+Whoever creates a list gets an `admin` link. Every other level exists because
+an admin handed it out.
+
+A refusal is `403 forbidden` with a message written for a person. Getting the
+level wrong is not a 401: the link is real, it is simply not allowed.
 
 | Situation | Status | Meaning |
 |---|---|---|
@@ -71,10 +94,13 @@ Rate limited to `RATE_LIMIT_CREATE_MAX` per IP per hour.
 
 ### `GET /v1/list`
 
-Full snapshot: the list plus every item, already in display order.
+Full snapshot: the list, every item in display order, and what this link may
+do. Clients render according to `access` rather than guessing.
 
 ```jsonc
-{ "list": { … }, "items": [ { "id": "…", "text": "Tent", "checked": false, "position": "a1", … } ] }
+{ "list": { … },
+  "items": [ { "id": "…", "text": "Tent", "checked": false, "position": "a1", … } ],
+  "access": "write" }
 ```
 
 ### `PATCH /v1/list`
@@ -88,9 +114,45 @@ Full snapshot: the list plus every item, already in display order.
 `{"type":"revoked","reason":"deleted"}`. The link then answers `410` until the
 reaper eventually forgets it.
 
+### Links (admin)
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| `GET` | `/v1/list/links` | none | `200` `ShareLink[]` |
+| `POST` | `/v1/list/links` | `{ access, label? }` | `201` `{ link, token, url }` |
+| `DELETE` | `/v1/list/links/:linkId` | none | `204` |
+
+A `ShareLink` never carries a token, and cannot: only its SHA-256 was stored. A
+token is visible **once**, in the `201` from `POST /v1/list/links`. Lose it and
+the only way back is a new link.
+
+Revoking the link you are currently using answers `400`. Replacing it is the
+deliberate way to do that, and locking yourself out mid-request is not.
+
+Capped at `LIMITS.linksPerList` live links.
+
+### Copy links
+
+| Method | Path | Returns |
+|---|---|---|
+| `GET` | `/v1/list/copy` | `200` `{ title, itemCount }` |
+| `POST` | `/v1/list/copy` | `201` `{ list, items, token, url }` |
+
+The preview is a name and a count, so a client can say what it is about to
+make. The items themselves are not in it.
+
+Taking the copy makes a new list with the same title and items, **all
+unchecked**, notes and order preserved, and hands the caller an `admin` link to
+it. The two lists are strangers afterwards: no shared rows, no shared links, no
+events crossing between them. Each person who opens the same copy link gets
+their own, and the template keeps working.
+
+Both refuse anything that is not a copy link, and every other endpoint refuses
+a copy link.
+
 ### `POST /v1/list/rotate`
 
-Replaces the share link.
+Replaces the share link **you are holding**, keeping its level.
 
 ```jsonc
 // 200
@@ -101,6 +163,11 @@ The old link is revoked immediately. There is no grace period, because a grace
 period would defeat the feature. Every socket authenticated with the old link is
 sent `{"type":"revoked","reason":"rotated"}` and closed, including the caller's.
 The caller reconnects with the token it just received.
+
+**Other links on the list are untouched.** When a list could only have one link,
+replacing it meant replacing all of them. Now that you can hand out a read link
+and keep an admin one, quietly killing the others would be the surprising
+behaviour. Revoke those one at a time instead.
 
 ### `GET /v1/list/changes?since=<revision>`
 
@@ -198,9 +265,9 @@ the identical order.
 { "error": { "code": "gone", "message": "This link was replaced. Ask whoever shared it for the new one." } }
 ```
 
-Codes: `bad_request` (400) · `unauthorized` (401) · `not_found` (404) ·
-`limit_reached` (409) · `gone` (410) · `too_many_requests` (429) ·
-`internal` (500).
+Codes: `bad_request` (400) · `unauthorized` (401) · `forbidden` (403) ·
+`copy_link` (403) · `not_found` (404) · `limit_reached` (409) · `gone` (410) ·
+`too_many_requests` (429) · `internal` (500).
 
 Messages are written for a person and are safe to show verbatim.
 
@@ -212,6 +279,7 @@ Messages are written for a person and are safe to show verbatim.
 | Item text | 500 characters |
 | Item note | 4000 characters |
 | Items per list | 500 |
+| Live links per list | 20 |
 | Events per `/changes` call | 500 |
 | Global | `RATE_LIMIT_MAX` (default 300) requests per IP per minute |
 | Create list | `RATE_LIMIT_CREATE_MAX` (default 30) per IP per hour |

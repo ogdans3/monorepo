@@ -7,6 +7,7 @@ import 'package:checkpost/ui/home_screen.dart';
 import 'package:checkpost/ui/list_screen.dart';
 import 'package:checkpost/ui/scope.dart';
 import 'package:checkpost/ui/widgets/check_mark.dart';
+import 'package:checkpost/ui/widgets/composer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -270,6 +271,67 @@ void main() {
       // No socket in a widget test, so presence stays at one, and one person
       // on a list is not news.
       expect(find.textContaining('here'), findsNothing);
+    });
+  });
+
+  group('a link that can only look', () {
+    testWidgets('shows the list and offers nothing that would change it', (
+      tester,
+    ) async {
+      server
+        ..access = 'read'
+        ..addItem('Firewood');
+      final library = libraryWith([savedList(total: 1)]);
+      await library.load();
+      await tester.pumpWidget(
+        wrap(
+          ListScreen(
+            library: library,
+            listId: server.listId,
+            realtimeFactory: noRealtime,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Everything is visible. Nothing is on offer.
+      expect(find.text('Firewood'), findsOneWidget);
+      expect(find.text('Read only'), findsOneWidget);
+      expect(find.byType(Composer), findsNothing);
+      expect(find.textContaining('cannot change it'), findsOneWidget);
+
+      // Tapping the row does not tick it, and does not ask the server either.
+      final before = server.requestCount;
+      await tester.tap(find.text('Firewood'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(
+        tester.widget<CheckMark>(find.byType(CheckMark).first).checked,
+        isFalse,
+      );
+      expect(server.requestCount, before);
+    });
+
+    testWidgets('a copy link says what it is instead of failing', (
+      tester,
+    ) async {
+      server.access = 'copy';
+      final library = libraryWith([savedList()]);
+      await library.load();
+      await tester.pumpWidget(
+        wrap(
+          ListScreen(
+            library: library,
+            listId: server.listId,
+            realtimeFactory: noRealtime,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('This link hands out copies'), findsOneWidget);
+      expect(find.textContaining('Open it in a browser'), findsOneWidget);
     });
   });
 

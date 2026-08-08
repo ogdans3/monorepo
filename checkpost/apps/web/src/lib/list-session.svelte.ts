@@ -1,8 +1,17 @@
-import type { ChangeEvent, Item, List, ServerFrame, Snapshot } from '@checkpost/contract';
+import type {
+  Access,
+  ChangeEvent,
+  CopyPreview,
+  Item,
+  List,
+  ServerFrame,
+  Snapshot,
+} from '@checkpost/contract';
+import { allows } from '@checkpost/contract';
 import { ApiError, OfflineError, api, clientId } from './api';
 import { Realtime } from './realtime';
 
-export type Status = 'loading' | 'ready' | 'offline' | 'gone' | 'invalid';
+export type Status = 'loading' | 'ready' | 'offline' | 'gone' | 'invalid' | 'copy';
 
 /** How long a ticked row holds its place before drifting to the done shelf. */
 const SETTLE_MS = 400;
@@ -24,6 +33,11 @@ export class ListSession {
   goneReason = $state<'rotated' | 'deleted' | null>(null);
   presence = $state(1);
   message = $state<string | null>(null);
+
+  /** What this link may do. Assume the least until the server says otherwise. */
+  access = $state<Access>('read');
+  /** Set when the link turns out to be a template rather than a way in. */
+  copy = $state<CopyPreview | null>(null);
 
   /** Ids whose move to the done shelf is deferred, so a tick stays visible. */
   settling = $state<string[]>([]);
@@ -56,6 +70,14 @@ export class ListSession {
     return this.items.filter((item) => item.checked).length;
   }
 
+  get canWrite() {
+    return allows(this.access, 'write');
+  }
+
+  get canAdmin() {
+    return allows(this.access, 'admin');
+  }
+
   isWashing(id: string) {
     return this.washing.includes(id);
   }
@@ -86,11 +108,32 @@ export class ListSession {
       this.#apply(await api.snapshot(this.#token));
       this.status = 'ready';
     } catch (error) {
+      if (error instanceof ApiError && error.isCopyLink) {
+        // Not a failure. This link makes copies, so find out what of.
+        await this.#loadCopyPreview();
+        return;
+      }
       this.#handle(error);
     }
   }
 
+  async #loadCopyPreview() {
+    try {
+      this.copy = await api.copyPreview(this.#token);
+      this.status = 'copy';
+    } catch (error) {
+      this.#handle(error);
+    }
+  }
+
+  /** Takes the copy and returns where it lives. */
+  async takeCopy(): Promise<string> {
+    const made = await api.takeCopy(this.#token);
+    return `/l/${made.token}`;
+  }
+
   #connect() {
+    if (this.status === 'copy') return;
     this.#realtime?.stop();
     this.#realtime = new Realtime(
       this.#token,
@@ -235,7 +278,20 @@ export class ListSession {
     );
   }
 
-  /** Replaces the link. Everyone else is cut off the moment this returns. */
+  links() {
+    return api.links(this.#token);
+  }
+
+  async createLink(access: Access, label: string) {
+    const made = await api.createLink(this.#token, access, label);
+    return { url: made.url, access: made.link.access };
+  }
+
+  revokeLink(linkId: string) {
+    return api.revokeLink(this.#token, linkId);
+  }
+
+  /** Replaces the link this tab is holding. Other links carry on. */
   async rotate(): Promise<string> {
     const rotated = await api.rotateLink(this.#token);
     this.#token = rotated.token;
@@ -297,6 +353,7 @@ export class ListSession {
   #apply(snapshot: Snapshot) {
     this.list = snapshot.list;
     this.items = this.#sorted(snapshot.items);
+    this.access = snapshot.access;
   }
 
   #applyEvent(event: ChangeEvent, remote: boolean) {

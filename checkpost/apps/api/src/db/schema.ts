@@ -39,6 +39,10 @@ export const lists = pgTable('lists', {
  * database dump does not yield working links. Rotation revokes the current row
  * and inserts a new one. The history is kept so a rotated link can answer
  * `410 Gone` ("this link was replaced") instead of a bare 401.
+ *
+ * A list has many live links, at different levels. There is deliberately no
+ * unique index forcing one: handing out a read link without disturbing the
+ * write link you already sent is the entire point of access on links.
  */
 export const shareLinks = pgTable(
   'share_links',
@@ -51,13 +55,20 @@ export const shareLinks = pgTable(
      */
     listId: uuid('list_id').references(() => lists.id, { onDelete: 'set null' }),
     tokenHash: text('token_hash').notNull(),
+    /**
+     * 'read' | 'write' | 'admin' | 'copy'. Text rather than a Postgres enum so
+     * adding a level later is a code change and not a migration that locks the
+     * table. See `accessSchema` in packages/contract for what each one means.
+     */
+    access: text('access').notNull().default('admin'),
+    /** Whoever made the link, to remind themselves who it went to. */
+    label: text('label').notNull().default(''),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(now),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
   },
   (t) => [
     uniqueIndex('share_links_token_hash_key').on(t.tokenHash),
-    // At most one live link per list. Enforced by the database, not by hope.
-    uniqueIndex('share_links_one_active_per_list')
+    index('share_links_list_live_idx')
       .on(t.listId)
       .where(sql`${t.revokedAt} is null`),
   ],

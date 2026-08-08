@@ -60,6 +60,12 @@ giving 43 characters and ~192 bits. The server stores only its SHA-256, so a
 database dump yields no working links. There is no list id in any URL. A token
 resolves to exactly one list and nothing else is reachable.
 
+**1b. A link carries its own permission.** `read` looks, `write` ticks and adds,
+`admin` also makes and revokes links. A fourth kind, `copy`, is not on that
+ladder: opening it hands you a private copy of the list with nothing ticked off,
+and it cannot read the list it came from. One list has as many live links as you
+need, which is what lets you send read to the group and keep admin for yourself.
+
 **2. A replaced link is a hard cut.** Rotation revokes the old token
 immediately and disconnects every socket holding it. There is no grace period,
 because a grace period would defeat the feature. The old link then answers `410 Gone`,

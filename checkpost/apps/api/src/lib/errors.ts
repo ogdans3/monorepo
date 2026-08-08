@@ -5,6 +5,8 @@ type Code = ErrorResponse['error']['code'];
 const STATUS: Record<Code, number> = {
   bad_request: 400,
   unauthorized: 401,
+  forbidden: 403,
+  copy_link: 403,
   not_found: 404,
   gone: 410,
   limit_reached: 409,
@@ -41,6 +43,22 @@ export class ApiError extends Error {
 
   static notFound(message = 'Not found.') {
     return new ApiError('not_found', message);
+  }
+
+  /** A real link, but not one that is allowed to do this. */
+  static forbidden(message = 'This link is not allowed to do that.') {
+    return new ApiError('forbidden', message);
+  }
+
+  /**
+   * A copy link, used as though it were a normal one. Its own code rather than
+   * a plain 403, because the client turns this into an offer to make a copy
+   * rather than into an error.
+   */
+  static copyLink(
+    message = 'This link makes you your own copy of the list. It cannot open the original.',
+  ) {
+    return new ApiError('copy_link', message);
   }
 
   /** Used when a *previously valid* link has been rotated or its list deleted. */

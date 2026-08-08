@@ -114,12 +114,43 @@ class ChecklistItem {
 
 const _unset = Object();
 
+/// What a link is allowed to do. One list can have several live links at
+/// different levels, so this belongs to the link rather than to the list.
+///
+/// `read`, `write` and `admin` are a ladder. `copy` is not on it: a copy link
+/// cannot see the list it came from, only mint a fresh one.
+enum Access {
+  read,
+  write,
+  admin,
+  copy;
+
+  static Access parse(String? value) => switch (value) {
+    'write' => Access.write,
+    'admin' => Access.admin,
+    'copy' => Access.copy,
+    // Anything unrecognised is treated as the least it could be, because a
+    // client that guesses upwards offers edits the server will refuse.
+    _ => Access.read,
+  };
+
+  bool get canWrite => this == Access.write || this == Access.admin;
+  bool get canAdmin => this == Access.admin;
+}
+
 @immutable
 class Snapshot {
-  const Snapshot({required this.list, required this.items});
+  const Snapshot({
+    required this.list,
+    required this.items,
+    this.access = Access.admin,
+  });
 
   final Checklist list;
   final List<ChecklistItem> items;
+
+  /// What the link this was fetched with may do.
+  final Access access;
 
   factory Snapshot.fromJson(Map<String, dynamic> json) => Snapshot(
     list: Checklist.fromJson(json['list'] as Map<String, dynamic>),
@@ -127,6 +158,7 @@ class Snapshot {
       for (final item in json['items'] as List)
         ChecklistItem.fromJson(item as Map<String, dynamic>),
     ],
+    access: Access.parse(json['access'] as String?),
   );
 }
 

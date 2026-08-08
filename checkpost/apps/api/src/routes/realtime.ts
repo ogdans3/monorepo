@@ -40,7 +40,11 @@ export async function realtimeRoutes(app: FastifyInstance): Promise<void> {
       preValidation: async (request) => {
         const token = tokenFrom(request);
         if (!token) throw ApiError.unauthorized('This socket needs a valid share link.');
-        request.link = await service.resolveLink(token);
+        const link = await service.resolveLink(token);
+        // A copy link has nothing to watch. It cannot see the list it came
+        // from, only mint a new one.
+        if (link.access === 'copy') throw ApiError.copyLink();
+        request.link = link;
       },
     },
     (socket, request) => {

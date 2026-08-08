@@ -38,6 +38,15 @@ server-side.
 That row lock is what serialises concurrent writers, and the change-log row and
 the broadcast hang off it. `ListService.#mutate` exists so this cannot be forgotten.
 
+**Access lives on the link, not the list.** One list has many live links at
+different levels, so there is deliberately no unique index forcing one. Every
+list route names the access it needs through `requireAccess`, which is why
+adding a route without deciding who may call it is not possible.
+
+**A copy link is not a weak read link.** It cannot see the list it came from at
+all. It answers `403 copy_link`, which clients turn into an offer rather than an
+error, and it is the only thing `POST /list/copy` accepts.
+
 **A revoked or deleted list answers 410, never 401.** `share_links` rows
 deliberately outlive their list (`on delete set null`) to make that possible.
 The app's copy depends on the distinction.
