@@ -42,3 +42,4 @@ debt, because it is what keeps them separable.
 | Folder | What it is |
 |---|---|
 | [`checkpost/`](checkpost/) | A shared checklist that lives at a link. Node API, Flutter app, SvelteKit landing page. |
+| [`image-tools/`](image-tools/) | Client-side image converter — every format pair gets its own page, files never leave the browser. SvelteKit + WASM codecs. |
