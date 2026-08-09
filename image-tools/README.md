@@ -74,11 +74,31 @@ landing section, sitemap and cross-links. Pure logic (flood fill, crop
 geometry, combine layout math) lives in `src/lib/tools/` under vitest;
 the editors in `src/lib/ui/tools/` are the only DOM-bound parts.
 
-## Before launch
+## Deploy
 
-- Point imagetoolbox.org DNS at the server and add the Caddy site block
-  (or dashboard public flag) so the domain serves this container.
-- Optional: register imagetoolbox.app/.net/.io as defensive redirects.
+Two paths, same Dockerfile (multi-stage node:22-alpine, listens on port 3000):
+
+### 1. AI Central master-dashboard (dev/preview)
+
+The dashboard discovers the folder automatically (Dockerfile +
+`.dashboard.yaml`), builds and runs it, and exposes it at
+`https://image-tools.<host>/`.
+
+### 2. Production: Docker Swarm + Traefik (`deploy/`)
+
+Adapted from the hvalen-minigolf setup. On the swarm host:
+
+```bash
+./deploy/update-stack.sh   # builds, pushes to 127.0.0.1:5000, deploys stack "imagetoolbox"
+```
+
+Traefik routes `imagetoolbox.org` and `www.imagetoolbox.org` to the container
+with Let's Encrypt via `myresolver`. Both hosts must point at the swarm server
+in DNS. The apex is canonical (`ORIGIN` and every canonical tag). Assumes the
+external `proxy-net` network and the local registry, as with hvalen and
+bobilpark.
+
+Optional: register imagetoolbox.app/.net/.io as defensive redirects.
 
 ## Later
 

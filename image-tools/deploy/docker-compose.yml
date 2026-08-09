@@ -1,0 +1,37 @@
+version: '3.8'
+
+# Docker Swarm stack for imagetoolbox.org (Traefik ingress, local registry).
+# Deployed via ./update-stack.sh on the swarm host. Adapted from the
+# hvalen-minigolf setup, which was adapted from bobilpark.
+#
+# The site is a single adapter-node container. All conversion happens in the
+# visitor's browser, so there is no api service, no database and no secrets.
+#
+# Domains: imagetoolbox.org (canonical) + www. Both must point at the swarm
+# host in DNS. ORIGIN stays on the apex, and every canonical tag in the app
+# already points there too.
+
+services:
+  web:
+    image: 127.0.0.1:5000/imagetoolbox_web:latest
+    networks:
+      - proxy-net
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      # adapter-node uses this for absolute URLs / CSRF behind the proxy
+      - ORIGIN=https://imagetoolbox.org
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=proxy-net"
+        - "traefik.http.routers.imagetoolbox-web.rule=Host(`imagetoolbox.org`) || Host(`www.imagetoolbox.org`)"
+        - "traefik.http.routers.imagetoolbox-web.tls=true"
+        - "traefik.http.routers.imagetoolbox-web.tls.certresolver=myresolver"
+        - "traefik.http.services.imagetoolbox-web.loadbalancer.server.port=3000"
+
+networks:
+  proxy-net:
+    external: true

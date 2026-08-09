@@ -1,0 +1,10 @@
+{
+	"name": "imagetoolbox-deploy",
+	"private": true,
+	"scripts": {
+		"deploy": "./update-stack.sh",
+		"stop": "docker stack rm imagetoolbox",
+		"services": "docker stack services imagetoolbox",
+		"logs": "docker service logs -f imagetoolbox_web"
+	}
+}
