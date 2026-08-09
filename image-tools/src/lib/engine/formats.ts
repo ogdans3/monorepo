@@ -68,7 +68,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		lossy: true,
 		alpha: false,
 		blurb: 'The default for photographs. Small files and universal support, but no transparency.',
-		targetNote: 'JPG has no transparency — transparent areas are filled with white.'
+		targetNote: 'JPG has no transparency, so transparent areas are filled with white.'
 	},
 	webp: {
 		id: 'webp',
@@ -95,7 +95,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		lossy: true,
 		alpha: true,
 		blurb: 'The newest of the web formats. Exceptional compression, supported by every modern browser.',
-		targetNote: 'AVIF encoding is thorough — large photos can take a few seconds.'
+		targetNote: 'AVIF encoding takes its time, so large photos can need a few seconds.'
 	},
 	gif: {
 		id: 'gif',
@@ -149,8 +149,8 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: false,
 		alpha: true,
-		blurb: 'The Windows icon format — what browsers expect for favicons.',
-		targetNote: 'Icons are capped at 256 × 256; larger images are scaled down to fit.'
+		blurb: 'The Windows icon format, and what browsers expect for favicons.',
+		targetNote: 'Icons are capped at 256 × 256. Larger images are scaled down to fit.'
 	},
 	svg: {
 		id: 'svg',
@@ -163,7 +163,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: false, // raster → vector is tracing, a different tool entirely
 		lossy: false,
 		alpha: true,
-		blurb: 'Vector, not pixels — it scales forever. Rasterising fixes it at one size for tools that need pixels.',
+		blurb: 'Vector instead of pixels, so it scales forever. Rasterising fixes it at one size for tools that need pixels.',
 		sourceNote: 'SVGs are rasterised at their intrinsic size.'
 	},
 	tiff: {
@@ -177,7 +177,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: false,
 		lossy: false,
 		alpha: true,
-		blurb: 'The archival and print workhorse — common out of scanners and DTP tools, rare on the web.',
+		blurb: 'The archival and print workhorse. Common out of scanners and DTP tools, rare on the web.',
 		sourceNote: 'Multi-page TIFFs are read as their first page.'
 	}
 };

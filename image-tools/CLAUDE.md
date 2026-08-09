@@ -8,7 +8,12 @@ decisions. This file is the short version of what matters when editing.
 - **Self-contained.** This folder must build, test and deploy alone (the
   monorepo rule). Never reference anything outside `image-tools/`.
 - **Client-side only.** Conversion never touches a server. Don't add upload
-  endpoints, server-side sharp, analytics or tracking.
+  endpoints or server-side conversion. Anonymous PostHog usage analytics is
+  planned and fine, but the copy must never promise "no tracking". The privacy
+  promise is about files: they never leave the device.
+- **Copy style.** No em dashes and no semicolons in user-facing text. Plain
+  sentences, dry tone, SEO keywords ("X to Y converter", "free", "online",
+  "no upload") carried naturally in titles, descriptions and headings.
 - **The registry drives everything.** New format = edit
   `src/lib/engine/formats.ts` + add its decode/encode case. Pages, slugs,
   the matrix, accept lists and sitemap follow automatically. Don't hand-write

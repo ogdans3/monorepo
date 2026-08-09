@@ -25,18 +25,26 @@
 </script>
 
 <svelte:head>
-	<title>Convert any image in your browser — free and private</title>
+	<title>Free Online Image Converter - PNG, JPG, WebP, HEIC, AVIF</title>
 	<meta
 		name="description"
-		content="Free image converter that runs entirely in your browser. PNG, JPG, WebP, AVIF, HEIC, GIF, BMP, ICO, SVG, TIFF — no uploads, files never leave your device."
+		content="Free online image converter with no uploads. PNG, JPG, WebP, AVIF, HEIC, GIF, BMP, ICO, SVG and TIFF. Runs in your browser, so your files stay on your device."
 	/>
 	<link rel="canonical" href="{SITE_URL}/" />
+	<meta property="og:title" content="Free Online Image Converter" />
+	<meta
+		property="og:description"
+		content="Convert images in your browser. No uploads, no signup, no watermarks."
+	/>
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="{SITE_URL}/" />
 </svelte:head>
 
 <section class="hero">
-	<h1>Convert any image in your browser</h1>
+	<h1>A free image converter that runs in your browser</h1>
 	<p class="lede">
-		Free and private. Files never leave your device — no uploads, no accounts, no watermarks.
+		Convert PNG, JPG, WebP, AVIF, HEIC and more without uploading anything. Your files stay on
+		your device. No signup, no watermarks.
 	</p>
 </section>
 
@@ -58,7 +66,7 @@
 </section>
 
 <section id="all" aria-labelledby="all-heading">
-	<h2 id="all-heading">Every conversion</h2>
+	<h2 id="all-heading">All conversions</h2>
 	<div class="matrix">
 		{#each bySource as group (group.source.id)}
 			<div class="matrix-row">
@@ -78,10 +86,10 @@
 <section aria-labelledby="how-heading">
 	<h2 id="how-heading">How it works</h2>
 	<p>
-		Your browser already ships excellent image codecs; this site adds WASM decoders for the rest
-		(HEIC, TIFF, and AVIF on older engines). Files are decoded to raw pixels on your own machine,
-		re-encoded to the target format, and handed straight back — the server only serves this page.
-		That's why it's free, and why it's private.
+		Your browser already ships very good image codecs. This site adds WASM decoders for the
+		formats it cannot read on its own, like HEIC and TIFF. Every file is decoded to raw pixels on
+		your own machine and re-encoded to the format you picked. The server only serves the page.
+		That is why the converter is free, and why your images stay private.
 	</p>
 </section>
 

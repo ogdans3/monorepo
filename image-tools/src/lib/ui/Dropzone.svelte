@@ -65,7 +65,7 @@
 <label class="zone" class:dragging>
 	<input bind:this={input} type="file" multiple accept={acceptAttribute()} onchange={pick} />
 	<span class="zone-headline">{dragging ? 'Drop to convert' : headline}</span>
-	<span class="zone-hint">or click to browse — pasting works too</span>
+	<span class="zone-hint">or click to browse. Paste works too</span>
 </label>
 
 <style>

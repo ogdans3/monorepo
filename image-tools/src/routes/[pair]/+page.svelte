@@ -12,12 +12,19 @@
 </script>
 
 <svelte:head>
-	<title>Convert {page.sourceName} to {page.targetName} — free, private, in your browser</title>
+	<title>{page.sourceName} to {page.targetName} Converter - Free, Private, No Upload</title>
 	<meta
 		name="description"
-		content="Convert {page.sourceName} images to {page.targetName} for free, right in your browser. No uploads — files never leave your device. Batch conversion with zip download."
+		content="Convert {page.sourceName} to {page.targetName} online free. Files convert in your browser and are never uploaded. Batch convert, download as a zip, keep your filenames."
 	/>
 	<link rel="canonical" href="{SITE_URL}/{page.canonicalSlug}" />
+	<meta property="og:title" content="{page.sourceName} to {page.targetName} Converter" />
+	<meta
+		property="og:description"
+		content="Convert {page.sourceName} to {page.targetName} free, right in your browser. No uploads."
+	/>
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="{SITE_URL}/{page.canonicalSlug}" />
 </svelte:head>
 
 <section class="hero">
@@ -27,8 +34,8 @@
 		> to </span>{page.targetName}
 	</h1>
 	<p class="lede">
-		Drop your {page.sourceName} files below — they convert to {page.targetName} on your own device,
-		and the filenames stay put.
+		Free {page.sourceName} to {page.targetName} conversion that runs on your own device. Nothing
+		gets uploaded, and your filenames stay put.
 	</p>
 </section>
 
@@ -49,13 +56,28 @@
 	</ul>
 {/if}
 
+<section aria-labelledby="howto-heading">
+	<h2 id="howto-heading">How to convert {page.sourceName} to {page.targetName}</h2>
+	<ol class="steps">
+		<li>
+			Drop your {page.sourceName} files in the zone above. Clicking it opens a file picker, and
+			pasting from the clipboard works too.
+		</li>
+		<li>Each file converts to {page.targetName} on your device, usually within a second or two.</li>
+		<li>
+			Download the files one by one, or grab them all as a zip. Every file keeps its original
+			name.
+		</li>
+	</ol>
+</section>
+
 <section aria-labelledby="about-heading">
-	<h2 id="about-heading">{page.sourceName} and {page.targetName}</h2>
-	<p><strong>{page.source.name}</strong> — {page.source.blurb}</p>
-	<p><strong>{page.target.name}</strong> — {page.target.blurb}</p>
+	<h2 id="about-heading">Why convert {page.sourceName} to {page.targetName}?</h2>
+	<p><strong>{page.source.name}</strong>: {page.source.blurb}</p>
+	<p><strong>{page.target.name}</strong>: {page.target.blurb}</p>
 	<p>
-		The conversion happens entirely in your browser: each file is decoded to raw pixels and
-		re-encoded as {page.targetName}. Nothing is uploaded — the server only serves this page.
+		The conversion happens entirely in your browser. Each file is decoded to raw pixels and
+		re-encoded as {page.targetName}. Nothing is uploaded, and the server only serves this page.
 	</p>
 </section>
 

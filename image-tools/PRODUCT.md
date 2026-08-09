@@ -45,9 +45,11 @@ extensions) are shown plainly in monospace — competence is the charm.
 
 1. **The tool is the page.** The dropzone is above the fold on every page;
    converting requires zero scrolling and zero reading.
-2. **Private by architecture.** Files never leave the device — so no upload
+2. **Private by architecture.** Files never leave the device, so no upload
    patterns, no server progress bars, no "processing on our servers" language.
-   The privacy line is stated once, plainly, and proven by the network tab.
+   The privacy promise is about files, not telemetry: anonymous PostHog usage
+   analytics is acceptable, which is why the copy says "your files never leave
+   your device" and never "no tracking".
 3. **Quiet competence.** Monospace for data (names, sizes, dimensions,
    formats), dry copy, one accent used sparingly. No decoration that doesn't
    inform.

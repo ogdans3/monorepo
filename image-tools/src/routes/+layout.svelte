@@ -23,8 +23,8 @@
 
 	<footer>
 		<p>
-			Everything runs in your browser — your files never leave your device. No uploads, no
-			accounts, no tracking.
+			Everything runs in your browser. Your files never leave your device. No uploads, no
+			accounts.
 		</p>
 	</footer>
 </div>

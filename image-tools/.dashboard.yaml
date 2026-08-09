@@ -1,3 +1,3 @@
 name: image-tools
-description: Client-side image converter — files never leave the browser. Working title, unnamed so far.
+description: Client-side image converter. Files never leave the browser. Working title, unnamed so far.
 http_port: 3000
