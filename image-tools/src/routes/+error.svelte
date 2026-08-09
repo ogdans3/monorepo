@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>{page.status} | image→tools</title>
+	<title>{page.status} | image→toolbox</title>
 </svelte:head>
 
 <section class="hero">

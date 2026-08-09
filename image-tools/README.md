@@ -1,8 +1,8 @@
-# image-tools
+# imagetoolbox
 
-Free, client-side image conversion in the browser. Working title — the
-project is unnamed so far (update `src/lib/site.ts` and the wordmark when
-christened).
+Free, client-side image conversion and editing in the browser, at
+[imagetoolbox.org](https://imagetoolbox.org). The monorepo folder and the
+dashboard slug keep the historical name `image-tools`.
 
 Every format pair gets its own prerendered page (`/heic-to-jpg`,
 `/png-to-webp`, …, alias spellings like `/heif-to-jpeg` included — ~93
@@ -76,10 +76,9 @@ the editors in `src/lib/ui/tools/` are the only DOM-bound parts.
 
 ## Before launch
 
-- Set the real domain in `src/lib/site.ts` (canonicals + sitemap) and
-  `static/robots.txt`.
-- Pick a name; update `SITE_NAME`, the wordmark in
-  `src/routes/+layout.svelte`, and this file.
+- Point imagetoolbox.org DNS at the server and add the Caddy site block
+  (or dashboard public flag) so the domain serves this container.
+- Optional: register imagetoolbox.app/.net/.io as defensive redirects.
 
 ## Later
 

@@ -7,11 +7,12 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<meta property="og:site_name" content="imagetoolbox" />
 </svelte:head>
 
 <div class="shell">
 	<header>
-		<a class="wordmark" href="/">image<span class="arrow">→</span>tools</a>
+		<a class="wordmark" href="/">image<span class="arrow">→</span>toolbox</a>
 		<nav aria-label="Main">
 			<a href="/tools">Tools</a>
 			<a href="/#all">All conversions</a>
