@@ -19,6 +19,17 @@ export function lockedDims(
 	return { w: clampPx(origW), h: clampPx(origH) };
 }
 
+const clampAdj = (v: number) => Math.min(100, Math.max(-100, v || 0));
+
+/**
+ * Canvas filter string for the adjust tool. Sliders run -100..100 where 0 is
+ * the untouched image, mapping linearly onto the CSS filter functions.
+ */
+export function adjustFilter(brightness: number, contrast: number, saturation: number): string {
+	const f = (v: number) => ((100 + clampAdj(v)) / 100).toFixed(2);
+	return `brightness(${f(brightness)}) contrast(${f(contrast)}) saturate(${f(saturation)})`;
+}
+
 export interface Orientation {
 	/** Quarter turns clockwise, 0 to 3, applied before the flips. */
 	turns: number;

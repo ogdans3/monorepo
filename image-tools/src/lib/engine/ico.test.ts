@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { wrapPngAsIco } from './ico';
+import { icoFromPngs, wrapPngAsIco } from './ico';
 
 describe('wrapPngAsIco', () => {
 	const png = new Uint8Array([1, 2, 3, 4, 5]);
@@ -26,5 +26,33 @@ describe('wrapPngAsIco', () => {
 
 	it('refuses oversized entries', () => {
 		expect(() => wrapPngAsIco(png, 257, 100)).toThrow();
+	});
+});
+
+describe('icoFromPngs (multi-size)', () => {
+	const a = new Uint8Array([1, 1, 1]);
+	const b = new Uint8Array([2, 2, 2, 2]);
+	const c = new Uint8Array([3]);
+
+	it('packs several images with correct directory entries and offsets', () => {
+		const buf = icoFromPngs([
+			{ png: a, width: 16, height: 16 },
+			{ png: b, width: 32, height: 32 },
+			{ png: c, width: 48, height: 48 }
+		]);
+		const v = new DataView(buf);
+		const bytes = new Uint8Array(buf);
+		expect(v.getUint16(4, true)).toBe(3); // count
+		const headerSize = 6 + 3 * 16;
+		expect(v.getUint32(6 + 12, true)).toBe(headerSize); // first payload offset
+		expect(v.getUint32(6 + 16 + 12, true)).toBe(headerSize + a.length);
+		expect(v.getUint32(6 + 32 + 12, true)).toBe(headerSize + a.length + b.length);
+		expect(v.getUint8(6 + 16)).toBe(32); // second entry width
+		expect(bytes.slice(headerSize + a.length, headerSize + a.length + b.length)).toEqual(b);
+		expect(buf.byteLength).toBe(headerSize + 8);
+	});
+
+	it('refuses an empty set', () => {
+		expect(() => icoFromPngs([])).toThrow();
 	});
 });

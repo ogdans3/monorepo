@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { RawImage } from '$lib/engine';
 	import { lockedDims } from '$lib/tools/transforms';
-	import { readImageFile, rawToCanvas } from './load';
+	import { readImageFile, rawToCanvas, steppedScale } from './load';
 	import Dropzone from '../Dropzone.svelte';
 	import ExportBar from './ExportBar.svelte';
 
@@ -58,33 +58,9 @@
 		h = clampPx((img.height * p) / 100);
 	}
 
-	/** Halve toward the target before the final pass. One big jump goes muddy. */
 	function steppedResize(tw: number, th: number): HTMLCanvasElement {
 		if (!base) throw new Error('No image loaded');
-		let current: HTMLCanvasElement = base;
-		let cw = base.width;
-		let ch = base.height;
-		while (cw / 2 > tw && ch / 2 > th) {
-			cw = Math.max(tw, Math.round(cw / 2));
-			ch = Math.max(th, Math.round(ch / 2));
-			const step = document.createElement('canvas');
-			step.width = cw;
-			step.height = ch;
-			const ctx = step.getContext('2d');
-			if (!ctx) break;
-			ctx.imageSmoothingQuality = 'high';
-			ctx.drawImage(current, 0, 0, cw, ch);
-			current = step;
-		}
-		const out = document.createElement('canvas');
-		out.width = tw;
-		out.height = th;
-		const ctx = out.getContext('2d');
-		if (ctx) {
-			ctx.imageSmoothingQuality = 'high';
-			ctx.drawImage(current, 0, 0, tw, th);
-		}
-		return out;
+		return steppedScale(base, tw, th);
 	}
 
 	// live preview at the target size

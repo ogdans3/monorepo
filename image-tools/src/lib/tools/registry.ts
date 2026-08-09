@@ -6,13 +6,15 @@
  * Copy style: plain sentences, no em dashes, no semicolons (guarded by test).
  */
 
-export type ToolCategory = 'edit' | 'transform' | 'privacy' | 'background';
+export type ToolCategory = 'edit' | 'transform' | 'adjust' | 'privacy' | 'background' | 'web';
 
 export const CATEGORIES: { id: ToolCategory; label: string; blurb: string }[] = [
 	{ id: 'edit', label: 'Edit', blurb: 'Change what is in the frame.' },
 	{ id: 'transform', label: 'Transform', blurb: 'Change size and orientation.' },
+	{ id: 'adjust', label: 'Adjust', blurb: 'Tune colour and light.' },
 	{ id: 'privacy', label: 'Privacy', blurb: 'Hide what should not be shared.' },
-	{ id: 'background', label: 'Background', blurb: 'Work on what is behind the subject.' }
+	{ id: 'background', label: 'Background', blurb: 'Work on what is behind the subject.' },
+	{ id: 'web', label: 'For the web', blurb: 'Smaller files and site assets.' }
 ];
 
 export interface ImageTool {
@@ -172,6 +174,28 @@ export const TOOLS: ImageTool[] = [
 		suffix: '-redacted'
 	},
 	{
+		slug: 'adjust-image',
+		category: 'adjust',
+		name: 'Adjust',
+		h1: 'Adjust brightness, contrast and saturation',
+		title: 'Adjust Brightness and Contrast Online - Free, No Upload',
+		description:
+			'Adjust image brightness, contrast and saturation online free, with a live preview and no uploads. Brighten dark photos or pull colours back, right in your browser.',
+		lede: 'Three sliders with a live preview. Brighten a dark photo, add punch with contrast or pull the colours back.',
+		blurb: 'Brightness, contrast and saturation with a live preview.',
+		steps: [
+			'Drop an image in the zone above.',
+			'Drag the sliders. The preview updates live, and Reset takes you back to the original.',
+			'Choose an output format and download.'
+		],
+		aboutHeading: 'About adjusting images here',
+		about: [
+			'Brightness lifts or darkens everything evenly, contrast pushes lights and darks apart, and saturation controls how vivid the colours are. Saturation all the way down gives a clean black and white.',
+			'The preview and the download run the exact same maths, so what you see is precisely what you get, at the original resolution.'
+		],
+		suffix: '-adjusted'
+	},
+	{
 		slug: 'transparent-background',
 		category: 'background',
 		name: 'Transparent',
@@ -192,6 +216,94 @@ export const TOOLS: ImageTool[] = [
 			'Export as PNG or WebP to keep the transparency. JPG has no alpha channel, so transparent areas turn white there.'
 		],
 		suffix: '-transparent'
+	},
+	{
+		slug: 'remove-exif',
+		category: 'privacy',
+		name: 'EXIF',
+		h1: 'View and remove EXIF data',
+		title: 'Remove EXIF Data from Photos - Free, Private, No Upload',
+		description:
+			'See what a photo reveals about you, camera, time and often the exact place, then download a copy with every trace of metadata removed. Free, no uploads.',
+		lede: 'See exactly what a photo says about you, camera, time and often the place, then download a copy with all of it gone.',
+		blurb: 'See what a photo reveals, download a copy with nothing in it.',
+		steps: [
+			'Drop a photo in the zone above. The metadata table shows everything the file carries.',
+			'Look for the location row in particular. Phones embed GPS coordinates by default.',
+			'Download the clean copy. Every metadata block is gone: EXIF, GPS, XMP, IPTC and embedded thumbnails.'
+		],
+		aboutHeading: 'What EXIF data gives away',
+		about: [
+			'Most cameras and phones write metadata into every photo: the device, the exact time, the settings, and very often GPS coordinates precise enough to identify a home address. Anyone you send the file to can read it.',
+			'The clean download is produced by decoding the image to raw pixels and re-encoding it, which physically cannot carry metadata along. The converter on this site does the same, this tool just shows you what was there first.'
+		],
+		suffix: '-clean'
+	},
+	{
+		slug: 'watermark-image',
+		category: 'edit',
+		name: 'Watermark',
+		h1: 'Watermark an image',
+		title: 'Add a Watermark to an Image - Free Online, No Upload',
+		description:
+			'Add a text or logo watermark to images online free. Control size, opacity and colour, place it in any corner or tile it across the whole image. No uploads.',
+		lede: 'Stamp text or a logo over your image. Size, opacity and colour are yours, in any corner or tiled across the whole thing.',
+		blurb: 'Text or logo, any corner or tiled, with opacity control.',
+		steps: [
+			'Drop an image in the zone above.',
+			'Type your text or pick a logo file, then set size, opacity and colour.',
+			'Choose a corner, or tile it across the image, and download.'
+		],
+		aboutHeading: 'About watermarking here',
+		about: [
+			'A corner mark stays subtle and keeps the image usable. Tiling repeats the mark across the whole frame, which makes it much harder to crop or clone away when the image really should not travel without your name on it.',
+			'The watermark is rendered into the pixels at full resolution, so it survives every format the download offers.'
+		],
+		suffix: '-watermarked'
+	},
+	{
+		slug: 'compress-image',
+		category: 'web',
+		name: 'Compress',
+		h1: 'Compress an image to a target size',
+		title: 'Compress Image to a Target Size - Free Online, No Upload',
+		description:
+			'Compress images to an exact file size online free, like under 1 MB or 200 KB. Finds the best quality that fits, optionally downscaling. No uploads.',
+		lede: 'Tell it the file size you need, like 500 KB, and it finds the best quality that fits. Downscaling is optional for tight targets.',
+		blurb: 'Hit an exact file size, like under 1 MB, at the best quality that fits.',
+		steps: [
+			'Drop an image in the zone above.',
+			'Set the target size and pick JPG or WebP. The tool searches for the best quality that stays under it.',
+			'Check the result line, then download. Allow downscaling if the target is very tight.'
+		],
+		aboutHeading: 'How the compressor hits the target',
+		about: [
+			'The tool runs a binary search over the quality setting, encoding the image a handful of times until it finds the highest quality that still fits under your target. If even the lowest quality is too big, it can shrink the dimensions step by step and search again.',
+			'WebP usually lands noticeably smaller than JPG at the same visual quality, so try it first when the site you are uploading to accepts it.'
+		],
+		suffix: '-compressed'
+	},
+	{
+		slug: 'favicon-generator',
+		category: 'web',
+		name: 'Favicon',
+		h1: 'Generate favicons',
+		title: 'Favicon Generator - ICO and PNG Set, Free, No Upload',
+		description:
+			'Generate a complete favicon set online free: multi size ICO, PNGs for every slot, apple touch icon and the HTML to paste. Runs in your browser, no uploads.',
+		lede: 'One logo in, the whole favicon set out: a multi size ICO, PNGs for every slot and the HTML to paste into your head.',
+		blurb: 'One logo in, ICO and the full PNG set out, HTML included.',
+		steps: [
+			'Drop your logo in the zone above. Square works best, anything else is padded with transparency.',
+			'Check the previews, especially the 16 pixel one. Simple shapes survive, fine detail does not.',
+			'Download the zip and paste the HTML snippet into your page head.'
+		],
+		aboutHeading: 'What the favicon pack contains',
+		about: [
+			'The zip holds favicon.ico with 16, 32 and 48 pixel versions embedded, favicon-16x16.png and favicon-32x32.png, apple-touch-icon.png at 180 pixels, and icon-192.png plus icon-512.png for web manifests.',
+			'Everything is rendered from your original with stepped downscaling, which keeps small sizes as crisp as they can be. If the 16 pixel preview turns to mush, simplify the logo rather than fighting it.'
+		],
+		suffix: '-favicons'
 	}
 ];
 

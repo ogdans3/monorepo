@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { flipView, IDENTITY, lockedDims, orientedDims, rotateView } from './transforms';
+import {
+	adjustFilter,
+	flipView,
+	IDENTITY,
+	lockedDims,
+	orientedDims,
+	rotateView
+} from './transforms';
+
+describe('adjustFilter', () => {
+	it('maps sliders onto filter functions with 0 as identity', () => {
+		expect(adjustFilter(0, 0, 0)).toBe('brightness(1.00) contrast(1.00) saturate(1.00)');
+		expect(adjustFilter(50, -30, 100)).toBe('brightness(1.50) contrast(0.70) saturate(2.00)');
+	});
+
+	it('clamps out-of-range values', () => {
+		expect(adjustFilter(999, -999, 0)).toBe('brightness(2.00) contrast(0.00) saturate(1.00)');
+	});
+});
 
 describe('lockedDims', () => {
 	it('derives the other side from the original aspect', () => {

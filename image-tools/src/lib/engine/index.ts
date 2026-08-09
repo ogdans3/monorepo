@@ -20,6 +20,6 @@ export { convertFile, type Converted, type ConvertOptions } from './convert';
 export { decodeToRaw } from './decode';
 export { encodeRaw, type EncodeOptions } from './encode';
 export { encodeBmp } from './bmp';
-export { wrapPngAsIco } from './ico';
+export { icoFromPngs, wrapPngAsIco, type IcoEntry } from './ico';
 export { zipBlobs } from './zip';
 export type { RawImage } from './raw';

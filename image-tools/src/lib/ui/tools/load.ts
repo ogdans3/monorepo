@@ -16,3 +16,31 @@ export function rawToCanvas(raw: RawImage): HTMLCanvasElement {
 	canvas.getContext('2d')?.putImageData(new ImageData(raw.data, raw.width, raw.height), 0, 0);
 	return canvas;
 }
+
+/** Scale in halving steps toward the target. One big jump goes muddy. */
+export function steppedScale(source: HTMLCanvasElement, tw: number, th: number): HTMLCanvasElement {
+	let current = source;
+	let cw = source.width;
+	let ch = source.height;
+	while (cw / 2 > tw && ch / 2 > th) {
+		cw = Math.max(tw, Math.round(cw / 2));
+		ch = Math.max(th, Math.round(ch / 2));
+		const step = document.createElement('canvas');
+		step.width = cw;
+		step.height = ch;
+		const ctx = step.getContext('2d');
+		if (!ctx) break;
+		ctx.imageSmoothingQuality = 'high';
+		ctx.drawImage(current, 0, 0, cw, ch);
+		current = step;
+	}
+	const out = document.createElement('canvas');
+	out.width = tw;
+	out.height = th;
+	const ctx = out.getContext('2d');
+	if (ctx) {
+		ctx.imageSmoothingQuality = 'high';
+		ctx.drawImage(current, 0, 0, tw, th);
+	}
+	return out;
+}
