@@ -10,8 +10,8 @@ pages), each with a dropzone, batch conversion, previews, per-file download
 and zip-all. Conversion happens entirely on the user's device; the Node
 server only serves the static build.
 
-There are also twelve editing tools under `/tools/` (hub page at `/tools`,
-grouped into Edit, Transform, Adjust, Privacy, Background and For the web),
+There are also twenty tools under `/tools/` (hub page at `/tools`, grouped
+into Edit, Transform, Adjust, Privacy, Background, Documents and For the web),
 same client-side rules: crop, combine, resize, rotate/flip, adjust
 (brightness/contrast/saturation via canvas filters), blur (shape-drawn
 regions, blur or pixelate), redact (solid shapes), transparent background
@@ -19,9 +19,13 @@ regions, blur or pixelate), redact (solid shapes), transparent background
 decode→encode pipeline for stripping), watermark (text or logo, 9-position
 anchor or tiled), compress (binary search over quality to hit a byte
 target, optional stepped downscaling) and a favicon generator (multi-size
-ICO + PNG set + HTML snippet, zipped). Most export through the engine's
-encoders via a shared ExportBar. The three original root-level tool URLs
-301 to `/tools/…` via `src/hooks.server.ts`.
+ICO + PNG set + HTML snippet, zipped), round corners/circle crop, split
+into a grid (zip), sharpen (unsharp mask), colour picker (click + dominant
+palette via the GIF quantiser), bulk resize (zip), image→PDF (pdf-lib,
+match-size or A4 pages) and PDF→image (pdfjs-dist, per page or zipped),
+plus image→Base64. Most export through the engine's encoders via a shared
+ExportBar. The three original root-level tool URLs 301 to `/tools/…` via
+`src/hooks.server.ts`.
 
 ## Stack
 

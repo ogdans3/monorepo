@@ -4,11 +4,14 @@
 	let {
 		headline,
 		onfiles,
-		multiple = true
+		multiple = true,
+		accept = acceptAttribute()
 	}: {
 		headline: string;
 		onfiles: (files: File[]) => void;
 		multiple?: boolean;
+		/** Override for non-image tools, e.g. the PDF pages. */
+		accept?: string;
 	} = $props();
 
 	let input: HTMLInputElement | undefined = $state();
@@ -65,7 +68,7 @@
 />
 
 <label class="zone" class:dragging>
-	<input bind:this={input} type="file" {multiple} accept={acceptAttribute()} onchange={pick} />
+	<input bind:this={input} type="file" {multiple} {accept} onchange={pick} />
 	<span class="zone-headline">{dragging ? 'Drop to convert' : headline}</span>
 	<span class="zone-hint">or click to browse. Paste works too</span>
 </label>

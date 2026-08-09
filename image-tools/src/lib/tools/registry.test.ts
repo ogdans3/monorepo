@@ -17,7 +17,7 @@ describe('tools registry', () => {
 		const slugs = TOOLS.map((t) => t.slug);
 		expect(new Set(slugs).size).toBe(slugs.length);
 		for (const slug of slugs) {
-			expect(slug).toMatch(/^[a-z][a-z-]*[a-z]$/);
+			expect(slug).toMatch(/^[a-z][a-z0-9-]*[a-z0-9]$/);
 			expect(parsePairSlug(slug), slug).toBeNull();
 		}
 	});

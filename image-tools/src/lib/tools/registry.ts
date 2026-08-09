@@ -6,7 +6,14 @@
  * Copy style: plain sentences, no em dashes, no semicolons (guarded by test).
  */
 
-export type ToolCategory = 'edit' | 'transform' | 'adjust' | 'privacy' | 'background' | 'web';
+export type ToolCategory =
+	| 'edit'
+	| 'transform'
+	| 'adjust'
+	| 'privacy'
+	| 'background'
+	| 'documents'
+	| 'web';
 
 export const CATEGORIES: { id: ToolCategory; label: string; blurb: string }[] = [
 	{ id: 'edit', label: 'Edit', blurb: 'Change what is in the frame.' },
@@ -14,6 +21,7 @@ export const CATEGORIES: { id: ToolCategory; label: string; blurb: string }[] = 
 	{ id: 'adjust', label: 'Adjust', blurb: 'Tune colour and light.' },
 	{ id: 'privacy', label: 'Privacy', blurb: 'Hide what should not be shared.' },
 	{ id: 'background', label: 'Background', blurb: 'Work on what is behind the subject.' },
+	{ id: 'documents', label: 'Documents', blurb: 'Move between images and PDF.' },
 	{ id: 'web', label: 'For the web', blurb: 'Smaller files and site assets.' }
 ];
 
@@ -304,6 +312,182 @@ export const TOOLS: ImageTool[] = [
 			'Everything is rendered from your original with stepped downscaling, which keeps small sizes as crisp as they can be. If the 16 pixel preview turns to mush, simplify the logo rather than fighting it.'
 		],
 		suffix: '-favicons'
+	},
+	{
+		slug: 'round-corners',
+		category: 'edit',
+		name: 'Round corners',
+		h1: 'Round image corners or crop a circle',
+		title: 'Round Image Corners or Crop a Circle - Free, No Upload',
+		description:
+			'Round the corners of an image or crop it into a perfect circle, free and right in your browser. Adjustable radius, transparent corners, no uploads.',
+		lede: 'A radius slider for soft corners, or one switch for a perfect circle. The corners come out transparent.',
+		blurb: 'Soft corners or a full circle, with transparent edges.',
+		steps: [
+			'Drop an image in the zone above.',
+			'Drag the radius slider, or flip on Circle for a round avatar. Circle crops to a centred square first.',
+			'Download as PNG or WebP to keep the transparent corners.'
+		],
+		aboutHeading: 'About rounding corners here',
+		about: [
+			'The corners are cut with real transparency, not painted white, so the result sits cleanly on any background. Circle mode crops to a centred square before rounding, which is exactly what avatar slots expect.',
+			'Export as PNG or WebP to keep the transparency. JPG has no alpha channel, so the corners turn white there.'
+		],
+		suffix: '-rounded'
+	},
+	{
+		slug: 'split-image',
+		category: 'edit',
+		name: 'Split',
+		h1: 'Split an image into a grid',
+		title: 'Split an Image Into a Grid - Free Online, No Upload',
+		description:
+			'Split an image into equal tiles online free, for Instagram grids, puzzles or spritesheets. Pick rows and columns, download every tile as a zip. No uploads.',
+		lede: 'Pick rows and columns, see the grid on the image, and download every tile in one zip.',
+		blurb: 'Cut into equal tiles and download them all as a zip.',
+		steps: [
+			'Drop an image in the zone above.',
+			'Set rows and columns. The grid overlay shows exactly where the cuts land.',
+			'Download the zip. Tiles are named by row and column so the order never gets lost.'
+		],
+		aboutHeading: 'About splitting images here',
+		about: [
+			'Tiles are cut at full resolution and sized evenly, with the last row and column absorbing any leftover pixels so nothing is dropped.',
+			'The classic use is a multi-post Instagram grid, but it works just as well for puzzles, spritesheets and print-at-home posters.'
+		],
+		suffix: '-tiles'
+	},
+	{
+		slug: 'sharpen-image',
+		category: 'adjust',
+		name: 'Sharpen',
+		h1: 'Sharpen an image',
+		title: 'Sharpen an Image Online - Free, Private, No Upload',
+		description:
+			'Sharpen blurry or soft images online free with an unsharp mask and a live preview, right in your browser. One slider, no uploads, full resolution out.',
+		lede: 'One slider, live preview. Brings back the edge that soft focus or heavy downscaling took away.',
+		blurb: 'Unsharp mask with one slider and a live preview.',
+		steps: [
+			'Drop an image in the zone above.',
+			'Drag the amount slider until edges look crisp. Past a certain point halos appear, back off a notch.',
+			'Choose an output format and download at full resolution.'
+		],
+		aboutHeading: 'How sharpening works here',
+		about: [
+			'This is a classic unsharp mask: the image is compared against a slightly blurred copy of itself, and the differences, which are the edges, get amplified. It cannot invent detail that was never captured, but it makes real detail read clearly again.',
+			'Sharpening is the standard last step after resizing photos down, which is why it pairs well with the resize tool.'
+		],
+		suffix: '-sharpened'
+	},
+	{
+		slug: 'image-color-picker',
+		category: 'adjust',
+		name: 'Colour picker',
+		h1: 'Pick colours from an image',
+		title: 'Image Color Picker - Hex Codes and Palette, No Upload',
+		description:
+			'Pick any colour from an image and get its hex, RGB and HSL codes, plus an extracted palette of the dominant colours. Free, in your browser, no uploads.',
+		lede: 'Click anywhere in the image for the exact hex, RGB and HSL values, and get the dominant colours as a ready palette.',
+		blurb: 'Click for hex, RGB and HSL, plus the dominant palette.',
+		steps: [
+			'Drop an image in the zone above. The dominant palette appears straight away.',
+			'Click any pixel for its exact values. Every pick lands in a history row.',
+			'Copy any value with one click. Hex, RGB and HSL are all there.'
+		],
+		aboutHeading: 'About picking colours here',
+		about: [
+			'The palette comes from quantising the image down to its most dominant colours, the same technique GIF encoding uses, which makes it a solid starting point for design tokens or a brand check.',
+			'Clicks sample the original pixels at full resolution, not the scaled preview, so the values are exact.'
+		],
+		suffix: '-palette'
+	},
+	{
+		slug: 'bulk-resize',
+		category: 'transform',
+		name: 'Bulk resize',
+		h1: 'Bulk resize images',
+		title: 'Bulk Resize Images - Free Online, No Upload',
+		description:
+			'Resize many images at once online free. Set a width or a percentage, pick a format, and download every result in one zip. Nothing gets uploaded.',
+		lede: 'Drop a pile of images, set one width or percentage, and take the whole batch home as a zip.',
+		blurb: 'One setting, a whole folder of images, one zip out.',
+		steps: [
+			'Drop any number of images in the zone above.',
+			'Set a target width or a percentage. Every image keeps its own aspect ratio.',
+			'Pick an output format and download the zip.'
+		],
+		aboutHeading: 'About bulk resizing here',
+		about: [
+			'Every image is scaled with the same stepped downscaling the single resize tool uses, so the batch does not trade quality for convenience.',
+			'Mixed formats are fine on the way in. HEIC photos, PNG screenshots and WebP exports can all go into the same batch and come out uniform.'
+		],
+		suffix: '-resized'
+	},
+	{
+		slug: 'image-to-pdf',
+		category: 'documents',
+		name: 'Image to PDF',
+		h1: 'Convert images to a PDF',
+		title: 'Image to PDF Converter (JPG, PNG, HEIC) - Free, No Upload',
+		description:
+			'Convert JPG, PNG, HEIC and more to PDF online free. Combine several images into one PDF, reorder pages, pick page size. Runs in your browser, no uploads.',
+		lede: 'Drop one image or twenty. Reorder them, pick a page size and download a single PDF.',
+		blurb: 'One or many images into a single PDF, pages in your order.',
+		steps: [
+			'Drop your images in the zone above. JPG, PNG, HEIC, WebP and everything else this site reads.',
+			'Drag the order right with the arrows, and choose between pages that match each image or A4.',
+			'Download the PDF. One image per page, at full resolution.'
+		],
+		aboutHeading: 'About making PDFs here',
+		about: [
+			'Each image becomes one page. Match mode sizes every page to its image, A4 mode centres each image on a standard page, which prints predictably.',
+			'The PDF is assembled entirely in your browser. Scans, receipts and ID photos never touch a server, which is rather the point for documents.'
+		],
+		suffix: ''
+	},
+	{
+		slug: 'pdf-to-jpg',
+		category: 'documents',
+		name: 'PDF to JPG',
+		h1: 'Convert a PDF to images',
+		title: 'PDF to JPG Converter - Free, Private, No Upload',
+		description:
+			'Convert PDF pages to JPG, PNG or WebP online free. Pick the resolution, download single pages or the whole document as a zip. No uploads, fully private.',
+		lede: 'Every page becomes an image. Pick the resolution and format, download one page or the whole document as a zip.',
+		blurb: 'PDF pages out as JPG, PNG or WebP, single or zipped.',
+		steps: [
+			'Drop a PDF in the zone above.',
+			'Pick the resolution. Higher looks better and weighs more.',
+			'Download pages one by one, or grab the whole document as a zip.'
+		],
+		aboutHeading: 'About converting PDFs here',
+		about: [
+			'Pages are rendered with the same engine Firefox uses for its PDF viewer, running in your browser. The document never leaves your device, which matters for contracts, invoices and anything with a signature on it.',
+			'JPG is right for text and mixed pages. PNG keeps razor-sharp line art, and WebP lands smaller than both.'
+		],
+		suffix: ''
+	},
+	{
+		slug: 'image-to-base64',
+		category: 'web',
+		name: 'Base64',
+		h1: 'Convert an image to Base64',
+		title: 'Image to Base64 Converter - Data URL, Free, No Upload',
+		description:
+			'Convert an image to a Base64 data URL online free. Copy the raw string, an img tag or a CSS background, straight from your browser with no uploads.',
+		lede: 'The file as a data URL, ready to paste. Copy the raw string, an img tag or a CSS background rule.',
+		blurb: 'Data URLs for inlining, with img and CSS snippets ready.',
+		steps: [
+			'Drop an image in the zone above. The original file is encoded as is, byte for byte.',
+			'Copy the raw data URL, the img tag or the CSS rule.',
+			'Mind the size. Base64 adds about a third, so it is for small images.'
+		],
+		aboutHeading: 'When Base64 makes sense',
+		about: [
+			'Inlining spares a network request, which is worth it for tiny icons, tracking-free email signatures and single-file HTML documents. The encoded string is about 33 percent larger than the file, so it stops making sense quickly as images grow.',
+			'The file is encoded exactly as it is, with no re-compression, so what you inline is byte for byte what you dropped.'
+		],
+		suffix: ''
 	}
 ];
 
