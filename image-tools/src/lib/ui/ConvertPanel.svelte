@@ -121,50 +121,6 @@
 		margin-right: 0.2rem;
 	}
 
-	.chip {
-		padding: 0.3rem 0.7rem;
-		border: 1px solid var(--line);
-		border-radius: 99px;
-		background: none;
-		color: var(--ink);
-		font: 600 0.8125rem/1.2 var(--font-ui);
-		cursor: pointer;
-		transition:
-			background-color 150ms var(--ease),
-			border-color 150ms var(--ease),
-			color 150ms var(--ease);
-	}
-
-	.chip:hover {
-		border-color: var(--muted);
-	}
-
-	.chip.active {
-		background: var(--primary);
-		border-color: var(--primary);
-		color: #fff;
-	}
-
-	.quality {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		font-size: 0.875rem;
-		color: var(--muted);
-	}
-
-	.quality input {
-		flex: 1;
-		max-width: 16rem;
-		accent-color: var(--primary);
-	}
-
-	.quality output {
-		min-width: 2.2ch;
-		font-size: 0.8125rem;
-		color: var(--ink);
-	}
-
 	.rows {
 		list-style: none;
 		margin: 0.25rem 0 0;

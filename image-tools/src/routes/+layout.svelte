@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { TOOLS } from '$lib/tools/registry';
 
 	let { children } = $props();
 </script>
@@ -12,7 +13,10 @@
 <div class="shell">
 	<header>
 		<a class="wordmark" href="/">image<span class="arrow">→</span>tools</a>
-		<nav>
+		<nav aria-label="Main">
+			{#each TOOLS as tool (tool.slug)}
+				<a href="/{tool.slug}">{tool.name}</a>
+			{/each}
 			<a href="/#all">All conversions</a>
 		</nav>
 	</header>
@@ -43,8 +47,16 @@
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 0.35rem 1rem;
 		padding: 1.1rem 0;
 		border-bottom: 1px solid var(--line);
+	}
+
+	nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1.1rem;
 	}
 
 	.wordmark {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { SITE_URL } from '$lib/site';
+	import { TOOLS } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 
 	let { data } = $props();
@@ -92,6 +93,15 @@
 					> {p.target.name}</a
 				>
 			</li>
+		{/each}
+	</ul>
+</section>
+
+<section aria-labelledby="pagetools-heading">
+	<h2 id="pagetools-heading">Image tools</h2>
+	<ul class="pair-links">
+		{#each TOOLS as tool (tool.slug)}
+			<li><a href="/{tool.slug}">{tool.h1}</a></li>
 		{/each}
 	</ul>
 </section>

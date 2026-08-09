@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { FORMATS, SOURCES, TARGETS, parsePairSlug } from '$lib/engine';
 	import { SITE_URL } from '$lib/site';
+	import { TOOLS } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 
 	const popular = [
@@ -28,7 +29,7 @@
 	<title>Free Online Image Converter - PNG, JPG, WebP, HEIC, AVIF</title>
 	<meta
 		name="description"
-		content="Free online image converter with no uploads. PNG, JPG, WebP, AVIF, HEIC, GIF, BMP, ICO, SVG and TIFF. Runs in your browser, so your files stay on your device."
+		content="Free online image converter with no uploads. PNG, JPG, WebP, AVIF, HEIC and more, plus tools to crop images, make backgrounds transparent and combine photos."
 	/>
 	<link rel="canonical" href="{SITE_URL}/" />
 	<meta property="og:title" content="Free Online Image Converter" />
@@ -49,6 +50,18 @@
 </section>
 
 <ConvertPanel target={FORMATS.png} showTargetPicker />
+
+<section aria-labelledby="tools-heading">
+	<h2 id="tools-heading">Image tools</h2>
+	<ul class="tool-list">
+		{#each TOOLS as tool (tool.slug)}
+			<li>
+				<a href="/{tool.slug}">{tool.h1}</a>
+				<span class="tool-blurb">{tool.blurb}</span>
+			</li>
+		{/each}
+	</ul>
+</section>
 
 <section aria-labelledby="popular-heading">
 	<h2 id="popular-heading">Popular conversions</h2>
@@ -94,6 +107,36 @@
 </section>
 
 <style>
+	.tool-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.tool-list li {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.6rem;
+	}
+
+	.tool-list a {
+		font-weight: 600;
+		color: var(--ink);
+	}
+
+	.tool-list a:hover {
+		color: var(--primary);
+	}
+
+	.tool-blurb {
+		font-size: 0.875rem;
+		color: var(--muted);
+	}
+
 	.matrix {
 		display: flex;
 		flex-direction: column;

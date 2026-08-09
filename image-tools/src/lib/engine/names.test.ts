@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, outputFileName } from './names';
+import { editedFileName, formatBytes, outputFileName } from './names';
 
 describe('outputFileName', () => {
 	it('keeps the base name and swaps the extension', () => {
@@ -18,6 +18,14 @@ describe('outputFileName', () => {
 	it('handles dotfiles and spaces', () => {
 		expect(outputFileName('.hidden', '.png')).toBe('.hidden.png');
 		expect(outputFileName('my holiday photo.jpeg', '.png')).toBe('my holiday photo.png');
+	});
+});
+
+describe('editedFileName', () => {
+	it('adds the tool suffix before the new extension', () => {
+		expect(editedFileName('IMG_1.HEIC', '-cropped', '.png')).toBe('IMG_1-cropped.png');
+		expect(editedFileName('logo.png', '-transparent', '.webp')).toBe('logo-transparent.webp');
+		expect(editedFileName('scan', '-combined', '.jpg')).toBe('scan-combined.jpg');
 	});
 });
 

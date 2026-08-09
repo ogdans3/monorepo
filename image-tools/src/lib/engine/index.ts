@@ -15,7 +15,7 @@ export {
 	type PairPage
 } from './formats';
 export { sniffFormat } from './sniff';
-export { outputFileName, formatBytes } from './names';
+export { outputFileName, editedFileName, formatBytes } from './names';
 export { convertFile, type Converted, type ConvertOptions } from './convert';
 export { decodeToRaw } from './decode';
 export { encodeRaw, type EncodeOptions } from './encode';

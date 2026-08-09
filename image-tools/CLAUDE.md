@@ -18,6 +18,12 @@ decisions. This file is the short version of what matters when editing.
   `src/lib/engine/formats.ts` + add its decode/encode case. Pages, slugs,
   the matrix, accept lists and sitemap follow automatically. Don't hand-write
   per-pair pages or copy.
+- **Tools follow the same pattern.** New tool = entry in
+  `src/lib/tools/registry.ts` (slug, SEO copy, steps) + pure logic in
+  `src/lib/tools/` with tests + an editor in `src/lib/ui/tools/` + a thin
+  route wrapping it in `ToolPage`. Nav, landing, sitemap and cross-links
+  update themselves. Export always goes through `ExportBar` and the engine
+  encoders.
 - **WASM codecs are lazy.** Keep them behind dynamic imports, and keep
   `optimizeDeps.exclude` in `vite.config.ts` in sync when adding one.
 - **Pure parts stay pure.** BMP/ICO encoders, sniffing, slugs and naming run

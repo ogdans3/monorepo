@@ -4,6 +4,12 @@ export function outputFileName(inputName: string, ext: string): string {
 	return (base || inputName) + ext;
 }
 
+/** "IMG_1.HEIC" + "-cropped" + ".png" → "IMG_1-cropped.png" — for the editing tools. */
+export function editedFileName(inputName: string, suffix: string, ext: string): string {
+	const base = inputName.replace(/\.[^./\\]+$/, '');
+	return (base || inputName) + suffix + ext;
+}
+
 const UNITS = ['B', 'KB', 'MB', 'GB'];
 
 export function formatBytes(n: number): string {

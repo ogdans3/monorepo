@@ -10,6 +10,13 @@ pages), each with a dropzone, batch conversion, previews, per-file download
 and zip-all. Conversion happens entirely on the user's device; the Node
 server only serves the static build.
 
+There are also three editing tools, same client-side rules: `/crop-image`
+(8-handle frame, aspect presets, exact px), `/transparent-background`
+(magic-wand flood fill with live tolerance and undo) and `/combine-images`
+(side by side / stacked / 2×2 grid with draggable dividers, per-cell pan,
+spacing, background and exact output size). All export through the engine's
+encoders via a shared ExportBar (PNG/JPG/WebP + quality).
+
 ## Stack
 
 - **SvelteKit** (Svelte 5 runes) with `@sveltejs/adapter-node`
@@ -50,6 +57,12 @@ encode → rename`:
 HEIC, SVG and TIFF are source-only: HEVC encoding is patent-encumbered, and
 raster→vector is a different tool. Animated GIFs flatten to their first
 frame (v1).
+
+The tools follow the same pattern with their own registry
+(`src/lib/tools/registry.ts` — slugs, SEO copy, how-to steps) feeding nav,
+landing section, sitemap and cross-links. Pure logic (flood fill, crop
+geometry, combine layout math) lives in `src/lib/tools/` under vitest;
+the editors in `src/lib/ui/tools/` are the only DOM-bound parts.
 
 ## Before launch
 
