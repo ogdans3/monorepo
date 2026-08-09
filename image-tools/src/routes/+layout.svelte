@@ -1,7 +1,6 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { TOOLS } from '$lib/tools/registry';
 
 	let { children } = $props();
 </script>
@@ -14,9 +13,7 @@
 	<header>
 		<a class="wordmark" href="/">image<span class="arrow">→</span>tools</a>
 		<nav aria-label="Main">
-			{#each TOOLS as tool (tool.slug)}
-				<a href="/{tool.slug}">{tool.name}</a>
-			{/each}
+			<a href="/tools">Tools</a>
 			<a href="/#all">All conversions</a>
 		</nav>
 	</header>

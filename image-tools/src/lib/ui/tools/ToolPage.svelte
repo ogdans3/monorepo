@@ -1,12 +1,17 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { SITE_URL } from '$lib/site';
-	import { TOOLS, type ImageTool } from '$lib/tools/registry';
+	import { TOOLS, toolPath, type ImageTool } from '$lib/tools/registry';
 	import { parsePairSlug } from '$lib/engine';
 
 	let { tool, children }: { tool: ImageTool; children: Snippet } = $props();
 
-	const otherTools = $derived(TOOLS.filter((t) => t.slug !== tool.slug));
+	// same category first, the rest after, current tool out
+	const otherTools = $derived(
+		[...TOOLS.filter((t) => t.category === tool.category), ...TOOLS.filter((t) => t.category !== tool.category)].filter(
+			(t) => t.slug !== tool.slug
+		)
+	);
 	const conversions = [
 		'heic-to-jpg',
 		'png-to-jpg',
@@ -20,11 +25,11 @@
 <svelte:head>
 	<title>{tool.title}</title>
 	<meta name="description" content={tool.description} />
-	<link rel="canonical" href="{SITE_URL}/{tool.slug}" />
+	<link rel="canonical" href="{SITE_URL}{toolPath(tool)}" />
 	<meta property="og:title" content={tool.title} />
 	<meta property="og:description" content={tool.description} />
 	<meta property="og:type" content="website" />
-	<meta property="og:url" content="{SITE_URL}/{tool.slug}" />
+	<meta property="og:url" content="{SITE_URL}{toolPath(tool)}" />
 </svelte:head>
 
 <section class="hero">
@@ -58,8 +63,11 @@
 	<h2 id="more-heading">More tools</h2>
 	<ul class="pair-links">
 		{#each otherTools as t (t.slug)}
-			<li><a href="/{t.slug}">{t.h1}</a></li>
+			<li><a href={toolPath(t)}>{t.h1}</a></li>
 		{/each}
+	</ul>
+	<p class="all-tools"><a href="/tools">All image tools</a></p>
+	<ul class="pair-links">
 		{#each conversions as p (p.slug)}
 			<li>
 				<a class="mono" href="/{p.slug}"
@@ -71,3 +79,10 @@
 		{/each}
 	</ul>
 </section>
+
+<style>
+	.all-tools {
+		margin: 0.75rem 0 1rem;
+		font-size: 0.875rem;
+	}
+</style>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { FORMATS, SOURCES, TARGETS, parsePairSlug } from '$lib/engine';
 	import { SITE_URL } from '$lib/site';
-	import { TOOLS } from '$lib/tools/registry';
+	import { CATEGORIES, toolPath, toolsInCategory } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 
 	const popular = [
@@ -29,7 +29,7 @@
 	<title>Free Online Image Converter - PNG, JPG, WebP, HEIC, AVIF</title>
 	<meta
 		name="description"
-		content="Free online image converter with no uploads. PNG, JPG, WebP, AVIF, HEIC and more, plus tools to crop images, make backgrounds transparent and combine photos."
+		content="Free online image converter with no uploads. PNG, JPG, WebP, AVIF, HEIC and more, plus tools to crop, resize, rotate, blur, redact and combine images."
 	/>
 	<link rel="canonical" href="{SITE_URL}/" />
 	<meta property="og:title" content="Free Online Image Converter" />
@@ -53,14 +53,22 @@
 
 <section aria-labelledby="tools-heading">
 	<h2 id="tools-heading">Image tools</h2>
-	<ul class="tool-list">
-		{#each TOOLS as tool (tool.slug)}
-			<li>
-				<a href="/{tool.slug}">{tool.h1}</a>
-				<span class="tool-blurb">{tool.blurb}</span>
-			</li>
+	<div class="tool-groups">
+		{#each CATEGORIES as category (category.id)}
+			<div class="tool-group">
+				<h3>{category.label}</h3>
+				<ul class="tool-list">
+					{#each toolsInCategory(category.id) as tool (tool.slug)}
+						<li>
+							<a href={toolPath(tool)}>{tool.h1}</a>
+							<span class="tool-blurb">{tool.blurb}</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
 		{/each}
-	</ul>
+	</div>
+	<p class="all-tools-link"><a href="/tools">All image tools</a></p>
 </section>
 
 <section aria-labelledby="popular-heading">
@@ -107,34 +115,22 @@
 </section>
 
 <style>
-	.tool-list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
+	.tool-groups {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 1rem;
 	}
 
-	.tool-list li {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
-		gap: 0.6rem;
-	}
-
-	.tool-list a {
-		font-weight: 600;
-		color: var(--ink);
-	}
-
-	.tool-list a:hover {
-		color: var(--primary);
-	}
-
-	.tool-blurb {
-		font-size: 0.875rem;
+	.tool-group h3 {
+		margin: 0 0 0.4rem;
+		font-size: 0.8125rem;
+		font-weight: 650;
 		color: var(--muted);
+	}
+
+	.all-tools-link {
+		margin: 1rem 0 0;
+		font-size: 0.875rem;
 	}
 
 	.matrix {

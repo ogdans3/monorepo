@@ -1,5 +1,5 @@
 import { allPairSlugs } from '$lib/engine';
-import { TOOLS } from '$lib/tools/registry';
+import { TOOLS, toolPath } from '$lib/tools/registry';
 import { SITE_URL } from '$lib/site';
 
 export const prerender = true;
@@ -7,7 +7,8 @@ export const prerender = true;
 export function GET() {
 	const urls = [
 		'/',
-		...TOOLS.map((tool) => `/${tool.slug}`),
+		'/tools',
+		...TOOLS.map((tool) => toolPath(tool)),
 		...allPairSlugs().map((slug) => `/${slug}`)
 	];
 	const body =

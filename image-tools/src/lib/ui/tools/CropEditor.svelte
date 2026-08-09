@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { decodeToRaw, sniffFormat, type RawImage } from '$lib/engine';
+	import type { RawImage } from '$lib/engine';
+	import { readImageFile } from './load';
 	import {
 		applyAspect,
 		fullRect,
@@ -37,11 +38,8 @@
 		loading = true;
 		loadError = null;
 		try {
-			const head = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
-			const format = sniffFormat(head, file.name);
-			if (!format) throw new Error(`Could not read ${file.name} as an image`);
-			const raw = await decodeToRaw(file, format);
-			baseName = file.name;
+			const { raw, name } = await readImageFile(file);
+			baseName = name;
 			crop = fullRect(raw.width, raw.height, aspect);
 			img = raw;
 		} catch (err) {

@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { decodeToRaw, sniffFormat, type RawImage } from '$lib/engine';
+	import type { RawImage } from '$lib/engine';
 	import { floodErase } from '$lib/tools/floodfill';
+	import { readImageFile } from './load';
 	import Dropzone from '../Dropzone.svelte';
 	import ExportBar from './ExportBar.svelte';
 
@@ -27,11 +28,8 @@
 		loading = true;
 		loadError = null;
 		try {
-			const head = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
-			const format = sniffFormat(head, file.name);
-			if (!format) throw new Error(`Could not read ${file.name} as an image`);
-			const raw = await decodeToRaw(file, format);
-			baseName = file.name;
+			const { raw, name } = await readImageFile(file);
+			baseName = name;
 			ops = [];
 			img = raw;
 		} catch (err) {

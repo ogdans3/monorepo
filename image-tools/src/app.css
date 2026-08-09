@@ -250,6 +250,37 @@ section h2 {
 	margin-top: 0.4rem;
 }
 
+/* Tool lists — the landing section and the /tools hub. */
+.tool-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.tool-list li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.6rem;
+}
+
+.tool-list a {
+	font-weight: 600;
+	color: var(--ink);
+}
+
+.tool-list a:hover {
+	color: var(--primary);
+}
+
+.tool-blurb {
+	font-size: 0.875rem;
+	color: var(--muted);
+}
+
 .notes {
 	margin: 1.25rem 0 0;
 	padding-left: 1.1rem;

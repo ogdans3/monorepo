@@ -10,12 +10,15 @@ pages), each with a dropzone, batch conversion, previews, per-file download
 and zip-all. Conversion happens entirely on the user's device; the Node
 server only serves the static build.
 
-There are also three editing tools, same client-side rules: `/crop-image`
-(8-handle frame, aspect presets, exact px), `/transparent-background`
-(magic-wand flood fill with live tolerance and undo) and `/combine-images`
-(side by side / stacked / 2×2 grid with draggable dividers, per-cell pan,
-spacing, background and exact output size). All export through the engine's
-encoders via a shared ExportBar (PNG/JPG/WebP + quality).
+There are also seven editing tools under `/tools/` (hub page at `/tools`,
+grouped by category), same client-side rules: crop (8-handle frame, aspect
+presets, exact px), combine (dividers, per-cell pan, grid), resize (aspect
+lock, stepped downscale), rotate/flip (quarter turns with correct flip
+parity), blur (shape-drawn regions, blur or pixelate), redact (solid shapes,
+any colour) and transparent background (magic-wand flood fill with live
+tolerance). All export through the engine's encoders via a shared ExportBar
+(PNG/JPG/WebP + quality). The three original root-level tool URLs 301 to
+`/tools/…` via `src/hooks.server.ts`.
 
 ## Stack
 

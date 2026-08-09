@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { acceptAttribute, decodeToRaw, sniffFormat, type RawImage } from '$lib/engine';
+	import { acceptAttribute, type RawImage } from '$lib/engine';
+	import { readImageFile, rawToCanvas } from './load';
 	import {
 		cellAt,
 		cellRects,
@@ -50,26 +51,15 @@
 	);
 	const displayScale = $derived(wrapWidth > 0 && outW > 0 ? wrapWidth / outW : 0);
 
-	function rawToCanvas(raw: RawImage): HTMLCanvasElement {
-		const c = document.createElement('canvas');
-		c.width = raw.width;
-		c.height = raw.height;
-		c.getContext('2d')?.putImageData(new ImageData(raw.data, raw.width, raw.height), 0, 0);
-		return c;
-	}
-
 	async function onfiles(files: File[]) {
 		loading = true;
 		loadError = null;
 		try {
 			for (const file of files) {
-				const head = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
-				const format = sniffFormat(head, file.name);
-				if (!format) throw new Error(`Could not read ${file.name} as an image`);
-				const raw = await decodeToRaw(file, format);
+				const { raw, name } = await readImageFile(file);
 				slots.push({
 					id: nextId++,
-					name: file.name,
+					name,
 					source: rawToCanvas(raw),
 					w: raw.width,
 					h: raw.height,

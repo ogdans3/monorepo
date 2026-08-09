@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { TOOLS, toolBySlug } from './registry';
+import { CATEGORIES, TOOLS, toolBySlug, toolPath, toolsInCategory } from './registry';
 import { parsePairSlug } from '$lib/engine';
 
 describe('tools registry', () => {
+	it('sorts every tool into a defined category, and none stays empty', () => {
+		const ids = CATEGORIES.map((c) => c.id);
+		for (const t of TOOLS) expect(ids, t.slug).toContain(t.category);
+		for (const id of ids) expect(toolsInCategory(id).length, id).toBeGreaterThan(0);
+	});
+
+	it('builds /tools/ paths', () => {
+		expect(toolPath(TOOLS[0])).toBe(`/tools/${TOOLS[0].slug}`);
+	});
+
 	it('has unique, kebab-case slugs that never collide with pair pages', () => {
 		const slugs = TOOLS.map((t) => t.slug);
 		expect(new Set(slugs).size).toBe(slugs.length);
