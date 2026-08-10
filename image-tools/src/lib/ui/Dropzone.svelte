@@ -78,11 +78,11 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.35rem;
-		padding: 3.25rem 1.5rem;
+		gap: 0.4rem;
+		padding: 3.5rem 1.5rem;
 		background: var(--surface);
 		border: 1.5px dashed var(--line);
-		border-radius: var(--r-m);
+		border-radius: var(--r-l);
 		cursor: pointer;
 		text-align: center;
 		transition:
@@ -92,6 +92,7 @@
 
 	.zone:hover {
 		border-color: var(--muted);
+		background: var(--surface-deep);
 	}
 
 	.zone.dragging {
@@ -113,8 +114,9 @@
 	}
 
 	.zone-headline {
-		font-size: 1.125rem;
+		font-size: 1.25rem;
 		font-weight: 650;
+		letter-spacing: -0.01em;
 	}
 
 	.zone.dragging .zone-headline {

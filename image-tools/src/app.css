@@ -22,6 +22,7 @@
 
 	--r-s: 6px;
 	--r-m: 10px;
+	--r-l: 14px;
 	--ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -37,7 +38,7 @@ body {
 	color: var(--ink);
 	font-family: var(--font-ui);
 	font-size: 1rem;
-	line-height: 1.55;
+	line-height: 1.6;
 	-webkit-font-smoothing: antialiased;
 }
 
@@ -61,7 +62,19 @@ a {
 
 a:hover {
 	text-decoration: underline;
-	text-underline-offset: 2px;
+	text-underline-offset: 3px;
+}
+
+/* Links inside running text get a quiet standing underline. */
+p a {
+	text-decoration: underline;
+	text-decoration-color: oklch(0.545 0.1 112 / 0.35);
+	text-underline-offset: 3px;
+	transition: text-decoration-color 150ms var(--ease);
+}
+
+p a:hover {
+	text-decoration-color: currentColor;
 }
 
 :focus-visible {
@@ -191,35 +204,29 @@ a:hover {
 
 /* Shared page furniture — used by the landing and every pair page. */
 .hero {
-	margin: 2.5rem 0 1.75rem;
+	margin: 3rem 0 2rem;
 }
 
 .hero h1 {
-	font-size: 1.875rem;
+	font-size: 2rem;
 	letter-spacing: -0.015em;
-	margin: 0 0 0.5rem;
-}
-
-/* The mono arrow sits low and tight next to sans capitals — give it room. */
-.hero h1 .arrow {
-	font-size: 0.78em;
-	margin: 0 0.24em;
-	vertical-align: 0.08em;
+	margin: 0 0 0.6rem;
 }
 
 .lede {
 	color: var(--muted);
 	margin: 0;
 	font-size: 1.0625rem;
+	max-width: 58ch;
 }
 
 section {
-	margin: 2.75rem 0;
+	margin: 3.25rem 0;
 }
 
 section h2 {
-	font-size: 1.125rem;
-	margin: 0 0 0.75rem;
+	font-size: 1.25rem;
+	margin: 0 0 0.9rem;
 }
 
 .pair-links {
@@ -227,27 +234,35 @@ section h2 {
 	margin: 0;
 	padding: 0;
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-	gap: 0.45rem 1rem;
-	font-size: 0.875rem;
+	grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+	gap: 0.55rem 1.25rem;
+	font-size: 0.9375rem;
 }
 
 .pair-links a {
 	color: var(--ink);
+	transition: color 120ms var(--ease);
 }
 
 .pair-links a:hover {
 	color: var(--primary);
+	text-decoration: none;
 }
 
 .steps {
 	margin: 0;
 	padding-left: 1.2rem;
-	max-width: 65ch;
+	max-width: 62ch;
 }
 
 .steps li + li {
-	margin-top: 0.4rem;
+	margin-top: 0.5rem;
+}
+
+.steps li::marker {
+	color: var(--muted);
+	font-family: var(--font-mono);
+	font-size: 0.875em;
 }
 
 /* Tool lists — the landing section and the /tools hub. */

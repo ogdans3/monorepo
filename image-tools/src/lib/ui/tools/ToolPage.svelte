@@ -54,8 +54,7 @@
 		<p>{paragraph}</p>
 	{/each}
 	<p>
-		Like everything on this site, the tool runs entirely in your browser. Your image is never
-		uploaded, and the server only serves this page.
+		Like everything on this site, this tool runs in your browser. Your image is never uploaded.
 	</p>
 </section>
 
@@ -69,13 +68,7 @@
 	<p class="all-tools"><a href="/tools">All image tools</a></p>
 	<ul class="pair-links">
 		{#each conversions as p (p.slug)}
-			<li>
-				<a class="mono" href="/{p.slug}"
-					>{p.sourceName} <span class="arrow" aria-hidden="true">→</span><span
-						class="visually-hidden">to</span
-					> {p.targetName}</a
-				>
-			</li>
+			<li><a href="/{p.slug}">{p.sourceName} to {p.targetName}</a></li>
 		{/each}
 	</ul>
 </section>

@@ -53,16 +53,13 @@
 
 <section aria-labelledby="tools-heading">
 	<h2 id="tools-heading">Image tools</h2>
-	<div class="tool-groups">
+	<div class="matrix">
 		{#each CATEGORIES as category (category.id)}
-			<div class="tool-group">
+			<div class="matrix-group">
 				<h3>{category.label}</h3>
-				<ul class="tool-list">
+				<ul class="pair-links">
 					{#each toolsInCategory(category.id) as tool (tool.slug)}
-						<li>
-							<a href={toolPath(tool)}>{tool.h1}</a>
-							<span class="tool-blurb">{tool.blurb}</span>
-						</li>
+						<li><a href={toolPath(tool)}>{tool.h1}</a></li>
 					{/each}
 				</ul>
 			</div>
@@ -75,13 +72,7 @@
 	<h2 id="popular-heading">Popular conversions</h2>
 	<ul class="pair-links">
 		{#each popular as p (p.slug)}
-			<li>
-				<a class="mono" href="/{p.slug}"
-					>{p.sourceName} <span class="arrow" aria-hidden="true">→</span><span
-						class="visually-hidden">to</span
-					> {p.targetName}</a
-				>
-			</li>
+			<li><a href="/{p.slug}">{p.sourceName} to {p.targetName}</a></li>
 		{/each}
 	</ul>
 </section>
@@ -90,15 +81,15 @@
 	<h2 id="all-heading">All conversions</h2>
 	<div class="matrix">
 		{#each bySource as group (group.source.id)}
-			<div class="matrix-row">
-				<span class="matrix-source mono"
-					>{group.source.name} <span class="arrow" aria-hidden="true">→</span></span
-				>
-				<span class="matrix-targets">
+			<div class="matrix-group">
+				<h3>{group.source.name}</h3>
+				<ul class="pair-links">
 					{#each group.targets as t (t.id)}
-						<a class="mono" href="/{group.source.id}-to-{t.id}">{t.name}</a>
+						<li>
+							<a href="/{group.source.id}-to-{t.id}">{group.source.name} to {t.name}</a>
+						</li>
 					{/each}
-				</span>
+				</ul>
 			</div>
 		{/each}
 	</div>
@@ -107,53 +98,29 @@
 <section aria-labelledby="how-heading">
 	<h2 id="how-heading">How it works</h2>
 	<p>
-		Your browser already ships very good image codecs. This site adds WASM decoders for the
-		formats it cannot read on its own, like HEIC and TIFF. Every file is decoded to raw pixels on
-		your own machine and re-encoded to the format you picked. The server only serves the page.
-		That is why the converter is free, and why your images stay private.
+		Your browser already knows how to read most image formats. This site adds a little extra code
+		for the rest, like HEIC and TIFF. Every file is turned into raw pixels on your own computer,
+		then saved again in the format you picked. The server only sends you this page. That is why
+		the converter is free, and why your images stay private.
 	</p>
 </section>
 
 <style>
-	.tool-groups {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.tool-group h3 {
-		margin: 0 0 0.4rem;
-		font-size: 0.8125rem;
-		font-weight: 650;
-		color: var(--muted);
-	}
-
 	.all-tools-link {
-		margin: 1rem 0 0;
+		margin: 1.1rem 0 0;
 		font-size: 0.875rem;
 	}
 
 	.matrix {
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
+		gap: 1.35rem;
 	}
 
-	.matrix-row {
-		display: flex;
-		gap: 1rem;
-		font-size: 0.875rem;
-	}
-
-	.matrix-source {
-		flex: none;
-		width: 5.5rem;
+	.matrix-group h3 {
+		margin: 0 0 0.45rem;
+		font-size: 0.8125rem;
+		font-weight: 650;
 		color: var(--muted);
-	}
-
-	.matrix-targets {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem 1rem;
 	}
 </style>

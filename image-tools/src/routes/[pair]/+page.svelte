@@ -29,14 +29,10 @@
 </svelte:head>
 
 <section class="hero">
-	<h1>
-		Convert {page.sourceName}<span class="arrow" aria-hidden="true"> → </span><span
-			class="visually-hidden"
-		> to </span>{page.targetName}
-	</h1>
+	<h1>Convert {page.sourceName} to {page.targetName}</h1>
 	<p class="lede">
-		Free {page.sourceName} to {page.targetName} conversion that runs on your own device. Nothing
-		gets uploaded, and your filenames stay put.
+		Convert {page.sourceName} to {page.targetName} for free, right here in your browser. Your
+		files are never uploaded, and they keep their names.
 	</p>
 </section>
 
@@ -61,14 +57,14 @@
 	<h2 id="howto-heading">How to convert {page.sourceName} to {page.targetName}</h2>
 	<ol class="steps">
 		<li>
-			Drop your {page.sourceName} files in the zone above. Clicking it opens a file picker, and
-			pasting from the clipboard works too.
+			Drop your {page.sourceName} files in the box above. You can also click the box to pick
+			files, or paste them.
 		</li>
-		<li>Each file converts to {page.targetName} on your device, usually within a second or two.</li>
 		<li>
-			Download the files one by one, or grab them all as a zip. Every file keeps its original
-			name.
+			Each file is converted to {page.targetName} on your own device. It usually takes a second
+			or two.
 		</li>
+		<li>Download each file, or get them all in one zip. Every file keeps its name.</li>
 	</ol>
 </section>
 
@@ -77,8 +73,8 @@
 	<p><strong>{page.source.name}</strong>: {page.source.blurb}</p>
 	<p><strong>{page.target.name}</strong>: {page.target.blurb}</p>
 	<p>
-		The conversion happens entirely in your browser. Each file is decoded to raw pixels and
-		re-encoded as {page.targetName}. Nothing is uploaded, and the server only serves this page.
+		The whole conversion happens in your browser. Your file is unpacked into raw pixels and saved
+		again as {page.targetName}. Nothing is sent to any server.
 	</p>
 </section>
 
@@ -86,13 +82,7 @@
 	<h2 id="related-heading">Related conversions</h2>
 	<ul class="pair-links">
 		{#each data.related as p (p.slug)}
-			<li>
-				<a class="mono" href="/{p.slug}"
-					>{p.source.name} <span class="arrow" aria-hidden="true">→</span><span
-						class="visually-hidden">to</span
-					> {p.target.name}</a
-				>
-			</li>
+			<li><a href="/{p.slug}">{p.source.name} to {p.target.name}</a></li>
 		{/each}
 	</ul>
 </section>

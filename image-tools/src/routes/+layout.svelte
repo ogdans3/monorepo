@@ -24,6 +24,7 @@
 	</main>
 
 	<footer>
+		<p class="footer-brand">image<span class="arrow">→</span>toolbox</p>
 		<p>
 			Everything runs in your browser. Your files never leave your device. No uploads, no
 			accounts.
@@ -84,8 +85,8 @@
 	}
 
 	footer {
-		margin-top: 3rem;
-		padding: 1.25rem 0 1.5rem;
+		margin-top: 3.5rem;
+		padding: 1.4rem 0 1.75rem;
 		border-top: 1px solid var(--line);
 	}
 
@@ -93,5 +94,12 @@
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--muted);
+	}
+
+	.footer-brand {
+		font-family: var(--font-mono);
+		font-weight: 700;
+		color: var(--ink);
+		margin-bottom: 0.3rem;
 	}
 </style>

@@ -57,17 +57,17 @@ export const TOOLS: ImageTool[] = [
 		title: 'Crop Image Online - Free, Private, No Upload',
 		description:
 			'Crop images online free, right in your browser. Aspect ratio presets, exact pixel sizes and no uploads. Works with PNG, JPG, WebP, HEIC and more.',
-		lede: 'Free online cropping that runs on your own device. Drag the frame, pick an aspect ratio if you need one and download the result.',
-		blurb: 'Drag a frame, pick an aspect ratio and download at full resolution.',
+		lede: 'Crop images for free, right in your browser. Drag the frame, pick a shape if you need one, and download.',
+		blurb: 'Drag a frame, pick a shape and download at full quality.',
 		steps: [
-			'Drop an image in the zone above. Any format this site can read works, HEIC and TIFF included.',
+			'Drop an image in the box above. Any format this site can read works, even HEIC and TIFF.',
 			'Drag the corners or edges of the crop frame, or pick a preset like 1:1 or 16:9. You can also type exact pixel sizes.',
-			'Choose an output format and download. The file keeps its name with -cropped added.'
+			'Choose a format and download. The file keeps its name, with -cropped added.'
 		],
 		aboutHeading: 'About cropping images here',
 		about: [
-			'The crop frame shows a rule of thirds grid to help with composition. Lock the aspect ratio for profile pictures, thumbnails or covers, or keep it free and frame exactly what you want.',
-			'Cropping happens entirely in your browser. The image is never uploaded, and the download is rendered from the original resolution, not from the on-screen preview.'
+			'The crop frame shows a faint grid that helps you line things up. Lock the shape for profile pictures or thumbnails, or keep it free and cut exactly what you want.',
+			'Cropping happens in your browser. The image is never uploaded, and the download uses the full quality of your original, not the small preview.'
 		],
 		suffix: '-cropped'
 	},
@@ -82,14 +82,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Put photos side by side, stack them or build a grid. Drag the dividers to decide how much room each image gets, and drag any image to choose which part shows.',
 		blurb: 'Side by side, stacked or a grid, with draggable dividers.',
 		steps: [
-			'Drop two or more images in the zone above.',
+			'Drop two or more images in the box above.',
 			'Pick a layout, drag the dividers to set the split, and drag any image to position it inside its cell.',
 			'Set the output size and spacing, then download the combined image.'
 		],
 		aboutHeading: 'About combining images here',
 		about: [
-			'Each image fills its cell and can be dragged to choose the visible part, so nothing gets squashed or stretched. Moving the dividers changes how much space each image gets, which makes before and after shots, comparisons and simple collages quick to build.',
-			'The preview is scaled to fit your screen, but the download is rendered at the exact pixel size you set.'
+			'Each image fills its own cell, and you can drag it to choose which part shows. Nothing gets squashed or stretched. Moving the lines changes how much room each image gets, which makes side by side shots and simple collages quick to build.',
+			'The preview is shrunk to fit your screen. The download uses the exact size you set.'
 		],
 		suffix: '-combined'
 	},
@@ -101,17 +101,17 @@ export const TOOLS: ImageTool[] = [
 		title: 'Resize Image Online - Free, Private, No Upload',
 		description:
 			'Resize images online free, right in your browser. Exact pixel sizes or quick percentages, with the aspect ratio locked so nothing gets stretched.',
-		lede: 'Type a new size in pixels or jump to a percentage. The aspect ratio stays locked unless you unlock it.',
-		blurb: 'Exact pixels or quick percentages, aspect ratio locked.',
+		lede: 'Type a new size or pick a percent. The shape stays locked, so nothing gets stretched.',
+		blurb: 'Exact pixels or quick percentages, with the shape locked.',
 		steps: [
-			'Drop an image in the zone above.',
+			'Drop an image in the box above.',
 			'Type a new width or height, or hit a percentage like 50%. With the lock on, the other side follows automatically.',
 			'Choose an output format and download at the exact new size.'
 		],
 		aboutHeading: 'About resizing images here',
 		about: [
-			'Downscaling here happens in steps, halving the image until it approaches the target before the final pass. That avoids the muddy artefacts a single big jump produces and keeps text and edges sharp.',
-			'Upscaling works too, but no tool can add detail that was never captured. Expect softness when you enlarge.'
+			'If you shrink a photo in one big jump, it can turn muddy. This tool shrinks in several small steps instead, so edges and text stay sharp.',
+			'You can also make images bigger, but no tool can invent detail. Bigger versions will look a little soft.'
 		],
 		suffix: '-resized'
 	},
@@ -126,14 +126,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Rotate in 90 degree steps and flip horizontally or vertically. A phone photo lying on its side is fixed in two clicks.',
 		blurb: 'Quarter turns and mirror flips, two clicks and done.',
 		steps: [
-			'Drop an image in the zone above.',
+			'Drop an image in the box above.',
 			'Use the rotate buttons for quarter turns and the flip buttons to mirror. The preview always shows exactly what you will get.',
 			'Choose an output format and download.'
 		],
 		aboutHeading: 'About rotating and flipping here',
 		about: [
-			'Photos load with their camera orientation already applied, so what you see is what you start from. Quarter turns and flips are exact operations, no quality is lost in the rotation itself.',
-			'The only re-encoding happens at download, in the format and quality you choose.'
+			'Photos open the right way up, just as your camera saved them. Turning and flipping loses no quality at all.',
+			'The image is only saved again when you download it, in the format you choose.'
 		],
 		suffix: '-rotated'
 	},
@@ -148,14 +148,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Draw a box over anything you want hidden. Choose blur or pixelate, set the strength and download.',
 		blurb: 'Draw boxes over the sensitive parts, blur or pixelate them.',
 		steps: [
-			'Drop an image in the zone above.',
+			'Drop an image in the box above.',
 			'Drag across the part you want hidden. Boxes and ovals both work, and you can add as many as you need.',
 			'Pick blur or pixelate, set the strength, then download. Undo removes the last shape.'
 		],
 		aboutHeading: 'Blur, pixelate, and when to redact instead',
 		about: [
-			'Blurring softens a region beyond recognition and pixelation reduces it to coarse blocks. Both are drawn straight onto the pixels, so the download contains no trace of the original region at full detail.',
-			'One honest caveat: for text in a known font, heavy research tools can sometimes reconstruct blurred or pixelated characters. For names, account numbers and anything truly sensitive, use the redact tool and a solid box instead.'
+			'Blur makes an area too soft to read. Pixelate turns it into big blocks. Both change the real pixels, so the download does not contain the hidden part.',
+			'One honest warning. Special software can sometimes read blurred text again. For names, card numbers and real secrets, use the redact tool instead. A solid box cannot be undone.'
 		],
 		suffix: '-blurred'
 	},
@@ -170,14 +170,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Draw solid boxes over names, faces or numbers. Black, white or any colour you pick.',
 		blurb: 'Solid boxes over anything private. The safe way to censor.',
 		steps: [
-			'Drop an image in the zone above, for example a screenshot with details to hide.',
+			'Drop an image in the box above, for example a screenshot with details to hide.',
 			'Drag boxes or ovals over whatever needs to go. Pick black, white or a custom colour.',
 			'Download the censored copy. Undo removes the last shape if you cover too much.'
 		],
 		aboutHeading: 'Why solid redaction beats blurring',
 		about: [
-			'A solid box replaces the pixels underneath outright. Unlike blurring or pixelation there is nothing left to reconstruct, which makes it the safe choice for text like names, addresses and account numbers.',
-			'The shapes are burned into the image itself before download, not stored as a removable layer, so the covered content is gone from the file.'
+			'A solid box replaces the pixels under it completely. There is nothing left to recover. That makes it the safe choice for names, addresses and card numbers.',
+			'The boxes become part of the image itself. They are not a layer someone can peel off. The covered content is gone from the file.'
 		],
 		suffix: '-redacted'
 	},
@@ -192,14 +192,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Three sliders with a live preview. Brighten a dark photo, add punch with contrast or pull the colours back.',
 		blurb: 'Brightness, contrast and saturation with a live preview.',
 		steps: [
-			'Drop an image in the zone above.',
+			'Drop an image in the box above.',
 			'Drag the sliders. The preview updates live, and Reset takes you back to the original.',
 			'Choose an output format and download.'
 		],
 		aboutHeading: 'About adjusting images here',
 		about: [
 			'Brightness lifts or darkens everything evenly, contrast pushes lights and darks apart, and saturation controls how vivid the colours are. Saturation all the way down gives a clean black and white.',
-			'The preview and the download run the exact same maths, so what you see is precisely what you get, at the original resolution.'
+			'The preview and the download use the same math, so what you see is exactly what you get, at full quality.'
 		],
 		suffix: '-adjusted'
 	},
@@ -214,7 +214,7 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Click the colour you want gone. The eraser spreads from that spot until it reaches a different colour, and the tolerance slider decides how strict that is.',
 		blurb: 'Click a colour to erase it, tune the tolerance. A classic magic wand.',
 		steps: [
-			'Drop an image in the zone above, then click the colour you want to remove.',
+			'Drop an image in the box above, then click the colour you want to remove.',
 			'Adjust the tolerance slider. Higher tolerance erases a wider range of similar shades, and your last click updates live while you drag it.',
 			'Undo any click if you go too far, then download as PNG or WebP to keep the transparency.'
 		],
@@ -236,14 +236,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'See exactly what a photo says about you, camera, time and often the place, then download a copy with all of it gone.',
 		blurb: 'See what a photo reveals, download a copy with nothing in it.',
 		steps: [
-			'Drop a photo in the zone above. The metadata table shows everything the file carries.',
+			'Drop a photo in the box above. The metadata table shows everything the file carries.',
 			'Look for the location row in particular. Phones embed GPS coordinates by default.',
 			'Download the clean copy. Every metadata block is gone: EXIF, GPS, XMP, IPTC and embedded thumbnails.'
 		],
 		aboutHeading: 'What EXIF data gives away',
 		about: [
-			'Most cameras and phones write metadata into every photo: the device, the exact time, the settings, and very often GPS coordinates precise enough to identify a home address. Anyone you send the file to can read it.',
-			'The clean download is produced by decoding the image to raw pixels and re-encoding it, which physically cannot carry metadata along. The converter on this site does the same, this tool just shows you what was there first.'
+			'Most phones and cameras hide extra info inside every photo. It can show the device, the exact time, and often the exact place it was taken. Anyone you send the file to can read it.',
+			'The clean copy is made by rebuilding the image from raw pixels. Hidden info cannot survive that. This tool simply shows you what was there before it goes.'
 		],
 		suffix: '-clean'
 	},
@@ -255,17 +255,17 @@ export const TOOLS: ImageTool[] = [
 		title: 'Add a Watermark to an Image - Free Online, No Upload',
 		description:
 			'Add a text or logo watermark to images online free. Control size, opacity and colour, place it in any corner or tile it across the whole image. No uploads.',
-		lede: 'Stamp text or a logo over your image. Size, opacity and colour are yours, in any corner or tiled across the whole thing.',
-		blurb: 'Text or logo, any corner or tiled, with opacity control.',
+		lede: 'Put text or a logo on your image. Pick the size, the colour and how see-through it is, in any corner or tiled all over.',
+		blurb: 'Text or logo, any corner or tiled across the image.',
 		steps: [
-			'Drop an image in the zone above.',
+			'Drop an image in the box above.',
 			'Type your text or pick a logo file, then set size, opacity and colour.',
 			'Choose a corner, or tile it across the image, and download.'
 		],
 		aboutHeading: 'About watermarking here',
 		about: [
-			'A corner mark stays subtle and keeps the image usable. Tiling repeats the mark across the whole frame, which makes it much harder to crop or clone away when the image really should not travel without your name on it.',
-			'The watermark is rendered into the pixels at full resolution, so it survives every format the download offers.'
+			'A mark in the corner stays subtle. Tiling repeats it across the whole image, which makes it much harder to crop out or remove.',
+			'The watermark becomes part of the pixels at full quality, so it survives in every format you download.'
 		],
 		suffix: '-watermarked'
 	},
@@ -277,17 +277,17 @@ export const TOOLS: ImageTool[] = [
 		title: 'Compress Image to a Target Size - Free Online, No Upload',
 		description:
 			'Compress images to an exact file size online free, like under 1 MB or 200 KB. Finds the best quality that fits, optionally downscaling. No uploads.',
-		lede: 'Tell it the file size you need, like 500 KB, and it finds the best quality that fits. Downscaling is optional for tight targets.',
+		lede: 'Tell it the file size you need, like 500 KB. It finds the best quality that fits. It can also shrink the image if the target is very small.',
 		blurb: 'Hit an exact file size, like under 1 MB, at the best quality that fits.',
 		steps: [
-			'Drop an image in the zone above.',
+			'Drop an image in the box above.',
 			'Set the target size and pick JPG or WebP. The tool searches for the best quality that stays under it.',
 			'Check the result line, then download. Allow downscaling if the target is very tight.'
 		],
 		aboutHeading: 'How the compressor hits the target',
 		about: [
-			'The tool runs a binary search over the quality setting, encoding the image a handful of times until it finds the highest quality that still fits under your target. If even the lowest quality is too big, it can shrink the dimensions step by step and search again.',
-			'WebP usually lands noticeably smaller than JPG at the same visual quality, so try it first when the site you are uploading to accepts it.'
+			'The tool tries different quality levels until it finds the highest one that stays under your target. If even the lowest quality is too big, it can shrink the image step by step and try again.',
+			'WebP files are usually smaller than JPG at the same quality. Try WebP first if the site you need the file for accepts it.'
 		],
 		suffix: '-compressed'
 	},
@@ -299,17 +299,17 @@ export const TOOLS: ImageTool[] = [
 		title: 'Favicon Generator - ICO and PNG Set, Free, No Upload',
 		description:
 			'Generate a complete favicon set online free: multi size ICO, PNGs for every slot, apple touch icon and the HTML to paste. Runs in your browser, no uploads.',
-		lede: 'One logo in, the whole favicon set out: a multi size ICO, PNGs for every slot and the HTML to paste into your head.',
-		blurb: 'One logo in, ICO and the full PNG set out, HTML included.',
+		lede: 'Drop in one logo and get the whole favicon set: the ICO file, all the PNG sizes, and the HTML to paste.',
+		blurb: 'One logo in, the full icon set out, HTML included.',
 		steps: [
-			'Drop your logo in the zone above. Square works best, anything else is padded with transparency.',
+			'Drop your logo in the box above. Square works best, anything else is padded with transparency.',
 			'Check the previews, especially the 16 pixel one. Simple shapes survive, fine detail does not.',
 			'Download the zip and paste the HTML snippet into your page head.'
 		],
 		aboutHeading: 'What the favicon pack contains',
 		about: [
 			'The zip holds favicon.ico with 16, 32 and 48 pixel versions embedded, favicon-16x16.png and favicon-32x32.png, apple-touch-icon.png at 180 pixels, and icon-192.png plus icon-512.png for web manifests.',
-			'Everything is rendered from your original with stepped downscaling, which keeps small sizes as crisp as they can be. If the 16 pixel preview turns to mush, simplify the logo rather than fighting it.'
+			'Each size is made from your original, so it stays as sharp as possible. If the 16 pixel one looks muddy, try a simpler logo.'
 		],
 		suffix: '-favicons'
 	},
@@ -324,14 +324,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'A radius slider for soft corners, or one switch for a perfect circle. The corners come out transparent.',
 		blurb: 'Soft corners or a full circle, with transparent edges.',
 		steps: [
-			'Drop an image in the zone above.',
+			'Drop an image in the box above.',
 			'Drag the radius slider, or flip on Circle for a round avatar. Circle crops to a centred square first.',
 			'Download as PNG or WebP to keep the transparent corners.'
 		],
 		aboutHeading: 'About rounding corners here',
 		about: [
-			'The corners are cut with real transparency, not painted white, so the result sits cleanly on any background. Circle mode crops to a centred square before rounding, which is exactly what avatar slots expect.',
-			'Export as PNG or WebP to keep the transparency. JPG has no alpha channel, so the corners turn white there.'
+			'The corners become truly transparent, not painted white, so the image sits cleanly on any background. Circle mode first cuts a square from the middle, which is what avatar pictures need.',
+			'Download as PNG or WebP to keep the transparent corners. JPG cannot store them, so the corners turn white there.'
 		],
 		suffix: '-rounded'
 	},
@@ -346,14 +346,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Pick rows and columns, see the grid on the image, and download every tile in one zip.',
 		blurb: 'Cut into equal tiles and download them all as a zip.',
 		steps: [
-			'Drop an image in the zone above.',
+			'Drop an image in the box above.',
 			'Set rows and columns. The grid overlay shows exactly where the cuts land.',
 			'Download the zip. Tiles are named by row and column so the order never gets lost.'
 		],
 		aboutHeading: 'About splitting images here',
 		about: [
-			'Tiles are cut at full resolution and sized evenly, with the last row and column absorbing any leftover pixels so nothing is dropped.',
-			'The classic use is a multi-post Instagram grid, but it works just as well for puzzles, spritesheets and print-at-home posters.'
+			'Tiles are cut at full quality and sized evenly. The last row and column take any leftover pixels, so nothing is lost.',
+			'The classic use is an Instagram grid, but it works just as well for puzzles and posters you print at home.'
 		],
 		suffix: '-tiles'
 	},
@@ -365,17 +365,17 @@ export const TOOLS: ImageTool[] = [
 		title: 'Sharpen an Image Online - Free, Private, No Upload',
 		description:
 			'Sharpen blurry or soft images online free with an unsharp mask and a live preview, right in your browser. One slider, no uploads, full resolution out.',
-		lede: 'One slider, live preview. Brings back the edge that soft focus or heavy downscaling took away.',
-		blurb: 'Unsharp mask with one slider and a live preview.',
+		lede: 'One slider with a live preview. It brings back the crisp edges that soft focus or shrinking took away.',
+		blurb: 'One slider that makes soft images crisp again.',
 		steps: [
-			'Drop an image in the zone above.',
-			'Drag the amount slider until edges look crisp. Past a certain point halos appear, back off a notch.',
-			'Choose an output format and download at full resolution.'
+			'Drop an image in the box above.',
+			'Drag the slider until edges look crisp. If bright outlines appear, go back a little.',
+			'Choose a format and download at full quality.'
 		],
 		aboutHeading: 'How sharpening works here',
 		about: [
-			'This is a classic unsharp mask: the image is compared against a slightly blurred copy of itself, and the differences, which are the edges, get amplified. It cannot invent detail that was never captured, but it makes real detail read clearly again.',
-			'Sharpening is the standard last step after resizing photos down, which is why it pairs well with the resize tool.'
+			'The tool compares your image with a blurry copy of itself. The parts that differ are the edges, and those get boosted. It cannot invent detail, but it makes real detail easy to see again.',
+			'Sharpening is the classic last step after shrinking a photo, which is why it pairs well with the resize tool.'
 		],
 		suffix: '-sharpened'
 	},
@@ -390,14 +390,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Click anywhere in the image for the exact hex, RGB and HSL values, and get the dominant colours as a ready palette.',
 		blurb: 'Click for hex, RGB and HSL, plus the dominant palette.',
 		steps: [
-			'Drop an image in the zone above. The dominant palette appears straight away.',
+			'Drop an image in the box above. The dominant palette appears straight away.',
 			'Click any pixel for its exact values. Every pick lands in a history row.',
 			'Copy any value with one click. Hex, RGB and HSL are all there.'
 		],
 		aboutHeading: 'About picking colours here',
 		about: [
-			'The palette comes from quantising the image down to its most dominant colours, the same technique GIF encoding uses, which makes it a solid starting point for design tokens or a brand check.',
-			'Clicks sample the original pixels at full resolution, not the scaled preview, so the values are exact.'
+			'The palette shows the main colours in your image. It is a good starting point for picking brand colours or matching a design.',
+			'Clicks read the original pixels, not the small preview, so the values are exact.'
 		],
 		suffix: '-palette'
 	},
@@ -412,14 +412,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Drop a pile of images, set one width or percentage, and take the whole batch home as a zip.',
 		blurb: 'One setting, a whole folder of images, one zip out.',
 		steps: [
-			'Drop any number of images in the zone above.',
+			'Drop any number of images in the box above.',
 			'Set a target width or a percentage. Every image keeps its own aspect ratio.',
 			'Pick an output format and download the zip.'
 		],
 		aboutHeading: 'About bulk resizing here',
 		about: [
-			'Every image is scaled with the same stepped downscaling the single resize tool uses, so the batch does not trade quality for convenience.',
-			'Mixed formats are fine on the way in. HEIC photos, PNG screenshots and WebP exports can all go into the same batch and come out uniform.'
+			'Every image is shrunk the same careful way the single resize tool uses, so quality stays high.',
+			'You can mix formats. HEIC photos, PNG screenshots and WebP files can all go in the same batch and come out matching.'
 		],
 		suffix: '-resized'
 	},
@@ -431,17 +431,17 @@ export const TOOLS: ImageTool[] = [
 		title: 'Image to PDF Converter (JPG, PNG, HEIC) - Free, No Upload',
 		description:
 			'Convert JPG, PNG, HEIC and more to PDF online free. Combine several images into one PDF, reorder pages, pick page size. Runs in your browser, no uploads.',
-		lede: 'Drop one image or twenty. Reorder them, pick a page size and download a single PDF.',
+		lede: 'Drop one image or twenty. Put them in order, pick a page size and download one PDF.',
 		blurb: 'One or many images into a single PDF, pages in your order.',
 		steps: [
-			'Drop your images in the zone above. JPG, PNG, HEIC, WebP and everything else this site reads.',
-			'Drag the order right with the arrows, and choose between pages that match each image or A4.',
-			'Download the PDF. One image per page, at full resolution.'
+			'Drop your images in the box above. JPG, PNG, HEIC, WebP and everything else this site reads.',
+			'Use the arrows to put the pages in order, then choose matching page sizes or A4.',
+			'Download the PDF. One image per page, at full quality.'
 		],
 		aboutHeading: 'About making PDFs here',
 		about: [
-			'Each image becomes one page. Match mode sizes every page to its image, A4 mode centres each image on a standard page, which prints predictably.',
-			'The PDF is assembled entirely in your browser. Scans, receipts and ID photos never touch a server, which is rather the point for documents.'
+			'Each image becomes one page. Match mode makes every page the same size as its image. A4 mode puts each image in the middle of a standard page, which is best for printing.',
+			'The PDF is built in your browser. Scans, receipts and ID photos never touch a server. For private papers, that is the whole point.'
 		],
 		suffix: ''
 	},
@@ -456,14 +456,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'Every page becomes an image. Pick the resolution and format, download one page or the whole document as a zip.',
 		blurb: 'PDF pages out as JPG, PNG or WebP, single or zipped.',
 		steps: [
-			'Drop a PDF in the zone above.',
+			'Drop a PDF in the box above.',
 			'Pick the resolution. Higher looks better and weighs more.',
 			'Download pages one by one, or grab the whole document as a zip.'
 		],
 		aboutHeading: 'About converting PDFs here',
 		about: [
-			'Pages are rendered with the same engine Firefox uses for its PDF viewer, running in your browser. The document never leaves your device, which matters for contracts, invoices and anything with a signature on it.',
-			'JPG is right for text and mixed pages. PNG keeps razor-sharp line art, and WebP lands smaller than both.'
+			'Pages are drawn with the same engine Firefox uses to show PDFs, running in your browser. The document never leaves your device. That matters for contracts and anything with a signature on it.',
+			'JPG works well for most pages. PNG keeps sharp lines and drawings, and WebP makes the smallest files.'
 		],
 		suffix: ''
 	},
@@ -478,14 +478,14 @@ export const TOOLS: ImageTool[] = [
 		lede: 'The file as a data URL, ready to paste. Copy the raw string, an img tag or a CSS background rule.',
 		blurb: 'Data URLs for inlining, with img and CSS snippets ready.',
 		steps: [
-			'Drop an image in the zone above. The original file is encoded as is, byte for byte.',
+			'Drop an image in the box above. The original file is encoded as is, byte for byte.',
 			'Copy the raw data URL, the img tag or the CSS rule.',
 			'Mind the size. Base64 adds about a third, so it is for small images.'
 		],
 		aboutHeading: 'When Base64 makes sense',
 		about: [
-			'Inlining spares a network request, which is worth it for tiny icons, tracking-free email signatures and single-file HTML documents. The encoded string is about 33 percent larger than the file, so it stops making sense quickly as images grow.',
-			'The file is encoded exactly as it is, with no re-compression, so what you inline is byte for byte what you dropped.'
+			'Putting the image inside your code saves a network request. That is worth it for tiny icons and single-file pages. The text version is about a third larger than the file, so it only makes sense for small images.',
+			'The file is encoded exactly as it is. Nothing is re-compressed, so you get byte for byte what you dropped.'
 		],
 		suffix: ''
 	}

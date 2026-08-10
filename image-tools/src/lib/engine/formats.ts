@@ -54,7 +54,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: false,
 		alpha: true,
-		blurb: 'Lossless and universally supported, with full transparency. The safe choice for graphics, logos and screenshots.'
+		blurb: 'Keeps every detail sharp and supports transparent backgrounds. Works everywhere. The safe pick for logos, graphics and screenshots.'
 	},
 	jpg: {
 		id: 'jpg',
@@ -67,8 +67,8 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: true,
 		alpha: false,
-		blurb: 'The default for photographs. Small files and universal support, but no transparency.',
-		targetNote: 'JPG has no transparency, so transparent areas are filled with white.'
+		blurb: 'The standard choice for photos. Files are small and every app can open them. It cannot store transparent backgrounds.',
+		targetNote: 'JPG cannot store transparent areas, so they are filled with white.'
 	},
 	webp: {
 		id: 'webp',
@@ -81,7 +81,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: true,
 		alpha: true,
-		blurb: 'Modern web format from Google. Noticeably smaller than PNG or JPG at the same quality, with transparency.'
+		blurb: 'A newer format made for the web. Files are much smaller than PNG or JPG at the same quality, and it keeps transparent backgrounds.'
 	},
 	avif: {
 		id: 'avif',
@@ -94,8 +94,8 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: true,
 		alpha: true,
-		blurb: 'The newest of the web formats. Exceptional compression, supported by every modern browser.',
-		targetNote: 'AVIF encoding takes its time, so large photos can need a few seconds.'
+		blurb: 'The newest web format. It makes the smallest files of all, and every modern browser can show it.',
+		targetNote: 'AVIF takes a little longer to make, so big photos can need a few seconds.'
 	},
 	gif: {
 		id: 'gif',
@@ -108,9 +108,9 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: false,
 		alpha: true,
-		blurb: 'Ancient but indestructible. 256 colours, rough transparency, supported by absolutely everything.',
-		sourceNote: 'Animated GIFs are flattened to their first frame.',
-		targetNote: 'GIF is limited to 256 colours, so photos will look posterised.'
+		blurb: 'Very old but still everywhere. It can only use 256 colours, so photos look rough, but every app can open it.',
+		sourceNote: 'Moving GIFs are converted using only their first frame.',
+		targetNote: 'GIF can only use 256 colours, so photos may look grainy.'
 	},
 	heic: {
 		id: 'heic',
@@ -123,7 +123,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: false, // HEVC encoding is patent-encumbered; no sane browser path
 		lossy: true,
 		alpha: true,
-		blurb: 'What iPhones shoot. Excellent compression, but poorly supported outside Apple hardware.'
+		blurb: 'The format iPhones use for photos. Files are small, but many apps outside Apple cannot open them.'
 	},
 	bmp: {
 		id: 'bmp',
@@ -136,7 +136,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: false,
 		alpha: true,
-		blurb: 'Plain, uncompressed Windows bitmap. Large files that any software from the last 30 years can open.'
+		blurb: 'A plain Windows format with no compression. Files are big, but even very old programs can open them.'
 	},
 	ico: {
 		id: 'ico',
@@ -149,8 +149,8 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: false,
 		alpha: true,
-		blurb: 'The Windows icon format, and what browsers expect for favicons.',
-		targetNote: 'Icons are capped at 256 × 256. Larger images are scaled down to fit.'
+		blurb: 'The icon format for Windows and websites. Browsers look for it when they show the small tab icon.',
+		targetNote: 'Icons stop at 256 × 256. Bigger images are scaled down to fit.'
 	},
 	svg: {
 		id: 'svg',
@@ -163,8 +163,8 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: false, // raster → vector is tracing, a different tool entirely
 		lossy: false,
 		alpha: true,
-		blurb: 'Vector instead of pixels, so it scales forever. Rasterising fixes it at one size for tools that need pixels.',
-		sourceNote: 'SVGs are rasterised at their intrinsic size.'
+		blurb: 'Built from shapes instead of pixels, so it stays sharp at any size. Converting turns it into pixels at one fixed size.',
+		sourceNote: 'SVG files are drawn at their natural size before converting.'
 	},
 	tiff: {
 		id: 'tiff',
@@ -177,8 +177,8 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: false,
 		lossy: false,
 		alpha: true,
-		blurb: 'The archival and print workhorse. Common out of scanners and DTP tools, rare on the web.',
-		sourceNote: 'Multi-page TIFFs are read as their first page.'
+		blurb: 'A format used for print and scanning. Scanners often make TIFF files. It is rare on the web.',
+		sourceNote: 'TIFF files with many pages are read using only the first page.'
 	}
 };
 

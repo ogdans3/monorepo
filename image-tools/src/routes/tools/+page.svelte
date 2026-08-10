@@ -45,9 +45,9 @@
 <section aria-labelledby="convert-heading">
 	<h2 id="convert-heading">Need a different format instead?</h2>
 	<p>
-		The <a href="/">converter</a> reads PNG, JPG, WebP, AVIF, HEIC, GIF, BMP, ICO, SVG and TIFF,
-		and every pair has its own page, like <a href="/heic-to-jpg" class="mono">HEIC → JPG</a> or
-		<a href="/png-to-webp" class="mono">PNG → WebP</a>.
+		The <a href="/">converter</a> reads PNG, JPG, WebP, AVIF, HEIC, GIF, BMP, ICO, SVG and TIFF.
+		Every pair has its own page, like <a href="/heic-to-jpg">HEIC to JPG</a> or
+		<a href="/png-to-webp">PNG to WebP</a>.
 	</p>
 </section>
 
