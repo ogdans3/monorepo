@@ -26,8 +26,8 @@
 	<footer>
 		<p class="footer-brand">image<span class="arrow">→</span>toolbox</p>
 		<p>
-			Everything runs in your browser. Your files never leave your device. No uploads, no
-			accounts.
+			Free to use, no account needed. Everything runs in your browser, and your files never
+			leave your device.
 		</p>
 	</footer>
 </div>

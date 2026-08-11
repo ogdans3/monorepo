@@ -3,6 +3,7 @@
 	import { SITE_URL } from '$lib/site';
 	import { TOOLS, toolPath, type ImageTool } from '$lib/tools/registry';
 	import { parsePairSlug } from '$lib/engine';
+	import TrustLine from '../TrustLine.svelte';
 
 	let { tool, children }: { tool: ImageTool; children: Snippet } = $props();
 
@@ -35,6 +36,7 @@
 <section class="hero">
 	<h1>{tool.h1}</h1>
 	<p class="lede">{tool.lede}</p>
+	<TrustLine />
 </section>
 
 {@render children()}

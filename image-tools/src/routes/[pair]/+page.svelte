@@ -2,6 +2,7 @@
 	import { SITE_URL } from '$lib/site';
 	import { TOOLS, toolPath } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
+	import TrustLine from '$lib/ui/TrustLine.svelte';
 
 	let { data } = $props();
 	const page = $derived(data.page);
@@ -34,6 +35,7 @@
 		Convert {page.sourceName} to {page.targetName} for free, right here in your browser. Your
 		files are never uploaded, and they keep their names.
 	</p>
+	<TrustLine />
 </section>
 
 {#key page.slug}

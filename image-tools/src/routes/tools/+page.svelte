@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { SITE_URL } from '$lib/site';
 	import { CATEGORIES, toolPath, toolsInCategory } from '$lib/tools/registry';
+	import TrustLine from '$lib/ui/TrustLine.svelte';
 </script>
 
 <svelte:head>
@@ -22,9 +23,10 @@
 <section class="hero">
 	<h1>Free online image tools</h1>
 	<p class="lede">
-		Every tool runs entirely in your browser. Nothing is uploaded, nothing is watermarked and
+		Every tool works right in your browser. Nothing is uploaded, nothing is watermarked and
 		nothing needs an account.
 	</p>
+	<TrustLine />
 </section>
 
 {#each CATEGORIES as category (category.id)}

@@ -3,6 +3,7 @@
 	import { SITE_URL } from '$lib/site';
 	import { CATEGORIES, toolPath, toolsInCategory } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
+	import TrustLine from '$lib/ui/TrustLine.svelte';
 
 	const popular = [
 		'heic-to-jpg',
@@ -47,6 +48,7 @@
 		Convert PNG, JPG, WebP, AVIF, HEIC and more without uploading anything. Your files stay on
 		your device. No signup, no watermarks.
 	</p>
+	<TrustLine />
 </section>
 
 <ConvertPanel target={FORMATS.png} showTargetPicker />
