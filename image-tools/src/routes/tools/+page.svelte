@@ -24,7 +24,7 @@
 	<h1>Free online image tools</h1>
 	<p class="lede">
 		Every tool works right in your browser. Nothing is uploaded, nothing is watermarked and
-		nothing needs an account.
+		nothing needs an account. Use them as much as you like.
 	</p>
 	<TrustLine />
 </section>

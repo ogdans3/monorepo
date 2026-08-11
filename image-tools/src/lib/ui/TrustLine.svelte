@@ -1,8 +1,9 @@
-<!-- The three promises, shown under every hero: free, local, no account. -->
+<!-- The four promises, shown under every hero: free, local, no account, no limits. -->
 <ul class="trust" aria-label="Good to know">
 	<li>Free</li>
 	<li>Runs on your device</li>
 	<li>No account</li>
+	<li>No limits</li>
 </ul>
 
 <style>

@@ -46,7 +46,7 @@
 	<h1>A free image converter that runs in your browser</h1>
 	<p class="lede">
 		Convert PNG, JPG, WebP, AVIF, HEIC and more without uploading anything. Your files stay on
-		your device. No signup, no watermarks.
+		your device. No signup, no watermarks, no limits.
 	</p>
 	<TrustLine />
 </section>
