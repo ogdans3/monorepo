@@ -3,6 +3,8 @@
 	import { TOOLS, toolPath } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
+	import Faq from '$lib/ui/Faq.svelte';
+	import { trustFaq } from '$lib/ui/trust-faq';
 
 	let { data } = $props();
 	const page = $derived(data.page);
@@ -79,6 +81,8 @@
 		again as {page.targetName}. Nothing is sent to any server.
 	</p>
 </section>
+
+<Faq items={trustFaq(`${page.sourceName} to ${page.targetName} converter`)} />
 
 <section aria-labelledby="related-heading">
 	<h2 id="related-heading">Related conversions</h2>

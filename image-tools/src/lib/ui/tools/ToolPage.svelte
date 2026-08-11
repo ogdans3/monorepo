@@ -4,6 +4,8 @@
 	import { TOOLS, toolPath, type ImageTool } from '$lib/tools/registry';
 	import { parsePairSlug } from '$lib/engine';
 	import TrustLine from '../TrustLine.svelte';
+	import Faq from '../Faq.svelte';
+	import { trustFaq } from '../trust-faq';
 
 	let { tool, children }: { tool: ImageTool; children: Snippet } = $props();
 
@@ -59,6 +61,8 @@
 		Like everything on this site, this tool runs in your browser. Your image is never uploaded.
 	</p>
 </section>
+
+<Faq items={trustFaq(`${tool.name.toLowerCase()} tool`)} />
 
 <section aria-labelledby="more-heading">
 	<h2 id="more-heading">More tools</h2>

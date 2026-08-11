@@ -4,6 +4,22 @@
 	import { CATEGORIES, toolPath, toolsInCategory } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
+	import Faq from '$lib/ui/Faq.svelte';
+	import { trustFaq } from '$lib/ui/trust-faq';
+
+	// WebApplication structured data: name, category and an explicit price of
+	// zero, which is how machines learn the site is free.
+	const appLd = JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'WebApplication',
+		name: 'imagetoolbox',
+		url: SITE_URL,
+		applicationCategory: 'MultimediaApplication',
+		operatingSystem: 'Any (runs in the browser)',
+		description:
+			'Free image converter and image tools that run in your browser. Files are never uploaded. No account, no watermarks, no limits.',
+		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+	});
 
 	const popular = [
 		'heic-to-jpg',
@@ -40,6 +56,7 @@
 	/>
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{SITE_URL}/" />
+	{@html `<script type="application/ld+json">${appLd}<\/script>`}
 </svelte:head>
 
 <section class="hero">
@@ -100,12 +117,15 @@
 <section aria-labelledby="how-heading">
 	<h2 id="how-heading">How it works</h2>
 	<p>
-		Your browser already knows how to read most image formats. This site adds a little extra code
-		for the rest, like HEIC and TIFF. Every file is turned into raw pixels on your own computer,
-		then saved again in the format you picked. The server only sends you this page. That is why
-		the converter is free, and why your images stay private.
+		imagetoolbox is a free image converter and a set of image tools that run in your browser.
+		Your browser already knows how to read most image formats, and this site adds a little extra
+		code for the rest, like HEIC and TIFF. Every file is turned into raw pixels on your own
+		computer, then saved again in the format you picked. The server only sends you this page.
+		That is why the converter is free, and why your images stay private.
 	</p>
 </section>
+
+<Faq items={trustFaq('image converter')} />
 
 <style>
 	.all-tools-link {

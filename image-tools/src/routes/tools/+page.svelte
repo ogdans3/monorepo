@@ -2,6 +2,8 @@
 	import { SITE_URL } from '$lib/site';
 	import { CATEGORIES, toolPath, toolsInCategory } from '$lib/tools/registry';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
+	import Faq from '$lib/ui/Faq.svelte';
+	import { trustFaq } from '$lib/ui/trust-faq';
 </script>
 
 <svelte:head>
@@ -52,6 +54,8 @@
 		<a href="/png-to-webp">PNG to WebP</a>.
 	</p>
 </section>
+
+<Faq items={trustFaq('image tools', true)} />
 
 <style>
 	.category-blurb {
