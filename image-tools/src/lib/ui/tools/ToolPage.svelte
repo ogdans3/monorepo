@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { SITE_URL } from '$lib/site';
+	import { SITE_URL, convertPath } from '$lib/site';
 	import { TOOLS, toolPath, type ImageTool } from '$lib/tools/registry';
 	import { parsePairSlug } from '$lib/engine';
 	import TrustLine from '../TrustLine.svelte';
@@ -74,7 +74,7 @@
 	<p class="all-tools"><a href="/tools">All image tools</a></p>
 	<ul class="pair-links">
 		{#each conversions as p (p.slug)}
-			<li><a href="/{p.slug}">{p.sourceName} to {p.targetName}</a></li>
+			<li><a href={convertPath(p.slug)}>{p.sourceName} to {p.targetName}</a></li>
 		{/each}
 	</ul>
 </section>

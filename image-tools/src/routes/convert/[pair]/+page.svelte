@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SITE_URL } from '$lib/site';
+	import { SITE_URL, convertPath } from '$lib/site';
 	import { TOOLS, toolPath } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
@@ -21,14 +21,14 @@
 		name="description"
 		content="Convert {page.sourceName} to {page.targetName} online free. Files convert in your browser and are never uploaded. Batch convert, download as a zip, keep your filenames."
 	/>
-	<link rel="canonical" href="{SITE_URL}/{page.canonicalSlug}" />
+	<link rel="canonical" href="{SITE_URL}{convertPath(page.canonicalSlug)}" />
 	<meta property="og:title" content="{page.sourceName} to {page.targetName} Converter" />
 	<meta
 		property="og:description"
 		content="Convert {page.sourceName} to {page.targetName} free, right in your browser. No uploads."
 	/>
 	<meta property="og:type" content="website" />
-	<meta property="og:url" content="{SITE_URL}/{page.canonicalSlug}" />
+	<meta property="og:url" content="{SITE_URL}{convertPath(page.canonicalSlug)}" />
 </svelte:head>
 
 <section class="hero">
@@ -88,7 +88,7 @@
 	<h2 id="related-heading">Related conversions</h2>
 	<ul class="pair-links">
 		{#each data.related as p (p.slug)}
-			<li><a href="/{p.slug}">{p.source.name} to {p.target.name}</a></li>
+			<li><a href={convertPath(p.slug)}>{p.source.name} to {p.target.name}</a></li>
 		{/each}
 	</ul>
 </section>

@@ -25,8 +25,8 @@
 			<span>image<span class="arrow">→</span>toolbox</span>
 		</a>
 		<nav aria-label="Main">
+			<a href="/convert">Conversions</a>
 			<a href="/tools">Tools</a>
-			<a href="/#all">All conversions</a>
 		</nav>
 	</header>
 

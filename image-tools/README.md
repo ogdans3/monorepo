@@ -4,11 +4,13 @@ Free, client-side image conversion and editing in the browser, at
 [imagetoolbox.org](https://imagetoolbox.org). The monorepo folder and the
 dashboard slug keep the historical name `image-tools`.
 
-Every format pair gets its own prerendered page (`/heic-to-jpg`,
-`/png-to-webp`, …, alias spellings like `/heif-to-jpeg` included — ~93
-pages), each with a dropzone, batch conversion, previews, per-file download
-and zip-all. Conversion happens entirely on the user's device; the Node
-server only serves the static build.
+Every format pair gets its own prerendered page under `/convert/`
+(`/convert/heic-to-jpg`, `/convert/png-to-webp`, …, alias spellings like
+`/convert/heif-to-jpeg` included — ~93 pages plus the `/convert` hub), each
+with a dropzone, batch conversion, previews, per-file download and zip-all.
+Old root-level pair URLs 301 to `/convert/…` via `src/hooks.server.ts`.
+Conversion happens entirely on the user's device; the Node server only
+serves the static build.
 
 There are also twenty tools under `/tools/` (hub page at `/tools`, grouped
 into Edit, Transform, Adjust, Privacy, Background, Documents and For the web),

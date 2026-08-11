@@ -1,15 +1,16 @@
 import { allPairSlugs } from '$lib/engine';
 import { TOOLS, toolPath } from '$lib/tools/registry';
-import { SITE_URL } from '$lib/site';
+import { SITE_URL, convertPath } from '$lib/site';
 
 export const prerender = true;
 
 export function GET() {
 	const urls = [
 		'/',
+		'/convert',
 		'/tools',
 		...TOOLS.map((tool) => toolPath(tool)),
-		...allPairSlugs().map((slug) => `/${slug}`)
+		...allPairSlugs().map((slug) => convertPath(slug))
 	];
 	const body =
 		`<?xml version="1.0" encoding="UTF-8"?>\n` +

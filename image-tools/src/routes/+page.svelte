@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { FORMATS, SOURCES, TARGETS, parsePairSlug } from '$lib/engine';
-	import { SITE_URL } from '$lib/site';
+	import { FORMATS, parsePairSlug } from '$lib/engine';
+	import { SITE_URL, convertPath } from '$lib/site';
 	import { CATEGORIES, toolPath, toolsInCategory } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
@@ -35,11 +35,6 @@
 		'png-to-ico',
 		'svg-to-png'
 	].map((slug) => parsePairSlug(slug)!);
-
-	const bySource = SOURCES.map((source) => ({
-		source,
-		targets: TARGETS.filter((t) => t.id !== source.id)
-	}));
 </script>
 
 <svelte:head>
@@ -91,27 +86,10 @@
 	<h2 id="popular-heading">Popular conversions</h2>
 	<ul class="pair-links">
 		{#each popular as p (p.slug)}
-			<li><a href="/{p.slug}">{p.sourceName} to {p.targetName}</a></li>
+			<li><a href={convertPath(p.slug)}>{p.sourceName} to {p.targetName}</a></li>
 		{/each}
 	</ul>
-</section>
-
-<section id="all" aria-labelledby="all-heading">
-	<h2 id="all-heading">All conversions</h2>
-	<div class="matrix">
-		{#each bySource as group (group.source.id)}
-			<div class="matrix-group">
-				<h3>{group.source.name}</h3>
-				<ul class="pair-links">
-					{#each group.targets as t (t.id)}
-						<li>
-							<a href="/{group.source.id}-to-{t.id}">{group.source.name} to {t.name}</a>
-						</li>
-					{/each}
-				</ul>
-			</div>
-		{/each}
-	</div>
+	<p class="all-tools-link"><a href="/convert">All conversions</a></p>
 </section>
 
 <section aria-labelledby="how-heading">
@@ -131,18 +109,5 @@
 	.all-tools-link {
 		margin: 1.1rem 0 0;
 		font-size: 0.875rem;
-	}
-
-	.matrix {
-		display: flex;
-		flex-direction: column;
-		gap: 1.35rem;
-	}
-
-	.matrix-group h3 {
-		margin: 0 0 0.45rem;
-		font-size: 0.8125rem;
-		font-weight: 650;
-		color: var(--muted);
 	}
 </style>
