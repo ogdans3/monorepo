@@ -380,6 +380,28 @@ export const TOOLS: ImageTool[] = [
 		suffix: '-sharpened'
 	},
 	{
+		slug: 'invert-image',
+		category: 'adjust',
+		name: 'Invert',
+		h1: 'Invert image colours',
+		title: 'Invert Image Colors Online - Free, Private, No Upload',
+		description:
+			'Invert image colors online free. Turn a picture into its negative, or turn a negative back into a picture, right in your browser with no uploads.',
+		lede: 'Turn every colour into its opposite, like a photo negative. One click, full quality out.',
+		blurb: 'Flip every colour to its opposite, like a film negative.',
+		steps: [
+			'Drop an image in the box above. It inverts right away.',
+			'Use the Original and Inverted buttons to compare. Transparent parts stay transparent.',
+			'Choose a format and download at full quality.'
+		],
+		aboutHeading: 'About inverting colours here',
+		about: [
+			'Every pixel flips to its opposite. Black turns white, blue turns orange, light turns dark. It is the same look as an old film negative.',
+			'Inverting is exact and loses nothing. Run it twice and you get your original image back. That also means it can turn a scanned negative into a normal photo.'
+		],
+		suffix: '-inverted'
+	},
+	{
 		slug: 'image-color-picker',
 		category: 'adjust',
 		name: 'Colour picker',
