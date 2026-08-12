@@ -119,23 +119,45 @@ export const TOOLS: ImageTool[] = [
 		slug: 'rotate-image',
 		category: 'transform',
 		name: 'Rotate',
-		h1: 'Rotate or flip an image',
-		title: 'Rotate or Flip an Image - Free Online, No Upload',
+		h1: 'Rotate an image',
+		title: 'Rotate Image Online - Free, Private, No Upload',
 		description:
-			'Rotate images in 90 degree steps or flip them horizontally and vertically, free and right in your browser. Sideways phone photos fixed in two clicks.',
-		lede: 'Rotate in 90 degree steps and flip horizontally or vertically. A phone photo lying on its side is fixed in two clicks.',
-		blurb: 'Quarter turns and mirror flips, two clicks and done.',
+			'Rotate images in 90 degree steps online free, right in your browser. A sideways phone photo is fixed in two clicks, with no uploads and no signup.',
+		lede: 'Turn your image in 90 degree steps. A phone photo lying on its side is fixed in two clicks.',
+		blurb: 'Quarter turns, two clicks and done.',
 		steps: [
 			'Drop an image in the box above.',
-			'Use the rotate buttons for quarter turns and the flip buttons to mirror. The preview always shows exactly what you will get.',
+			'Use the rotate buttons for quarter turns. The preview always shows exactly what you will get. Flip buttons are there too.',
 			'Choose an output format and download.'
 		],
-		aboutHeading: 'About rotating and flipping here',
+		aboutHeading: 'About rotating images here',
 		about: [
-			'Photos open the right way up, just as your camera saved them. Turning and flipping loses no quality at all.',
-			'The image is only saved again when you download it, in the format you choose.'
+			'Photos open the right way up, just as your camera saved them. Turning loses no quality at all.',
+			'Need a mirror image instead? The flip tool does that, and the flip buttons here work too. The image is only saved again when you download it.'
 		],
 		suffix: '-rotated'
+	},
+	{
+		slug: 'flip-image',
+		category: 'transform',
+		name: 'Flip',
+		h1: 'Flip or mirror an image',
+		title: 'Flip or Mirror an Image - Free Online, No Upload',
+		description:
+			'Flip an image like a mirror, left to right or upside down, free and right in your browser. Full quality out, with no uploads and no signup.',
+		lede: 'Mirror your image left to right, flip it upside down, or both. What you see is what you download.',
+		blurb: 'Mirror left to right or flip upside down.',
+		steps: [
+			'Drop an image in the box above. It mirrors left to right right away.',
+			'Turn the mirror and flip buttons on or off. The preview updates as you click.',
+			'Choose a format and download at full quality.'
+		],
+		aboutHeading: 'About mirroring images here',
+		about: [
+			'Mirroring helps with selfies that came out backwards, text that scanned reversed, and stencils or iron-on prints that need to be laid out in reverse.',
+			'Flipping is exact and loses nothing. The image is only saved again when you download it, in the format you choose.'
+		],
+		suffix: '-flipped'
 	},
 	{
 		slug: 'blur-image',
