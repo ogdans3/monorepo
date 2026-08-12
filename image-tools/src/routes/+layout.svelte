@@ -3,6 +3,23 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import logo from '$lib/assets/logo.svg';
 	import { SITE_URL } from '$lib/site';
+	import { browser } from '$app/environment';
+	import posthog from 'posthog-js';
+
+	// Anonymous, cookieless analytics. Nothing is stored on the device and no
+	// person profiles are built, which is exactly why no consent banner is
+	// needed. NEVER call posthog.identify() or alias(), and never loosen
+	// cookieless_mode or person_profiles: that would reintroduce personal
+	// data and break the legal basis for running without a banner.
+	// Localhost is skipped so dev and test runs stay out of the numbers.
+	if (browser && !['localhost', '127.0.0.1'].includes(location.hostname)) {
+		posthog.init('phc_rk387TLQFj72Q9Cv8JV2vsLka62yWC5zkZW8iEFt6VKk', {
+			api_host: 'https://eu.i.posthog.com',
+			defaults: '2026-05-30',
+			cookieless_mode: 'always',
+			person_profiles: 'never'
+		});
+	}
 
 	let { children } = $props();
 </script>

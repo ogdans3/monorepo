@@ -8,9 +8,15 @@ decisions. This file is the short version of what matters when editing.
 - **Self-contained.** This folder must build, test and deploy alone (the
   monorepo rule). Never reference anything outside `image-tools/`.
 - **Client-side only.** Conversion never touches a server. Don't add upload
-  endpoints or server-side conversion. Anonymous PostHog usage analytics is
-  planned and fine, but the copy must never promise "no tracking". The privacy
-  promise is about files: they never leave the device.
+  endpoints or server-side conversion. The privacy promise is about files:
+  they never leave the device. The copy must never promise "no tracking".
+- **Analytics is live and deliberately anonymous.** PostHog (EU host) runs in
+  `+layout.svelte` with `cookieless_mode: 'always'` and
+  `person_profiles: 'never'`, guarded to skip localhost. This is what makes a
+  consent banner legally unnecessary: nothing is written to cookies or
+  storage. NEVER call `posthog.identify()` or `posthog.alias()`, and never
+  loosen those two flags — doing so reintroduces personal data and breaks the
+  GDPR basis for running banner-free.
 - **Copy style.** No em dashes and no semicolons in user-facing text. Plain
   sentences, dry tone, SEO keywords ("X to Y converter", "free", "online",
   "no upload") carried naturally in titles, descriptions and headings.
