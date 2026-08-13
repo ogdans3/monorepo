@@ -2,6 +2,28 @@ import type { Format } from './formats';
 import type { RawImage } from './raw';
 
 /**
+ * Fetch the heavy decoder for a format ahead of time, so the first conversion
+ * does not wait on a megabyte of WASM. Call it when the user shows intent
+ * (dragging a file over the page), never on page load. Errors are ignored:
+ * this is only ever a head start, and decodeToRaw imports the same modules.
+ */
+export function warmDecoder(format: Format): void {
+	const warm = (load: () => Promise<unknown>) => void load().catch(() => {});
+	switch (format.id) {
+		case 'heic':
+			warm(() => import('libheif-js/wasm-bundle'));
+			break;
+		case 'tiff':
+			warm(() => import('utif2'));
+			break;
+		case 'avif':
+			// only needed where the browser cannot decode AVIF itself
+			if (!('createImageBitmap' in globalThis)) warm(() => import('@jsquash/avif'));
+			break;
+	}
+}
+
+/**
  * Decode any supported format to raw RGBA. Browser-native codecs do the bulk
  * of the work; WASM/JS decoders are lazy-loaded only for the formats the
  * browser can't read itself (HEIC, TIFF, and AVIF on older engines).

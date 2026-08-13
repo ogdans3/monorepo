@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TARGETS, type Format } from '$lib/engine';
+	import { TARGETS, resolveFormat, warmDecoder, type Format } from '$lib/engine';
 	import { Converter } from './converter.svelte';
 	import { downloadBlob } from './download';
 	import Dropzone from './Dropzone.svelte';
@@ -29,6 +29,14 @@
 
 	let zipping = $state(false);
 
+	// On a HEIC or TIFF page the decoder is a megabyte of WASM. Fetch it as
+	// soon as the visitor reaches for the dropzone, so the first conversion
+	// does not start with a download.
+	function warmSource() {
+		const source = sourceName ? resolveFormat(sourceName) : undefined;
+		if (source) warmDecoder(source);
+	}
+
 	async function downloadZip() {
 		zipping = true;
 		try {
@@ -43,6 +51,7 @@
 	<Dropzone
 		headline={sourceName ? `Drop ${sourceName} files here` : 'Drop images here'}
 		onfiles={(files) => conv.add(files)}
+		onintent={warmSource}
 	/>
 
 	{#if showTargetPicker}

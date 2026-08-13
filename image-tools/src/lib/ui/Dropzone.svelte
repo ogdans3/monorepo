@@ -4,15 +4,26 @@
 	let {
 		headline,
 		onfiles,
+		onintent,
 		multiple = true,
 		accept = acceptAttribute()
 	}: {
 		headline: string;
 		onfiles: (files: File[]) => void;
+		/** Fires once when a drag starts, to warm up heavy decoders early. */
+		onintent?: () => void;
 		multiple?: boolean;
 		/** Override for non-image tools, e.g. the PDF pages. */
 		accept?: string;
 	} = $props();
+
+	let intentFired = false;
+
+	function signalIntent() {
+		if (intentFired) return;
+		intentFired = true;
+		onintent?.();
+	}
 
 	let input: HTMLInputElement | undefined = $state();
 	let dragDepth = $state(0);
@@ -28,6 +39,8 @@
 		if (!draggedFiles(e)) return;
 		e.preventDefault();
 		dragDepth++;
+		// a file is on its way in, so start fetching the decoder now
+		signalIntent();
 	}
 
 	function windowDragLeave(e: DragEvent) {
@@ -67,7 +80,7 @@
 	onpaste={windowPaste}
 />
 
-<label class="zone" class:dragging>
+<label class="zone" class:dragging onpointerenter={signalIntent}>
 	<input bind:this={input} type="file" {multiple} {accept} onchange={pick} />
 	<span class="zone-headline">{dragging ? 'Drop to convert' : headline}</span>
 	<span class="zone-hint">or click to browse. Paste works too</span>

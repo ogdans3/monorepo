@@ -4,7 +4,6 @@
 	import logo from '$lib/assets/logo.svg';
 	import { SITE_URL } from '$lib/site';
 	import { browser } from '$app/environment';
-	import posthog from 'posthog-js';
 
 	// Anonymous, cookieless analytics. Nothing is stored on the device and no
 	// person profiles are built, which is exactly why no consent banner is
@@ -12,13 +11,32 @@
 	// cookieless_mode or person_profiles: that would reintroduce personal
 	// data and break the legal basis for running without a banner.
 	// Localhost is skipped so dev and test runs stay out of the numbers.
+	//
+	// Imported lazily and started when the browser is idle. A static import
+	// puts ~55KB of analytics in the layout chunk, which every page waits for
+	// before the tools become usable. Measuring beats guessing: that was the
+	// single biggest thing on the critical path. The cost is that visits
+	// shorter than the idle timeout go uncounted, which is a fine trade.
 	if (browser && !['localhost', '127.0.0.1'].includes(location.hostname)) {
-		posthog.init('phc_rk387TLQFj72Q9Cv8JV2vsLka62yWC5zkZW8iEFt6VKk', {
-			api_host: 'https://eu.i.posthog.com',
-			defaults: '2026-05-30',
-			cookieless_mode: 'always',
-			person_profiles: 'never'
-		});
+		const startAnalytics = () =>
+			import('posthog-js')
+				.then(({ default: posthog }) => {
+					posthog.init('phc_rk387TLQFj72Q9Cv8JV2vsLka62yWC5zkZW8iEFt6VKk', {
+						api_host: 'https://eu.i.posthog.com',
+						defaults: '2026-05-30',
+						cookieless_mode: 'always',
+						person_profiles: 'never'
+					});
+				})
+				.catch(() => {
+					/* analytics is never worth breaking a page over */
+				});
+
+		if ('requestIdleCallback' in window) {
+			requestIdleCallback(startAnalytics, { timeout: 2000 });
+		} else {
+			setTimeout(startAnalytics, 1200);
+		}
 	}
 
 	let { children } = $props();
