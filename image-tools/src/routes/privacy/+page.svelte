@@ -125,8 +125,7 @@
 <section aria-labelledby="changes-heading">
 	<h2 id="changes-heading">Changes to this policy</h2>
 	<p>
-		If the way the site handles data changes, this page and its date change with it. A big change
-		would also get a note on the front page.
+		If the way the site handles data changes, this page and its date change with it.
 	</p>
 	<p>See also the <a href="/terms">terms of service</a>.</p>
 </section>
