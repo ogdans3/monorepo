@@ -12,8 +12,13 @@ Old root-level pair URLs 301 to `/convert/…` via `src/hooks.server.ts`.
 Conversion happens entirely on the user's device; the Node server only
 serves the static build.
 
-There are also 43 tools under `/tools/` (hub page at `/tools`, grouped
-into Edit, Transform, Adjust, Privacy, Background, Documents and For the web),
+There are also 43 tools in two sections: 32 image tools under `/tools/`
+(hub at `/tools`, grouped into Crop and combine, Size and orientation,
+Colour and light, Borders and effects, Text and marks, Privacy, Inspect
+and For the web) and 11 PDF tools under `/pdf/` (hub at `/pdf`). Both hubs
+have a live search box, and every tool page offers hand-picked next steps
+from the registry's `next` field. Old `/tools/<pdf-slug>` URLs 301 to
+`/pdf/`.
 same client-side rules: crop, combine, resize, rotate/flip, adjust
 (brightness/contrast/saturation via canvas filters), blur (shape-drawn
 regions, blur or pixelate), redact (solid shapes), transparent background

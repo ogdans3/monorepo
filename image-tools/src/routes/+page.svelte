@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { FORMATS, parsePairSlug } from '$lib/engine';
 	import { SITE_URL, convertPath } from '$lib/site';
-	import { CATEGORIES, toolPath, toolsInCategory } from '$lib/tools/registry';
+	import { IMAGE_CATEGORIES, PDF_TOOLS, toolPath, toolsInCategory } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
@@ -68,7 +68,7 @@
 <section aria-labelledby="tools-heading">
 	<h2 id="tools-heading">Image tools</h2>
 	<div class="matrix">
-		{#each CATEGORIES as category (category.id)}
+		{#each IMAGE_CATEGORIES as category (category.id)}
 			<div class="matrix-group">
 				<h3>{category.label}</h3>
 				<ul class="pair-links">
@@ -80,6 +80,20 @@
 		{/each}
 	</div>
 	<p class="all-tools-link"><a href="/tools">All image tools</a></p>
+</section>
+
+<section aria-labelledby="pdf-heading">
+	<h2 id="pdf-heading">PDF tools</h2>
+	<div class="matrix">
+		<div class="matrix-group">
+			<ul class="pair-links">
+				{#each PDF_TOOLS as tool (tool.slug)}
+					<li><a href={toolPath(tool)}>{tool.h1}</a></li>
+				{/each}
+			</ul>
+		</div>
+	</div>
+	<p class="all-tools-link"><a href="/pdf">All PDF tools</a></p>
 </section>
 
 <section aria-labelledby="popular-heading">

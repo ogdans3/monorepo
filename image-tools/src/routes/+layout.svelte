@@ -65,8 +65,9 @@
 			<span>image<span class="arrow">→</span>toolbox</span>
 		</a>
 		<nav aria-label="Main">
-			<a href="/convert">Conversions</a>
+			<a href="/convert">Convert</a>
 			<a href="/tools">Tools</a>
+			<a href="/pdf">PDF</a>
 		</nav>
 	</header>
 

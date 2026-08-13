@@ -11,6 +11,7 @@ export function sitemapPaths(): string[] {
 		'/',
 		'/convert',
 		'/tools',
+		'/pdf',
 		'/privacy',
 		'/terms',
 		...TOOLS.map((tool) => toolPath(tool)),

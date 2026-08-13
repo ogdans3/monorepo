@@ -1,32 +1,45 @@
 /**
- * The tools registry. Nav, the /tools hub, the landing section, the sitemap,
+ * The tools registry. Nav, both hubs, the landing section, the sitemap,
  * cross-links and every tool page's SEO copy derive from this one table,
  * mirroring how formats.ts drives the conversion pages.
  *
  * Copy style: plain sentences, no em dashes, no semicolons (guarded by test).
  */
 
+/**
+ * Categories are grouped by what the visitor is trying to do, not by how the
+ * code works. Two rules learned by getting it wrong: a category with one tool
+ * is just a lonely heading, and tools that only look at an image do not belong
+ * next to tools that change it.
+ */
 export type ToolCategory =
-	| 'edit'
-	| 'transform'
-	| 'adjust'
+	| 'frame'
+	| 'size'
+	| 'colour'
+	| 'decorate'
+	| 'annotate'
 	| 'privacy'
-	| 'background'
-	| 'documents'
-	| 'web';
+	| 'inspect'
+	| 'web'
+	| 'pdf';
 
 export const CATEGORIES: { id: ToolCategory; label: string; blurb: string }[] = [
-	{ id: 'edit', label: 'Edit', blurb: 'Change what is in the frame.' },
-	{ id: 'transform', label: 'Transform', blurb: 'Change size and orientation.' },
-	{ id: 'adjust', label: 'Adjust', blurb: 'Tune colour and light.' },
+	{ id: 'frame', label: 'Crop and combine', blurb: 'Change what is in the frame.' },
+	{ id: 'size', label: 'Size and orientation', blurb: 'Resize, rotate and mirror.' },
+	{ id: 'colour', label: 'Colour and light', blurb: 'Tune how the image looks.' },
+	{ id: 'decorate', label: 'Borders and effects', blurb: 'Frame it and finish it.' },
+	{ id: 'annotate', label: 'Text and marks', blurb: 'Put your words on it.' },
 	{ id: 'privacy', label: 'Privacy', blurb: 'Hide what should not be shared.' },
-	{ id: 'background', label: 'Background', blurb: 'Work on what is behind the subject.' },
-	{ id: 'documents', label: 'Documents', blurb: 'Move between images and PDF.' },
-	{ id: 'web', label: 'For the web', blurb: 'Smaller files and site assets.' }
+	{ id: 'inspect', label: 'Inspect', blurb: 'Look at an image without changing it.' },
+	{ id: 'web', label: 'For the web', blurb: 'Smaller files and site assets.' },
+	{ id: 'pdf', label: 'PDF', blurb: 'Work with documents. These live under /pdf.' }
 ];
 
+/** PDF tools live under /pdf, everything else under /tools. */
+export const PDF_CATEGORY: ToolCategory = 'pdf';
+
 export interface ImageTool {
-	/** URL slug under /tools/, also the route folder name. */
+	/** URL slug, also the route folder name, under /tools or /pdf. */
 	slug: string;
 	category: ToolCategory;
 	/** Short label for nav, hub and lists. */
@@ -44,6 +57,13 @@ export interface ImageTool {
 	aboutHeading: string;
 	/** Paragraphs for the about section. */
 	about: string[];
+	/**
+	 * Slugs to offer as the obvious next step, most useful first. Hand-picked,
+	 * because "you cropped a photo, now sharpen it" beats an alphabetical list.
+	 */
+	next?: string[];
+	/** Extra words people search for, used by the hub search box. */
+	keywords?: string[];
 	/** Output name suffix, e.g. "-cropped". */
 	suffix: string;
 }
@@ -51,7 +71,7 @@ export interface ImageTool {
 export const TOOLS: ImageTool[] = [
 	{
 		slug: 'crop-image',
-		category: 'edit',
+		category: 'frame',
 		name: 'Crop',
 		h1: 'Crop an image',
 		title: 'Crop Image Online - Free, Private, No Upload',
@@ -69,11 +89,13 @@ export const TOOLS: ImageTool[] = [
 			'The crop frame shows a faint grid that helps you line things up. Lock the shape for profile pictures or thumbnails, or keep it free and cut exactly what you want.',
 			'Cropping happens in your browser. The image is never uploaded, and the download uses the full quality of your original, not the small preview.'
 		],
+		next: ['trim-image', 'resize-image', 'round-corners'],
+		keywords: ['cut', 'square', 'aspect ratio', 'thumbnail'],
 		suffix: '-cropped'
 	},
 	{
 		slug: 'combine-images',
-		category: 'edit',
+		category: 'frame',
 		name: 'Combine',
 		h1: 'Combine images into one',
 		title: 'Combine Images Into One - Free Online, No Upload',
@@ -91,11 +113,13 @@ export const TOOLS: ImageTool[] = [
 			'Each image fills its own cell, and you can drag it to choose which part shows. Nothing gets squashed or stretched. Moving the lines changes how much room each image gets, which makes side by side shots and simple collages quick to build.',
 			'The preview is shrunk to fit your screen. The download uses the exact size you set.'
 		],
+		next: ['blend-images', 'split-image', 'image-to-pdf'],
+		keywords: ['collage', 'side by side', 'merge photos', 'grid'],
 		suffix: '-combined'
 	},
 	{
 		slug: 'resize-image',
-		category: 'transform',
+		category: 'size',
 		name: 'Resize',
 		h1: 'Resize an image',
 		title: 'Resize Image Online - Free, Private, No Upload',
@@ -113,11 +137,13 @@ export const TOOLS: ImageTool[] = [
 			'If you shrink a photo in one big jump, it can turn muddy. This tool shrinks in several small steps instead, so edges and text stay sharp.',
 			'You can also make images bigger, but no tool can invent detail. Bigger versions will look a little soft.'
 		],
+		next: ['sharpen-image', 'compress-image', 'bulk-resize'],
+		keywords: ['scale', 'dimensions', 'shrink', 'enlarge'],
 		suffix: '-resized'
 	},
 	{
 		slug: 'rotate-image',
-		category: 'transform',
+		category: 'size',
 		name: 'Rotate',
 		h1: 'Rotate an image',
 		title: 'Rotate Image Online - Free, Private, No Upload',
@@ -135,11 +161,13 @@ export const TOOLS: ImageTool[] = [
 			'Photos open the right way up, just as your camera saved them. Turning loses no quality at all.',
 			'Need a mirror image instead? The flip tool does that, and the flip buttons here work too. The image is only saved again when you download it.'
 		],
+		next: ['flip-image', 'crop-image'],
+		keywords: ['turn', 'sideways', 'straighten', 'orientation'],
 		suffix: '-rotated'
 	},
 	{
 		slug: 'flip-image',
-		category: 'transform',
+		category: 'size',
 		name: 'Flip',
 		h1: 'Flip or mirror an image',
 		title: 'Flip or Mirror an Image - Free Online, No Upload',
@@ -157,6 +185,8 @@ export const TOOLS: ImageTool[] = [
 			'Mirroring helps with selfies that came out backwards, text that scanned reversed, and stencils or iron-on prints that need to be laid out in reverse.',
 			'Flipping is exact and loses nothing. The image is only saved again when you download it, in the format you choose.'
 		],
+		next: ['rotate-image', 'crop-image'],
+		keywords: ['mirror', 'reverse', 'horizontal', 'vertical'],
 		suffix: '-flipped'
 	},
 	{
@@ -179,6 +209,8 @@ export const TOOLS: ImageTool[] = [
 			'Blur makes an area too soft to read. Pixelate turns it into big blocks. Both change the real pixels, so the download does not contain the hidden part.',
 			'One honest warning. Special software can sometimes read blurred text again. For names, card numbers and real secrets, use the redact tool instead. A solid box cannot be undone.'
 		],
+		next: ['redact-image', 'pixelate-image', 'remove-exif'],
+		keywords: ['censor', 'hide face', 'blur face', 'obscure'],
 		suffix: '-blurred'
 	},
 	{
@@ -201,11 +233,13 @@ export const TOOLS: ImageTool[] = [
 			'A solid box replaces the pixels under it completely. There is nothing left to recover. That makes it the safe choice for names, addresses and card numbers.',
 			'The boxes become part of the image itself. They are not a layer someone can peel off. The covered content is gone from the file.'
 		],
+		next: ['blur-image', 'remove-exif'],
+		keywords: ['black box', 'censor', 'hide text', 'cover'],
 		suffix: '-redacted'
 	},
 	{
 		slug: 'adjust-image',
-		category: 'adjust',
+		category: 'colour',
 		name: 'Adjust',
 		h1: 'Adjust brightness, contrast and saturation',
 		title: 'Adjust Brightness and Contrast Online - Free, No Upload',
@@ -223,11 +257,13 @@ export const TOOLS: ImageTool[] = [
 			'Brightness lifts or darkens everything evenly, contrast pushes lights and darks apart, and saturation controls how vivid the colours are. Saturation all the way down gives a clean black and white.',
 			'The preview and the download use the same math, so what you see is exactly what you get, at full quality.'
 		],
+		next: ['sharpen-image', 'image-histogram', 'grayscale-image'],
+		keywords: ['brightness', 'contrast', 'saturation', 'exposure'],
 		suffix: '-adjusted'
 	},
 	{
 		slug: 'transparent-background',
-		category: 'background',
+		category: 'frame',
 		name: 'Transparent',
 		h1: 'Make a background transparent',
 		title: 'Transparent Background Maker - Free, Private, No Upload',
@@ -245,6 +281,8 @@ export const TOOLS: ImageTool[] = [
 			'The eraser works like a magic wand. It starts at the pixel you clicked and spreads to neighbouring pixels of similar colour, stopping when it reaches something different. That makes it precise on logos, scans, screenshots and product photos with a plain background.',
 			'Export as PNG or WebP to keep the transparency. JPG has no alpha channel, so transparent areas turn white there.'
 		],
+		next: ['replace-color', 'round-corners', 'trim-image'],
+		keywords: ['remove background', 'magic wand', 'transparent png', 'cut out'],
 		suffix: '-transparent'
 	},
 	{
@@ -267,11 +305,13 @@ export const TOOLS: ImageTool[] = [
 			'Most phones and cameras hide extra info inside every photo. It can show the device, the exact time, and often the exact place it was taken. Anyone you send the file to can read it.',
 			'The clean copy is made by rebuilding the image from raw pixels. Hidden info cannot survive that. This tool simply shows you what was there before it goes.'
 		],
+		next: ['redact-image', 'compress-image'],
+		keywords: ['metadata', 'gps', 'location', 'strip data'],
 		suffix: '-clean'
 	},
 	{
 		slug: 'watermark-image',
-		category: 'edit',
+		category: 'annotate',
 		name: 'Watermark',
 		h1: 'Watermark an image',
 		title: 'Add a Watermark to an Image - Free Online, No Upload',
@@ -289,6 +329,8 @@ export const TOOLS: ImageTool[] = [
 			'A mark in the corner stays subtle. Tiling repeats it across the whole image, which makes it much harder to crop out or remove.',
 			'The watermark becomes part of the pixels at full quality, so it survives in every format you download.'
 		],
+		next: ['add-text-to-image', 'compress-image'],
+		keywords: ['logo', 'copyright', 'branding', 'signature'],
 		suffix: '-watermarked'
 	},
 	{
@@ -311,6 +353,8 @@ export const TOOLS: ImageTool[] = [
 			'The tool tries different quality levels until it finds the highest one that stays under your target. If even the lowest quality is too big, it can shrink the image step by step and try again.',
 			'WebP files are usually smaller than JPG at the same quality. Try WebP first if the site you need the file for accepts it.'
 		],
+		next: ['resize-image', 'bulk-resize'],
+		keywords: ['smaller file', 'reduce size', 'kb', 'optimise'],
 		suffix: '-compressed'
 	},
 	{
@@ -333,11 +377,13 @@ export const TOOLS: ImageTool[] = [
 			'The zip holds favicon.ico with 16, 32 and 48 pixel versions embedded, favicon-16x16.png and favicon-32x32.png, apple-touch-icon.png at 180 pixels, and icon-192.png plus icon-512.png for web manifests.',
 			'Each size is made from your original, so it stays as sharp as possible. If the 16 pixel one looks muddy, try a simpler logo.'
 		],
+		next: ['round-corners', 'resize-image'],
+		keywords: ['ico', 'site icon', 'tab icon', 'apple touch'],
 		suffix: '-favicons'
 	},
 	{
 		slug: 'round-corners',
-		category: 'edit',
+		category: 'decorate',
 		name: 'Round corners',
 		h1: 'Round image corners or crop a circle',
 		title: 'Round Image Corners or Crop a Circle - Free, No Upload',
@@ -355,11 +401,13 @@ export const TOOLS: ImageTool[] = [
 			'The corners become truly transparent, not painted white, so the image sits cleanly on any background. Circle mode first cuts a square from the middle, which is what avatar pictures need.',
 			'Download as PNG or WebP to keep the transparent corners. JPG cannot store them, so the corners turn white there.'
 		],
+		next: ['drop-shadow', 'transparent-background'],
+		keywords: ['rounded', 'circle', 'avatar', 'radius'],
 		suffix: '-rounded'
 	},
 	{
 		slug: 'split-image',
-		category: 'edit',
+		category: 'frame',
 		name: 'Split',
 		h1: 'Split an image into a grid',
 		title: 'Split an Image Into a Grid - Free Online, No Upload',
@@ -377,11 +425,13 @@ export const TOOLS: ImageTool[] = [
 			'Tiles are cut at full quality and sized evenly. The last row and column take any leftover pixels, so nothing is lost.',
 			'The classic use is an Instagram grid, but it works just as well for puzzles and posters you print at home.'
 		],
+		next: ['crop-image', 'combine-images'],
+		keywords: ['tiles', 'grid', 'instagram grid', 'slice'],
 		suffix: '-tiles'
 	},
 	{
 		slug: 'sharpen-image',
-		category: 'adjust',
+		category: 'colour',
 		name: 'Sharpen',
 		h1: 'Sharpen an image',
 		title: 'Sharpen an Image Online - Free, Private, No Upload',
@@ -399,11 +449,13 @@ export const TOOLS: ImageTool[] = [
 			'The tool compares your image with a blurry copy of itself. The parts that differ are the edges, and those get boosted. It cannot invent detail, but it makes real detail easy to see again.',
 			'Sharpening is the classic last step after shrinking a photo, which is why it pairs well with the resize tool.'
 		],
+		next: ['resize-image', 'adjust-image'],
+		keywords: ['unsharp', 'crisp', 'blurry fix', 'focus'],
 		suffix: '-sharpened'
 	},
 	{
 		slug: 'invert-image',
-		category: 'adjust',
+		category: 'colour',
 		name: 'Invert',
 		h1: 'Invert image colours',
 		title: 'Invert Image Colors Online - Free, Private, No Upload',
@@ -421,11 +473,13 @@ export const TOOLS: ImageTool[] = [
 			'Every pixel flips to its opposite. Black turns white, blue turns orange, light turns dark. It is the same look as an old film negative.',
 			'Inverting is exact and loses nothing. Run it twice and you get your original image back. That also means it can turn a scanned negative into a normal photo.'
 		],
+		next: ['grayscale-image', 'adjust-image'],
+		keywords: ['negative', 'opposite colours', 'film negative'],
 		suffix: '-inverted'
 	},
 	{
 		slug: 'image-color-picker',
-		category: 'adjust',
+		category: 'inspect',
 		name: 'Colour picker',
 		h1: 'Pick colours from an image',
 		title: 'Image Color Picker - Hex Codes and Palette, No Upload',
@@ -443,11 +497,13 @@ export const TOOLS: ImageTool[] = [
 			'The palette shows the main colours in your image. It is a good starting point for picking brand colours or matching a design.',
 			'Clicks read the original pixels, not the small preview, so the values are exact.'
 		],
+		next: ['replace-color', 'image-histogram'],
+		keywords: ['hex', 'rgb', 'palette', 'eyedropper'],
 		suffix: '-palette'
 	},
 	{
 		slug: 'bulk-resize',
-		category: 'transform',
+		category: 'size',
 		name: 'Bulk resize',
 		h1: 'Bulk resize images',
 		title: 'Bulk Resize Images - Free Online, No Upload',
@@ -465,11 +521,13 @@ export const TOOLS: ImageTool[] = [
 			'Every image is shrunk the same careful way the single resize tool uses, so quality stays high.',
 			'You can mix formats. HEIC photos, PNG screenshots and WebP files can all go in the same batch and come out matching.'
 		],
+		next: ['compress-image', 'resize-image'],
+		keywords: ['batch', 'many images', 'multiple', 'folder'],
 		suffix: '-resized'
 	},
 	{
 		slug: 'image-to-pdf',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Image to PDF',
 		h1: 'Convert images to a PDF',
 		title: 'Image to PDF Converter (JPG, PNG, HEIC) - Free, No Upload',
@@ -487,11 +545,13 @@ export const TOOLS: ImageTool[] = [
 			'Each image becomes one page. Match mode makes every page the same size as its image. A4 mode puts each image in the middle of a standard page, which is best for printing.',
 			'The PDF is built in your browser. Scans, receipts and ID photos never touch a server. For private papers, that is the whole point.'
 		],
+		next: ['merge-pdf', 'pdf-to-jpg'],
+		keywords: ['jpg to pdf', 'png to pdf', 'scan to pdf', 'photos to pdf'],
 		suffix: ''
 	},
 	{
 		slug: 'pdf-to-jpg',
-		category: 'documents',
+		category: 'pdf',
 		name: 'PDF to JPG',
 		h1: 'Convert a PDF to images',
 		title: 'PDF to JPG Converter - Free, Private, No Upload',
@@ -509,11 +569,13 @@ export const TOOLS: ImageTool[] = [
 			'Pages are drawn with the same engine Firefox uses to show PDFs, running in your browser. The document never leaves your device. That matters for contracts and anything with a signature on it.',
 			'JPG works well for most pages. PNG keeps sharp lines and drawings, and WebP makes the smallest files.'
 		],
+		next: ['pdf-to-text', 'image-to-pdf'],
+		keywords: ['pdf to image', 'pdf to png', 'export pages'],
 		suffix: ''
 	},
 	{
 		slug: 'grayscale-image',
-		category: 'adjust',
+		category: 'colour',
 		name: 'Black and white',
 		h1: 'Convert an image to black and white',
 		title: 'Convert Image to Black and White - Free, No Upload',
@@ -531,11 +593,13 @@ export const TOOLS: ImageTool[] = [
 			'Colours are mixed by how bright they look to the eye, not by a plain average. Green counts most and blue least, which is why skies and leaves keep their difference instead of turning into the same grey mush.',
 			'Nothing else about the image changes, and the download is made from your original at full size.'
 		],
+		next: ['sepia-image', 'adjust-image'],
+		keywords: ['black and white', 'greyscale', 'monochrome', 'desaturate'],
 		suffix: '-bw'
 	},
 	{
 		slug: 'sepia-image',
-		category: 'adjust',
+		category: 'colour',
 		name: 'Sepia',
 		h1: 'Add a sepia tone to an image',
 		title: 'Sepia Photo Effect Online - Free, Private, No Upload',
@@ -553,6 +617,8 @@ export const TOOLS: ImageTool[] = [
 			'Sepia is the brown tone real photographs took on with age. The effect mixes each colour towards that warmth rather than just tinting the whole picture, so light and dark areas stay separate.',
 			'Pair it with a vignette for a convincingly old look.'
 		],
+		next: ['vignette-image', 'grayscale-image'],
+		keywords: ['vintage', 'old photo', 'retro', 'brown'],
 		suffix: '-sepia'
 	},
 	{
@@ -575,11 +641,13 @@ export const TOOLS: ImageTool[] = [
 			'This covers the entire picture, which is what you want for a censored look, a retro game feel or a low fidelity avatar.',
 			'To hide something specific, use the blur tool to cover just that part. And for names or numbers that really must not be readable, use redact and a solid box, because heavy blocks can sometimes be worked backwards.'
 		],
+		next: ['blur-image', 'redact-image'],
+		keywords: ['mosaic', 'blocks', 'censor', '8 bit'],
 		suffix: '-pixelated'
 	},
 	{
 		slug: 'replace-color',
-		category: 'adjust',
+		category: 'colour',
 		name: 'Replace colour',
 		h1: 'Replace a colour in an image',
 		title: 'Replace a Color in an Image - Free Online, No Upload',
@@ -597,11 +665,13 @@ export const TOOLS: ImageTool[] = [
 			'Every pixel close enough to the colour you clicked is swapped, wherever it is in the image. That makes it good for recolouring a logo, changing a flat background or fixing one wrong brand colour.',
 			'Tolerance decides how close is close enough. Photos need a higher tolerance than flat graphics, since a real surface is never one exact colour.'
 		],
+		next: ['transparent-background', 'image-color-picker'],
+		keywords: ['swap colour', 'recolour', 'change colour', 'hue'],
 		suffix: '-recoloured'
 	},
 	{
 		slug: 'trim-image',
-		category: 'transform',
+		category: 'frame',
 		name: 'Trim',
 		h1: 'Trim the edges of an image',
 		title: 'Auto Crop and Trim Image Edges - Free, No Upload',
@@ -619,11 +689,13 @@ export const TOOLS: ImageTool[] = [
 			'The colour of the top left pixel is taken as the border colour, and every edge is pulled in while it stays that colour. Transparent edges count as border whatever colour they claim to be.',
 			'A scan is never perfectly even, so raise the tolerance a little if a thin line survives. If the whole image is one colour there is nothing to keep, and the tool leaves it alone.'
 		],
+		next: ['crop-image', 'extend-canvas'],
+		keywords: ['autocrop', 'auto crop', 'whitespace', 'margins', 'edges'],
 		suffix: '-trimmed'
 	},
 	{
 		slug: 'extend-canvas',
-		category: 'transform',
+		category: 'frame',
 		name: 'Extend canvas',
 		h1: 'Add space around an image',
 		title: 'Extend Image Canvas and Add Borders - Free, No Upload',
@@ -641,11 +713,13 @@ export const TOOLS: ImageTool[] = [
 			'This is the opposite of cropping. Your image is untouched and new space appears around it, which is exactly what you need when a site demands a square image or a print needs a margin.',
 			'Keep the fill transparent and download as PNG or WebP to leave the new space see-through.'
 		],
+		next: ['add-border', 'crop-image'],
+		keywords: ['padding', 'canvas size', 'square', 'instagram'],
 		suffix: '-padded'
 	},
 	{
 		slug: 'add-border',
-		category: 'edit',
+		category: 'decorate',
 		name: 'Border',
 		h1: 'Add a border to an image',
 		title: 'Add a Border to an Image - Free Online, No Upload',
@@ -663,11 +737,13 @@ export const TOOLS: ImageTool[] = [
 			'The border is drawn around your image, so nothing is covered up and no detail is lost. A wide white border is the classic look for prints and social posts.',
 			'The inner line sits just inside the border, which is the trick that makes a plain frame look considered.'
 		],
+		next: ['drop-shadow', 'extend-canvas', 'round-corners'],
+		keywords: ['frame', 'outline', 'edge', 'white border'],
 		suffix: '-bordered'
 	},
 	{
 		slug: 'drop-shadow',
-		category: 'edit',
+		category: 'decorate',
 		name: 'Drop shadow',
 		h1: 'Add a drop shadow to an image',
 		title: 'Add a Drop Shadow to an Image - Free, No Upload',
@@ -685,11 +761,13 @@ export const TOOLS: ImageTool[] = [
 			'Room is added around the image so the shadow has somewhere to land, and that space stays transparent unless you fill it.',
 			'Download as PNG or WebP to keep it transparent. JPG cannot, so the space turns white there, which still looks right on a white page.'
 		],
+		next: ['add-border', 'round-corners'],
+		keywords: ['shadow', 'depth', 'mockup', 'lift'],
 		suffix: '-shadow'
 	},
 	{
 		slug: 'vignette-image',
-		category: 'edit',
+		category: 'decorate',
 		name: 'Vignette',
 		h1: 'Add a vignette to an image',
 		title: 'Add a Vignette to a Photo - Free Online, No Upload',
@@ -707,11 +785,13 @@ export const TOOLS: ImageTool[] = [
 			'A vignette is a soft shading around the edges. Old lenses did it by accident, and photographers have used it on purpose ever since, because it pushes attention towards the middle of the frame.',
 			'Keep it subtle. If you can clearly see where the shading starts, it is too strong.'
 		],
+		next: ['sepia-image', 'adjust-image'],
+		keywords: ['darken edges', 'corners', 'moody', 'lomo'],
 		suffix: '-vignette'
 	},
 	{
 		slug: 'blend-images',
-		category: 'edit',
+		category: 'decorate',
 		name: 'Blend',
 		h1: 'Blend two images together',
 		title: 'Blend Two Images Together - Free Online, No Upload',
@@ -729,11 +809,13 @@ export const TOOLS: ImageTool[] = [
 			'The second image is scaled to cover the first, so the result is always the size of the base image and nothing is left empty.',
 			'Normal is a plain fade between the two. Multiply keeps whatever is dark in either one, screen keeps whatever is light, and overlay does both at once for more contrast.'
 		],
+		next: ['combine-images', 'adjust-image'],
+		keywords: ['fade', 'double exposure', 'mix', 'overlay', 'multiply'],
 		suffix: '-blended'
 	},
 	{
 		slug: 'add-text-to-image',
-		category: 'edit',
+		category: 'annotate',
 		name: 'Add text',
 		h1: 'Add text to an image',
 		title: 'Add Text to an Image - Free Online, No Upload',
@@ -751,11 +833,13 @@ export const TOOLS: ImageTool[] = [
 			'Text is drawn into the pixels at full size, so it stays sharp and travels with the file in every format.',
 			'The outline is what makes text readable over a photo. White text with a thin dark outline works on almost anything, which is why captions have looked that way for a century.'
 		],
+		next: ['watermark-image', 'add-border'],
+		keywords: ['caption', 'meme', 'words on photo', 'label'],
 		suffix: '-text'
 	},
 	{
 		slug: 'image-histogram',
-		category: 'adjust',
+		category: 'inspect',
 		name: 'Histogram',
 		h1: 'View an image histogram',
 		title: 'Image Histogram Viewer - Free Online, No Upload',
@@ -773,11 +857,13 @@ export const TOOLS: ImageTool[] = [
 			'The width is brightness, from black on the left to white on the right, and the height is how many pixels sit at that brightness. A photo using its whole range has bars across the middle rather than a spike at one end.',
 			'Bars jammed against either edge mean detail has been lost there and no editing will bring it back. That is worth knowing before you start adjusting.'
 		],
+		next: ['adjust-image', 'image-color-picker'],
+		keywords: ['levels', 'exposure', 'clipping', 'brightness chart'],
 		suffix: ''
 	},
 	{
 		slug: 'merge-pdf',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Merge PDF',
 		h1: 'Merge PDF files',
 		title: 'Merge PDF Files - Free Online, No Upload',
@@ -795,11 +881,13 @@ export const TOOLS: ImageTool[] = [
 			'Pages are copied across exactly as they are, so text stays text and quality is untouched. Nothing is re-compressed.',
 			'The whole merge happens in your browser. Contracts, invoices and scans never reach a server, which is the part that matters for documents.'
 		],
+		next: ['organise-pdf', 'split-pdf', 'pdf-page-numbers'],
+		keywords: ['combine pdf', 'join pdf', 'append'],
 		suffix: '-merged'
 	},
 	{
 		slug: 'split-pdf',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Split PDF',
 		h1: 'Split a PDF',
 		title: 'Split PDF Online - Free, Private, No Upload',
@@ -817,11 +905,13 @@ export const TOOLS: ImageTool[] = [
 			'Pages are copied without being re-encoded, so every part keeps the quality and the text of the original.',
 			'Everything happens in your browser, so the document never reaches a server.'
 		],
+		next: ['extract-pdf-pages', 'merge-pdf'],
+		keywords: ['separate pdf', 'break up', 'cut pdf'],
 		suffix: '-split'
 	},
 	{
 		slug: 'extract-pdf-pages',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Extract pages',
 		h1: 'Extract pages from a PDF',
 		title: 'Extract PDF Pages - Free Online, No Upload',
@@ -839,11 +929,13 @@ export const TOOLS: ImageTool[] = [
 			'The pages you pick are copied into a fresh document in the order they appear. Nothing is re-encoded, so quality and text are untouched.',
 			'Your file is read and rewritten in your browser and never uploaded.'
 		],
+		next: ['delete-pdf-pages', 'split-pdf'],
+		keywords: ['pick pages', 'keep pages', 'select pages'],
 		suffix: '-pages'
 	},
 	{
 		slug: 'delete-pdf-pages',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Delete pages',
 		h1: 'Delete pages from a PDF',
 		title: 'Delete Pages from a PDF - Free Online, No Upload',
@@ -861,11 +953,13 @@ export const TOOLS: ImageTool[] = [
 			'The pages you keep are copied into a new document untouched. The removed pages are simply not carried over, so nothing of them is left in the file.',
 			'This happens in your browser, so the document never reaches a server.'
 		],
+		next: ['extract-pdf-pages', 'organise-pdf'],
+		keywords: ['remove pages', 'drop pages'],
 		suffix: '-edited'
 	},
 	{
 		slug: 'organise-pdf',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Reorder pages',
 		h1: 'Reorder PDF pages',
 		title: 'Reorder PDF Pages - Free Online, No Upload',
@@ -883,11 +977,13 @@ export const TOOLS: ImageTool[] = [
 			'Pages are copied into a new document in the order you set. Nothing is re-encoded, so the file keeps its quality and its text.',
 			'A scan that came out back to front is fixed in a few clicks, without the file ever leaving your device.'
 		],
+		next: ['merge-pdf', 'delete-pdf-pages'],
+		keywords: ['reorder', 'rearrange', 'sort pages', 'move pages'],
 		suffix: '-reordered'
 	},
 	{
 		slug: 'rotate-pdf',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Rotate PDF',
 		h1: 'Rotate PDF pages',
 		title: 'Rotate PDF Pages - Free Online, No Upload',
@@ -905,11 +1001,13 @@ export const TOOLS: ImageTool[] = [
 			'Rotation is stored as a page setting, so nothing is redrawn and no quality is lost. Text stays selectable.',
 			'Scanners often turn a page the wrong way. This fixes it without touching anything else in the file.'
 		],
+		next: ['organise-pdf', 'pdf-to-jpg'],
+		keywords: ['turn pages', 'sideways pdf', 'landscape'],
 		suffix: '-rotated'
 	},
 	{
 		slug: 'watermark-pdf',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Watermark PDF',
 		h1: 'Add a watermark to a PDF',
 		title: 'Watermark a PDF - Free Online, No Upload',
@@ -927,11 +1025,13 @@ export const TOOLS: ImageTool[] = [
 			'The text is drawn into each page as part of the document, not added as a note someone can click away.',
 			'Everything happens in your browser, so a confidential draft stays on your machine.'
 		],
+		next: ['pdf-page-numbers', 'merge-pdf'],
+		keywords: ['draft stamp', 'confidential', 'stamp pdf'],
 		suffix: '-watermarked'
 	},
 	{
 		slug: 'pdf-page-numbers',
-		category: 'documents',
+		category: 'pdf',
 		name: 'Page numbers',
 		h1: 'Add page numbers to a PDF',
 		title: 'Add Page Numbers to a PDF - Free Online, No Upload',
@@ -949,11 +1049,13 @@ export const TOOLS: ImageTool[] = [
 			'Numbers are drawn into each page in a standard font, so they print exactly as you see them.',
 			'Useful for handouts and contracts that need to be referred to page by page. The file never leaves your browser.'
 		],
+		next: ['watermark-pdf', 'merge-pdf'],
+		keywords: ['numbering', 'footer', 'paginate'],
 		suffix: '-numbered'
 	},
 	{
 		slug: 'pdf-to-text',
-		category: 'documents',
+		category: 'pdf',
 		name: 'PDF to text',
 		h1: 'Extract text from a PDF',
 		title: 'PDF to Text - Copy Text from a PDF, Free, No Upload',
@@ -971,6 +1073,8 @@ export const TOOLS: ImageTool[] = [
 			'This reads the real text stored in the PDF, which is why it is exact and instant. It works for documents made by a computer, like invoices, reports and contracts.',
 			'A scanned page is a picture of text, not text, so nothing comes out. Reading those needs character recognition, which this tool does not do.'
 		],
+		next: ['pdf-to-jpg', 'extract-pdf-pages'],
+		keywords: ['copy text', 'extract text', 'txt'],
 		suffix: ''
 	},
 	{
@@ -993,6 +1097,8 @@ export const TOOLS: ImageTool[] = [
 			'Putting the image inside your code saves a network request. That is worth it for tiny icons and single-file pages. The text version is about a third larger than the file, so it only makes sense for small images.',
 			'The file is encoded exactly as it is. Nothing is re-compressed, so you get byte for byte what you dropped.'
 		],
+		next: ['compress-image', 'favicon-generator'],
+		keywords: ['data url', 'inline', 'encode', 'css'],
 		suffix: ''
 	}
 ];
@@ -1001,10 +1107,41 @@ export function toolBySlug(slug: string): ImageTool | undefined {
 	return TOOLS.find((t) => t.slug === slug);
 }
 
+/** PDF tools sit under /pdf, image tools under /tools. */
 export function toolPath(tool: ImageTool): string {
-	return `/tools/${tool.slug}`;
+	return `${tool.category === PDF_CATEGORY ? '/pdf' : '/tools'}/${tool.slug}`;
+}
+
+export function pathForSlug(slug: string): string | null {
+	const tool = toolBySlug(slug);
+	return tool ? toolPath(tool) : null;
 }
 
 export function toolsInCategory(category: ToolCategory): ImageTool[] {
 	return TOOLS.filter((t) => t.category === category);
+}
+
+export const IMAGE_TOOLS: ImageTool[] = TOOLS.filter((t) => t.category !== PDF_CATEGORY);
+export const PDF_TOOLS: ImageTool[] = TOOLS.filter((t) => t.category === PDF_CATEGORY);
+
+/** Categories holding image tools, in hub order. */
+export const IMAGE_CATEGORIES = CATEGORIES.filter((c) => c.id !== PDF_CATEGORY);
+
+/** The next steps for a tool, resolved and with anything unknown dropped. */
+export function nextTools(tool: ImageTool): ImageTool[] {
+	return (tool.next ?? []).map((slug) => toolBySlug(slug)).filter((t): t is ImageTool => Boolean(t));
+}
+
+/**
+ * Match a tool against a search box. Name, headline, blurb and the extra
+ * keywords all count, so "mirror" finds flip and "metadata" finds EXIF.
+ */
+export function toolMatches(tool: ImageTool, query: string): boolean {
+	const q = query.trim().toLowerCase();
+	if (!q) return true;
+	const haystack = [tool.name, tool.h1, tool.blurb, tool.slug, ...(tool.keywords ?? [])]
+		.join(' ')
+		.toLowerCase();
+	// every word must appear somewhere, so "pdf page" narrows rather than widens
+	return q.split(/\s+/).every((word) => haystack.includes(word));
 }

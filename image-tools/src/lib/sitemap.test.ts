@@ -1,19 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { sitemapPaths } from './sitemap';
-import { TOOLS } from './tools/registry';
+import { TOOLS, toolPath } from './tools/registry';
 import { allPairSlugs } from './engine';
 
 describe('sitemapPaths', () => {
 	const paths = sitemapPaths();
 
 	it('lists every tool and every conversion, plus the fixed pages', () => {
-		expect(paths.length).toBe(5 + TOOLS.length + allPairSlugs().length);
-		for (const tool of TOOLS) expect(paths).toContain(`/tools/${tool.slug}`);
+		expect(paths.length).toBe(6 + TOOLS.length + allPairSlugs().length);
+		for (const tool of TOOLS) expect(paths).toContain(toolPath(tool));
 		expect(paths).toContain('/convert/heic-to-jpg');
 		expect(paths).toContain('/convert/heif-to-jpeg'); // alias spellings too
-		for (const fixed of ['/', '/convert', '/tools', '/privacy', '/terms']) {
+		for (const fixed of ['/', '/convert', '/tools', '/pdf', '/privacy', '/terms']) {
 			expect(paths).toContain(fixed);
 		}
+	});
+
+	it('puts PDF tools under /pdf and never under /tools', () => {
+		const pdfPaths = paths.filter((p) => p.startsWith('/pdf/'));
+		expect(pdfPaths.length).toBeGreaterThan(8);
+		expect(paths.filter((p) => p.startsWith('/tools/') && p.includes('pdf'))).toEqual([]);
 	});
 
 	it('has no duplicates and every path is root-relative', () => {

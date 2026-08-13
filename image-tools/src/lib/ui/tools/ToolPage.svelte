@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { SITE_URL, convertPath } from '$lib/site';
-	import { TOOLS, toolPath, type ImageTool } from '$lib/tools/registry';
+	import { nextTools, PDF_CATEGORY, TOOLS, toolPath, type ImageTool } from '$lib/tools/registry';
 	import { parsePairSlug } from '$lib/engine';
 	import TrustLine from '../TrustLine.svelte';
 	import Faq from '../Faq.svelte';
@@ -9,10 +9,15 @@
 
 	let { tool, children }: { tool: ImageTool; children: Snippet } = $props();
 
-	// same category first, the rest after, current tool out
-	const otherTools = $derived(
-		[...TOOLS.filter((t) => t.category === tool.category), ...TOOLS.filter((t) => t.category !== tool.category)].filter(
-			(t) => t.slug !== tool.slug
+	const isPdf = $derived(tool.category === PDF_CATEGORY);
+	/** Hand-picked next steps, then the rest of the same category to fill out. */
+	const nextUp = $derived(nextTools(tool));
+	const sameCategory = $derived(
+		TOOLS.filter(
+			(t) =>
+				t.category === tool.category &&
+				t.slug !== tool.slug &&
+				!nextUp.some((n) => n.slug === t.slug)
 		)
 	);
 	const conversions = [
@@ -64,14 +69,36 @@
 
 <Faq items={trustFaq(`${tool.name.toLowerCase()} tool`)} />
 
+{#if nextUp.length}
+	<section aria-labelledby="next-heading">
+		<h2 id="next-heading">What people usually do next</h2>
+		<ul class="tool-list">
+			{#each nextUp as t (t.slug)}
+				<li>
+					<a href={toolPath(t)}>{t.h1}</a>
+					<span class="tool-blurb">{t.blurb}</span>
+				</li>
+			{/each}
+		</ul>
+	</section>
+{/if}
+
 <section aria-labelledby="more-heading">
 	<h2 id="more-heading">More tools</h2>
-	<ul class="pair-links">
-		{#each otherTools as t (t.slug)}
-			<li><a href={toolPath(t)}>{t.h1}</a></li>
-		{/each}
-	</ul>
-	<p class="all-tools"><a href="/tools">All image tools</a></p>
+	{#if sameCategory.length}
+		<ul class="pair-links">
+			{#each sameCategory as t (t.slug)}
+				<li><a href={toolPath(t)}>{t.h1}</a></li>
+			{/each}
+		</ul>
+	{/if}
+	<p class="all-tools">
+		{#if isPdf}
+			<a href="/pdf">All PDF tools</a> · <a href="/tools">image tools</a>
+		{:else}
+			<a href="/tools">All image tools</a> · <a href="/pdf">PDF tools</a>
+		{/if}
+	</p>
 	<ul class="pair-links">
 		{#each conversions as p (p.slug)}
 			<li><a href={convertPath(p.slug)}>{p.sourceName} to {p.targetName}</a></li>
