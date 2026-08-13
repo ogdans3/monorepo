@@ -178,13 +178,15 @@
 	}
 
 	.footer-links a {
-		color: var(--primary);
+		color: var(--ink);
+		text-decoration: underline;
+		text-decoration-color: oklch(0.545 0.1 112 / 0.45);
+		text-underline-offset: 3px;
 	}
 
 	.footer-links a:hover,
 	.footer-links a:focus-visible {
 		color: var(--primary-deep);
-		text-decoration: underline;
-		text-underline-offset: 3px;
+		text-decoration-color: var(--primary);
 	}
 </style>

@@ -65,10 +65,11 @@ a:hover {
 	text-underline-offset: 3px;
 }
 
-/* Links inside running text get a quiet standing underline. */
+/* Links inside running text follow the same rule, but keep the accent colour
+   for the words: one link in a paragraph is a highlight, not a surface. */
 p a {
 	text-decoration: underline;
-	text-decoration-color: oklch(0.545 0.1 112 / 0.35);
+	text-decoration-color: oklch(0.545 0.1 112 / 0.45);
 	text-underline-offset: 3px;
 	transition: text-decoration-color 150ms var(--ease);
 }
@@ -240,21 +241,27 @@ section h2 {
 }
 
 /*
- * One rule across the site: olive means you can click it. These lists used to
- * be ink coloured with no underline, which made 93 conversion links look like
- * an ordinary paragraph until you happened to hover one. Colour alone is also
- * not enough on its own, so the underline arrives on hover and on focus.
+ * One rule across the site: an olive underline means you can click it. The
+ * text itself stays ink, for two reasons. A page of 93 links in accent colour
+ * makes the accent the surface rather than a highlight, against the under-ten-
+ * percent rule in DESIGN.md, and an underline is understood without relying on
+ * colour vision at all. The line darkens on hover so it still answers back.
  */
 .pair-links a {
-	color: var(--primary);
-	transition: color 120ms var(--ease);
+	color: var(--ink);
+	text-decoration: underline;
+	text-decoration-color: oklch(0.545 0.1 112 / 0.45);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+	transition:
+		color 120ms var(--ease),
+		text-decoration-color 120ms var(--ease);
 }
 
 .pair-links a:hover,
 .pair-links a:focus-visible {
 	color: var(--primary-deep);
-	text-decoration: underline;
-	text-underline-offset: 3px;
+	text-decoration-color: var(--primary);
 }
 
 .steps {
@@ -292,14 +299,20 @@ section h2 {
 
 .tool-list a {
 	font-weight: 600;
-	color: var(--primary);
+	color: var(--ink);
+	text-decoration: underline;
+	text-decoration-color: oklch(0.545 0.1 112 / 0.45);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+	transition:
+		color 120ms var(--ease),
+		text-decoration-color 120ms var(--ease);
 }
 
 .tool-list a:hover,
 .tool-list a:focus-visible {
 	color: var(--primary-deep);
-	text-decoration: underline;
-	text-underline-offset: 3px;
+	text-decoration-color: var(--primary);
 }
 
 .tool-blurb {
