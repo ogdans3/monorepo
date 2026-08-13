@@ -9,6 +9,8 @@ export function GET() {
 		'/',
 		'/convert',
 		'/tools',
+		'/privacy',
+		'/terms',
 		...TOOLS.map((tool) => toolPath(tool)),
 		...allPairSlugs().map((slug) => convertPath(slug))
 	];

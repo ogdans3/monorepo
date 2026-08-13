@@ -57,6 +57,10 @@
 			Free to use, with no account and no limits. Everything runs in your browser, and your
 			files never leave your device.
 		</p>
+		<p class="footer-links">
+			<a href="/privacy">Privacy</a>
+			<a href="/terms">Terms</a>
+		</p>
 	</footer>
 </div>
 
@@ -136,5 +140,19 @@
 		font-weight: 700;
 		color: var(--ink);
 		margin-bottom: 0.3rem;
+	}
+
+	.footer-links {
+		margin-top: 0.5rem;
+		display: flex;
+		gap: 1.25rem;
+	}
+
+	.footer-links a {
+		color: var(--muted);
+	}
+
+	.footer-links a:hover {
+		color: var(--primary);
 	}
 </style>
