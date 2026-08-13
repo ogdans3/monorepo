@@ -512,6 +512,270 @@ export const TOOLS: ImageTool[] = [
 		suffix: ''
 	},
 	{
+		slug: 'grayscale-image',
+		category: 'adjust',
+		name: 'Black and white',
+		h1: 'Convert an image to black and white',
+		title: 'Convert Image to Black and White - Free, No Upload',
+		description:
+			'Turn a photo black and white online free, right in your browser. True greyscale that keeps detail, with a slider to mix back some colour. No uploads.',
+		lede: 'Turn a photo black and white, with a slider if you want to mix a little colour back in.',
+		blurb: 'True black and white, with a strength slider.',
+		steps: [
+			'Drop an image in the box above. It turns black and white right away.',
+			'Slide the strength down if you want a partly faded look instead of full black and white.',
+			'Choose a format and download at full quality.'
+		],
+		aboutHeading: 'About black and white here',
+		about: [
+			'Colours are mixed by how bright they look to the eye, not by a plain average. Green counts most and blue least, which is why skies and leaves keep their difference instead of turning into the same grey mush.',
+			'Nothing else about the image changes, and the download is made from your original at full size.'
+		],
+		suffix: '-bw'
+	},
+	{
+		slug: 'sepia-image',
+		category: 'adjust',
+		name: 'Sepia',
+		h1: 'Add a sepia tone to an image',
+		title: 'Sepia Photo Effect Online - Free, Private, No Upload',
+		description:
+			'Give a photo the warm brown sepia look of an old photograph, free and in your browser. Adjustable strength, full quality out, and no uploads.',
+		lede: 'The warm brown of an old photograph. Slide the strength to taste.',
+		blurb: 'The warm brown look of an old photograph.',
+		steps: [
+			'Drop an image in the box above.',
+			'Slide the strength until it looks right.',
+			'Choose a format and download.'
+		],
+		aboutHeading: 'About the sepia effect here',
+		about: [
+			'Sepia is the brown tone real photographs took on with age. The effect mixes each colour towards that warmth rather than just tinting the whole picture, so light and dark areas stay separate.',
+			'Pair it with a vignette for a convincingly old look.'
+		],
+		suffix: '-sepia'
+	},
+	{
+		slug: 'pixelate-image',
+		category: 'privacy',
+		name: 'Pixelate',
+		h1: 'Pixelate an image',
+		title: 'Pixelate an Image Online - Free, Private, No Upload',
+		description:
+			'Pixelate a whole image online free, with a slider for the block size. Runs in your browser with no uploads. For faces and names, redaction is safer.',
+		lede: 'Turn the whole image into blocks, with a slider for how big they are.',
+		blurb: 'Turn the whole image into coarse blocks.',
+		steps: [
+			'Drop an image in the box above.',
+			'Slide the block size until it looks the way you want.',
+			'Choose a format and download.'
+		],
+		aboutHeading: 'Pixelating a whole image, and when not to',
+		about: [
+			'This covers the entire picture, which is what you want for a censored look, a retro game feel or a low fidelity avatar.',
+			'To hide something specific, use the blur tool to cover just that part. And for names or numbers that really must not be readable, use redact and a solid box, because heavy blocks can sometimes be worked backwards.'
+		],
+		suffix: '-pixelated'
+	},
+	{
+		slug: 'replace-color',
+		category: 'adjust',
+		name: 'Replace colour',
+		h1: 'Replace a colour in an image',
+		title: 'Replace a Color in an Image - Free Online, No Upload',
+		description:
+			'Swap one colour for another in an image online free. Click the colour to change, pick the new one, tune the tolerance. Runs in your browser, no uploads.',
+		lede: 'Click the colour you want to change, pick what to change it to, and tune how many similar shades come along.',
+		blurb: 'Swap one colour for another, with tolerance.',
+		steps: [
+			'Drop an image in the box above, then click the colour you want to change.',
+			'Pick the new colour and adjust the tolerance until the right areas are covered.',
+			'Choose a format and download.'
+		],
+		aboutHeading: 'About replacing a colour here',
+		about: [
+			'Every pixel close enough to the colour you clicked is swapped, wherever it is in the image. That makes it good for recolouring a logo, changing a flat background or fixing one wrong brand colour.',
+			'Tolerance decides how close is close enough. Photos need a higher tolerance than flat graphics, since a real surface is never one exact colour.'
+		],
+		suffix: '-recoloured'
+	},
+	{
+		slug: 'trim-image',
+		category: 'transform',
+		name: 'Trim',
+		h1: 'Trim the edges of an image',
+		title: 'Auto Crop and Trim Image Edges - Free, No Upload',
+		description:
+			'Automatically trim a flat or transparent border from an image, free and in your browser. Removes white space around scans and logos. No uploads.',
+		lede: 'Cut away the empty border automatically. Handy for scans with white margins and logos with transparent space around them.',
+		blurb: 'Cut away a flat or transparent border automatically.',
+		steps: [
+			'Drop an image in the box above. The border is found for you.',
+			'Raise the tolerance if a slightly uneven border is being left behind.',
+			'Choose a format and download the trimmed image.'
+		],
+		aboutHeading: 'About trimming edges here',
+		about: [
+			'The colour of the top left pixel is taken as the border colour, and every edge is pulled in while it stays that colour. Transparent edges count as border whatever colour they claim to be.',
+			'A scan is never perfectly even, so raise the tolerance a little if a thin line survives. If the whole image is one colour there is nothing to keep, and the tool leaves it alone.'
+		],
+		suffix: '-trimmed'
+	},
+	{
+		slug: 'extend-canvas',
+		category: 'transform',
+		name: 'Extend canvas',
+		h1: 'Add space around an image',
+		title: 'Extend Image Canvas and Add Borders - Free, No Upload',
+		description:
+			'Add space around an image online free. Grow the canvas on any side, fill it with a colour or leave it transparent, and pad an image to a square. No uploads.',
+		lede: 'Grow the space around your image instead of cutting into it. Fill it with a colour, or leave it transparent.',
+		blurb: 'Add space around an image, or pad it to a square.',
+		steps: [
+			'Drop an image in the box above.',
+			'Set how much space to add on each side, or hit the square button to pad it evenly.',
+			'Pick a fill colour or keep it transparent, then download.'
+		],
+		aboutHeading: 'About extending the canvas here',
+		about: [
+			'This is the opposite of cropping. Your image is untouched and new space appears around it, which is exactly what you need when a site demands a square image or a print needs a margin.',
+			'Keep the fill transparent and download as PNG or WebP to leave the new space see-through.'
+		],
+		suffix: '-padded'
+	},
+	{
+		slug: 'add-border',
+		category: 'edit',
+		name: 'Border',
+		h1: 'Add a border to an image',
+		title: 'Add a Border to an Image - Free Online, No Upload',
+		description:
+			'Add a border or frame to an image online free. Pick the width, the colour and an optional inner line, then download. Runs in your browser, no uploads.',
+		lede: 'A clean border in any width and colour, with an optional thin inner line.',
+		blurb: 'A clean border in any width and colour.',
+		steps: [
+			'Drop an image in the box above.',
+			'Set the width and colour. Add an inner line for a framed look.',
+			'Choose a format and download.'
+		],
+		aboutHeading: 'About borders here',
+		about: [
+			'The border is drawn around your image, so nothing is covered up and no detail is lost. A wide white border is the classic look for prints and social posts.',
+			'The inner line sits just inside the border, which is the trick that makes a plain frame look considered.'
+		],
+		suffix: '-bordered'
+	},
+	{
+		slug: 'drop-shadow',
+		category: 'edit',
+		name: 'Drop shadow',
+		h1: 'Add a drop shadow to an image',
+		title: 'Add a Drop Shadow to an Image - Free, No Upload',
+		description:
+			'Add a soft drop shadow to an image online free. Control the blur, the offset, the colour and the padding around it. Runs in your browser with no uploads.',
+		lede: 'A soft shadow that lifts the image off the page. Control how soft it is and where it falls.',
+		blurb: 'A soft shadow that lifts the image off the page.',
+		steps: [
+			'Drop an image in the box above.',
+			'Set how soft the shadow is and how far it falls.',
+			'Download as PNG or WebP to keep the space around it transparent.'
+		],
+		aboutHeading: 'About drop shadows here',
+		about: [
+			'Room is added around the image so the shadow has somewhere to land, and that space stays transparent unless you fill it.',
+			'Download as PNG or WebP to keep it transparent. JPG cannot, so the space turns white there, which still looks right on a white page.'
+		],
+		suffix: '-shadow'
+	},
+	{
+		slug: 'vignette-image',
+		category: 'edit',
+		name: 'Vignette',
+		h1: 'Add a vignette to an image',
+		title: 'Add a Vignette to a Photo - Free Online, No Upload',
+		description:
+			'Darken the corners of a photo with a vignette, free and in your browser. Adjustable strength and size, light or dark, with no uploads and no signup.',
+		lede: 'Darken the corners so the eye goes to the middle. Or lighten them, for a faded old look.',
+		blurb: 'Darken the corners to draw the eye inwards.',
+		steps: [
+			'Drop an image in the box above.',
+			'Set the strength and how far in the shading reaches.',
+			'Choose a format and download.'
+		],
+		aboutHeading: 'About vignettes here',
+		about: [
+			'A vignette is a soft shading around the edges. Old lenses did it by accident, and photographers have used it on purpose ever since, because it pushes attention towards the middle of the frame.',
+			'Keep it subtle. If you can clearly see where the shading starts, it is too strong.'
+		],
+		suffix: '-vignette'
+	},
+	{
+		slug: 'blend-images',
+		category: 'edit',
+		name: 'Blend',
+		h1: 'Blend two images together',
+		title: 'Blend Two Images Together - Free Online, No Upload',
+		description:
+			'Blend two images into one online free. Fade between them with a slider and choose a blend mode like multiply or screen. Runs in your browser, no uploads.',
+		lede: 'Fade one image into another with a slider, and pick how the two mix.',
+		blurb: 'Fade two images into one, with blend modes.',
+		steps: [
+			'Drop two images in the box above. The first one is the base.',
+			'Slide the mix and try the blend modes. Normal fades, multiply darkens and screen lightens.',
+			'Choose a format and download.'
+		],
+		aboutHeading: 'About blending images here',
+		about: [
+			'The second image is scaled to cover the first, so the result is always the size of the base image and nothing is left empty.',
+			'Normal is a plain fade between the two. Multiply keeps whatever is dark in either one, screen keeps whatever is light, and overlay does both at once for more contrast.'
+		],
+		suffix: '-blended'
+	},
+	{
+		slug: 'add-text-to-image',
+		category: 'edit',
+		name: 'Add text',
+		h1: 'Add text to an image',
+		title: 'Add Text to an Image - Free Online, No Upload',
+		description:
+			'Add text to a photo online free. Place it anywhere, pick the size, colour and an outline so it stays readable on any background. No uploads, no signup.',
+		lede: 'Put text anywhere on the image. An outline keeps it readable over a busy photo.',
+		blurb: 'Put text anywhere, with an outline that keeps it readable.',
+		steps: [
+			'Drop an image in the box above and type your text.',
+			'Drag the text where you want it, then set the size, colour and outline.',
+			'Choose a format and download.'
+		],
+		aboutHeading: 'About adding text here',
+		about: [
+			'Text is drawn into the pixels at full size, so it stays sharp and travels with the file in every format.',
+			'The outline is what makes text readable over a photo. White text with a thin dark outline works on almost anything, which is why captions have looked that way for a century.'
+		],
+		suffix: '-text'
+	},
+	{
+		slug: 'image-histogram',
+		category: 'adjust',
+		name: 'Histogram',
+		h1: 'View an image histogram',
+		title: 'Image Histogram Viewer - Free Online, No Upload',
+		description:
+			'See the brightness and colour histogram of any image, free and in your browser. Spot clipping in the shadows and highlights before you edit. No uploads.',
+		lede: 'See how the light and colour in your photo are spread out, and whether anything is clipped.',
+		blurb: 'See how light and colour are spread, and what is clipped.',
+		steps: [
+			'Drop an image in the box above.',
+			'Read the shape. Bars piled at the left mean crushed shadows, and at the right mean blown highlights.',
+			'Switch between brightness and the separate colour channels.'
+		],
+		aboutHeading: 'How to read a histogram',
+		about: [
+			'The width is brightness, from black on the left to white on the right, and the height is how many pixels sit at that brightness. A photo using its whole range has bars across the middle rather than a spike at one end.',
+			'Bars jammed against either edge mean detail has been lost there and no editing will bring it back. That is worth knowing before you start adjusting.'
+		],
+		suffix: ''
+	},
+	{
 		slug: 'merge-pdf',
 		category: 'documents',
 		name: 'Merge PDF',

@@ -12,7 +12,7 @@ Old root-level pair URLs 301 to `/convert/…` via `src/hooks.server.ts`.
 Conversion happens entirely on the user's device; the Node server only
 serves the static build.
 
-There are also twenty tools under `/tools/` (hub page at `/tools`, grouped
+There are also 43 tools under `/tools/` (hub page at `/tools`, grouped
 into Edit, Transform, Adjust, Privacy, Background, Documents and For the web),
 same client-side rules: crop, combine, resize, rotate/flip, adjust
 (brightness/contrast/saturation via canvas filters), blur (shape-drawn
@@ -25,7 +25,12 @@ ICO + PNG set + HTML snippet, zipped), round corners/circle crop, split
 into a grid (zip), sharpen (unsharp mask), colour picker (click + dominant
 palette via the GIF quantiser), bulk resize (zip), image→PDF (pdf-lib,
 match-size or A4 pages) and PDF→image (pdfjs-dist, per page or zipped),
-plus image→Base64. Most export through the engine's encoders via a shared
+plus image→Base64. There is a nine-tool PDF suite on pdf-lib and pdfjs
+(merge, split, extract/delete pages, reorder, rotate, watermark, page
+numbers, PDF→text), and a filter family sharing pure pixel maths in
+`src/lib/tools/pixels.ts` (black and white, sepia, pixelate, vignette,
+replace colour, trim, extend canvas, border, drop shadow, blend, add text,
+histogram). Most export through the engine's encoders via a shared
 ExportBar. The three original root-level tool URLs 301 to `/tools/…` via
 `src/hooks.server.ts`.
 
