@@ -1,0 +1,558 @@
+{
+  "rounds": [
+    {
+      "n": 3,
+      "label": "Runde 3",
+      "latest": true,
+      "file": "round-3.html",
+      "bytes": 155432,
+      "title": "Swapply, skjermutkast runde 3",
+      "subtitle": "Endringer: kjedelengden er skjult for brukeren, du ser bare hvem du gir til og hvem du får fra · tre komplette bytteflyter (toveis, treveis, mangeveis) · BankID promptes ved første godta · separate samtaler per person i større bytter · overlevering og frakt i godtatt-tilstanden · vurdering flyttet inn i bytteflyten · nye rader i Mine handler",
+      "states": 31,
+      "sections": [
+        {
+          "id": "g1",
+          "kicker": "FØRSTEGANG",
+          "note": "bevegelse: ordmerket toner mykt inn, ringene pulserer svakt",
+          "screens": [
+            {
+              "id": "s01",
+              "num": "01",
+              "name": "Splash"
+            },
+            {
+              "id": "s02a",
+              "num": "02a",
+              "name": "Slik funker det · 1/2"
+            },
+            {
+              "id": "s02b",
+              "num": "02b",
+              "name": "Slik funker det · 2/2"
+            }
+          ]
+        },
+        {
+          "id": "g2",
+          "kicker": "KJERNELØKKA",
+          "note": "Sveip høyre = «jeg vil bytte til meg denne»",
+          "screens": [
+            {
+              "id": "s03",
+              "num": "03",
+              "name": "Oppdag (hjem)"
+            },
+            {
+              "id": "s04",
+              "num": "04",
+              "name": "Gjenstand, detalj"
+            },
+            {
+              "id": "s05",
+              "num": "05",
+              "name": "Søk, kun fritekst"
+            }
+          ]
+        },
+        {
+          "id": "g3",
+          "kicker": "BYTTEFLYT A — TOVEIS (FØRSTE BYTTE, MED BANKID OG VURDERING)",
+          "note": "Match → godta (BankID promptes første gang) → alle har godtatt med overlevering → samtale → vurdering",
+          "screens": [
+            {
+              "id": "s06a",
+              "num": "06a",
+              "name": "Match, toveis"
+            },
+            {
+              "id": "s06b",
+              "num": "06b",
+              "name": "Byttedetalj, din tur å godta"
+            },
+            {
+              "id": "s06c",
+              "num": "06c",
+              "name": "BankID-prompt ved første godta"
+            },
+            {
+              "id": "s06d",
+              "num": "06d",
+              "name": "Alle har godtatt, velg overlevering"
+            },
+            {
+              "id": "s06e",
+              "num": "06e",
+              "name": "Samtale med Ola (1:1)"
+            },
+            {
+              "id": "s06f",
+              "num": "06f",
+              "name": "Vurdering etter fullført bytte"
+            }
+          ]
+        },
+        {
+          "id": "g4",
+          "kicker": "BYTTEFLYT B — TREVEIS",
+          "note": "Du gir til Ola og får fra Kari. Kjedelengden nevnes aldri, brukeren ser bare sine to naboer.",
+          "screens": [
+            {
+              "id": "s07a",
+              "num": "07a",
+              "name": "Match, treveis"
+            },
+            {
+              "id": "s07b",
+              "num": "07b",
+              "name": "Byttedetalj, din tur å godta"
+            },
+            {
+              "id": "s07c",
+              "num": "07c",
+              "name": "Byttedetalj, venter på andre"
+            },
+            {
+              "id": "s07d",
+              "num": "07d",
+              "name": "Alle har godtatt, sending"
+            }
+          ]
+        },
+        {
+          "id": "g5",
+          "kicker": "BYTTEFLYT C — MANGEVEIS",
+          "note": "Samme skjermer som treveis, men resten av kjeden vises som en anonym fremdriftslinje uten antall.",
+          "screens": [
+            {
+              "id": "s08a",
+              "num": "08a",
+              "name": "Match, mangeveis"
+            },
+            {
+              "id": "s08b",
+              "num": "08b",
+              "name": "Byttedetalj, venter (smart status)"
+            },
+            {
+              "id": "s08c",
+              "num": "08c",
+              "name": "Samtaler, en per person"
+            },
+            {
+              "id": "s08d",
+              "num": "08d",
+              "name": "Alle har godtatt, sending"
+            },
+            {
+              "id": "s08e",
+              "num": "08e",
+              "name": "Betal fraktetikett med Vipps"
+            },
+            {
+              "id": "s08f",
+              "num": "08f",
+              "name": "Mellomlegg, du betaler"
+            },
+            {
+              "id": "s08g",
+              "num": "08g",
+              "name": "Mellomlegg, du får penger"
+            }
+          ]
+        },
+        {
+          "id": "g6",
+          "kicker": "LEGG UT-FLYT",
+          "note": "ting du",
+          "screens": [
+            {
+              "id": "s10a",
+              "num": "10a",
+              "name": "Prompt etter 10 likes"
+            },
+            {
+              "id": "s10b",
+              "num": "10b",
+              "name": "Legg ut en gjenstand · steg 1/2"
+            },
+            {
+              "id": "s10c",
+              "num": "10c",
+              "name": "Opprett konto · steg 2/2"
+            }
+          ]
+        },
+        {
+          "id": "g7",
+          "kicker": "ADMINISTRER",
+          "note": "radene leses venstre mot høyre: det du får → deg → det du gir, med navn over gjenstandene",
+          "screens": [
+            {
+              "id": "s11",
+              "num": "11",
+              "name": "Mine handler, får/gir-rader"
+            },
+            {
+              "id": "s12",
+              "num": "12",
+              "name": "Likt"
+            },
+            {
+              "id": "s13",
+              "num": "13",
+              "name": "Profil (egen)"
+            }
+          ]
+        },
+        {
+          "id": "g8",
+          "kicker": "STØTTE",
+          "note": "Fortell mer (valgfritt)…",
+          "screens": [
+            {
+              "id": "s16a",
+              "num": "16a",
+              "name": "Rapporter / blokkér (modal)"
+            },
+            {
+              "id": "s16b",
+              "num": "16b",
+              "name": "Innstillinger"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "label": "Runde 2",
+      "latest": false,
+      "file": "round-2.html",
+      "bytes": 115932,
+      "title": "Swapply — skjermutkast, runde 2",
+      "subtitle": "Endringer: invitasjon og «første gjenstand» fjernet fra førstegang · kun fritekstsøk · bunn-nav på alle hovedskjermer · ingen ikoner med bakgrunnsfarge · BankID erstatter kontoskjermen · konto opprettes i legg-ut-flyten (promptes etter 10 likes) · chat sløyfet inn i byttedetaljen · norske navn (Ola, Kari, Per, Anne)",
+      "states": 24,
+      "sections": [
+        {
+          "id": "g1",
+          "kicker": "FØRSTEGANG — RETT INN I APPEN",
+          "note": "bevegelse: ordmerket toner mykt inn, ringene pulserer svakt",
+          "screens": [
+            {
+              "id": "s01",
+              "num": "01",
+              "name": "Splash"
+            },
+            {
+              "id": "s02a",
+              "num": "02a",
+              "name": "Slik funker det · 1/2"
+            },
+            {
+              "id": "s02b",
+              "num": "02b",
+              "name": "Slik funker det · 2/2"
+            }
+          ]
+        },
+        {
+          "id": "g2",
+          "kicker": "KJERNELØKKA — OPPDAG, DETALJ, SØK",
+          "note": "Sveip høyre = «jeg vil bytte til meg denne»",
+          "screens": [
+            {
+              "id": "s03",
+              "num": "03",
+              "name": "Oppdag (hjem) — sveip + legg ut"
+            },
+            {
+              "id": "s04",
+              "num": "04",
+              "name": "Gjenstand — detalj"
+            },
+            {
+              "id": "s05",
+              "num": "05",
+              "name": "Søk — kun fritekst"
+            }
+          ]
+        },
+        {
+          "id": "g3",
+          "kicker": "MATCH OG BYTTE",
+          "note": "bevegelse: kortene glir inn fra hver side, konfetti popper",
+          "screens": [
+            {
+              "id": "s06a",
+              "num": "06a",
+              "name": "Match — direkte (2-veis)"
+            },
+            {
+              "id": "s06b",
+              "num": "06b",
+              "name": "Match — kjede (3-veis) ★"
+            },
+            {
+              "id": "s06c",
+              "num": "06c",
+              "name": "Match — stor kjede (1 532 personer)"
+            },
+            {
+              "id": "s07a",
+              "num": "07a",
+              "name": "Byttedetalj — din tur å godta"
+            },
+            {
+              "id": "s07b",
+              "num": "07b",
+              "name": "Byttedetalj — venter på andre"
+            },
+            {
+              "id": "s07c",
+              "num": "07c",
+              "name": "Byttedetalj — alle har godtatt"
+            },
+            {
+              "id": "s08",
+              "num": "08",
+              "name": "Chat — full tråd"
+            }
+          ]
+        },
+        {
+          "id": "g4",
+          "kicker": "LEGG UT-FLYT (EGEN FLYT) + BANKID",
+          "note": "ting du",
+          "screens": [
+            {
+              "id": "s10a",
+              "num": "10a",
+              "name": "Prompt etter 10 likes"
+            },
+            {
+              "id": "s10b",
+              "num": "10b",
+              "name": "Legg ut en gjenstand · steg 1/2"
+            },
+            {
+              "id": "s10c",
+              "num": "10c",
+              "name": "Opprett konto · steg 2/2"
+            },
+            {
+              "id": "s09",
+              "num": "09",
+              "name": "Koble til BankID"
+            }
+          ]
+        },
+        {
+          "id": "g5",
+          "kicker": "ADMINISTRER",
+          "note": "NYLIG FULLFØRT",
+          "screens": [
+            {
+              "id": "s11",
+              "num": "11",
+              "name": "Mine handler"
+            },
+            {
+              "id": "s12",
+              "num": "12",
+              "name": "Likt — hvem liker tingene dine"
+            },
+            {
+              "id": "s13",
+              "num": "13",
+              "name": "Profil (egen)"
+            },
+            {
+              "id": "s14",
+              "num": "14",
+              "name": "Vurdering (etter fullført bytte)"
+            }
+          ]
+        },
+        {
+          "id": "g6",
+          "kicker": "STØTTE — VARSLER, RAPPORTER, INNSTILLINGER",
+          "note": "ingen ikonsirkler — kun grønn uleststatus · hvert varsel dyplenker til riktig skjerm",
+          "screens": [
+            {
+              "id": "s15",
+              "num": "15",
+              "name": "Varsler"
+            },
+            {
+              "id": "s16a",
+              "num": "16a",
+              "name": "Rapporter / blokkér (modal)"
+            },
+            {
+              "id": "s16b",
+              "num": "16b",
+              "name": "Innstillinger"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "n": 1,
+      "label": "Runde 1",
+      "latest": false,
+      "file": "round-1.html",
+      "bytes": 106783,
+      "title": "Swapply — skjermutkast, runde 1",
+      "subtitle": "17 skjermer (22 stater) · norsk · én retning · rammeløse 390×844-skjermer",
+      "states": 22,
+      "sections": [
+        {
+          "id": "g1",
+          "kicker": "FØRSTEGANG — INVITASJON, ANONYM START",
+          "note": "bevegelse: logoen skalerer mykt inn, ringene pulserer svakt",
+          "screens": [
+            {
+              "id": "s01",
+              "num": "01",
+              "name": "Splash"
+            },
+            {
+              "id": "s02",
+              "num": "02",
+              "name": "Invitasjon (dyplenke)"
+            },
+            {
+              "id": "s03a",
+              "num": "03a",
+              "name": "Slik funker det · 1/2"
+            },
+            {
+              "id": "s03b",
+              "num": "03b",
+              "name": "Slik funker det · 2/2"
+            },
+            {
+              "id": "s04",
+              "num": "04",
+              "name": "Legg til første gjenstand (anonym)"
+            }
+          ]
+        },
+        {
+          "id": "g2",
+          "kicker": "KJERNELØKKA — OPPDAG, DETALJ, SØK",
+          "note": "Sveip høyre = «jeg vil bytte til meg denne»",
+          "screens": [
+            {
+              "id": "s05",
+              "num": "05",
+              "name": "Oppdag (hjem) — søk + sveip"
+            },
+            {
+              "id": "s06",
+              "num": "06",
+              "name": "Gjenstand — detalj"
+            },
+            {
+              "id": "s07",
+              "num": "07",
+              "name": "Søk og filter"
+            }
+          ]
+        },
+        {
+          "id": "g3",
+          "kicker": "MATCH OG BYTTE — SIGNATURØYEBLIKKET",
+          "note": "bevegelse: kortene glir inn fra hver side, konfetti popper, ⇄ roterer",
+          "screens": [
+            {
+              "id": "s08a",
+              "num": "08a",
+              "name": "Match — direkte (2-veis)"
+            },
+            {
+              "id": "s08b",
+              "num": "08b",
+              "name": "Match — kjede (3-veis) ★ signaturskjerm"
+            },
+            {
+              "id": "s09a",
+              "num": "09a",
+              "name": "Byttedetalj — din tur å godta"
+            },
+            {
+              "id": "s09b",
+              "num": "09b",
+              "name": "Byttedetalj — venter på andre"
+            },
+            {
+              "id": "s09c",
+              "num": "09c",
+              "name": "Byttedetalj — alle har godtatt"
+            },
+            {
+              "id": "s10",
+              "num": "10",
+              "name": "Chat — gruppetråd for matchen"
+            }
+          ]
+        },
+        {
+          "id": "g4",
+          "kicker": "BLI BRUKER + ADMINISTRER",
+          "note": "jonas@epost.no",
+          "screens": [
+            {
+              "id": "s11",
+              "num": "11",
+              "name": "Opprett konto (utsatt registrering)"
+            },
+            {
+              "id": "s12",
+              "num": "12",
+              "name": "Mine handler"
+            },
+            {
+              "id": "s13",
+              "num": "13",
+              "name": "Likt — hvem liker tingene dine"
+            },
+            {
+              "id": "s14",
+              "num": "14",
+              "name": "Profil (egen)"
+            },
+            {
+              "id": "s15",
+              "num": "15",
+              "name": "Vurdering (etter fullført bytte)"
+            }
+          ]
+        },
+        {
+          "id": "g5",
+          "kicker": "STØTTE — VARSLER, RAPPORTER, INNSTILLINGER",
+          "note": "hvert varsel dyplenker til riktig skjerm (match → 08, tur → 09a, melding → 10)",
+          "screens": [
+            {
+              "id": "s16",
+              "num": "16",
+              "name": "Varsler"
+            },
+            {
+              "id": "s17a",
+              "num": "17a",
+              "name": "Rapporter / blokkér (modal)"
+            },
+            {
+              "id": "s17b",
+              "num": "17b",
+              "name": "Innstillinger"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

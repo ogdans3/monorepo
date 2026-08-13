@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./resources.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#EFEDE7;font-family:-apple-system,"SF Pro Text","Helvetica Neue","Segoe UI",system-ui,sans-serif;color:#141C18;-webkit-font-smoothing:antialiased}a{color:#0E8F54}a:hover{color:#064E3B}</style></helmet>
+
+<section id="g0" style="padding:40px 48px 28px;border-bottom:1px solid rgba(6,78,59,.08)">
+<div style="max-width:900px;display:flex;flex-direction:column;gap:14px">
+<div style="font-size:26px;font-weight:800;letter-spacing:-.5px;color:#064E3B">Swapply — skjermutkast, runde 2</div>
+<div style="font-size:13px;color:#6E7B73">Endringer: invitasjon og «første gjenstand» fjernet fra førstegang · kun fritekstsøk · bunn-nav på alle hovedskjermer · ingen ikoner med bakgrunnsfarge · BankID erstatter kontoskjermen · konto opprettes i legg-ut-flyten (promptes etter 10 likes) · chat sløyfet inn i byttedetaljen · norske navn (Ola, Kari, Per, Anne)</div>
+<div style="font-size:12.5px;color:#41514A;line-height:1.6;max-width:720px"><b>Ny førstegang:</b> Splash → intro 1 → intro 2 → rett inn i sveipeskjermen. <b>Legg ut-flyt</b> er egen flyt med eget kontosteg. Skjerm <a href="#s06c">06c</a> viser hvordan en kjede på 1 532 personer kan se ut — si fra om 1532 var ment bokstavelig.</div>
+</div>
+</section>
+
+<section id="g1" style="padding:36px 48px;border-bottom:1px solid rgba(6,78,59,.08)">
+<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:#6E7B73;margin-bottom:18px">FØRSTEGANG — RETT INN I APPEN</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+
+<div id="s01" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s01" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">01</a><span style="font-size:13px;font-weight:600">Splash</span></div>
+<div data-screen-label="01 Splash" style="width:390px;height:844px;background:#064E3B;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;position:relative;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:#fff"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(255,255,255,.5);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#fff;border-radius:2px"></span></span></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative">
+<div style="position:absolute;width:340px;height:340px;border:1px solid rgba(255,255,255,.07);border-radius:50%"></div>
+<div style="position:absolute;width:480px;height:480px;border:1px solid rgba(255,255,255,.05);border-radius:50%"></div>
+<span style="font-size:42px;font-weight:800;letter-spacing:-1.2px;color:#fff">swapply</span>
+</div>
+<div style="flex:none;height:60px"></div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">bevegelse: ordmerket toner mykt inn, ringene pulserer svakt</div>
+</div>
+
+<div id="s02a" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s02a" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">02a</a><span style="font-size:13px;font-weight:600">Slik funker det · 1/2</span></div>
+<div data-screen-label="02a Slik funker det 1" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;display:flex;justify-content:flex-end;padding:6px 24px"><span style="font-size:14px;font-weight:600;color:#8A938E">Hopp over</span></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 28px;gap:26px">
+<div style="height:300px;border-radius:24px;background:repeating-linear-gradient(45deg,#EBEFEA 0 12px,#E3E8E2 12px 24px);display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#6E7B73;background:rgba(250,250,249,.92);padding:5px 10px;border-radius:6px">illustrasjon: sveipe på gjenstander</span></div>
+<div style="text-align:center;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:27px;font-weight:800;letter-spacing:-.5px;color:#064E3B">Sveip på det du vil ha</div>
+<div style="font-size:15px;color:#5B6862;line-height:1.5;max-width:290px;margin:0 auto">Ting i nærheten, byttes — ikke kjøpes.</div>
+</div>
+</div>
+<div style="flex:none;padding:0 24px 34px;display:flex;flex-direction:column;gap:20px;align-items:center">
+<div style="display:flex;gap:6px"><span style="width:20px;height:8px;border-radius:100px;background:#12B76A"></span><span style="width:8px;height:8px;border-radius:50%;background:#D7DDD6"></span></div>
+<div style="height:54px;width:100%;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,183,106,.35)">Neste</div>
+</div>
+</div>
+</div>
+
+<div id="s02b" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s02b" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">02b</a><span style="font-size:13px;font-weight:600">Slik funker det · 2/2</span></div>
+<div data-screen-label="02b Slik funker det 2" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;display:flex;justify-content:flex-end;padding:6px 24px"><span style="font-size:14px;font-weight:600;color:#8A938E">Hopp over</span></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 28px;gap:26px">
+<div style="height:300px;border-radius:24px;background:repeating-linear-gradient(45deg,#EBEFEA 0 12px,#E3E8E2 12px 24px);display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#6E7B73;background:rgba(250,250,249,.92);padding:5px 10px;border-radius:6px">illustrasjon: byttekjede — 3 personer i ring</span></div>
+<div style="text-align:center;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:27px;font-weight:800;letter-spacing:-.5px;color:#064E3B">Vi finner byttet for deg</div>
+<div style="font-size:15px;color:#5B6862;line-height:1.5;max-width:300px;margin:0 auto">Direkte — eller gjennom en kjede av folk som alle får noe de vil ha.</div>
+</div>
+</div>
+<div style="flex:none;padding:0 24px 34px;display:flex;flex-direction:column;gap:20px;align-items:center">
+<div style="display:flex;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#D7DDD6"></span><span style="width:20px;height:8px;border-radius:100px;background:#12B76A"></span></div>
+<div style="height:54px;width:100%;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,183,106,.35)">Start å sveipe</div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">går rett til 03 — ingen konto, ingen gjenstand kreves</div>
+</div>
+
+</div>
+</section>
+
+<section id="g2" style="padding:36px 48px;border-bottom:1px solid rgba(6,78,59,.08)">
+<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:#6E7B73;margin-bottom:18px">KJERNELØKKA — OPPDAG, DETALJ, SØK</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+
+<div id="s03" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s03" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">03</a><span style="font-size:13px;font-weight:600">Oppdag (hjem) — sveip + legg ut</span></div>
+<div data-screen-label="03 Oppdag" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;display:flex;gap:10px;padding:6px 18px 12px;align-items:center">
+<div style="flex:1;height:46px;border-radius:100px;background:#fff;border:1px solid #E4E8E3;display:flex;align-items:center;gap:9px;padding:0 16px;color:#98A29B"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:14.5px">Søk etter noe du vil ha…</span></div>
+<div style="height:46px;padding:0 18px;border-radius:100px;background:#12B76A;color:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;box-shadow:0 4px 12px rgba(18,183,106,.3)">+ Legg ut</div>
+</div>
+<div style="flex:1;position:relative;padding:0 18px">
+<div style="position:absolute;left:34px;right:34px;top:14px;bottom:26px;background:#E7EBE6;border-radius:26px"></div>
+<div style="position:absolute;left:26px;right:26px;top:8px;bottom:20px;background:#EFF2EE;border-radius:26px;box-shadow:0 4px 12px rgba(6,78,59,.05)"></div>
+<div style="position:absolute;left:18px;right:18px;top:0;bottom:12px;border-radius:26px;overflow:hidden;box-shadow:0 14px 34px rgba(6,78,59,.16);background:repeating-linear-gradient(45deg,#E4E9E3 0 14px,#DBE1DA 14px 28px);display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;justify-content:center;padding-top:140px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#5B6862;background:rgba(250,250,249,.92);padding:5px 10px;border-radius:6px">foto: retro spillkonsoll</span></div>
+<div style="background:linear-gradient(180deg,rgba(6,30,20,0) 0%,rgba(6,30,20,.72) 55%,rgba(6,30,20,.85) 100%);padding:70px 20px 20px;color:#fff">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><span style="font-size:24px;font-weight:800;letter-spacing:-.4px">Retro spillkonsoll</span><span style="font-size:18px;font-weight:700;color:#7DF0B8">1 200 kr</span></div>
+<div style="display:flex;gap:7px;margin-top:10px;align-items:center">
+<span style="padding:5px 11px;border-radius:100px;background:rgba(255,255,255,.16);font-size:11.5px;font-weight:600">Gaming</span>
+<span style="padding:5px 11px;border-radius:100px;background:rgba(255,255,255,.16);font-size:11.5px;font-weight:600">God</span>
+<span style="font-size:12px;color:rgba(255,255,255,.75)">Trondheim · 4 km</span>
+</div>
+</div>
+</div>
+</div>
+<div style="flex:none;display:flex;justify-content:center;gap:26px;padding:14px 0 6px;align-items:center">
+<div style="width:62px;height:62px;border-radius:50%;background:#fff;border:1.5px solid #FFD9D5;color:#FF6B5E;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;box-shadow:0 6px 16px rgba(255,107,94,.16)">✕</div>
+<div style="width:70px;height:70px;border-radius:50%;background:#12B76A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 8px 20px rgba(18,183,106,.4)">♥</div>
+</div>
+<div style="flex:none;text-align:center;font-size:11.5px;color:#98A29B;padding-bottom:8px">Sveip høyre = «jeg vil bytte til meg denne»</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:700">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:600">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">«+ Legg ut» starter legg ut-flyten (10b) · søkefeltet åpner 05</div>
+</div>
+
+<div id="s04" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s04" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">04</a><span style="font-size:13px;font-weight:600">Gjenstand — detalj</span></div>
+<div data-screen-label="04 Gjenstand detalj" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:340px;background:repeating-linear-gradient(45deg,#E4E9E3 0 14px,#DBE1DA 14px 28px);position:relative;display:flex;align-items:center;justify-content:center">
+<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#5B6862;background:rgba(250,250,249,.92);padding:5px 10px;border-radius:6px">foto 1/6: fiskestang med snelle</span>
+<div style="position:absolute;top:14px;left:14px;width:38px;height:38px;border-radius:50%;background:rgba(250,250,249,.92);display:flex;align-items:center;justify-content:center;font-size:18px;color:#141C18">‹</div>
+<div style="position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(250,250,249,.92);display:flex;align-items:center;justify-content:center;font-size:16px;letter-spacing:1px;color:#141C18">⋯</div>
+<div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:5px"><span style="width:14px;height:5px;border-radius:100px;background:#fff"></span><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6)"></span><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6)"></span><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6)"></span><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6)"></span><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6)"></span></div>
+</div>
+<div style="flex:1;padding:18px 22px;display:flex;flex-direction:column;gap:13px;overflow:hidden">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><span style="font-size:25px;font-weight:800;letter-spacing:-.4px;color:#064E3B">Fiskestang med snelle</span><span style="font-size:19px;font-weight:700;color:#0B7A47">850 kr</span></div>
+<div style="display:flex;gap:7px;align-items:center">
+<span style="padding:6px 12px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12px;font-weight:600">Diverse</span>
+<span style="padding:6px 12px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12px;font-weight:600">God</span>
+<span style="font-size:12.5px;color:#8A938E">Bergen</span>
+</div>
+<div style="font-size:14.5px;color:#41514A;line-height:1.55">Shimano-stang, 2,7 m, brukt to somre. Snelle følger med. Fungerer perfekt — litt kosmetisk slitasje på håndtaket.</div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:18px">
+<div style="width:46px;height:46px;border-radius:50%;background:#C08B2D;color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700">K</div>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">Kari N.</div><div style="font-size:12.5px;color:#8A938E">★ 4,8 · 23 bytter</div></div>
+<span style="font-size:11.5px;font-weight:700;color:#0B7A47">BankID-verifisert</span>
+</div>
+</div>
+<div style="flex:none;display:flex;justify-content:center;gap:26px;padding:8px 0 10px;align-items:center;border-top:1px solid #F0F2EE;background:#FCFCFB">
+<div style="width:56px;height:56px;border-radius:50%;background:#fff;border:1.5px solid #FFD9D5;color:#FF6B5E;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600">✕</div>
+<div style="width:62px;height:62px;border-radius:50%;background:#12B76A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px rgba(18,183,106,.4)">♥</div>
+</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:700">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:600">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">⋯-menyen åpner Rapporter (16a) · galleri sveipes horisontalt</div>
+</div>
+
+<div id="s05" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s05" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">05</a><span style="font-size:13px;font-weight:600">Søk — kun fritekst</span></div>
+<div data-screen-label="05 Søk" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;display:flex;gap:12px;padding:6px 18px 12px;align-items:center">
+<span style="font-size:18px">‹</span>
+<div style="flex:1;height:46px;border-radius:100px;background:#fff;border:1.5px solid #12B76A;display:flex;align-items:center;gap:9px;padding:0 16px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0B7A47" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:15px;font-weight:600">sykkel</span><span style="width:2px;height:18px;background:#12B76A"></span></div>
+</div>
+<div style="flex:1;padding:8px 22px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+<div style="font-size:12.5px;color:#8A938E">24 treff nær Trondheim</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div style="border-radius:16px;overflow:hidden;background:#fff;border:1px solid #ECEFEA"><div style="height:120px;background:repeating-linear-gradient(45deg,#E4E9E3 0 12px,#DBE1DA 12px 24px)"></div><div style="padding:9px 11px"><div style="font-size:13px;font-weight:700">Terrengsykkel 26"</div><div style="font-size:11.5px;color:#8A938E;margin-top:2px">2 500 kr · Trondheim</div></div></div>
+<div style="border-radius:16px;overflow:hidden;background:#fff;border:1px solid #ECEFEA"><div style="height:120px;background:repeating-linear-gradient(45deg,#EBEFEA 0 12px,#E3E8E2 12px 24px)"></div><div style="padding:9px 11px"><div style="font-size:13px;font-weight:700">Bysykkel, dame</div><div style="font-size:11.5px;color:#8A938E;margin-top:2px">1 100 kr · Melhus</div></div></div>
+<div style="border-radius:16px;overflow:hidden;background:#fff;border:1px solid #ECEFEA"><div style="height:120px;background:repeating-linear-gradient(45deg,#E7E4DC 0 12px,#DFDBD1 12px 24px)"></div><div style="padding:9px 11px"><div style="font-size:13px;font-weight:700">Barnesykkel 20"</div><div style="font-size:11.5px;color:#8A938E;margin-top:2px">600 kr · Stjørdal</div></div></div>
+<div style="border-radius:16px;overflow:hidden;background:#fff;border:1px solid #ECEFEA"><div style="height:120px;background:repeating-linear-gradient(45deg,#E2E6EA 0 12px,#D9DEE3 12px 24px)"></div><div style="padding:9px 11px"><div style="font-size:13px;font-weight:700">Sykkelvogn</div><div style="font-size:11.5px;color:#8A938E;margin-top:2px">900 kr · Trondheim</div></div></div>
+</div>
+<div style="height:50px;border-radius:100px;background:#12B76A;color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,183,106,.35);margin-top:4px">Sveip på treffene</div>
+</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:700">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:600">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">filtre (kategori, radius, verdi) er utsatt til senere — kun fritekst i MVP · treffene mates inn i sveipebunken</div>
+</div>
+
+</div>
+</section>
+
+<section id="g3" style="padding:36px 48px;border-bottom:1px solid rgba(6,78,59,.08)">
+<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:#6E7B73;margin-bottom:18px">MATCH OG BYTTE</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+
+<div id="s06a" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s06a" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">06a</a><span style="font-size:13px;font-weight:600">Match — direkte (2-veis)</span></div>
+<div data-screen-label="06a Match direkte" style="width:390px;height:844px;background:#064E3B;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;position:relative;display:flex;flex-direction:column">
+<span style="position:absolute;top:120px;left:44px;width:8px;height:8px;border-radius:50%;background:#12B76A"></span><span style="position:absolute;top:88px;right:70px;width:6px;height:6px;border-radius:50%;background:#FF6B5E"></span><span style="position:absolute;top:190px;right:36px;width:9px;height:9px;border-radius:2px;background:#7DF0B8;transform:rotate(24deg)"></span><span style="position:absolute;bottom:250px;left:40px;width:7px;height:7px;border-radius:50%;background:#7DF0B8"></span>
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:#fff"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(255,255,255,.5);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#fff;border-radius:2px"></span></span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 30px;text-align:center;color:#fff">
+<div style="font-size:36px;font-weight:800;letter-spacing:-.8px">Det er en match!</div>
+<div style="font-size:15px;color:rgba(255,255,255,.75);margin-top:10px;max-width:270px;line-height:1.45">Du og Ola vil ha hverandres ting.</div>
+<div style="position:relative;margin-top:44px;height:230px;width:100%">
+<div style="position:absolute;left:26px;top:14px;width:150px;height:190px;border-radius:20px;background:repeating-linear-gradient(45deg,#E4E9E3 0 12px,#DBE1DA 12px 24px);transform:rotate(-7deg);box-shadow:0 16px 34px rgba(0,0,0,.3);display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:#5B6862;background:rgba(250,250,249,.92);padding:3px 7px;border-radius:5px">din drill</span></div>
+<div style="position:absolute;right:26px;top:14px;width:150px;height:190px;border-radius:20px;background:repeating-linear-gradient(45deg,#E7E4DC 0 12px,#DFDBD1 12px 24px);transform:rotate(7deg);box-shadow:0 16px 34px rgba(0,0,0,.3);display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:#5B6862;background:rgba(250,250,249,.92);padding:3px 7px;border-radius:5px">olas konsoll</span></div>
+<div style="position:absolute;left:50%;top:96px;transform:translateX(-50%);font-size:38px;font-weight:800;color:#7DF0B8">⇄</div>
+<div style="position:absolute;left:52px;bottom:-14px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);padding:5px 11px 5px 5px;border-radius:100px"><span style="width:24px;height:24px;border-radius:50%;background:#12B76A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">D</span><span style="font-size:12px;font-weight:600">Du</span></div>
+<div style="position:absolute;right:44px;bottom:-14px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);padding:5px 11px 5px 5px;border-radius:100px"><span style="width:24px;height:24px;border-radius:50%;background:#2F9E8F;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">O</span><span style="font-size:12px;font-weight:600">Ola</span></div>
+</div>
+</div>
+<div style="flex:none;padding:0 24px 34px;display:flex;flex-direction:column;gap:12px">
+<div style="height:54px;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25)">Se byttet</div>
+<div style="text-align:center;font-size:14px;font-weight:600;color:rgba(255,255,255,.65)">Fortsett å sveipe</div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">bevegelse: kortene glir inn fra hver side, konfetti popper</div>
+</div>
+
+<div id="s06b" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s06b" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">06b</a><span style="font-size:13px;font-weight:600">Match — kjede (3-veis) ★</span></div>
+<div data-screen-label="06b Match kjede" style="width:390px;height:844px;background:#064E3B;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;position:relative;display:flex;flex-direction:column">
+<span style="position:absolute;top:110px;left:40px;width:8px;height:8px;border-radius:50%;background:#7DF0B8"></span><span style="position:absolute;top:150px;right:48px;width:6px;height:6px;border-radius:2px;background:#FF6B5E;transform:rotate(20deg)"></span><span style="position:absolute;bottom:230px;right:40px;width:8px;height:8px;border-radius:50%;background:#12B76A"></span>
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:#fff"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(255,255,255,.5);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#fff;border-radius:2px"></span></span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 26px;text-align:center;color:#fff">
+<div style="font-size:34px;font-weight:800;letter-spacing:-.8px">Et 3-veis bytte!</div>
+<div style="font-size:15px;color:rgba(255,255,255,.75);margin-top:8px">Alle får noe de ønsker seg.</div>
+<div style="position:relative;width:300px;height:300px;margin-top:34px">
+<div style="position:absolute;inset:44px;border:2px dashed rgba(255,255,255,.32);border-radius:50%"></div>
+<span style="position:absolute;right:34px;top:86px;font-size:17px;color:#7DF0B8;transform:rotate(64deg)">❯</span>
+<span style="position:absolute;left:50%;bottom:30px;font-size:17px;color:#7DF0B8;transform:translateX(-50%) rotate(180deg)">❯</span>
+<span style="position:absolute;left:34px;top:86px;font-size:17px;color:#7DF0B8;transform:rotate(-116deg)">❯</span>
+<div style="position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:104px;display:flex;flex-direction:column;align-items:center;gap:5px">
+<div style="position:relative"><div style="width:64px;height:64px;border-radius:18px;background:repeating-linear-gradient(45deg,#E4E9E3 0 10px,#DBE1DA 10px 20px);box-shadow:0 8px 20px rgba(0,0,0,.3)"></div><span style="position:absolute;bottom:-7px;right:-7px;width:26px;height:26px;border-radius:50%;background:#12B76A;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;box-shadow:0 0 0 3px #064E3B">D</span></div>
+<span style="font-size:12.5px;font-weight:700">Du</span><span style="font-size:10px;color:rgba(255,255,255,.6);margin-top:-4px">drill</span>
+</div>
+<div style="position:absolute;right:-8px;bottom:34px;width:104px;display:flex;flex-direction:column;align-items:center;gap:5px">
+<div style="position:relative"><div style="width:64px;height:64px;border-radius:18px;background:repeating-linear-gradient(45deg,#E7E4DC 0 10px,#DFDBD1 10px 20px);box-shadow:0 8px 20px rgba(0,0,0,.3)"></div><span style="position:absolute;bottom:-7px;right:-7px;width:26px;height:26px;border-radius:50%;background:#2F9E8F;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;box-shadow:0 0 0 3px #064E3B">O</span></div>
+<span style="font-size:12.5px;font-weight:700">Ola</span><span style="font-size:10px;color:rgba(255,255,255,.6);margin-top:-4px">konsoll</span>
+</div>
+<div style="position:absolute;left:-8px;bottom:34px;width:104px;display:flex;flex-direction:column;align-items:center;gap:5px">
+<div style="position:relative"><div style="width:64px;height:64px;border-radius:18px;background:repeating-linear-gradient(45deg,#E2E6EA 0 10px,#D9DEE3 10px 20px);box-shadow:0 8px 20px rgba(0,0,0,.3)"></div><span style="position:absolute;bottom:-7px;right:-7px;width:26px;height:26px;border-radius:50%;background:#C08B2D;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;box-shadow:0 0 0 3px #064E3B">K</span></div>
+<span style="font-size:12.5px;font-weight:700">Kari</span><span style="font-size:10px;color:rgba(255,255,255,.6);margin-top:-4px">fiskestang</span>
+</div>
+</div>
+<div style="font-size:12.5px;color:rgba(255,255,255,.65);margin-top:22px">Du gir til Ola · Ola gir til Kari · Kari gir til deg</div>
+</div>
+<div style="flex:none;padding:0 24px 34px;display:flex;flex-direction:column;gap:12px">
+<div style="height:54px;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25)">Se byttet</div>
+<div style="text-align:center;font-size:14px;font-weight:600;color:rgba(255,255,255,.65)">Fortsett å sveipe</div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">bevegelse: nodene popper inn én og én langs ringen</div>
+</div>
+
+<div id="s06c" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s06c" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">06c</a><span style="font-size:13px;font-weight:600">Match — stor kjede (1 532 personer)</span></div>
+<div data-screen-label="06c Match stor kjede" style="width:390px;height:844px;background:#064E3B;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;position:relative;display:flex;flex-direction:column">
+<span style="position:absolute;top:100px;left:44px;width:7px;height:7px;border-radius:50%;background:#7DF0B8"></span><span style="position:absolute;top:140px;right:52px;width:6px;height:6px;border-radius:2px;background:#FF6B5E;transform:rotate(20deg)"></span>
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:#fff"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(255,255,255,.5);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#fff;border-radius:2px"></span></span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 28px;text-align:center;color:#fff">
+<div style="font-size:32px;font-weight:800;letter-spacing:-.8px;line-height:1.15">En kjede på<br>1 532 personer!</div>
+<div style="font-size:14.5px;color:rgba(255,255,255,.75);margin-top:10px;max-width:290px;line-height:1.5">Du trenger bare å bry deg om dine to hopp — resten ordner seg selv.</div>
+<div style="width:100%;margin-top:32px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:12px;padding:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:18px;text-align:left">
+<div style="width:52px;height:52px;border-radius:14px;background:repeating-linear-gradient(45deg,#E4E9E3 0 10px,#DBE1DA 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:14.5px;font-weight:700">Du gir: Bosch drill</div><div style="font-size:12px;color:rgba(255,255,255,.65)">→ til Ola i Trondheim</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:18px;text-align:left">
+<div style="width:52px;height:52px;border-radius:14px;background:repeating-linear-gradient(45deg,#E2E6EA 0 10px,#D9DEE3 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:14.5px;font-weight:700">Du får: Kajakk</div><div style="font-size:12px;color:rgba(255,255,255,.65)">← fra Anne i Malvik</div></div>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 14px">
+<div style="display:flex"><span style="width:30px;height:30px;border-radius:50%;background:#2F9E8F;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;box-shadow:0 0 0 2.5px #064E3B">O</span><span style="width:30px;height:30px;border-radius:50%;background:#C08B2D;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-left:-9px;box-shadow:0 0 0 2.5px #064E3B">P</span><span style="width:30px;height:30px;border-radius:50%;background:#7C6FD1;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-left:-9px;box-shadow:0 0 0 2.5px #064E3B">A</span><span style="width:30px;height:30px;border-radius:50%;background:#C05B4E;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-left:-9px;box-shadow:0 0 0 2.5px #064E3B">N</span></div>
+<span style="font-size:13px;font-weight:700;color:rgba(255,255,255,.8)">+ 1 528 andre i kjeden</span>
+</div>
+</div>
+</div>
+<div style="flex:none;padding:0 24px 34px;display:flex;flex-direction:column;gap:12px">
+<div style="height:54px;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25)">Se byttet</div>
+<div style="text-align:center;font-size:14px;font-weight:600;color:rgba(255,255,255,.65)">Fortsett å sveipe</div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">store kjeder: ringen byttes med «dine to hopp» + avatarstabel — hele ringen er uleselig over ~5 personer</div>
+</div>
+
+<div id="s07a" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s07a" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">07a</a><span style="font-size:13px;font-weight:600">Byttedetalj — din tur å godta</span></div>
+<div data-screen-label="07a Bytte godta" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;padding:6px 22px 0;display:flex;align-items:center;gap:12px"><span style="font-size:18px">‹</span><span style="font-size:22px;font-weight:800;letter-spacing:-.4px;color:#064E3B">3-veis bytte</span></div>
+<div style="flex:1;padding:16px 22px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#fff;border:1px solid #ECEFEA;border-radius:18px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:34px;height:34px;border-radius:50%;background:#12B76A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">D</span><span style="color:#8A938E">→</span>
+<span style="width:34px;height:34px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">O</span><span style="color:#8A938E">→</span>
+<span style="width:34px;height:34px;border-radius:50%;background:#C08B2D;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">K</span><span style="color:#8A938E">→</span>
+<span style="width:34px;height:34px;border-radius:50%;border:1.5px dashed #12B76A;color:#0B7A47;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">D</span>
+</div>
+<span style="padding:5px 11px;border-radius:100px;background:#FFF3E2;color:#B25E09;font-size:11px;font-weight:700">Din tur</span>
+</div>
+<div style="font-size:12.5px;font-weight:700;color:#41514A">Hvem gir hva</div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid #ECEFEA;border-radius:16px">
+<div style="width:48px;height:48px;border-radius:12px;background:repeating-linear-gradient(45deg,#E4E9E3 0 10px,#DBE1DA 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:14.5px;font-weight:700">Du gir: Bosch drill</div><div style="font-size:12.5px;color:#8A938E">→ til Ola</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid #ECEFEA;border-radius:16px">
+<div style="width:48px;height:48px;border-radius:12px;background:repeating-linear-gradient(45deg,#E2E6EA 0 10px,#D9DEE3 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:14.5px;font-weight:700">Du får: Fiskestang</div><div style="font-size:12.5px;color:#8A938E">← fra Kari</div></div>
+<span style="font-size:11.5px;font-weight:700;color:#0B7A47">850 kr</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px dashed #E0E4DF;border-radius:16px;opacity:.75">
+<div style="width:48px;height:48px;border-radius:12px;background:repeating-linear-gradient(45deg,#E7E4DC 0 10px,#DFDBD1 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:600;color:#5B6862">Ola gir konsollen sin</div><div style="font-size:12.5px;color:#8A938E">→ til Kari</div></div>
+</div>
+<div style="text-align:center;font-size:12.5px;color:#8A938E;margin-top:2px">Alle må godta for at byttet skal skje.</div>
+</div>
+<div style="flex:none;padding:0 22px 14px;display:flex;flex-direction:column;gap:10px">
+<div style="height:54px;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,183,106,.35)">Godta byttet</div>
+</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:600">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:700">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+</div>
+
+<div id="s07b" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s07b" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">07b</a><span style="font-size:13px;font-weight:600">Byttedetalj — venter på andre</span></div>
+<div data-screen-label="07b Bytte venter" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;padding:6px 22px 0;display:flex;align-items:center;gap:12px"><span style="font-size:18px">‹</span><span style="font-size:22px;font-weight:800;letter-spacing:-.4px;color:#064E3B">3-veis bytte</span></div>
+<div style="flex:1;padding:16px 22px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+<div style="font-size:20px;font-weight:800;color:#064E3B;letter-spacing:-.3px">Venter på Ola og Kari</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:16px">
+<span style="width:38px;height:38px;border-radius:50%;background:#12B76A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">D</span>
+<span style="flex:1;font-size:14.5px;font-weight:700">Du</span>
+<span style="color:#0B7A47;font-size:12.5px;font-weight:700">✓ Godtatt</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:16px">
+<span style="width:38px;height:38px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">O</span>
+<span style="flex:1;font-size:14.5px;font-weight:700">Ola</span>
+<span style="color:#8A938E;font-size:12.5px;font-weight:600">Venter</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:16px">
+<span style="width:38px;height:38px;border-radius:50%;background:#C08B2D;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">K</span>
+<span style="flex:1;font-size:14.5px;font-weight:700">Kari</span>
+<span style="color:#8A938E;font-size:12.5px;font-weight:600">Venter</span>
+</div>
+</div>
+<div style="padding:13px 14px;background:#E9F7F0;border:1px solid #C9EBDA;border-radius:16px;font-size:13px;color:#0B6B41;line-height:1.5">Du får beskjed med en gang alle har godtatt. I mellomtiden kan dere snakkes i samtalen under.</div>
+<div style="padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:18px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:12px;font-weight:700;letter-spacing:.06em;color:#98A29B">SAMTALE</div>
+<div style="display:flex;gap:8px;align-items:flex-end"><span style="width:26px;height:26px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none">O</span><div style="background:#F3F6F2;border-radius:14px 14px 14px 5px;padding:8px 12px;font-size:13.5px;line-height:1.4">Godtar i kveld, må bare sjekke en ting!</div></div>
+<div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:38px;border-radius:100px;border:1px solid #E4E8E3;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:13px;color:#98A29B">Skriv en melding…</div><span style="font-size:13px;font-weight:700;color:#0B7A47">Send</span></div>
+</div>
+</div>
+<div style="flex:none;padding:0 22px 14px"><div style="text-align:center;font-size:13px;font-weight:600;color:#8A938E;text-decoration:underline;text-underline-offset:3px">Trekk deg fra byttet</div></div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:600">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:700">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">chatten er sløyfet inn som samtalekort — full tråd (08) åpnes ved å trykke på kortet</div>
+</div>
+
+<div id="s07c" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s07c" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">07c</a><span style="font-size:13px;font-weight:600">Byttedetalj — alle har godtatt</span></div>
+<div data-screen-label="07c Bytte godtatt" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;padding:6px 22px 0;display:flex;align-items:center;gap:12px"><span style="font-size:18px">‹</span><span style="font-size:22px;font-weight:800;letter-spacing:-.4px;color:#064E3B">3-veis bytte</span></div>
+<div style="flex:1;padding:16px 22px;display:flex;flex-direction:column;gap:13px;overflow:hidden">
+<div style="padding:20px 18px;background:#064E3B;border-radius:22px;color:#fff;text-align:center">
+<div style="font-size:22px;font-weight:800;letter-spacing:-.3px">Alle har godtatt!</div>
+<div style="font-size:13.5px;color:rgba(255,255,255,.75);margin-top:6px;line-height:1.45">Avtal overlevering i samtalen under.</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:16px">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:12px;background:repeating-linear-gradient(45deg,#E4E9E3 0 10px,#DBE1DA 10px 20px)"></div><div><div style="font-size:14px;font-weight:700">Bosch drill</div><div style="font-size:12px;color:#8A938E">Du → Ola · møtes i Trondheim</div></div></div>
+<span style="font-size:11.5px;font-weight:700;color:#0B7A47">Byttet</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:16px">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:12px;background:repeating-linear-gradient(45deg,#E2E6EA 0 10px,#D9DEE3 10px 20px)"></div><div><div style="font-size:14px;font-weight:700">Fiskestang</div><div style="font-size:12px;color:#8A938E">Kari → deg · avtal i samtalen</div></div></div>
+<span style="font-size:11.5px;font-weight:700;color:#0B7A47">Byttet</span>
+</div>
+<div style="padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:18px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:700;letter-spacing:.06em;color:#98A29B">SAMTALE · DU, OLA OG KARI</span><span style="font-size:12px;font-weight:700;color:#0B7A47">Åpne ›</span></div>
+<div style="display:flex;gap:8px;align-items:flex-end"><span style="width:26px;height:26px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none">O</span><div style="background:#F3F6F2;border-radius:14px 14px 14px 5px;padding:8px 12px;font-size:13.5px;line-height:1.4">Kan møtes ved Nidarosdomen i morgen kl. 17?</div></div>
+<div style="display:flex;gap:8px;align-items:flex-end"><span style="width:26px;height:26px;border-radius:50%;background:#C08B2D;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none">K</span><div style="background:#F3F6F2;border-radius:14px 14px 14px 5px;padding:8px 12px;font-size:13.5px;line-height:1.4">Passer bra!</div></div>
+<div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:38px;border-radius:100px;border:1px solid #E4E8E3;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:13px;color:#98A29B">Skriv en melding…</div><span style="font-size:13px;font-weight:700;color:#0B7A47">Send</span></div>
+</div>
+<div style="text-align:center;font-size:12.5px;color:#98A29B">Angrer du? <span style="font-weight:700;color:#8A938E;text-decoration:underline;text-underline-offset:3px">Trekk deg</span> — de andre får beskjed.</div>
+</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:600">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:700">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">ingen egen «åpne chat»-CTA — samtalen ligger i byttedetaljen, full tråd (08) ved behov</div>
+</div>
+
+<div id="s08" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s08" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">08</a><span style="font-size:13px;font-weight:600">Chat — full tråd</span></div>
+<div data-screen-label="08 Chat" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;display:flex;align-items:center;gap:12px;padding:8px 18px 12px;border-bottom:1px solid #EDEFEA;background:#FCFCFB">
+<span style="font-size:18px">‹</span>
+<div style="display:flex"><span style="width:36px;height:36px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;box-shadow:0 0 0 2.5px #FCFCFB">O</span><span style="width:36px;height:36px;border-radius:50%;background:#C08B2D;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-left:-10px;box-shadow:0 0 0 2.5px #FCFCFB">K</span><span style="width:36px;height:36px;border-radius:50%;background:#12B76A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-left:-10px;box-shadow:0 0 0 2.5px #FCFCFB">D</span></div>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">Du, Ola og Kari</div><div style="font-size:11.5px;color:#8A938E">3-veis bytte · alle har godtatt</div></div>
+</div>
+<div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+<div style="align-self:center;font-size:11px;color:#98A29B;font-weight:600">I dag 14:02</div>
+<div style="display:flex;gap:8px;align-items:flex-end;max-width:300px"><span style="width:28px;height:28px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none">O</span><div><div style="font-size:10.5px;color:#98A29B;margin:0 0 3px 6px">Ola</div><div style="background:#fff;border:1px solid #ECEFEA;border-radius:18px 18px 18px 6px;padding:10px 14px;font-size:14.5px;line-height:1.4">Heihei! Jeg kan møtes ved Nidarosdomen i morgen — passer det?</div></div></div>
+<div style="display:flex;gap:8px;align-items:flex-end;max-width:300px"><span style="width:28px;height:28px;border-radius:50%;background:#C08B2D;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none">K</span><div><div style="font-size:10.5px;color:#98A29B;margin:0 0 3px 6px">Kari</div><div style="background:#fff;border:1px solid #ECEFEA;border-radius:18px 18px 18px 6px;padding:10px 14px;font-size:14.5px;line-height:1.4">Passer bra! Kl. 17?</div></div></div>
+<div style="align-self:flex-end;max-width:280px"><div style="background:#12B76A;color:#fff;border-radius:18px 18px 6px 18px;padding:10px 14px;font-size:14.5px;line-height:1.4">Funker for meg! Jeg tar med drillen i original­kofferten.</div><div style="text-align:right;font-size:10.5px;color:#98A29B;margin:3px 6px 0 0">Lest 14:10</div></div>
+<div style="display:flex;gap:8px;align-items:flex-end;max-width:300px"><span style="width:28px;height:28px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none">O</span><div><div style="background:#fff;border:1px solid #ECEFEA;border-radius:18px 18px 18px 6px;padding:10px 14px;font-size:14.5px;line-height:1.4">Perfekt, sees da!</div></div></div>
+</div>
+<div style="flex:none;display:flex;gap:10px;padding:10px 16px 8px;border-top:1px solid #EDEFEA;background:#FCFCFB;align-items:center">
+<div style="flex:1;height:44px;border-radius:100px;border:1px solid #E4E8E3;background:#fff;display:flex;align-items:center;padding:0 16px;font-size:14.5px;color:#98A29B">Skriv en melding…</div>
+<span style="font-size:15px;font-weight:700;color:#0B7A47;padding:0 6px">Send</span>
+</div>
+<div style="flex:none;background:#FCFCFB;padding-bottom:4px"><div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:2px auto;opacity:.9"></div></div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">åpnes fra samtalekortet i byttedetaljen · én tråd per match, alle deltakere samlet · kun tekst i MVP</div>
+</div>
+
+</div>
+</section>
+
+<section id="g4" style="padding:36px 48px;border-bottom:1px solid rgba(6,78,59,.08)">
+<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:#6E7B73;margin-bottom:18px">LEGG UT-FLYT (EGEN FLYT) + BANKID</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+
+<div id="s10a" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s10a" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">10a</a><span style="font-size:13px;font-weight:600">Prompt etter 10 likes</span></div>
+<div data-screen-label="10a Prompt etter 10 likes" style="width:390px;height:844px;background:#DFE3DD;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;position:relative;display:flex;flex-direction:column">
+<div style="position:absolute;left:26px;right:26px;top:70px;height:420px;border-radius:26px;background:#E9ECE7"></div>
+<div style="position:absolute;inset:0;background:rgba(6,30,20,.45)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#FAFAF9;border-radius:28px 28px 30px 30px;padding:10px 24px 34px;display:flex;flex-direction:column;gap:14px">
+<div style="width:40px;height:5px;border-radius:3px;background:#D7DDD6;margin:2px auto 8px"></div>
+<div style="font-size:24px;font-weight:800;letter-spacing:-.5px;color:#064E3B;line-height:1.2">Du har likt 10 ting — på tide å legge ut noe selv</div>
+<div style="font-size:14.5px;color:#5B6862;line-height:1.5">Bytter skjer først når du har noe å gi. Legg ut én ting, så kan vi begynne å lete etter matcher for deg.</div>
+<div style="display:flex;gap:10px;margin:4px 0">
+<div style="width:88px;height:88px;border-radius:16px;background:repeating-linear-gradient(45deg,#EBEFEA 0 12px,#E3E8E2 12px 24px)"></div>
+<div style="width:88px;height:88px;border-radius:16px;background:repeating-linear-gradient(45deg,#E7E4DC 0 12px,#DFDBD1 12px 24px)"></div>
+<div style="width:88px;height:88px;border-radius:16px;background:repeating-linear-gradient(45deg,#E2E6EA 0 12px,#D9DEE3 12px 24px)"></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:#98A29B;text-align:center;line-height:1.4">ting du<br>har likt</div>
+</div>
+<div style="height:54px;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,183,106,.35)">Legg ut en gjenstand</div>
+<div style="text-align:center;font-size:14px;font-weight:600;color:#8A938E">Senere</div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">trigges etter 10. like · samme flyt nås fra «+ Legg ut» på 03</div>
+</div>
+
+<div id="s10b" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s10b" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">10b</a><span style="font-size:13px;font-weight:600">Legg ut en gjenstand · steg 1/2</span></div>
+<div data-screen-label="10b Legg ut gjenstand" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:1;padding:8px 22px 0;display:flex;flex-direction:column;gap:13px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:26px;font-weight:800;letter-spacing:-.5px;color:#064E3B">Legg ut en gjenstand</div><span style="font-size:12px;font-weight:700;color:#8A938E">1/2</span></div>
+<div style="display:flex;gap:10px">
+<div style="width:104px;height:104px;border:1.5px dashed #B9C4BC;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#0B7A47;background:#F3F7F3"><span style="font-size:26px;font-weight:400;line-height:1">+</span><span style="font-size:10.5px;font-weight:700">Legg til bilder</span><span style="font-size:9px;color:#8A938E">opptil 10</span></div>
+<div style="width:104px;height:104px;border-radius:16px;background:repeating-linear-gradient(45deg,#EBEFEA 0 12px,#E3E8E2 12px 24px);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9px;color:#6E7B73;background:rgba(250,250,249,.92);padding:3px 6px;border-radius:5px">foto 1</span><span style="position:absolute;top:6px;left:6px;font-size:9px;font-weight:700;background:#064E3B;color:#fff;padding:2px 7px;border-radius:100px">Forside</span></div>
+<div style="width:104px;height:104px;border-radius:16px;background:repeating-linear-gradient(45deg,#EBEFEA 0 12px,#E3E8E2 12px 24px);display:flex;align-items:center;justify-content:center"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9px;color:#6E7B73;background:rgba(250,250,249,.92);padding:3px 6px;border-radius:5px">foto 2</span></div>
+</div>
+<div><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:6px">Tittel</div><div style="height:44px;border:1px solid #E4E8E3;border-radius:14px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px;color:#141C18">Bosch drill 18V</div></div>
+<div><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:6px">Beskrivelse</div><div style="height:58px;border:1px solid #E4E8E3;border-radius:14px;background:#fff;padding:11px 14px;font-size:14px;color:#98A29B;line-height:1.4">Hva bør folk vite?</div></div>
+<div><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:6px">Anslått verdi</div><div style="display:flex;align-items:center;gap:10px"><div style="height:44px;width:130px;border:1px solid #E4E8E3;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px"><span>600</span><span style="color:#8A938E">kr</span></div><span style="font-size:11.5px;color:#98A29B">Helt billige ting kan være gratis</span></div></div>
+<div><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:6px">Kategori</div><div style="display:flex;flex-wrap:wrap;gap:7px">
+<span style="padding:7px 13px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12.5px;font-weight:600">Gaming</span>
+<span style="padding:7px 13px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12.5px;font-weight:600">Klær</span>
+<span style="padding:7px 13px;border-radius:100px;background:#12B76A;color:#fff;font-size:12.5px;font-weight:700">Verktøy</span>
+<span style="padding:7px 13px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12.5px;font-weight:600">Sykling</span>
+<span style="padding:7px 13px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12.5px;font-weight:600">Båt</span>
+<span style="padding:7px 13px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12.5px;font-weight:600">Diverse</span>
+</div></div>
+<div style="display:flex;gap:12px">
+<div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:6px">Tilstand</div><div style="display:flex;background:#EEF2EE;border-radius:12px;padding:3px"><span style="flex:1;text-align:center;padding:8px 0;font-size:12.5px;font-weight:600;color:#6E7B73">Ny</span><span style="flex:1;text-align:center;padding:8px 0;font-size:12.5px;font-weight:700;background:#fff;border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.08)">God</span><span style="flex:1;text-align:center;padding:8px 0;font-size:12.5px;font-weight:600;color:#6E7B73">Slitt</span></div></div>
+<div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:6px">Sted</div><div style="height:40px;border:1px solid #E4E8E3;border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 12px;font-size:14px">Trondheim</div><div style="font-size:10px;color:#98A29B;margin-top:3px">Kun by/fylke vises</div></div>
+</div>
+</div>
+<div style="flex:none;padding:12px 22px 30px"><div style="height:54px;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,183,106,.35)">Neste</div></div>
+</div>
+</div>
+
+<div id="s10c" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s10c" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">10c</a><span style="font-size:13px;font-weight:600">Opprett konto · steg 2/2</span></div>
+<div data-screen-label="10c Opprett konto" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:1;padding:18px 24px;display:flex;flex-direction:column;gap:16px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:18px">‹</span><span style="font-size:12px;font-weight:700;color:#8A938E">2/2</span></div>
+<div><div style="font-size:27px;font-weight:800;letter-spacing:-.6px;color:#064E3B;line-height:1.15">Hvem bytter man med?</div><div style="font-size:14px;color:#5B6862;line-height:1.5;margin-top:8px">Et navn og en måte å nå deg på — så er gjenstanden ute.</div></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:16px">
+<div style="width:46px;height:46px;border-radius:12px;background:repeating-linear-gradient(45deg,#EBEFEA 0 10px,#E3E8E2 10px 20px)"></div>
+<div><div style="font-size:14px;font-weight:700">Bosch drill 18V</div><div style="font-size:12px;color:#8A938E">600 kr · Verktøy · Trondheim</div></div>
+</div>
+<div><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:6px">Visningsnavn</div><div style="height:46px;border:1px solid #E4E8E3;border-radius:14px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px">Ola N.</div></div>
+<div><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:6px">E-post eller telefon</div><div style="height:46px;border:1px solid #E4E8E3;border-radius:14px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px;color:#98A29B">ola@epost.no</div></div>
+<div style="font-size:12.5px;color:#8A938E;line-height:1.5">Vi bruker dette til å varsle deg om matcher — aldri spam. BankID-verifisering kan gjøres senere, når et bytte skal skje.</div>
+</div>
+<div style="flex:none;padding:0 24px 32px"><div style="height:54px;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,183,106,.35)">Legg den ut</div></div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">kontoen opprettes som del av legg ut-flyten — vises kun første gang</div>
+</div>
+
+<div id="s09" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s09" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">09</a><span style="font-size:13px;font-weight:600">Koble til BankID</span></div>
+<div data-screen-label="09 Koble til BankID" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 28px;gap:20px">
+<div style="font-size:30px;font-weight:800;letter-spacing:-.7px;color:#064E3B;line-height:1.15">Vis at du er deg,<br>med BankID</div>
+<div style="font-size:15px;color:#5B6862;line-height:1.55">Byttet med Ola og Kari er klart. En rask BankID-bekreftelse gir profilen din et verifisert-merke som alle i byttet kan se.</div>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+<div style="display:flex;gap:10px;align-items:baseline"><span style="font-size:13px;font-weight:800;color:#0B7A47">✓</span><span style="font-size:14px;color:#41514A;line-height:1.5">Verifisert-merke på profilen din</span></div>
+<div style="display:flex;gap:10px;align-items:baseline"><span style="font-size:13px;font-weight:800;color:#0B7A47">✓</span><span style="font-size:14px;color:#41514A;line-height:1.5">Tryggere bytter — begge vet hvem de møter</span></div>
+<div style="display:flex;gap:10px;align-items:baseline"><span style="font-size:13px;font-weight:800;color:#0B7A47">✓</span><span style="font-size:14px;color:#41514A;line-height:1.5">Kun navnet ditt bekreftes — ingenting annet deles</span></div>
+</div>
+</div>
+<div style="flex:none;padding:0 24px 34px;display:flex;flex-direction:column;gap:12px">
+<div style="height:54px;border-radius:100px;background:#39134C;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center">Fortsett med BankID</div>
+<div style="text-align:center;font-size:14px;font-weight:600;color:#8A938E">Hopp over for nå</div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">erstatter den gamle kontoskjermen · vises når et bytte er i ferd med å skje · valgfritt</div>
+</div>
+
+</div>
+</section>
+
+<section id="g5" style="padding:36px 48px;border-bottom:1px solid rgba(6,78,59,.08)">
+<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:#6E7B73;margin-bottom:18px">ADMINISTRER</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+
+<div id="s11" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s11" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">11</a><span style="font-size:13px;font-weight:600">Mine handler</span></div>
+<div data-screen-label="11 Mine handler" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;padding:6px 22px 12px"><div style="font-size:26px;font-weight:800;letter-spacing:-.5px;color:#064E3B">Mine handler</div></div>
+<div style="flex:none;margin:0 22px;display:flex;background:#EEF2EE;border-radius:14px;padding:3px">
+<span style="flex:1;text-align:center;padding:9px 0;font-size:13px;font-weight:700;background:#fff;border-radius:11px;box-shadow:0 1px 3px rgba(0,0,0,.08)">Venter · 2</span>
+<span style="flex:1;text-align:center;padding:9px 0;font-size:13px;font-weight:600;color:#6E7B73">Aktive · 1</span>
+<span style="flex:1;text-align:center;padding:9px 0;font-size:13px;font-weight:600;color:#6E7B73">Fullført · 3</span>
+</div>
+<div style="flex:1;padding:16px 22px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:18px">
+<div style="display:flex"><div style="width:46px;height:46px;border-radius:12px;background:repeating-linear-gradient(45deg,#E7E4DC 0 10px,#DFDBD1 10px 20px);box-shadow:0 0 0 2px #fff"></div><div style="width:46px;height:46px;border-radius:12px;background:repeating-linear-gradient(45deg,#E2E6EA 0 10px,#D9DEE3 10px 20px);margin-left:-14px;box-shadow:0 0 0 2px #fff"></div></div>
+<div style="flex:1"><div style="font-size:14.5px;font-weight:700">3-veis med Ola + Kari</div><div style="font-size:12px;color:#8A938E">Drill → Ola · Fiskestang ← Kari</div></div>
+<span style="padding:5px 10px;border-radius:100px;background:#FFF3E2;color:#B25E09;font-size:10.5px;font-weight:700">Din tur</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:18px">
+<div style="width:46px;height:46px;border-radius:12px;background:repeating-linear-gradient(45deg,#EBEFEA 0 10px,#E3E8E2 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:14.5px;font-weight:700">Direkte med Anne</div><div style="font-size:12px;color:#8A938E">Skateboard ↔ ullgenser</div></div>
+<span style="padding:5px 10px;border-radius:100px;background:#EEF2EE;color:#5B6862;font-size:10.5px;font-weight:700">Venter på Anne</span>
+</div>
+<div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#98A29B;margin-top:8px">NYLIG FULLFØRT</div>
+<div style="padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:18px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:46px;height:46px;border-radius:12px;background:repeating-linear-gradient(45deg,#E4E9E3 0 10px,#DBE1DA 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:14.5px;font-weight:700">Sykkelhjelm ↔ Per</div><div style="font-size:12px;color:#8A938E">Overlevert i Trondheim · i går</div></div>
+<span style="padding:5px 10px;border-radius:100px;background:#DEF5E9;color:#0B7A47;font-size:10.5px;font-weight:700">Byttet</span>
+</div>
+<div style="height:42px;border-radius:100px;border:1.5px solid #12B76A;color:#0B7A47;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center">Gi en vurdering</div>
+</div>
+<div style="padding:12px 14px;background:#F3F6F2;border-radius:16px;font-size:12px;color:#6E7B73;line-height:1.5">Overlevering avtales i samtalen — frakt er ikke med i MVP.</div>
+</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:600">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A;position:relative"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:700">Bytter</span><span style="position:absolute;top:-2px;right:26px;width:8px;height:8px;border-radius:50%;background:#FF6B5E"></span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+</div>
+
+<div id="s12" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s12" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">12</a><span style="font-size:13px;font-weight:600">Likt — hvem liker tingene dine</span></div>
+<div data-screen-label="12 Likt" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;padding:6px 22px 4px"><div style="font-size:26px;font-weight:800;letter-spacing:-.5px;color:#064E3B">Likt</div><div style="font-size:13px;color:#8A938E;margin-top:3px">Folk som har likt tingene dine</div></div>
+<div style="flex:1;padding:14px 22px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+<div style="padding:13px 14px;background:#fff;border:1.5px solid #12B76A;border-radius:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:52px;height:52px;border-radius:14px;background:repeating-linear-gradient(45deg,#E4E9E3 0 10px,#DBE1DA 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">Bosch drill 18V</div><div style="font-size:12.5px;color:#0B7A47;font-weight:700">3 har likt denne</div></div>
+<span style="color:#8A938E">⌄</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid #F0F2EE;padding-top:12px">
+<div style="display:flex;align-items:center;gap:11px"><span style="width:36px;height:36px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">O</span><div style="flex:1"><div style="font-size:14px;font-weight:700">Ola</div><div style="font-size:11.5px;color:#8A938E">12 gjenstander · Trondheim</div></div><span style="font-size:12.5px;font-weight:700;color:#0B7A47">Se tingene deres ›</span></div>
+<div style="display:flex;align-items:center;gap:11px"><span style="width:36px;height:36px;border-radius:50%;background:#7C6FD1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">A</span><div style="flex:1"><div style="font-size:14px;font-weight:700">Anne</div><div style="font-size:11.5px;color:#8A938E">4 gjenstander · Melhus</div></div><span style="font-size:12.5px;font-weight:700;color:#0B7A47">Se tingene deres ›</span></div>
+<div style="display:flex;align-items:center;gap:11px"><span style="width:36px;height:36px;border-radius:50%;background:#C05B4E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">P</span><div style="flex:1"><div style="font-size:14px;font-weight:700">Per</div><div style="font-size:11.5px;color:#8A938E">7 gjenstander · Stjørdal</div></div><span style="font-size:12.5px;font-weight:700;color:#0B7A47">Se tingene deres ›</span></div>
+</div>
+</div>
+<div style="padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:18px;display:flex;align-items:center;gap:12px">
+<div style="width:52px;height:52px;border-radius:14px;background:repeating-linear-gradient(45deg,#EBEFEA 0 10px,#E3E8E2 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">Sykkelhjelm</div><div style="font-size:12.5px;color:#8A938E">1 har likt denne</div></div>
+<span style="color:#8A938E">›</span>
+</div>
+<div style="padding:13px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:18px;display:flex;align-items:center;gap:12px;opacity:.7">
+<div style="width:52px;height:52px;border-radius:14px;background:repeating-linear-gradient(45deg,#EBEFEA 0 10px,#E3E8E2 10px 20px)"></div>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">Ullgenser M</div><div style="font-size:12.5px;color:#8A938E">Ingen likes ennå</div></div>
+</div>
+<div style="padding:12px 14px;background:#E9F7F0;border:1px solid #C9EBDA;border-radius:16px;font-size:12px;color:#0B6B41;line-height:1.5"><b>Tips:</b> lik tilbake — det lukker kjeder raskere.</div>
+</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:600">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:700">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:600">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+</div>
+
+<div id="s13" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s13" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">13</a><span style="font-size:13px;font-weight:600">Profil (egen)</span></div>
+<div data-screen-label="13 Profil" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;position:relative;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;display:flex;justify-content:flex-end;padding:0 22px"><span style="font-size:13px;font-weight:700;color:#0B7A47">Innstillinger</span></div>
+<div style="flex:1;padding:0 22px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:16px">
+<div style="width:84px;height:84px;border-radius:50%;background:#064E3B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800">O</div>
+<div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px;font-weight:800;letter-spacing:-.4px">Ola N.</span><span style="font-size:10.5px;font-weight:700;color:#0B7A47">BankID-verifisert</span></div>
+<div style="font-size:13px;color:#41514A;margin-top:4px">★★★★★ <b>4,9</b> · 12 vurderinger</div>
+<div style="font-size:12.5px;color:#8A938E;margin-top:2px">Trondheim · medlem siden mai</div></div>
+</div>
+<div><div style="font-size:12.5px;font-weight:700;color:#41514A;margin-bottom:7px">Interesser</div><div style="display:flex;flex-wrap:wrap;gap:7px">
+<span style="padding:6px 12px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12px;font-weight:600">Verktøy</span>
+<span style="padding:6px 12px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12px;font-weight:600">Gaming</span>
+<span style="padding:6px 12px;border-radius:100px;background:#EEF2EE;color:#3C4A43;font-size:12px;font-weight:600">Sykling</span>
+<span style="padding:6px 12px;border-radius:100px;border:1.5px dashed #C9CFCA;color:#8A938E;font-size:12px;font-weight:600">+ fylles ut mens du bruker appen</span>
+</div></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12.5px;font-weight:700;color:#41514A">Mine gjenstander · 4</span><span style="font-size:12px;font-weight:700;color:#0B7A47">Rediger profil</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div style="border-radius:16px;overflow:hidden;background:#fff;border:1px solid #ECEFEA"><div style="height:96px;background:repeating-linear-gradient(45deg,#E4E9E3 0 12px,#DBE1DA 12px 24px)"></div><div style="padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12.5px;font-weight:700">Bosch drill</span><span style="padding:3px 8px;border-radius:100px;background:#DEF5E9;color:#0B7A47;font-size:9.5px;font-weight:700">Tilgjengelig</span></div></div>
+<div style="border-radius:16px;overflow:hidden;background:#fff;border:1px solid #ECEFEA"><div style="height:96px;background:repeating-linear-gradient(45deg,#EBEFEA 0 12px,#E3E8E2 12px 24px)"></div><div style="padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12.5px;font-weight:700">Sykkelhjelm</span><span style="padding:3px 8px;border-radius:100px;background:#FFF3E2;color:#B25E09;font-size:9.5px;font-weight:700">Reservert</span></div></div>
+<div style="border-radius:16px;overflow:hidden;background:#fff;border:1px solid #ECEFEA;opacity:.72"><div style="height:96px;background:repeating-linear-gradient(45deg,#E7E4DC 0 12px,#DFDBD1 12px 24px)"></div><div style="padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12.5px;font-weight:700">Skateboard</span><span style="padding:3px 8px;border-radius:100px;background:#EEF2EE;color:#5B6862;font-size:9.5px;font-weight:700">Byttet</span></div></div>
+<div style="border-radius:16px;overflow:hidden;background:#fff;border:1px solid #ECEFEA"><div style="height:96px;background:repeating-linear-gradient(45deg,#E2E6EA 0 12px,#D9DEE3 12px 24px)"></div><div style="padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12.5px;font-weight:700">Ullgenser M</span><span style="padding:3px 8px;border-radius:100px;background:#DEF5E9;color:#0B7A47;font-size:9.5px;font-weight:700">Tilgjengelig</span></div></div>
+</div>
+</div>
+<div style="position:absolute;right:20px;bottom:104px;height:50px;padding:0 20px;border-radius:100px;background:#12B76A;color:#fff;display:flex;align-items:center;font-size:14px;font-weight:700;box-shadow:0 10px 24px rgba(18,183,106,.45)">+ Legg ut</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:600">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:600">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#12B76A"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:700">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+</div>
+
+<div id="s14" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s14" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">14</a><span style="font-size:13px;font-weight:600">Vurdering (etter fullført bytte)</span></div>
+<div data-screen-label="14 Vurdering" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 30px;text-align:center;gap:0">
+<div style="width:76px;height:76px;border-radius:50%;background:#2F9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700">O</div>
+<div style="font-size:26px;font-weight:800;letter-spacing:-.5px;color:#064E3B;margin-top:18px;line-height:1.2">Hvordan var byttet<br>med Ola?</div>
+<div style="display:flex;gap:10px;margin-top:24px;font-size:38px;line-height:1"><span style="color:#12B76A">★</span><span style="color:#12B76A">★</span><span style="color:#12B76A">★</span><span style="color:#12B76A">★</span><span style="color:#DCE1DB">★</span></div>
+<div style="width:100%;margin-top:28px;border:1px solid #E4E8E3;border-radius:16px;background:#fff;padding:14px;text-align:left;font-size:14px;color:#98A29B;height:92px">Si et par ord (valgfritt)…</div>
+<div style="font-size:12px;color:#98A29B;margin-top:14px">Vurderinger bygger tillit i Swapply.</div>
+</div>
+<div style="flex:none;padding:0 24px 34px;display:flex;flex-direction:column;gap:12px">
+<div style="height:54px;border-radius:100px;background:#12B76A;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,183,106,.35)">Send vurdering</div>
+<div style="text-align:center;font-size:14px;font-weight:600;color:#8A938E">Hopp over</div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section id="g6" style="padding:36px 48px 30px">
+<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:#6E7B73;margin-bottom:18px">STØTTE — VARSLER, RAPPORTER, INNSTILLINGER</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+
+<div id="s15" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s15" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">15</a><span style="font-size:13px;font-weight:600">Varsler</span></div>
+<div data-screen-label="15 Varsler" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;padding:6px 22px 12px;display:flex;align-items:center;gap:12px"><span style="font-size:18px">‹</span><span style="font-size:26px;font-weight:800;letter-spacing:-.5px;color:#064E3B">Varsler</span></div>
+<div style="flex:1;padding:0 22px;display:flex;flex-direction:column;overflow:hidden">
+<div style="display:flex;gap:12px;padding:15px 4px;border-bottom:1px solid #F0F2EE;align-items:center">
+<span style="width:9px;height:9px;border-radius:50%;background:#12B76A;flex:none"></span>
+<div style="flex:1"><div style="font-size:14px;font-weight:700">Det er en match! Et 3-veis bytte er klart</div><div style="font-size:12px;color:#8A938E;margin-top:2px">Du, Ola og Kari · nå</div></div>
+</div>
+<div style="display:flex;gap:12px;padding:15px 4px;border-bottom:1px solid #F0F2EE;align-items:center">
+<span style="width:9px;height:9px;border-radius:50%;background:#12B76A;flex:none"></span>
+<div style="flex:1"><div style="font-size:14px;font-weight:700">Ola godtok byttet</div><div style="font-size:12px;color:#8A938E;margin-top:2px">Venter bare på Kari · 2 t</div></div>
+</div>
+<div style="display:flex;gap:12px;padding:15px 4px;border-bottom:1px solid #F0F2EE;align-items:center">
+<span style="width:9px;height:9px;border-radius:50%;background:#12B76A;flex:none"></span>
+<div style="flex:1"><div style="font-size:14px;font-weight:700">Din tur å godta</div><div style="font-size:12px;color:#8A938E;margin-top:2px">Direktebytte med Anne · 2 t</div></div>
+</div>
+<div style="display:flex;gap:12px;padding:15px 4px;border-bottom:1px solid #F0F2EE;align-items:center;opacity:.72">
+<span style="width:9px;height:9px;flex:none"></span>
+<div style="flex:1"><div style="font-size:14px;font-weight:600">Ny melding fra Kari</div><div style="font-size:12px;color:#8A938E;margin-top:2px">«Passer bra! Kl. 17?» · i går</div></div>
+</div>
+<div style="display:flex;gap:12px;padding:15px 4px;align-items:center;opacity:.72">
+<span style="width:9px;height:9px;flex:none"></span>
+<div style="flex:1"><div style="font-size:14px;font-weight:600">Anne likte Bosch drill</div><div style="font-size:12px;color:#8A938E;margin-top:2px">i går</div></div>
+</div>
+</div>
+<div style="flex:none;background:#FCFCFB;border-top:1px solid #EDEFEA;padding:8px 6px 4px">
+<div style="display:flex">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16.2 16.2L21 21"></path></svg><span style="font-size:10px;font-weight:600">Oppdag</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px">♥</span><span style="font-size:10px;font-weight:600">Likt</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><span style="font-size:19px;line-height:21px;font-weight:700">⇄</span><span style="font-size:10px;font-weight:600">Bytter</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#8A938E"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5.5 19.5c1.3-3.4 3.7-5 6.5-5s5.2 1.6 6.5 5"></path></svg><span style="font-size:10px;font-weight:600">Profil</span></div>
+</div>
+<div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:6px auto 2px;opacity:.9"></div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">ingen ikonsirkler — kun grønn uleststatus · hvert varsel dyplenker til riktig skjerm</div>
+</div>
+
+<div id="s16a" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s16a" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">16a</a><span style="font-size:13px;font-weight:600">Rapporter / blokkér (modal)</span></div>
+<div data-screen-label="16a Rapporter" style="width:390px;height:844px;background:#DFE3DD;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;position:relative;display:flex;flex-direction:column">
+<div style="position:absolute;left:26px;right:26px;top:70px;height:420px;border-radius:26px;background:#E9ECE7"></div>
+<div style="position:absolute;inset:0;background:rgba(6,30,20,.45)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#FAFAF9;border-radius:28px 28px 30px 30px;padding:10px 22px 30px;display:flex;flex-direction:column;gap:14px">
+<div style="width:40px;height:5px;border-radius:3px;background:#D7DDD6;margin:2px auto 4px"></div>
+<div style="font-size:20px;font-weight:800;letter-spacing:-.3px;color:#064E3B">Rapporter denne gjenstanden</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:14px"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #C9CFCA"></span><span style="font-size:14.5px;font-weight:600">Spam</span></div>
+<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:14px"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #C9CFCA"></span><span style="font-size:14.5px;font-weight:600">Upassende innhold</span></div>
+<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:#fff;border:1.5px solid #FF6B5E;border-radius:14px"><span style="width:20px;height:20px;border-radius:50%;border:6px solid #FF6B5E"></span><span style="font-size:14.5px;font-weight:700">Svindel</span></div>
+<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:#fff;border:1px solid #ECEFEA;border-radius:14px"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #C9CFCA"></span><span style="font-size:14.5px;font-weight:600">Annet</span></div>
+</div>
+<div style="border:1px solid #E4E8E3;border-radius:14px;background:#fff;padding:12px 14px;font-size:13.5px;color:#98A29B;height:64px">Fortell mer (valgfritt)…</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#FFF4F3;border:1px solid #FFDCD8;border-radius:14px">
+<div><div style="font-size:14px;font-weight:700;color:#D14438">Blokkér Kari N.</div><div style="font-size:11.5px;color:#B08680;margin-top:2px">Skjuler tingene deres og hindrer fremtidige matcher</div></div>
+<span style="width:44px;height:26px;border-radius:100px;background:#E8DAD8;display:flex;align-items:center;padding:2px"><span style="width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span></span>
+</div>
+<div style="height:52px;border-radius:100px;background:#FF6B5E;color:#fff;font-size:15.5px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(255,107,94,.35)">Send rapport</div>
+<div style="text-align:center;font-size:14px;font-weight:600;color:#8A938E">Avbryt</div>
+</div>
+</div>
+<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#98A29B;line-height:1.5">nås fra ⋯-menyen på 04 · koraltonen er reservert destruktive handlinger</div>
+</div>
+
+<div id="s16b" style="flex:none;width:390px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+<div style="display:flex;align-items:center;gap:8px"><a href="#s16b" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;background:#064E3B;color:#fff;padding:3px 7px;border-radius:5px;text-decoration:none">16b</a><span style="font-size:13px;font-weight:600">Innstillinger</span></div>
+<div data-screen-label="16b Innstillinger" style="width:390px;height:844px;background:#FAFAF9;border-radius:30px;box-shadow:0 2px 5px rgba(6,78,59,.07),0 18px 44px rgba(6,78,59,.12);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px"><span style="font-size:14px;font-weight:600">9:41</span><span style="width:24px;height:12px;border:1.5px solid rgba(20,28,24,.35);border-radius:4px;display:flex;padding:1.5px"><span style="width:68%;background:#141C18;border-radius:2px"></span></span></div>
+<div style="flex:none;padding:6px 22px 14px;display:flex;align-items:center;gap:12px"><span style="font-size:18px">‹</span><span style="font-size:26px;font-weight:800;letter-spacing:-.5px;color:#064E3B">Innstillinger</span></div>
+<div style="flex:1;padding:0 22px;display:flex;flex-direction:column;gap:16px;overflow:hidden">
+<div><div style="font-size:11.5px;font-weight:700;letter-spacing:.08em;color:#98A29B;margin-bottom:7px">KONTO</div>
+<div style="background:#fff;border:1px solid #ECEFEA;border-radius:18px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #F0F2EE"><span style="font-size:14.5px;font-weight:600">Profil</span><span style="color:#C9CFCA">›</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #F0F2EE"><span style="font-size:14.5px;font-weight:600">E-post og telefon</span><span style="color:#C9CFCA">›</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px"><span style="font-size:14.5px;font-weight:600">BankID-verifisering</span><span style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#8A938E">Ikke verifisert</span><span style="color:#C9CFCA">›</span></span></div>
+</div></div>
+<div><div style="font-size:11.5px;font-weight:700;letter-spacing:.08em;color:#98A29B;margin-bottom:7px">VARSLER</div>
+<div style="background:#fff;border:1px solid #ECEFEA;border-radius:18px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #F0F2EE"><span style="font-size:14.5px;font-weight:600">Matcher og bytter</span><span style="width:46px;height:27px;border-radius:100px;background:#12B76A;display:flex;align-items:center;justify-content:flex-end;padding:2px"><span style="width:23px;height:23px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span></span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #F0F2EE"><span style="font-size:14.5px;font-weight:600">Meldinger</span><span style="width:46px;height:27px;border-radius:100px;background:#12B76A;display:flex;align-items:center;justify-content:flex-end;padding:2px"><span style="width:23px;height:23px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span></span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px"><span style="font-size:14.5px;font-weight:600">Likes på tingene mine</span><span style="width:46px;height:27px;border-radius:100px;background:#E4E8E3;display:flex;align-items:center;padding:2px"><span style="width:23px;height:23px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span></span></div>
+</div></div>
+<div><div style="font-size:11.5px;font-weight:700;letter-spacing:.08em;color:#98A29B;margin-bottom:7px">INVITASJONER</div>
+<div style="background:#fff;border:1px solid #ECEFEA;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:14.5px;font-weight:600">Del invitasjonslenken din</span><span style="font-size:12px;font-weight:700;color:#0B7A47">3 igjen</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;background:#F3F6F2;border-radius:12px;padding:10px 13px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#41514A">swapply.no/i/ola</span><span style="font-size:12px;font-weight:700;color:#0B7A47">Kopiér</span></div>
+</div></div>
+<div style="background:#fff;border:1px solid #ECEFEA;border-radius:18px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #F0F2EE"><span style="font-size:14.5px;font-weight:600">Juridisk og personvern</span><span style="color:#C9CFCA">›</span></div>
+<div style="display:flex;align-items:center;padding:14px 16px"><span style="font-size:14.5px;font-weight:700;color:#D14438">Logg ut</span></div>
+</div>
+</div>
+<div style="flex:none;background:#FAFAF9;padding-bottom:4px"><div style="width:134px;height:5px;background:#141C18;border-radius:3px;margin:2px auto;opacity:.9"></div></div>
+</div>
+</div>
+
+</div>
+<div style="margin-top:30px;font-size:12.5px;color:#6E7B73;line-height:1.6;max-width:720px"><b>Neste steg:</b> referer skjermer med nummer («06c», «07b») · si fra om «1 532 personer» var ment bokstavelig eller om du vil se f.eks. en 5-veis ring · runde 1 ligger fortsatt i «Swapply Skjermer.dc.html».</div>
+</section>
+</x-dc>
+</body>
+</html>

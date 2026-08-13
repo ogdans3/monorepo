@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swapply — skjermutkast</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.svg">
+<style>
+  :root {
+    --bg: #EFEDE7;
+    --paper: #FFFFFF;
+    --deep: #064E3B;
+    --green: #0E8F54;
+    --accent: #12B76A;
+    --ink: #141C18;
+    --muted: #6E7B73;
+    --soft: #41514A;
+    --line: rgba(6,78,59,.10);
+    --bar: 54px;
+    --side: 268px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.5 -apple-system, "SF Pro Text", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    height: 100vh; overflow: hidden;
+  }
+  a { color: var(--green); }
+
+  .bar {
+    height: var(--bar);
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 14px 0 12px;
+    background: rgba(239,237,231,.9);
+    backdrop-filter: saturate(1.4) blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .home {
+    display: flex; align-items: center; gap: 9px;
+    text-decoration: none; color: var(--deep);
+    padding: 5px 9px 5px 5px; border-radius: 10px;
+  }
+  .home:hover { background: rgba(6,78,59,.06); }
+  .mark {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-size: 14px; font-weight: 800;
+  }
+  .home b { font-size: 14px; letter-spacing: -.2px; }
+
+  .tabs { display: flex; gap: 4px; background: rgba(6,78,59,.06); padding: 3px; border-radius: 999px; }
+  .tab {
+    text-decoration: none; color: var(--soft);
+    font-size: 13px; font-weight: 600;
+    padding: 6px 14px; border-radius: 999px;
+  }
+  .tab:hover { color: var(--deep); }
+  .tab.on { background: var(--paper); color: var(--deep); box-shadow: 0 1px 3px rgba(6,78,59,.12); }
+
+  .spacer { flex: 1; }
+  .raw { font-size: 12.5px; color: var(--muted); text-decoration: none; }
+  .raw:hover { color: var(--deep); }
+  .toggle {
+    display: none;
+    font: inherit; font-size: 13px; font-weight: 600;
+    color: var(--deep); background: transparent;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 12px; cursor: pointer;
+  }
+
+  .split { display: flex; height: calc(100vh - var(--bar)); }
+
+  aside {
+    width: var(--side); flex: none;
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 14px 10px 40px;
+    background: rgba(255,255,255,.42);
+  }
+  .group { margin-bottom: 16px; }
+  .kicker {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--muted); padding: 0 8px; margin-bottom: 6px;
+  }
+  .screen {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; text-align: left;
+    font: inherit; font-size: 12.5px; color: var(--soft);
+    background: transparent; border: 0; border-radius: 9px;
+    padding: 6px 8px; cursor: pointer;
+  }
+  .screen:hover { background: rgba(6,78,59,.06); color: var(--deep); }
+  .screen.on { background: var(--deep); color: #fff; }
+  .screen.on .num { background: rgba(255,255,255,.2); color: #fff; }
+  .num {
+    flex: none;
+    font: 700 10px/1 ui-monospace, Menlo, monospace;
+    background: rgba(6,78,59,.08); color: var(--deep);
+    padding: 4px 5px; border-radius: 4px;
+  }
+  .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  main { flex: 1; min-width: 0; position: relative; background: var(--bg); }
+  iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  @media (max-width: 860px) {
+    .toggle { display: inline-block; }
+    .tabs .tab { padding: 6px 11px; }
+    aside {
+      position: absolute; z-index: 4; top: var(--bar); bottom: 0; left: 0;
+      background: var(--paper);
+      box-shadow: 0 10px 40px -12px rgba(6,78,59,.4);
+      transform: translateX(-100%); transition: transform .18s ease;
+    }
+    body.side-open aside { transform: none; }
+    .raw { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <a class="home" href="/"><span class="mark">⇄</span><b>Swapply</b></a>
+  <button class="toggle" id="toggle" type="button">Skjermer</button>
+  <nav class="tabs" id="tabs"></nav>
+  <span class="spacer"></span>
+  <a class="raw" id="raw" href="#" target="_blank" rel="noopener">Rå HTML ↗</a>
+</div>
+
+<div class="split">
+  <aside id="side"></aside>
+  <main><iframe id="doc" title="Skjermutkast"></iframe></main>
+</div>
+
+<script>
+const frame = document.getElementById('doc');
+const side = document.getElementById('side');
+const tabs = document.getElementById('tabs');
+const raw = document.getElementById('raw');
+
+const wanted = Number((location.pathname.match(/^\/r\/(\d+)/) || [])[1]);
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function markActive(id) {
+  side.querySelectorAll('.screen').forEach((b) => b.classList.toggle('on', b.dataset.id === id));
+}
+
+// Same-origin iframe, so the sidebar can scroll the doc directly and follow
+// along with an observer running inside it.
+function scrollTo(id) {
+  const doc = frame.contentDocument;
+  const target = doc && doc.getElementById(id);
+  if (!target) return;
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  markActive(id);
+  document.body.classList.remove('side-open');
+}
+
+function spy() {
+  const win = frame.contentWindow;
+  const doc = frame.contentDocument;
+  if (!win || !doc || !win.IntersectionObserver) return;
+  const targets = [...side.querySelectorAll('.screen')]
+    .map((b) => doc.getElementById(b.dataset.id))
+    .filter(Boolean);
+  if (!targets.length) return;
+  const seen = new Map();
+  const obs = new win.IntersectionObserver((entries) => {
+    entries.forEach((e) => seen.set(e.target.id, e.intersectionRatio));
+    let best = null, ratio = 0;
+    seen.forEach((r, id) => { if (r > ratio) { ratio = r; best = id; } });
+    if (best && ratio > 0) markActive(best);
+  }, { threshold: [0, .25, .6] });
+  targets.forEach((t) => obs.observe(t));
+}
+
+function renderSidebar(round) {
+  side.innerHTML = round.sections.map((s) => `
+    <div class="group">
+      <div class="kicker">${esc(s.kicker)}</div>
+      ${s.screens.map((sc) => `
+        <button class="screen" data-id="${esc(sc.id)}">
+          <span class="num">${esc(sc.num)}</span>
+          <span class="label">${esc(sc.name)}</span>
+        </button>`).join('')}
+    </div>`).join('');
+  side.querySelectorAll('.screen').forEach((b) => {
+    b.addEventListener('click', () => scrollTo(b.dataset.id));
+  });
+}
+
+fetch('/rounds.json')
+  .then((r) => r.json())
+  .then(({ rounds }) => {
+    const round = rounds.find((r) => r.n === wanted) || rounds[0];
+
+    document.title = `${round.label} — Swapply skjermutkast`;
+    tabs.innerHTML = [...rounds]
+      .sort((a, b) => a.n - b.n)
+      .map((r) => `<a class="tab${r.n === round.n ? ' on' : ''}" href="/r/${r.n}">${esc(r.label)}</a>`)
+      .join('');
+    raw.href = `/docs/${round.file}`;
+
+    renderSidebar(round);
+    frame.addEventListener('load', spy, { once: true });
+    frame.src = `/docs/${round.file}`;
+  })
+  .catch(() => {
+    side.innerHTML = '<div class="kicker">Klarte ikke å laste oversikten</div>';
+  });
+
+document.getElementById('toggle').addEventListener('click', () => {
+  document.body.classList.toggle('side-open');
+});
+</script>
+</body>
+</html>

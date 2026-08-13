@@ -1,0 +1,4 @@
+name: "Swapply Design"
+description: "Skjermutkast for Swapply — tre runder med mockups, med skjermindeks per runde."
+http_port: 3000
+auto_rebuild: false

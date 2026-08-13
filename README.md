@@ -43,3 +43,4 @@ debt, because it is what keeps them separable.
 |---|---|
 | [`checkpost/`](checkpost/) | A shared checklist that lives at a link. Node API, Flutter app, SvelteKit landing page. |
 | [`image-tools/`](image-tools/) | Client-side image converter — every format pair gets its own page, files never leave the browser. SvelteKit + WASM codecs. |
+| [`swapply-design/`](swapply-design/) | Screen mockups for the Swapply bartering app — three rounds of drafts with a per-screen index. Static, dependency-free node server. |

@@ -1,0 +1,12 @@
+{
+  "name": "swapply-design",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Hosts the Swapply screen mockups — one page per design round",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "index": "node tools/index-docs.js"
+  }
+}
