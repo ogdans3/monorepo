@@ -32,8 +32,12 @@ export interface Format {
 	canEncode: boolean;
 	/** Target has a quality setting. */
 	lossy: boolean;
-	/** Format keeps transparency. */
-	alpha: boolean;
+	/**
+	 * How much transparency the format can carry.
+	 * full: a real alpha channel. binary: on or off only, like GIF.
+	 * none: every pixel is opaque, so transparency has to be filled in.
+	 */
+	transparency: 'full' | 'binary' | 'none';
 	/** One-liner used in page copy. */
 	blurb: string;
 	/** Caveat shown when converting FROM this format. */
@@ -53,7 +57,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: true,
 		lossy: false,
-		alpha: true,
+		transparency: 'full',
 		blurb: 'Keeps every detail sharp and supports transparent backgrounds. Works everywhere. The safe pick for logos, graphics and screenshots.'
 	},
 	jpg: {
@@ -66,9 +70,10 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: true,
 		lossy: true,
-		alpha: false,
+		transparency: 'none',
 		blurb: 'The standard choice for photos. Files are small and every app can open them. It cannot store transparent backgrounds.',
-		targetNote: 'JPG cannot store transparent areas, so they are filled with white.'
+		targetNote:
+			'JPG cannot store transparent areas, so they are filled in. White by default, and you can pick any colour.'
 	},
 	webp: {
 		id: 'webp',
@@ -80,7 +85,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: true,
 		lossy: true,
-		alpha: true,
+		transparency: 'full',
 		blurb: 'A newer format made for the web. Files are much smaller than PNG or JPG at the same quality, and it keeps transparent backgrounds.'
 	},
 	avif: {
@@ -93,7 +98,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: true,
 		lossy: true,
-		alpha: true,
+		transparency: 'full',
 		blurb: 'The newest web format. It makes the smallest files of all, and every modern browser can show it.',
 		targetNote: 'AVIF takes a little longer to make, so big photos can need a few seconds.'
 	},
@@ -107,10 +112,11 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: true,
 		lossy: false,
-		alpha: true,
+		transparency: 'binary',
 		blurb: 'Very old but still everywhere. It can only use 256 colours, so photos look rough, but every app can open it.',
 		sourceNote: 'Moving GIFs are converted using only their first frame.',
-		targetNote: 'GIF can only use 256 colours, so photos may look grainy.'
+		targetNote:
+			'GIF can only use 256 colours, so photos may look grainy. Its transparency is on or off, so soft edges are blended onto the background colour you pick.'
 	},
 	heic: {
 		id: 'heic',
@@ -122,7 +128,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: false, // HEVC encoding is patent-encumbered; no sane browser path
 		lossy: true,
-		alpha: true,
+		transparency: 'full',
 		blurb: 'The format iPhones use for photos. Files are small, but many apps outside Apple cannot open them.'
 	},
 	bmp: {
@@ -135,7 +141,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: true,
 		lossy: false,
-		alpha: true,
+		transparency: 'full',
 		blurb: 'A plain Windows format with no compression. Files are big, but even very old programs can open them.'
 	},
 	ico: {
@@ -148,7 +154,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: true,
 		lossy: false,
-		alpha: true,
+		transparency: 'full',
 		blurb: 'The icon format for Windows and websites. Browsers look for it when they show the small tab icon.',
 		targetNote: 'Icons stop at 256 × 256. Bigger images are scaled down to fit.'
 	},
@@ -162,7 +168,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: false, // raster → vector is tracing, a different tool entirely
 		lossy: false,
-		alpha: true,
+		transparency: 'full',
 		blurb: 'Built from shapes instead of pixels, so it stays sharp at any size. Converting turns it into pixels at one fixed size.',
 		sourceNote: 'SVG files are drawn at their natural size before converting.'
 	},
@@ -176,11 +182,20 @@ export const FORMATS: Record<FormatId, Format> = {
 		canDecode: true,
 		canEncode: false,
 		lossy: false,
-		alpha: true,
+		transparency: 'full',
 		blurb: 'A format used for print and scanning. Scanners often make TIFF files. It is rare on the web.',
 		sourceNote: 'TIFF files with many pages are read using only the first page.'
 	}
 };
+
+/**
+ * Does this target need a background colour chosen? True when it cannot keep
+ * transparency at all, and for on-or-off transparency, where soft edges have
+ * to be blended onto something.
+ */
+export function needsBackground(format: Format): boolean {
+	return format.transparency !== 'full';
+}
 
 export const ALL_FORMATS: Format[] = Object.values(FORMATS);
 export const SOURCES: Format[] = ALL_FORMATS.filter((f) => f.canDecode);

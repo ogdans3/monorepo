@@ -3,6 +3,7 @@
 	import { readImageFile, rawToCanvas, steppedScale } from './load';
 	import { downloadBlob } from '../download';
 	import Dropzone from '../Dropzone.svelte';
+	import BackgroundPicker from '../BackgroundPicker.svelte';
 
 	interface Page {
 		id: number;
@@ -17,6 +18,7 @@
 	let pages = $state<Page[]>([]);
 	let pageMode = $state<'match' | 'a4'>('match');
 	let quality = $state(88);
+	let background = $state('#ffffff');
 	let working = $state(false);
 	let loading = $state(false);
 	let loadError = $state<string | null>(null);
@@ -50,14 +52,15 @@
 		}
 	}
 
-	/** JPEG bytes with transparency flattened to white, ready for embedding. */
+	/** JPEG bytes with transparency filled in, ready for embedding. */
 	async function pageJpeg(page: Page): Promise<Uint8Array> {
 		const flat = document.createElement('canvas');
 		flat.width = page.w;
 		flat.height = page.h;
 		const ctx = flat.getContext('2d');
 		if (!ctx) throw new Error('Canvas 2D is not available');
-		ctx.fillStyle = '#ffffff';
+		// a PDF page is opaque, so see-through parts need something behind them
+		ctx.fillStyle = background;
 		ctx.fillRect(0, 0, page.w, page.h);
 		ctx.drawImage(page.source, 0, 0);
 		const blob = await new Promise<Blob | null>((resolve) =>
@@ -146,6 +149,8 @@
 			<input id="pdf-quality" type="range" min="1" max="100" bind:value={quality} />
 			<output class="mono" for="pdf-quality">{quality}</output>
 		</div>
+
+		<BackgroundPicker bind:value={background} label="Behind transparent parts" />
 
 		<ol class="pages">
 			{#each pages as page, i (page.id)}

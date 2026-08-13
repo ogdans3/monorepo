@@ -1,11 +1,18 @@
 import type { Format } from './formats';
 import type { RawImage } from './raw';
 import { encodeBmp } from './bmp';
+import { flattenPartialAlpha, hexToRgb } from './flatten';
 import { wrapPngAsIco } from './ico';
 
 export interface EncodeOptions {
 	/** 1–100, used by lossy targets. */
 	quality: number;
+	/**
+	 * Colour to put behind transparent areas, as hex. Only formats that cannot
+	 * keep full transparency use it: JPG fills everything with it, and GIF
+	 * blends soft edges onto it while keeping fully transparent pixels clear.
+	 */
+	background?: string;
 }
 
 /**
@@ -17,14 +24,19 @@ export async function encodeRaw(img: RawImage, target: Format, opts: EncodeOptio
 		case 'png':
 			return canvasToBlob(toCanvas(img), 'image/png');
 		case 'jpg':
-			// JPEG has no alpha channel — flatten onto white, not black.
-			return canvasToBlob(toCanvas(img, '#ffffff'), 'image/jpeg', opts.quality / 100);
+			// JPEG has no alpha channel, so every pixel gets the chosen colour
+			// behind it. White by default, since that is what most pages expect.
+			return canvasToBlob(
+				toCanvas(img, opts.background ?? '#ffffff'),
+				'image/jpeg',
+				opts.quality / 100
+			);
 		case 'webp':
 			return encodeWebp(img, opts.quality);
 		case 'avif':
 			return encodeAvif(img, opts.quality);
 		case 'gif':
-			return encodeGif(img);
+			return encodeGif(img, opts.background ?? '#ffffff');
 		case 'bmp':
 			return new Blob([encodeBmp(img)], { type: 'image/bmp' });
 		case 'ico':
@@ -85,9 +97,14 @@ async function encodeAvif(img: RawImage, quality: number): Promise<Blob> {
 	return new Blob([buffer], { type: 'image/avif' });
 }
 
-async function encodeGif(img: RawImage): Promise<Blob> {
+async function encodeGif(img: RawImage, background: string): Promise<Blob> {
 	const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
-	const rgba = new Uint8Array(img.data.buffer, img.data.byteOffset, img.data.byteLength);
+
+	// GIF transparency is on or off, so a soft edge cannot be half see-through.
+	// Blend those pixels onto the background first, or they keep their own
+	// colour at full strength and read as a halo. Fully clear pixels stay clear.
+	const flattened = flattenPartialAlpha(img.data, hexToRgb(background));
+	const rgba = new Uint8Array(flattened.buffer, flattened.byteOffset, flattened.byteLength);
 
 	let hasTransparency = false;
 	for (let i = 3; i < rgba.length; i += 4) {

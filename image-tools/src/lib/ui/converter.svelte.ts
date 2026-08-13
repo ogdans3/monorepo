@@ -23,6 +23,8 @@ export class Converter {
 	target = $state<Format>()!;
 	targetExt = $state<string | undefined>(undefined);
 	quality = $state(90);
+	/** Fill colour for targets that cannot keep transparency, e.g. JPG. */
+	background = $state('#ffffff');
 	jobs = $state<Job[]>([]);
 
 	doneCount = $derived(this.jobs.filter((j) => j.status === 'done').length);
@@ -63,7 +65,7 @@ export class Converter {
 		this.#requeue(this.jobs);
 	}
 
-	/** Quality changed — finished lossy results are stale, convert them again. */
+	/** A setting changed, so finished results are stale. Convert them again. */
 	redoDone() {
 		this.#requeue(this.jobs.filter((j) => j.status === 'done'));
 	}
@@ -104,6 +106,7 @@ export class Converter {
 				try {
 					const result = await convertFile(job.file, this.target, {
 						quality: this.quality,
+						background: this.background,
 						targetExt: this.targetExt
 					});
 					if (job.url) URL.revokeObjectURL(job.url);

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { TARGETS, resolveFormat, warmDecoder, type Format } from '$lib/engine';
+	import { TARGETS, needsBackground, resolveFormat, warmDecoder, type Format } from '$lib/engine';
+	import BackgroundPicker from './BackgroundPicker.svelte';
 	import { Converter } from './converter.svelte';
 	import { downloadBlob } from './download';
 	import Dropzone from './Dropzone.svelte';
@@ -83,6 +84,10 @@
 			/>
 			<output class="mono" for="quality">{conv.quality}</output>
 		</div>
+	{/if}
+
+	{#if needsBackground(conv.target)}
+		<BackgroundPicker bind:value={conv.background} onchange={() => conv.redoDone()} />
 	{/if}
 
 	{#if conv.jobs.length}

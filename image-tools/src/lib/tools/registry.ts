@@ -279,7 +279,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'How the transparent background tool works',
 		about: [
 			'The eraser works like a magic wand. It starts at the pixel you clicked and spreads to neighbouring pixels of similar colour, stopping when it reaches something different. That makes it precise on logos, scans, screenshots and product photos with a plain background.',
-			'Export as PNG or WebP to keep the transparency. JPG has no alpha channel, so transparent areas turn white there.'
+			'Export as PNG or WebP to keep the transparency. JPG cannot store it, so it fills the cleared areas with the colour you pick in the download bar.'
 		],
 		next: ['replace-color', 'round-corners', 'trim-image'],
 		keywords: ['remove background', 'magic wand', 'transparent png', 'cut out'],
@@ -399,7 +399,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About rounding corners here',
 		about: [
 			'The corners become truly transparent, not painted white, so the image sits cleanly on any background. Circle mode first cuts a square from the middle, which is what avatar pictures need.',
-			'Download as PNG or WebP to keep the transparent corners. JPG cannot store them, so the corners turn white there.'
+			'Download as PNG or WebP to keep the transparent corners. JPG cannot store them, so it fills them with the colour you pick in the download bar.'
 		],
 		next: ['drop-shadow', 'transparent-background'],
 		keywords: ['rounded', 'circle', 'avatar', 'radius'],
@@ -759,7 +759,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About drop shadows here',
 		about: [
 			'Room is added around the image so the shadow has somewhere to land, and that space stays transparent unless you fill it.',
-			'Download as PNG or WebP to keep it transparent. JPG cannot, so the space turns white there, which still looks right on a white page.'
+			'Download as PNG or WebP to keep it transparent. JPG cannot, so it fills the space with the colour you pick, which is white by default.'
 		],
 		next: ['add-border', 'round-corners'],
 		keywords: ['shadow', 'depth', 'mockup', 'lift'],

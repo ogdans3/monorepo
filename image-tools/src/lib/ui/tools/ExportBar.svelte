@@ -1,6 +1,14 @@
 <script lang="ts">
-	import { FORMATS, encodeRaw, editedFileName, type FormatId, type RawImage } from '$lib/engine';
+	import {
+		FORMATS,
+		encodeRaw,
+		editedFileName,
+		needsBackground,
+		type FormatId,
+		type RawImage
+	} from '$lib/engine';
 	import { downloadBlob } from '../download';
+	import BackgroundPicker from '../BackgroundPicker.svelte';
 
 	let {
 		render,
@@ -21,6 +29,7 @@
 	// svelte-ignore state_referenced_locally
 	let formatId = $state(defaultFormat);
 	let quality = $state(90);
+	let background = $state('#ffffff');
 	let busy = $state(false);
 
 	const format = $derived(FORMATS[formatId]);
@@ -30,7 +39,7 @@
 		busy = true;
 		try {
 			const raw = await render();
-			const blob = await encodeRaw(raw, format, { quality });
+			const blob = await encodeRaw(raw, format, { quality, background });
 			downloadBlob(blob, outName);
 		} finally {
 			busy = false;
@@ -64,8 +73,16 @@
 			<output class="mono" for="export-quality">{quality}</output>
 		</div>
 	{/if}
-	{#if !format.alpha}
-		<p class="export-note">{format.name} has no transparency. Transparent areas turn white.</p>
+	{#if needsBackground(format)}
+		<BackgroundPicker bind:value={background} />
+		<p class="export-note">
+			{#if format.transparency === 'none'}
+				{format.name} cannot store transparency, so anything see-through gets this colour behind
+				it.
+			{:else}
+				{format.name} transparency is on or off, so soft edges are blended onto this colour.
+			{/if}
+		</p>
 	{/if}
 </div>
 

@@ -12,6 +12,8 @@ export interface ConvertOptions extends EncodeOptions {
 	targetExt?: string;
 }
 
+export type { EncodeOptions };
+
 export interface Converted {
 	blob: Blob;
 	name: string;
@@ -29,7 +31,10 @@ export async function convertFile(file: File, target: Format, opts: ConvertOptio
 	if (!source.canDecode) throw new Error(`${source.name} files can't be read in the browser`);
 
 	const raw = await decodeToRaw(file, source);
-	const blob = await encodeRaw(raw, target, { quality: opts.quality });
+	const blob = await encodeRaw(raw, target, {
+		quality: opts.quality,
+		background: opts.background
+	});
 	return {
 		blob,
 		name: outputFileName(file.name, opts.targetExt ?? target.extensions[0]),
