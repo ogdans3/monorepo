@@ -18,26 +18,23 @@ Colour and light, Borders and effects, Text and marks, Privacy, Inspect
 and For the web) and 11 PDF tools under `/pdf/` (hub at `/pdf`). Both hubs
 have a live search box, and every tool page offers hand-picked next steps
 from the registry's `next` field. Old `/tools/<pdf-slug>` URLs 301 to
-`/pdf/`.
-same client-side rules: crop, combine, resize, rotate/flip, adjust
-(brightness/contrast/saturation via canvas filters), blur (shape-drawn
-regions, blur or pixelate), redact (solid shapes), transparent background
-(magic-wand flood fill), EXIF viewer/remover (exifr for parsing, the
-decode→encode pipeline for stripping), watermark (text or logo, 9-position
-anchor or tiled), compress (binary search over quality to hit a byte
-target, optional stepped downscaling) and a favicon generator (multi-size
-ICO + PNG set + HTML snippet, zipped), round corners/circle crop, split
-into a grid (zip), sharpen (unsharp mask), colour picker (click + dominant
-palette via the GIF quantiser), bulk resize (zip), image→PDF (pdf-lib,
-match-size or A4 pages) and PDF→image (pdfjs-dist, per page or zipped),
-plus image→Base64. There is a nine-tool PDF suite on pdf-lib and pdfjs
-(merge, split, extract/delete pages, reorder, rotate, watermark, page
-numbers, PDF→text), and a filter family sharing pure pixel maths in
-`src/lib/tools/pixels.ts` (black and white, sepia, pixelate, vignette,
-replace colour, trim, extend canvas, border, drop shadow, blend, add text,
-histogram). Most export through the engine's encoders via a shared
-ExportBar. The three original root-level tool URLs 301 to `/tools/…` via
-`src/hooks.server.ts`.
+`/pdf/`, as do the three original root-level tool URLs to `/tools/`.
+
+Everything runs client-side. The image tools cover crop, combine, split,
+trim, extend canvas, resize, bulk resize, rotate, flip, adjust, black and
+white, sepia, invert, replace colour, sharpen, border, round corners, drop
+shadow, vignette, blend, add text, watermark, blur, redact, pixelate, EXIF
+removal, transparent background, colour picker, histogram, compress,
+favicon and Base64. The PDF tools cover image→PDF, PDF→image, merge,
+split, extract pages, delete pages, reorder, rotate, watermark, page
+numbers and PDF→text.
+
+Shared pure logic lives in `src/lib/tools/`: `pixels.ts` (luma greyscale,
+sepia matrix, colour replacement, edge trimming), `pdf.ts` (page ranges,
+document rebuilding), plus flood fill, crop geometry and layout maths. The
+editors in `src/lib/ui/tools/` are the only DOM-bound parts, and several
+are shared by variant (one filter editor serves four tools, one frame
+editor three, one PDF page-selector two).
 
 ## Stack
 
@@ -114,9 +111,11 @@ Optional: register imagetoolbox.app/.net/.io as defensive redirects.
 
 ## Later
 
-- Editing tools (crop, resize, rotate) — the RawImage hub is built for it.
 - Web-worker conversion so huge AVIF encodes don't block the main thread.
-- Animated GIF → animated WebP/AVIF.
+- Animated GIF → animated WebP/AVIF, and GIF frame tools.
+- PDF compress, sign and OCR. Note that pdf-lib cannot encrypt, so a
+  password-protect tool would need another library.
+- Eraser and brush, motion blur, kaleidoscope, QR generator and reader.
 
 ## Design
 
