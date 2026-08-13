@@ -20,7 +20,7 @@ primary, a deep bronze accent, and monospace data. Color strategy:
 | `--line` | `oklch(0.9 0.006 110)` | Hairlines, borders. |
 | `--ink` | `oklch(0.24 0.015 110)` | Body text. ~13:1 on bg. |
 | `--muted` | `oklch(0.49 0.012 110)` | Secondary text. ~6:1 on bg. |
-| `--primary` | `oklch(0.545 0.1 112)` | Olive. Links, primary buttons, focus rings, drag highlight. White text on fills. |
+| `--primary` | `oklch(0.545 0.1 112)` | Olive. Link underlines, primary buttons, focus rings, drag highlight. White text on fills. |
 | `--primary-deep` | `oklch(0.47 0.1 112)` | Hover/active of primary. |
 | `--accent` | `oklch(0.4 0.11 78)` | Bronze. Savings pills, done-state ticks. Sparingly. |
 | `--danger` | `oklch(0.5 0.15 27)` | Errors. |
@@ -48,6 +48,13 @@ Transparency previews sit on an 8 px checkerboard (`--surface-deep` on white).
   spinner → Download (solid primary) → or error text + Retry.
 - **Buttons**: solid primary (white text) for the single main action; quiet
   ghost (ink text, hairline border) for secondary; bare text links elsewhere.
+- **Links**: ink text with a 1 px olive underline at 45% opacity, offset 3 px.
+  The underline darkens to full `--primary` on hover and on `:focus-visible`.
+  This site is mostly lists of links (93 conversions, 43 tools), and colouring
+  all of them olive made the accent the surface rather than a highlight, which
+  the under-ten-percent rule exists to prevent. An underline also survives
+  colour blindness, where a hue shift does not. A single link inside a running
+  paragraph keeps the olive text, because there it really is a highlight.
 - **Quality control**: one range slider + mono readout, shown only for lossy
   targets, re-converts finished files on release.
 - **Target picker** (landing only): segmented row of format chips,
