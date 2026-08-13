@@ -239,14 +239,22 @@ section h2 {
 	font-size: 0.9375rem;
 }
 
+/*
+ * One rule across the site: olive means you can click it. These lists used to
+ * be ink coloured with no underline, which made 93 conversion links look like
+ * an ordinary paragraph until you happened to hover one. Colour alone is also
+ * not enough on its own, so the underline arrives on hover and on focus.
+ */
 .pair-links a {
-	color: var(--ink);
+	color: var(--primary);
 	transition: color 120ms var(--ease);
 }
 
-.pair-links a:hover {
-	color: var(--primary);
-	text-decoration: none;
+.pair-links a:hover,
+.pair-links a:focus-visible {
+	color: var(--primary-deep);
+	text-decoration: underline;
+	text-underline-offset: 3px;
 }
 
 .steps {
@@ -284,11 +292,14 @@ section h2 {
 
 .tool-list a {
 	font-weight: 600;
-	color: var(--ink);
+	color: var(--primary);
 }
 
-.tool-list a:hover {
-	color: var(--primary);
+.tool-list a:hover,
+.tool-list a:focus-visible {
+	color: var(--primary-deep);
+	text-decoration: underline;
+	text-underline-offset: 3px;
 }
 
 .tool-blurb {

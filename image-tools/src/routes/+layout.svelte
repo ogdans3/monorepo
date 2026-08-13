@@ -135,12 +135,16 @@
 		color: var(--primary-deep);
 	}
 
+	/* the nav sat in muted grey, which read as small print rather than as
+	   somewhere to go. Ink is legible, olive on hover says it is a link. */
 	nav a {
 		font-size: 0.875rem;
-		color: var(--muted);
+		font-weight: 600;
+		color: var(--ink);
 	}
 
-	nav a:hover {
+	nav a:hover,
+	nav a:focus-visible {
 		color: var(--primary);
 	}
 
@@ -174,10 +178,13 @@
 	}
 
 	.footer-links a {
-		color: var(--muted);
+		color: var(--primary);
 	}
 
-	.footer-links a:hover {
-		color: var(--primary);
+	.footer-links a:hover,
+	.footer-links a:focus-visible {
+		color: var(--primary-deep);
+		text-decoration: underline;
+		text-underline-offset: 3px;
 	}
 </style>
