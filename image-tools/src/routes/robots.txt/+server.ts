@@ -10,6 +10,8 @@ export function GET() {
 		'# AI crawlers are welcome too: being quoted is the point.',
 		'User-agent: *',
 		'Allow: /',
+		'# /t is the analytics relay, not a page.',
+		'Disallow: /t/',
 		'',
 		`Sitemap: ${SITE_URL}/sitemap.xml`,
 		''

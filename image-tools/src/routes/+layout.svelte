@@ -22,7 +22,12 @@
 			import('posthog-js')
 				.then(({ default: posthog }) => {
 					posthog.init('phc_rk387TLQFj72Q9Cv8JV2vsLka62yWC5zkZW8iEFt6VKk', {
-						api_host: 'https://eu.i.posthog.com',
+						// Our own /t path reverse-proxies PostHog, so content
+						// blockers cannot drop the requests. Built from the current
+						// origin rather than hardcoded, so it works on every domain
+						// the site is served from.
+						api_host: `${location.origin}/t`,
+						ui_host: 'https://eu.posthog.com',
 						defaults: '2026-05-30',
 						cookieless_mode: 'always',
 						person_profiles: 'never'
