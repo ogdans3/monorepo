@@ -80,35 +80,35 @@ function sizePreset(
 export const PRESETS: Preset[] = [
 	// The form said the file is too big
 	compressPreset('20KB', 20 * 1024, 'For strict upload limits', [
-		'Twenty kilobytes is very tight, so expect visible softness on a photo. Line art and simple graphics survive it far better.',
+		'20 KB is very tight, so expect visible softness on a photo. Line art and simple graphics survive it far better.',
 		'If the result looks too rough, allow downscaling. A smaller image at decent quality usually beats a large one at terrible quality.'
 	]),
 	compressPreset('50KB', 50 * 1024, 'Common for older forms', [
-		'Fifty kilobytes suits small profile pictures and thumbnails, and it is a common cap on older government and school forms.',
+		'50 KB suits small profile pictures and thumbnails, and it is a common cap on older government and school forms.',
 		'WebP will get you noticeably further than JPG at this size, if whatever you are uploading accepts it.'
 	]),
 	compressPreset('100KB', 100 * 1024, 'A frequent form limit', [
-		'A hundred kilobytes is one of the most common limits on upload forms, and a normal photo will need real compression to reach it.',
+		'100 KB is one of the most common limits on upload forms, and a normal photo needs real compression to reach it.',
 		'Try WebP first. At this size it holds detail that JPG has already given up.'
 	]),
 	compressPreset('200KB', 200 * 1024, 'Room for a real photo', [
-		'Two hundred kilobytes is enough for a decent looking photo at web size, which is why so many forms settle on it.',
+		'200 KB is enough for a decent looking photo at web size, which is why so many forms settle on it.',
 		'If the quality slider has to drop below about 60 to fit, shrink the dimensions instead. The result will look better.'
 	]),
 	compressPreset('500KB', 500 * 1024, 'Comfortable for photos', [
-		'Half a megabyte is comfortable for a full width web photo. Most images reach it with quality to spare.',
+		'500 KB is comfortable for a full width web photo. Most images reach it with quality to spare.',
 		'This is a sensible ceiling for anything going on a web page, since it keeps the page quick on a phone.'
 	]),
 	compressPreset('1MB', 1024 * 1024, 'The usual attachment cap', [
-		'One megabyte is the classic limit for email attachments and job application forms.',
+		'1 MB is the classic limit for email attachments and job application forms.',
 		'Most photos straight off a phone are several times this, so a little compression goes a long way.'
 	]),
 	compressPreset('2MB', 2 * 1024 * 1024, 'Generous, keeps quality', [
-		'Two megabytes is generous enough that the picture usually keeps its quality entirely.',
+		'2 MB is generous enough that the picture usually keeps its quality entirely.',
 		'A common cap for passport and visa uploads, and for forums that still allow full size photos.'
 	]),
 	compressPreset('5MB', 5 * 1024 * 1024, 'For large uploads', [
-		'Five megabytes fits nearly any photo without a visible change, so this is about clearing a limit rather than saving space.',
+		'5 MB fits nearly any photo without a visible change, so this is about clearing a limit rather than saving space.',
 		'Camera photos and scans are the usual reason to need it.'
 	]),
 
@@ -122,7 +122,7 @@ export const PRESETS: Preset[] = [
 		'dimensions',
 		'Full HD, the size of most screens and the standard for video thumbnails and slides.',
 		[
-			'Nineteen twenty by ten eighty is Full HD, so it fits a normal monitor exactly and is the safe size for a presentation slide or a video still.',
+			'1920 by 1080 is Full HD, so it fits a normal monitor exactly and is the safe size for a presentation slide or a video still.',
 			'The image is scaled to cover the whole frame and the overflow is trimmed, so nothing ends up stretched.'
 		]
 	),
@@ -135,7 +135,7 @@ export const PRESETS: Preset[] = [
 		'dimensions',
 		'A perfect square at the size social feeds like best.',
 		[
-			'A square at ten eighty is the size most social platforms treat as native, so nothing is cropped or blurred when you post it.',
+			'A 1080 pixel square is the size most social platforms treat as native, so nothing is cropped or blurred when you post it.',
 			'If your photo is not square, the middle is kept. Use the crop tool first if you want to choose which part survives.'
 		]
 	),
@@ -148,8 +148,8 @@ export const PRESETS: Preset[] = [
 		'dimensions',
 		'A small, classic size for documents and older systems.',
 		[
-			'Eight hundred by six hundred is small, quick to load and still large enough to read. Plenty of older systems and forms ask for exactly this.',
-			'The four to three shape matches most scanned documents and older cameras.'
+			'800 by 600 is small, quick to load and still large enough to read. Plenty of older systems and forms ask for exactly this.',
+			'The 4:3 shape matches most scanned documents and older cameras.'
 		]
 	),
 	sizePreset(
@@ -161,7 +161,7 @@ export const PRESETS: Preset[] = [
 		'dimensions',
 		'The usual size for app icons and avatars.',
 		[
-			'Five twelve square is the standard for app icons, web manifest icons and most avatar uploads.',
+			'512 by 512 is the standard for app icons, web manifest icons and most avatar uploads.',
 			'For a browser tab icon, the favicon generator makes the whole set at once instead.'
 		]
 	),
@@ -174,7 +174,7 @@ export const PRESETS: Preset[] = [
 		1280,
 		720,
 		'social',
-		'Twelve eighty by seven twenty, the size YouTube wants for a custom thumbnail.',
+		'1280 by 720 pixels, the size YouTube wants for a custom thumbnail.',
 		[
 			'YouTube asks for 1280 by 720 and a file under 2 MB. This page handles the size, and the compress tool will get you under the limit if the file is still too big.',
 			'Keep faces and text well inside the frame. The thumbnail is shown very small in a phone feed.'
@@ -187,7 +187,7 @@ export const PRESETS: Preset[] = [
 		1080,
 		1080,
 		'social',
-		'A ten eighty square, the shape a feed post is shown in.',
+		'A 1080 by 1080 square, the shape a feed post is shown in.',
 		[
 			'Instagram shows feed posts as squares at 1080 across. Giving it exactly that avoids the extra compression that comes from uploading something bigger.',
 			'For a portrait post the frame is 1080 by 1350, and for a story it is 1080 by 1920.'
@@ -200,7 +200,7 @@ export const PRESETS: Preset[] = [
 		1080,
 		1920,
 		'social',
-		'A tall nine by sixteen frame, the full height of a phone screen.',
+		'A tall 9:16 frame, the full height of a phone screen.',
 		[
 			'A story fills a phone screen, which is 1080 by 1920. Anything wider gets bars or a crop.',
 			'Keep anything important away from the top and bottom, where the interface sits over the picture.'
@@ -213,9 +213,9 @@ export const PRESETS: Preset[] = [
 		1584,
 		396,
 		'social',
-		'Fifteen eighty four by three ninety six, the shape of a profile cover.',
+		'1584 by 396 pixels, the wide strip LinkedIn uses for a profile cover.',
 		[
-			'LinkedIn uses a wide, short banner at 1584 by 396. It is an unusual shape, so a normal photo will lose a lot of its height.',
+			'LinkedIn uses a wide, short banner at 1584 by 396. It is an unusual shape, so a normal photo loses a lot of its height.',
 			'Your profile picture sits over the lower left of it, so keep that corner quiet.'
 		]
 	),
@@ -226,9 +226,9 @@ export const PRESETS: Preset[] = [
 		1200,
 		630,
 		'social',
-		'Twelve hundred by six thirty, which also suits link previews.',
+		'1200 by 630 pixels, which also suits link previews.',
 		[
-			'Twelve hundred by six thirty is the size Facebook uses for covers and link previews, and it is the same shape most social sites use when they show a shared link.',
+			'1200 by 630 is the size Facebook uses for covers and link previews, and most other social sites use the same shape when they show a shared link.',
 			'This is also the right size for an og:image on your own website.'
 		]
 	),
@@ -239,9 +239,9 @@ export const PRESETS: Preset[] = [
 		1500,
 		500,
 		'social',
-		'Fifteen hundred by five hundred, three to one and wide.',
+		'1500 by 500 pixels, a wide 3:1 strip.',
 		[
-			'X profile headers are 1500 by 500, a wide three to one strip. Your avatar overlaps the lower left, so leave that area clear.',
+			'X profile headers are 1500 by 500. Your avatar overlaps the lower left, so leave that area clear.',
 			'The header is cropped differently on phones, so keep anything important near the middle.'
 		]
 	),
@@ -252,7 +252,7 @@ export const PRESETS: Preset[] = [
 		512,
 		512,
 		'social',
-		'A five twelve square, shown as a circle.',
+		'A 512 by 512 square, shown as a circle.',
 		[
 			'Discord takes a square and shows it as a circle, so anything in the corners is cut off.',
 			'Use the round corners tool in circle mode first if you want to see exactly what will survive.'
