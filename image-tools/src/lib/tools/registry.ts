@@ -512,6 +512,204 @@ export const TOOLS: ImageTool[] = [
 		suffix: ''
 	},
 	{
+		slug: 'merge-pdf',
+		category: 'documents',
+		name: 'Merge PDF',
+		h1: 'Merge PDF files',
+		title: 'Merge PDF Files - Free Online, No Upload',
+		description:
+			'Combine several PDF files into one online free. Put the files in any order and download a single document. Your files never leave your browser.',
+		lede: 'Drop two or more PDF files, put them in the order you want, and download one document.',
+		blurb: 'Several PDF files into one, in your order.',
+		steps: [
+			'Drop your PDF files in the box above.',
+			'Use the arrows to set the order. The page count of each file is shown.',
+			'Download the merged PDF.'
+		],
+		aboutHeading: 'About merging PDF files here',
+		about: [
+			'Pages are copied across exactly as they are, so text stays text and quality is untouched. Nothing is re-compressed.',
+			'The whole merge happens in your browser. Contracts, invoices and scans never reach a server, which is the part that matters for documents.'
+		],
+		suffix: '-merged'
+	},
+	{
+		slug: 'split-pdf',
+		category: 'documents',
+		name: 'Split PDF',
+		h1: 'Split a PDF',
+		title: 'Split PDF Online - Free, Private, No Upload',
+		description:
+			'Split a PDF into separate files online free. Break it into single pages or cut it at the pages you choose, then download everything as a zip. No uploads.',
+		lede: 'Break a PDF into single pages, or cut it into parts at the pages you choose.',
+		blurb: 'Break a PDF into single pages or custom parts.',
+		steps: [
+			'Drop a PDF in the box above.',
+			'Choose one file per page, or type where to cut, like 3, 7 to get three parts.',
+			'Download all the parts in one zip.'
+		],
+		aboutHeading: 'About splitting a PDF here',
+		about: [
+			'Pages are copied without being re-encoded, so every part keeps the quality and the text of the original.',
+			'Everything happens in your browser, so the document never reaches a server.'
+		],
+		suffix: '-split'
+	},
+	{
+		slug: 'extract-pdf-pages',
+		category: 'documents',
+		name: 'Extract pages',
+		h1: 'Extract pages from a PDF',
+		title: 'Extract PDF Pages - Free Online, No Upload',
+		description:
+			'Pick the pages you want from a PDF and save them as a new file, free and in your browser. Click pages or type a range like 1-3, 7. No uploads.',
+		lede: 'Click the pages you want to keep, or type a range like 1-3, 7. The rest is left behind.',
+		blurb: 'Keep only the pages you pick.',
+		steps: [
+			'Drop a PDF in the box above.',
+			'Click the pages you want, or type a range in the box.',
+			'Download a new PDF with just those pages.'
+		],
+		aboutHeading: 'About extracting pages here',
+		about: [
+			'The pages you pick are copied into a fresh document in the order they appear. Nothing is re-encoded, so quality and text are untouched.',
+			'Your file is read and rewritten in your browser and never uploaded.'
+		],
+		suffix: '-pages'
+	},
+	{
+		slug: 'delete-pdf-pages',
+		category: 'documents',
+		name: 'Delete pages',
+		h1: 'Delete pages from a PDF',
+		title: 'Delete Pages from a PDF - Free Online, No Upload',
+		description:
+			'Remove pages from a PDF online free. Click the pages you want gone and download the rest as a new file. Runs in your browser with no uploads.',
+		lede: 'Click the pages you want gone. Everything else is kept, in order.',
+		blurb: 'Remove the pages you do not want.',
+		steps: [
+			'Drop a PDF in the box above.',
+			'Click the pages to remove, or type a range like 2, 5-6.',
+			'Download the PDF without them.'
+		],
+		aboutHeading: 'About deleting pages here',
+		about: [
+			'The pages you keep are copied into a new document untouched. The removed pages are simply not carried over, so nothing of them is left in the file.',
+			'This happens in your browser, so the document never reaches a server.'
+		],
+		suffix: '-edited'
+	},
+	{
+		slug: 'organise-pdf',
+		category: 'documents',
+		name: 'Reorder pages',
+		h1: 'Reorder PDF pages',
+		title: 'Reorder PDF Pages - Free Online, No Upload',
+		description:
+			'Change the page order in a PDF online free. Move pages up or down, drop the ones you do not need, and download the rearranged file. No uploads.',
+		lede: 'Move pages around until the order is right, and drop any you do not need.',
+		blurb: 'Put the pages in the right order.',
+		steps: [
+			'Drop a PDF in the box above.',
+			'Use the arrows on each page to move it, and the cross to remove it.',
+			'Download the rearranged PDF.'
+		],
+		aboutHeading: 'About reordering pages here',
+		about: [
+			'Pages are copied into a new document in the order you set. Nothing is re-encoded, so the file keeps its quality and its text.',
+			'A scan that came out back to front is fixed in a few clicks, without the file ever leaving your device.'
+		],
+		suffix: '-reordered'
+	},
+	{
+		slug: 'rotate-pdf',
+		category: 'documents',
+		name: 'Rotate PDF',
+		h1: 'Rotate PDF pages',
+		title: 'Rotate PDF Pages - Free Online, No Upload',
+		description:
+			'Rotate PDF pages online free. Turn every page at once or only the sideways ones, then download the fixed file. Runs in your browser, no uploads.',
+		lede: 'Turn every page at once, or click the sideways ones and fix only those.',
+		blurb: 'Turn pages the right way up.',
+		steps: [
+			'Drop a PDF in the box above.',
+			'Rotate all pages, or click the pages you want and rotate just those.',
+			'Download the fixed PDF.'
+		],
+		aboutHeading: 'About rotating a PDF here',
+		about: [
+			'Rotation is stored as a page setting, so nothing is redrawn and no quality is lost. Text stays selectable.',
+			'Scanners often turn a page the wrong way. This fixes it without touching anything else in the file.'
+		],
+		suffix: '-rotated'
+	},
+	{
+		slug: 'watermark-pdf',
+		category: 'documents',
+		name: 'Watermark PDF',
+		h1: 'Add a watermark to a PDF',
+		title: 'Watermark a PDF - Free Online, No Upload',
+		description:
+			'Add a text watermark to every page of a PDF online free. Set the size, colour, opacity and angle, then download. Runs in your browser with no uploads.',
+		lede: 'Stamp text like DRAFT or CONFIDENTIAL across every page. Size, angle and opacity are yours.',
+		blurb: 'Stamp text like DRAFT across every page.',
+		steps: [
+			'Drop a PDF in the box above.',
+			'Type your text and set the size, opacity and angle.',
+			'Download the watermarked PDF.'
+		],
+		aboutHeading: 'About watermarking a PDF here',
+		about: [
+			'The text is drawn into each page as part of the document, not added as a note someone can click away.',
+			'Everything happens in your browser, so a confidential draft stays on your machine.'
+		],
+		suffix: '-watermarked'
+	},
+	{
+		slug: 'pdf-page-numbers',
+		category: 'documents',
+		name: 'Page numbers',
+		h1: 'Add page numbers to a PDF',
+		title: 'Add Page Numbers to a PDF - Free Online, No Upload',
+		description:
+			'Add page numbers to a PDF online free. Choose the position, the size and where the count starts, then download. Runs in your browser with no uploads.',
+		lede: 'Number the pages, with a choice of corner, size and starting number.',
+		blurb: 'Number the pages, in any corner.',
+		steps: [
+			'Drop a PDF in the box above.',
+			'Pick the position and size, and set which number to start from.',
+			'Download the numbered PDF.'
+		],
+		aboutHeading: 'About adding page numbers here',
+		about: [
+			'Numbers are drawn into each page in a standard font, so they print exactly as you see them.',
+			'Useful for handouts and contracts that need to be referred to page by page. The file never leaves your browser.'
+		],
+		suffix: '-numbered'
+	},
+	{
+		slug: 'pdf-to-text',
+		category: 'documents',
+		name: 'PDF to text',
+		h1: 'Extract text from a PDF',
+		title: 'PDF to Text - Copy Text from a PDF, Free, No Upload',
+		description:
+			'Extract the text from a PDF online free and copy it or download it as a plain text file. Runs in your browser, so the document is never uploaded.',
+		lede: 'Pull the text out of a PDF so you can copy it or save it as a plain text file.',
+		blurb: 'Get the text out of a PDF, ready to copy.',
+		steps: [
+			'Drop a PDF in the box above.',
+			'The text of every page appears below, page by page.',
+			'Copy it, or download it as a .txt file.'
+		],
+		aboutHeading: 'What this can and cannot read',
+		about: [
+			'This reads the real text stored in the PDF, which is why it is exact and instant. It works for documents made by a computer, like invoices, reports and contracts.',
+			'A scanned page is a picture of text, not text, so nothing comes out. Reading those needs character recognition, which this tool does not do.'
+		],
+		suffix: ''
+	},
+	{
 		slug: 'image-to-base64',
 		category: 'web',
 		name: 'Base64',
