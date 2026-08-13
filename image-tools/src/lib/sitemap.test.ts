@@ -2,20 +2,35 @@ import { describe, expect, it } from 'vitest';
 import { sitemapPaths } from './sitemap';
 import { TOOLS, toolPath } from './tools/registry';
 import { PRESETS } from './tools/presets';
-import { allPairSlugs } from './engine';
+import { allPairs, allPairSlugs, parsePairSlug } from './engine';
+import { SAME_NAME_PAGES } from './tools/samename';
 
 describe('sitemapPaths', () => {
 	const paths = sitemapPaths();
 
 	it('lists every tool, preset and conversion, plus the fixed pages', () => {
-		expect(paths.length).toBe(7 + TOOLS.length + PRESETS.length + allPairSlugs().length);
+		expect(paths.length).toBe(
+			7 + TOOLS.length + PRESETS.length + allPairs().length + SAME_NAME_PAGES.length
+		);
 		for (const tool of TOOLS) expect(paths).toContain(toolPath(tool));
 		for (const preset of PRESETS) expect(paths).toContain(`/make/${preset.slug}`);
 		expect(paths).toContain('/convert/heic-to-jpg');
-		expect(paths).toContain('/convert/heif-to-jpeg'); // alias spellings too
 		for (const fixed of ['/', '/convert', '/tools', '/pdf', '/make', '/privacy', '/terms']) {
 			expect(paths).toContain(fixed);
 		}
+	});
+
+	it('lists canonical spellings only', () => {
+		// The alias pages (png-to-jpeg, heif-to-jpg, tif-to-png) still exist and
+		// still rank. They just point rel=canonical elsewhere, and a sitemap
+		// entry is itself a hint that a URL is the canonical one, so listing
+		// both spellings would be us contradicting ourselves.
+		const aliasSlugs = allPairSlugs().filter((slug) => {
+			const page = parsePairSlug(slug)!;
+			return page.slug !== page.canonicalSlug;
+		});
+		expect(aliasSlugs.length).toBeGreaterThan(20);
+		for (const slug of aliasSlugs) expect(paths).not.toContain(`/convert/${slug}`);
 	});
 
 	it('puts PDF tools under /pdf and never under /tools', () => {

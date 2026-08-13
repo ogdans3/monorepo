@@ -4,7 +4,23 @@
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Breadcrumbs from '$lib/ui/Breadcrumbs.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
-	import { trustFaq } from '$lib/ui/trust-faq';
+	import { pageFaq } from '$lib/faq';
+
+	// Questions this hub answers that its individual pages do not.
+	const SPECIFIC = [
+		{
+			q: 'Why does an upload form reject my photo?',
+			a: 'Almost always the file size rather than anything about the picture. Phone cameras produce files of several megabytes and plenty of forms, especially government and school ones, cap uploads at a fraction of that. Pick the limit you were given from the list above and the image is compressed to fit it.'
+		},
+		{
+			q: 'Do I have to know the exact pixel size a platform wants?',
+			a: 'No, that is what these pages are for. Each one carries the size the platform actually asks for, so you can pick the page by name instead of hunting through help articles that were last updated three redesigns ago. The tool arrives already set to it.'
+		},
+		{
+			q: 'What if the size I need is not listed?',
+			a: 'Use the general compress tool for any file size you can name, or the resize tool for any pixel size. These pages exist because a handful of numbers come up again and again, not because the tools behind them are limited to those numbers.'
+		}
+	];
 </script>
 
 <svelte:head>
@@ -58,7 +74,7 @@
 	</p>
 </section>
 
-<Faq items={trustFaq('size tools', true)} />
+<Faq items={pageFaq('size tools', SPECIFIC, true)} />
 
 <style>
 	.group-blurb {

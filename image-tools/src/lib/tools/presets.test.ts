@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { PRESETS, PRESET_GROUPS, presetBySlug, presetPath, presetsInGroup } from './presets';
+import {
+	PRESETS,
+	PRESET_GROUPS,
+	presetBySlug,
+	presetFaq,
+	presetPath,
+	presetsInGroup
+} from './presets';
 import { TOOLS } from './registry';
 import { parsePairSlug } from '$lib/engine';
 
@@ -70,5 +77,25 @@ describe('presets', () => {
 			if (p.kind === 'compress') continue;
 			expect(p.title, p.slug).toContain(`${p.width}x${p.height}`);
 		}
+	});
+
+	it('asks about the number the page is actually about', () => {
+		for (const p of PRESETS) {
+			const items = presetFaq(p);
+			expect(items.length, p.slug).toBe(2);
+			const text = items.flatMap((f) => [f.q, f.a]).join(' ');
+			expect(text, p.slug).not.toContain('—');
+			expect(text, p.slug).not.toContain(';');
+			for (const { q, a } of items) {
+				expect(q.endsWith('?'), `${p.slug}: ${q}`).toBe(true);
+				expect(a.length, `${p.slug}: ${q}`).toBeGreaterThan(140);
+			}
+			if (p.kind === 'resize') {
+				expect(items[0].q, p.slug).toContain(`${p.width} by ${p.height}`);
+			}
+		}
+		// the compress pages have to carry their own label, not a generic one
+		expect(presetFaq(presetBySlug('compress-image-to-200kb')!)[0].q).toContain('200KB');
+		expect(presetFaq(presetBySlug('compress-image-to-1mb')!)[0].q).toContain('1MB');
 	});
 });

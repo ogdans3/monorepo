@@ -3,10 +3,26 @@
 	import { CATEGORIES, PDF_TOOLS, toolPath } from '$lib/tools/registry';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
-	import { trustFaq } from '$lib/ui/trust-faq';
+	import { pageFaq } from '$lib/faq';
 	import ToolSearch from '$lib/ui/tools/ToolSearch.svelte';
 
 	const pdfCategory = CATEGORIES.filter((c) => c.id === 'pdf');
+
+	// Questions this hub answers that its individual pages do not.
+	const SPECIFIC = [
+		{
+			q: 'Are my PDFs uploaded when I merge or split them?',
+			a: 'No, and that matters more here than almost anywhere else, because PDFs are where contracts, invoices, medical letters and identity documents live. The file is opened and rewritten inside your browser and never sent anywhere, which is worth knowing given that most free PDF sites work by uploading your document to their servers.'
+		},
+		{
+			q: 'Does editing a PDF here reduce its quality?',
+			a: 'No. Pages are copied from one document to another as whole objects rather than rendered into pictures and saved again, so text stays selectable and searchable, fonts stay embedded, and images keep the resolution they had. The exception is the PDF to image tool, which is meant to produce pictures.'
+		},
+		{
+			q: 'Can I edit the text inside a PDF?',
+			a: 'Not here. These tools work on whole pages: merging, splitting, extracting, deleting, reordering, rotating, watermarking and numbering. Rewriting the words on a page means unpicking the fonts and the layout, which is a much larger job and one that usually goes better in the program the document came from.'
+		}
+	];
 </script>
 
 <svelte:head>
@@ -56,4 +72,4 @@
 	</p>
 </section>
 
-<Faq items={trustFaq('PDF tools', true)} />
+<Faq items={pageFaq('PDF tools', SPECIFIC, true)} />

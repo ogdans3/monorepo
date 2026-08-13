@@ -36,11 +36,27 @@ decisions. This file is the short version of what matters when editing.
   the matrix, accept lists and sitemap follow automatically. Don't hand-write
   per-pair pages or copy.
 - **Tools follow the same pattern.** New tool = entry in
-  `src/lib/tools/registry.ts` (slug, SEO copy, steps) + pure logic in
+  `src/lib/tools/registry.ts` (slug, SEO copy, steps, `faq`) + pure logic in
   `src/lib/tools/` with tests + an editor in `src/lib/ui/tools/` + a thin
   route wrapping it in `ToolPage`. Nav, landing, sitemap and cross-links
   update themselves. Export always goes through `ExportBar` and the engine
   encoders.
+- **Every page needs its own questions.** `src/lib/faq.ts` holds the two
+  shared trust questions, which carry all four promises and are identical
+  site wide on purpose. Everything after them must belong to that page
+  alone: `pairFaq` derives them from the format table, tools carry a `faq`
+  field, presets get them from `presetFaq`. Tests enforce two per tool, no
+  question used twice, and answers over 140 characters, because a one-line
+  answer is not the shape a search result or an assistant quotes. When the
+  shared pair was the whole FAQ it was 29% of every page's words and word
+  for word the same on all 163.
+- **The sitemap lists canonical URLs only.** The alias spellings
+  (`png-to-jpeg`, `heif-to-*`, `tif-to-*`) are still prerendered from
+  `allPairSlugs()` and still rank, but they point `rel=canonical` at the
+  primary spelling, so listing them too would contradict that. `lastmod`
+  comes from `CONTENT_UPDATED` in `site.ts`, a hand-set date. Bump it when
+  the words change, not when the build runs, or the signal stops being
+  worth anything.
 - **WASM codecs are lazy.** Keep them behind dynamic imports, and keep
   `optimizeDeps.exclude` in `vite.config.ts` in sync when adding one.
 - **Pure parts stay pure.** BMP/ICO encoders, sniffing, slugs and naming run

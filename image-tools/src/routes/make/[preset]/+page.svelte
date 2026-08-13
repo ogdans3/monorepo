@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { SITE_URL } from '$lib/site';
-	import { PRESETS, presetPath } from '$lib/tools/presets';
+	import { PRESETS, presetFaq, presetPath } from '$lib/tools/presets';
 	import { toolPath, toolBySlug } from '$lib/tools/registry';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Breadcrumbs from '$lib/ui/Breadcrumbs.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
-	import { trustFaq } from '$lib/ui/trust-faq';
+	import { pageFaq } from '$lib/faq';
 	import CompressEditor from '$lib/ui/tools/CompressEditor.svelte';
 	import PresetResizeEditor from '$lib/ui/tools/PresetResizeEditor.svelte';
 
@@ -83,4 +83,4 @@
 	</section>
 {/if}
 
-<Faq items={trustFaq(preset.kind === 'compress' ? 'compressor' : 'resizer')} />
+<Faq items={pageFaq(preset.kind === 'compress' ? 'compressor' : 'resizer', presetFaq(preset))} />

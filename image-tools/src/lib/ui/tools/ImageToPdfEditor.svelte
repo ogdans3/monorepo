@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { editedFileName } from '$lib/engine';
 	import { readImageFile, rawToCanvas, steppedScale } from './load';
+	import { untrack } from 'svelte';
 	import { downloadBlob } from '../download';
 	import Dropzone from '../Dropzone.svelte';
 	import BackgroundPicker from '../BackgroundPicker.svelte';
@@ -14,9 +15,17 @@
 		thumbUrl: string;
 	}
 
+	// The per-format pages under /pdf come preconfigured: they only accept the
+	// format they are named after, and they start on the page size that suits
+	// it. Scans and screenshots want A4, photographs want their own shape.
+	let {
+		accept,
+		initialPageMode = 'match'
+	}: { accept?: string; initialPageMode?: 'match' | 'a4' } = $props();
+
 	let nextId = 1;
 	let pages = $state<Page[]>([]);
-	let pageMode = $state<'match' | 'a4'>('match');
+	let pageMode = $state<'match' | 'a4'>(untrack(() => initialPageMode));
 	let quality = $state(88);
 	let background = $state('#ffffff');
 	let working = $state(false);
@@ -130,7 +139,7 @@
 
 {#if pages.length === 0}
 	<div class="editor-load">
-		<Dropzone headline="Drop images here" {onfiles} />
+		<Dropzone headline="Drop images here" {accept} {onfiles} />
 		{#if loading}<p class="editor-status" role="status">Reading images…</p>{/if}
 		{#if loadError}<p class="editor-error" role="alert">{loadError}</p>{/if}
 	</div>

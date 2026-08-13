@@ -3,8 +3,24 @@
 	import { IMAGE_CATEGORIES, IMAGE_TOOLS, PDF_TOOLS } from '$lib/tools/registry';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
-	import { trustFaq } from '$lib/ui/trust-faq';
+	import { pageFaq } from '$lib/faq';
 	import ToolSearch from '$lib/ui/tools/ToolSearch.svelte';
+
+	// Questions this hub answers that its individual pages do not.
+	const SPECIFIC = [
+		{
+			q: 'Can I use several tools on the same image?',
+			a: 'Yes, one after another. Download the result of the first tool and drop that file into the next one. Most tool pages list the steps people usually take next, which saves you hunting for the right one. Use PNG or WebP for the files in between, so nothing is compressed twice on the way through.'
+		},
+		{
+			q: 'Do these tools work on a phone?',
+			a: 'Yes. Everything runs in the browser, so a phone works the same way a computer does and the tools that need dragging respond to touch. The one thing to watch on an older phone is a very large image, since the whole picture has to fit in memory at once.'
+		},
+		{
+			q: 'Is there a limit on file size?',
+			a: 'Not one that this site sets. The ceiling is your device, since the image is decoded in memory rather than sent to a server that would have a limit of its own. An ordinary computer handles very large photographs comfortably. A phone with an enormous scan is where you might notice.'
+		}
+	];
 </script>
 
 <svelte:head>
@@ -52,4 +68,4 @@
 	</p>
 </section>
 
-<Faq items={trustFaq('image tools', true)} />
+<Faq items={pageFaq('image tools', SPECIFIC, true)} />

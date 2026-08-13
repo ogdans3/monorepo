@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { FORMATS, editedFileName, encodeRaw, zipBlobs, type FormatId } from '$lib/engine';
+	import { untrack } from 'svelte';
 	import { downloadBlob } from '../download';
 	import Dropzone from '../Dropzone.svelte';
 
@@ -11,11 +12,15 @@
 		h: number;
 	}
 
+	// The format landing pages under /pdf arrive set to the one they name, so
+	// /pdf/pdf-to-png really does hand you PNG files without touching anything.
+	let { initialFormat = 'jpg' }: { initialFormat?: FormatId } = $props();
+
 	let file = $state<File | null>(null);
 	let baseName = $state('document');
 	let pages = $state<RenderedPage[]>([]);
 	let scale = $state(2);
-	let formatId = $state<FormatId>('jpg');
+	let formatId = $state<FormatId>(untrack(() => initialFormat));
 	let quality = $state(90);
 	let rendering = $state(false);
 	let zipping = $state(false);

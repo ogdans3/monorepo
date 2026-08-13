@@ -9,16 +9,25 @@ Every format pair gets its own prerendered page under `/convert/`
 `/convert/heif-to-jpeg` included — ~93 pages plus the `/convert` hub), each
 with a dropzone, batch conversion, previews, per-file download and zip-all.
 Old root-level pair URLs 301 to `/convert/…` via `src/hooks.server.ts`.
-Conversion happens entirely on the user's device; the Node server only
-serves the static build.
+Alias spellings carry a `rel=canonical` to the primary one and are kept out
+of the sitemap for that reason. `/convert/jpeg-to-jpg` and
+`/convert/jpg-to-jpeg` are a special case: the same format under two
+extensions, so they rename the file rather than re-encode it, and only
+convert when the bytes turn out not to be a JPEG after all. Conversion
+happens entirely on the user's device; the Node server only serves the
+static build.
 
-There are also 43 tools in two sections: 32 image tools under `/tools/`
+There are also 47 tools in two sections: 32 image tools under `/tools/`
 (hub at `/tools`, grouped into Crop and combine, Size and orientation,
 Colour and light, Borders and effects, Text and marks, Privacy, Inspect
-and For the web) and 11 PDF tools under `/pdf/` (hub at `/pdf`). Both hubs
+and For the web) and 15 PDF tools under `/pdf/` (hub at `/pdf`). Both hubs
 have a live search box, and every tool page offers hand-picked next steps
 from the registry's `next` field. Old `/tools/<pdf-slug>` URLs 301 to
 `/pdf/`, as do the three original root-level tool URLs to `/tools/`.
+
+Every page carries an FAQ with matching FAQPage structured data: two shared
+trust questions and then two or three that belong to that page alone,
+derived from the format table for conversions and hand-written per tool.
 
 Everything runs client-side. The image tools cover crop, combine, split,
 trim, extend canvas, resize, bulk resize, rotate, flip, adjust, black and
@@ -27,7 +36,9 @@ shadow, vignette, blend, add text, watermark, blur, redact, pixelate, EXIF
 removal, transparent background, colour picker, histogram, compress,
 favicon and Base64. The PDF tools cover image→PDF, PDF→image, merge,
 split, extract pages, delete pages, reorder, rotate, watermark, page
-numbers and PDF→text.
+numbers and PDF→text, plus four format-specific landing pages (JPG, PNG
+and HEIC to PDF, and PDF to PNG) that share those editors but arrive
+preconfigured for the format they name.
 
 Shared pure logic lives in `src/lib/tools/`: `pixels.ts` (luma greyscale,
 sepia matrix, colour replacement, edge trimming), `pdf.ts` (page ranges,

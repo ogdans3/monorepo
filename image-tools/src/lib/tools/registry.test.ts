@@ -71,9 +71,35 @@ describe('tools registry', () => {
 
 	it('respects the copy style: no em dashes, no semicolons', () => {
 		for (const t of TOOLS) {
-			const copy = [t.h1, t.title, t.description, t.lede, t.blurb, ...t.steps, ...t.about].join(' ');
+			const copy = [
+				t.h1,
+				t.title,
+				t.description,
+				t.lede,
+				t.blurb,
+				...t.steps,
+				...t.about,
+				...t.faq.flatMap((f) => [f.q, f.a])
+			].join(' ');
 			expect(copy, t.slug).not.toContain('—');
 			expect(copy, t.slug).not.toContain(';');
+		}
+	});
+
+	it('gives every tool questions that only it could answer', () => {
+		// The two trust questions are the same site wide on purpose. These are
+		// the opposite, and without them a tool page is a template with a
+		// different heading. Answers are checked for length because a
+		// one-line answer is not the shape that gets quoted.
+		const seen = new Map<string, string>();
+		for (const t of TOOLS) {
+			expect(t.faq.length, t.slug).toBeGreaterThanOrEqual(2);
+			for (const { q, a } of t.faq) {
+				expect(q.endsWith('?'), `${t.slug}: ${q}`).toBe(true);
+				expect(a.length, `${t.slug}: ${q}`).toBeGreaterThan(140);
+				expect(seen.has(q), `${q} is used by both ${seen.get(q)} and ${t.slug}`).toBe(false);
+				seen.set(q, t.slug);
+			}
 		}
 	});
 

@@ -15,7 +15,7 @@
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
-	import { trustFaq } from '$lib/ui/trust-faq';
+	import { pageFaq } from '$lib/faq';
 
 	// WebApplication structured data: name, category and an explicit price of
 	// zero, which is how machines learn the site is free.
@@ -45,6 +45,22 @@
 		'png-to-ico',
 		'svg-to-png'
 	].map((slug) => parsePairSlug(slug)!);
+
+	// Questions this hub answers that its individual pages do not.
+	const SPECIFIC = [
+		{
+			q: 'What is the best free image converter?',
+			a: 'The one that does not make you wait for an upload, does not ask for an account and does not stamp a watermark on the result. This site converts between PNG, JPG, WebP, AVIF, HEIC, GIF, BMP, ICO, SVG and TIFF entirely inside your browser, so the file never travels anywhere and there is nothing to sign up for. It is free with no limit on how many images you convert.'
+		},
+		{
+			q: 'How does converting an image in the browser work?',
+			a: 'Your browser already knows how to read and write images, since that is most of what it does all day. Dropping a file here hands it to that machinery: the picture is unpacked into raw pixels, then saved again in the format you chose, all on your own device. The newer formats that browsers do not write natively are handled by small code libraries the page loads as it needs them.'
+		},
+		{
+			q: 'Which image format should I use?',
+			a: 'JPG for photographs that have to work everywhere, PNG when you need transparency or exact pixels such as a logo or a screenshot, and WebP for anything going on a website, since it is smaller than both at the same visible quality. AVIF is smaller still and worth using when only browsers will see the file. HEIC is what an iPhone gives you and is usually the thing to convert away from.'
+		}
+	];
 </script>
 
 <svelte:head>
@@ -140,7 +156,7 @@
 	</p>
 </section>
 
-<Faq items={trustFaq('image converter')} />
+<Faq items={pageFaq('image converter', SPECIFIC)} />
 
 <style>
 	.all-tools-link {

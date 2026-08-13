@@ -6,7 +6,7 @@
 	import TrustLine from '../TrustLine.svelte';
 	import Breadcrumbs from '../Breadcrumbs.svelte';
 	import Faq from '../Faq.svelte';
-	import { trustFaq } from '../trust-faq';
+	import { pageFaq } from '$lib/faq';
 
 	let { tool, children }: { tool: ImageTool; children: Snippet } = $props();
 
@@ -76,7 +76,7 @@
 	</p>
 </section>
 
-<Faq items={trustFaq(`${tool.name.toLowerCase()} tool`)} />
+<Faq items={pageFaq(`${tool.name.toLowerCase()} tool`, tool.faq)} />
 
 {#if nextUp.length}
 	<section aria-labelledby="next-heading">

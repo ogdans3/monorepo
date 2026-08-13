@@ -264,6 +264,38 @@ export function presetBySlug(slug: string): Preset | undefined {
 	return PRESETS.find((p) => p.slug === slug);
 }
 
+/**
+ * Two questions per preset, built from the number the page is about, so the
+ * 200 KB page answers the 200 KB question. Both are things people ask after
+ * the first attempt does not come out the way they expected.
+ */
+export function presetFaq(preset: Preset): { q: string; a: string }[] {
+	if (preset.kind === 'compress') {
+		const label = preset.h1.replace('Compress an image to ', '');
+		return [
+			{
+				q: `Why is my image still bigger than ${label}?`,
+				a: `Because quality alone could not get it there. The tool lowers quality as far as it sensibly can, and on a very large photo with a tight target that is not always enough. Turn on downscaling and it will reduce the dimensions as well, which is almost always the better looking answer, since a smaller picture at decent quality beats a large one that has been crushed.`
+			},
+			{
+				q: `How much quality will I lose getting down to ${label}?`,
+				a: `It depends entirely on the picture rather than on the number. A soft photograph compresses beautifully and may look untouched, while a screenshot full of text and flat colour shows the damage quickly at the same file size. The result line tells you the quality setting that was used, so you can see how hard it had to work.`
+			}
+		];
+	}
+	const { width, height } = preset;
+	return [
+		{
+			q: `Will my photo be cropped to fit ${width} by ${height}?`,
+			a: `Yes, if it is not already that shape. The image is scaled until it covers the whole frame and the overflow is trimmed off, which keeps everything in proportion rather than stretching it. The middle is what survives, so if the important part is off to one side, crop it yourself first and then come back here.`
+		},
+		{
+			q: `What if my image is smaller than ${width} by ${height}?`,
+			a: `It gets enlarged to fit, and enlarging always costs sharpness, because the extra pixels have to be invented from the ones already there. It will still be exactly the right size, it just will not be as crisp as the same picture from a larger original. Start from the biggest version you have whenever you can.`
+		}
+	];
+}
+
 export const PRESET_GROUPS: { id: Preset['group']; label: string; blurb: string }[] = [
 	{ id: 'size', label: 'Hit a file size', blurb: 'When an upload form says the file is too big.' },
 	{ id: 'dimensions', label: 'Exact pixel sizes', blurb: 'When something asks for a size by number.' },

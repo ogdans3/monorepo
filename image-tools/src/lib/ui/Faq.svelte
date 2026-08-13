@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FaqItem } from './trust-faq';
+	import type { FaqItem } from '$lib/faq';
 
 	let { items }: { items: FaqItem[] } = $props();
 
