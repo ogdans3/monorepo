@@ -1,5 +1,6 @@
 import { allPairSlugs } from './engine';
 import { TOOLS, toolPath } from './tools/registry';
+import { PRESETS, presetPath } from './tools/presets';
 import { convertPath } from './site';
 
 /**
@@ -12,9 +13,11 @@ export function sitemapPaths(): string[] {
 		'/convert',
 		'/tools',
 		'/pdf',
+		'/make',
 		'/privacy',
 		'/terms',
 		...TOOLS.map((tool) => toolPath(tool)),
+		...PRESETS.map((preset) => presetPath(preset)),
 		...allPairSlugs().map((slug) => convertPath(slug))
 	];
 }

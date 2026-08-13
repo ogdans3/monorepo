@@ -2,6 +2,16 @@
 	import { FORMATS, parsePairSlug } from '$lib/engine';
 	import { SITE_URL, convertPath } from '$lib/site';
 	import { IMAGE_CATEGORIES, PDF_TOOLS, toolPath, toolsInCategory } from '$lib/tools/registry';
+	import { presetBySlug, presetPath } from '$lib/tools/presets';
+
+	const POPULAR_PRESETS = [
+		'compress-image-to-200kb',
+		'compress-image-to-1mb',
+		'resize-image-to-1920x1080',
+		'youtube-thumbnail-size',
+		'instagram-post-size',
+		'linkedin-banner-size'
+	].map((slug) => presetBySlug(slug)!);
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
@@ -80,6 +90,19 @@
 		{/each}
 	</div>
 	<p class="all-tools-link"><a href="/tools">All image tools</a></p>
+</section>
+
+<section aria-labelledby="sizes-heading">
+	<h2 id="sizes-heading">Ready-made sizes</h2>
+	<p>
+		Pages that open with the setting already filled in, for the sizes people get asked for most.
+	</p>
+	<ul class="pair-links">
+		{#each POPULAR_PRESETS as preset (preset.slug)}
+			<li><a href={presetPath(preset)}>{preset.h1}</a></li>
+		{/each}
+	</ul>
+	<p class="all-tools-link"><a href="/make">All ready-made sizes</a></p>
 </section>
 
 <section aria-labelledby="pdf-heading">

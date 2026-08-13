@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { sitemapPaths } from './sitemap';
 import { TOOLS, toolPath } from './tools/registry';
+import { PRESETS } from './tools/presets';
 import { allPairSlugs } from './engine';
 
 describe('sitemapPaths', () => {
 	const paths = sitemapPaths();
 
-	it('lists every tool and every conversion, plus the fixed pages', () => {
-		expect(paths.length).toBe(6 + TOOLS.length + allPairSlugs().length);
+	it('lists every tool, preset and conversion, plus the fixed pages', () => {
+		expect(paths.length).toBe(7 + TOOLS.length + PRESETS.length + allPairSlugs().length);
 		for (const tool of TOOLS) expect(paths).toContain(toolPath(tool));
+		for (const preset of PRESETS) expect(paths).toContain(`/make/${preset.slug}`);
 		expect(paths).toContain('/convert/heic-to-jpg');
 		expect(paths).toContain('/convert/heif-to-jpeg'); // alias spellings too
-		for (const fixed of ['/', '/convert', '/tools', '/pdf', '/privacy', '/terms']) {
+		for (const fixed of ['/', '/convert', '/tools', '/pdf', '/make', '/privacy', '/terms']) {
 			expect(paths).toContain(fixed);
 		}
 	});

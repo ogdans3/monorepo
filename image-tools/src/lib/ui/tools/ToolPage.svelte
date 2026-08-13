@@ -4,6 +4,7 @@
 	import { nextTools, PDF_CATEGORY, TOOLS, toolPath, type ImageTool } from '$lib/tools/registry';
 	import { parsePairSlug } from '$lib/engine';
 	import TrustLine from '../TrustLine.svelte';
+	import Breadcrumbs from '../Breadcrumbs.svelte';
 	import Faq from '../Faq.svelte';
 	import { trustFaq } from '../trust-faq';
 
@@ -39,6 +40,14 @@
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{SITE_URL}{toolPath(tool)}" />
 </svelte:head>
+
+<Breadcrumbs
+	crumbs={[
+		{ label: 'Home', href: '/' },
+		isPdf ? { label: 'PDF tools', href: '/pdf' } : { label: 'Image tools', href: '/tools' }
+	]}
+	current={tool.h1}
+/>
 
 <section class="hero">
 	<h1>{tool.h1}</h1>

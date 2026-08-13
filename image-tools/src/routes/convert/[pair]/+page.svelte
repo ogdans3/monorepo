@@ -1,13 +1,18 @@
 <script lang="ts">
+	import { pairFacts } from '$lib/engine';
 	import { SITE_URL, convertPath } from '$lib/site';
 	import { TOOLS, toolPath } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
+	import Breadcrumbs from '$lib/ui/Breadcrumbs.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
 	import { trustFaq } from '$lib/ui/trust-faq';
 
 	let { data } = $props();
 	const page = $derived(data.page);
+	// facts that belong to this conversion alone, so 93 pages are not one
+	// template with two names swapped
+	const facts = $derived(pairFacts(data.page));
 	const notes = $derived(
 		[data.page.source.sourceNote, data.page.target.targetNote].filter(
 			(n): n is string => typeof n === 'string'
@@ -30,6 +35,14 @@
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{SITE_URL}{convertPath(page.canonicalSlug)}" />
 </svelte:head>
+
+<Breadcrumbs
+	crumbs={[
+		{ label: 'Home', href: '/' },
+		{ label: 'Conversions', href: '/convert' }
+	]}
+	current="{page.sourceName} to {page.targetName}"
+/>
 
 <section class="hero">
 	<h1>Convert {page.sourceName} to {page.targetName}</h1>
@@ -74,6 +87,13 @@
 
 <section aria-labelledby="about-heading">
 	<h2 id="about-heading">Why convert {page.sourceName} to {page.targetName}?</h2>
+	{#each facts as fact (fact)}
+		<p>{fact}</p>
+	{/each}
+</section>
+
+<section aria-labelledby="formats-heading">
+	<h2 id="formats-heading">About the two formats</h2>
 	<p><strong>{page.source.name}</strong>: {page.source.blurb}</p>
 	<p><strong>{page.target.name}</strong>: {page.target.blurb}</p>
 	<p>

@@ -68,6 +68,7 @@
 			<a href="/convert">Convert</a>
 			<a href="/tools">Tools</a>
 			<a href="/pdf">PDF</a>
+			<a href="/make">Sizes</a>
 		</nav>
 	</header>
 

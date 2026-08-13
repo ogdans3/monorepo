@@ -11,11 +11,22 @@
 		height: number;
 	}
 
+	let {
+		initialBytes
+	}: {
+		/** Preset pages arrive with the target already set, e.g. 200 KB. */
+		initialBytes?: number;
+	} = $props();
+
 	let img = $state<RawImage | null>(null);
 	let baseName = $state('image');
 	let originalBytes = $state(0);
-	let targetValue = $state(500);
-	let targetUnit = $state<'KB' | 'MB'>('KB');
+	// svelte-ignore state_referenced_locally
+	let targetValue = $state(
+		initialBytes ? (initialBytes >= 1024 * 1024 ? initialBytes / 1024 / 1024 : Math.round(initialBytes / 1024)) : 500
+	);
+	// svelte-ignore state_referenced_locally
+	let targetUnit = $state<'KB' | 'MB'>(initialBytes && initialBytes >= 1024 * 1024 ? 'MB' : 'KB');
 	let formatId = $state<FormatId>('jpg');
 	let allowDownscale = $state(true);
 	let working = $state(false);

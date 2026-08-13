@@ -16,6 +16,7 @@ export {
 	type PairPage
 } from './formats';
 export { sniffFormat } from './sniff';
+export { pairFacts } from './pairfacts';
 export { flattenPartialAlpha, hasTransparency, hexToRgb, WHITE, type Rgb } from './flatten';
 export { outputFileName, editedFileName, formatBytes } from './names';
 export { convertFile, type Converted, type ConvertOptions } from './convert';
