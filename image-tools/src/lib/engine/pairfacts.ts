@@ -97,6 +97,21 @@ function reasonSentence(source: Format, target: Format, sourceName: string, targ
 }
 
 /**
+ * The other spelling of the same format, said out loud.
+ *
+ * These used to be pages of their own, which meant 31 near-copies pointing
+ * rel=canonical back here. They are redirects now, so this sentence is what
+ * carries the spelling, and it belongs on the page anyway: people really do
+ * wonder whether .jpeg and .jpg are two different things.
+ */
+export function spellingNote(format: Format): string | null {
+	const alias = format.aliases[0];
+	if (!alias) return null;
+	const other = alias.toUpperCase();
+	return `${format.name} and ${other} are the same format. The two extensions are interchangeable, and .${format.id} is the more common of the two.`;
+}
+
+/**
  * Two to four sentences that belong to this pair alone. Ordered so the most
  * useful one comes first, since that is what gets read and quoted.
  */

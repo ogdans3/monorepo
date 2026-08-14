@@ -11,11 +11,21 @@
 		targets: TARGETS.filter((t) => t.id !== source.id)
 	}));
 
+	// Counted from the format table rather than typed in, because the first
+	// version of this answer said 93 conversions when there are 63. It had
+	// counted the alias spellings, and it also claimed everything but SVG
+	// converts both ways, which is not true of HEIC or TIFF either.
+	const readOnly = SOURCES.filter((f) => !f.canEncode);
+	const pairCount = SOURCES.length * TARGETS.length - TARGETS.length;
+
 	// Questions this hub answers that its individual pages do not.
 	const SPECIFIC = [
 		{
 			q: 'Which image formats can I convert between?',
-			a: 'Ten formats in every working direction: PNG, JPG, WebP, AVIF, GIF, HEIC, BMP, ICO, SVG and TIFF. SVG can be read but not written, since turning pixels back into shapes is a different kind of job, and everything else converts both ways. That gives 93 combinations, each with a page of its own.'
+			a: `Ten can be read: ${SOURCES.map((f) => f.name).join(', ')}. ${readOnly
+				.map((f) => f.name)
+				.join(', ')
+				.replace(/, ([^,]*)$/, ' and $1')} can be read but not written, because writing them needs an encoder no browser ships, and in the case of SVG because turning pixels back into shapes is a different kind of job entirely. That leaves ${pairCount} conversions, each with a page of its own.`
 		},
 		{
 			q: 'Can I convert several images at once?',

@@ -23,10 +23,28 @@ export const handle: Handle = ({ event, resolve }) => {
 		if (PDF_SLUGS.has(slug)) redirect(301, `/pdf/${slug}`);
 	}
 
+	// The alias spellings (png-to-jpeg, heif-to-jpg, tif-to-png) used to be
+	// pages of their own that pointed rel=canonical at the primary spelling.
+	// Google was always going to index the primary one anyway, so they were 31
+	// near-copies earning nothing, and once they left the sitemap nothing linked
+	// to them at all. A redirect does the same job with none of the ambiguity.
+	// The primary page now says in its own words that the spellings are
+	// interchangeable, which is what covers the query.
+	if (path.startsWith('/convert/')) {
+		const page = parsePairSlug(path.slice('/convert/'.length));
+		if (page && page.slug !== page.canonicalSlug) {
+			redirect(301, `/convert/${page.canonicalSlug}`);
+		}
+	}
+
 	// Conversion pages lived at the root before /convert/ existed. Any valid
-	// pair slug, alias spellings included, redirects to its new home.
+	// pair slug redirects to its new home, resolved to the canonical spelling
+	// in one hop rather than bouncing through the alias rule above.
 	const rootSlug = path.slice(1);
-	if (!rootSlug.includes('/') && parsePairSlug(rootSlug)) redirect(301, `/convert/${rootSlug}`);
+	if (!rootSlug.includes('/')) {
+		const page = parsePairSlug(rootSlug);
+		if (page) redirect(301, `/convert/${page.canonicalSlug}`);
+	}
 
 	return resolve(event);
 };

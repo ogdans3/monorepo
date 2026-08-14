@@ -50,13 +50,19 @@ decisions. This file is the short version of what matters when editing.
   answer is not the shape a search result or an assistant quotes. When the
   shared pair was the whole FAQ it was 29% of every page's words and word
   for word the same on all 163.
-- **The sitemap lists canonical URLs only.** The alias spellings
-  (`png-to-jpeg`, `heif-to-*`, `tif-to-*`) are still prerendered from
-  `allPairSlugs()` and still rank, but they point `rel=canonical` at the
-  primary spelling, so listing them too would contradict that. `lastmod`
-  comes from `CONTENT_UPDATED` in `site.ts`, a hand-set date. Bump it when
-  the words change, not when the build runs, or the signal stops being
-  worth anything.
+- **One page per conversion, 63 of them.** The alias spellings
+  (`png-to-jpeg`, `heif-to-*`, `tif-to-*`) are 301s in `hooks.server.ts`,
+  not pages. They were pages pointing `rel=canonical` at the primary
+  spelling, which meant 31 near-copies Google was never going to index, and
+  dropping them from the sitemap left them with no inbound links at all.
+  `spellingNote()` puts the other spelling on the primary page instead,
+  which is what covers the query. Every prerendered page is now both
+  linked and listed: 138 pages, 138 sitemap URLs, zero orphans, and a test
+  pins the count at 63 because the hub copy once claimed 93 by counting
+  spellings.
+- **`lastmod` comes from `CONTENT_UPDATED` in `site.ts`**, a hand-set date.
+  Bump it when the words change, not when the build runs, or the signal
+  stops being worth anything.
 - **WASM codecs are lazy.** Keep them behind dynamic imports, and keep
   `optimizeDeps.exclude` in `vite.config.ts` in sync when adding one.
 - **Pure parts stay pure.** BMP/ICO encoders, sniffing, slugs and naming run

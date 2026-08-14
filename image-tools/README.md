@@ -5,12 +5,15 @@ Free, client-side image conversion and editing in the browser, at
 dashboard slug keep the historical name `image-tools`.
 
 Every format pair gets its own prerendered page under `/convert/`
-(`/convert/heic-to-jpg`, `/convert/png-to-webp`, …, alias spellings like
-`/convert/heif-to-jpeg` included — ~93 pages plus the `/convert` hub), each
-with a dropzone, batch conversion, previews, per-file download and zip-all.
-Old root-level pair URLs 301 to `/convert/…` via `src/hooks.server.ts`.
-Alias spellings carry a `rel=canonical` to the primary one and are kept out
-of the sitemap for that reason. `/convert/jpeg-to-jpg` and
+(`/convert/heic-to-jpg`, `/convert/png-to-webp`, … — 63 pages plus the
+`/convert` hub), each with a dropzone, batch conversion, previews, per-file
+download and zip-all. Ten formats can be read and seven written, since HEIC,
+SVG and TIFF have no browser encoder. Old root-level pair URLs 301 to
+`/convert/…` via `src/hooks.server.ts`, and so do the alias spellings
+(`png-to-jpeg`, `heif-to-jpg`, `tif-to-png`), which used to be pages of
+their own pointing `rel=canonical` at the primary spelling. The primary page
+now carries a sentence saying the spellings are interchangeable.
+`/convert/jpeg-to-jpg` and
 `/convert/jpg-to-jpeg` are a special case: the same format under two
 extensions, so they rename the file rather than re-encode it, and only
 convert when the bytes turn out not to be a JPEG after all. Conversion

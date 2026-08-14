@@ -1,9 +1,13 @@
 import { error } from '@sveltejs/kit';
-import { allPairSlugs, parsePairSlug, relatedPairs } from '$lib/engine';
+import { allPairs, parsePairSlug, relatedPairs } from '$lib/engine';
 import type { EntryGenerator, PageLoad } from './$types';
 
-/** Prerender every conversion page, alias spellings included. */
-export const entries: EntryGenerator = () => allPairSlugs().map((pair) => ({ pair }));
+/**
+ * One page per conversion, in the primary spelling only. The alias spellings
+ * are 301s in hooks.server.ts rather than pages, because a page that points
+ * rel=canonical somewhere else was never going to be the one Google indexed.
+ */
+export const entries: EntryGenerator = () => allPairs().map((pair) => ({ pair: pair.slug }));
 
 export const load: PageLoad = ({ params }) => {
 	const page = parsePairSlug(params.pair);

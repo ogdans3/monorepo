@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { pairFacts, pairFaq } from '$lib/engine';
+	import { pairFacts, pairFaq, spellingNote } from '$lib/engine';
 	import { SITE_URL, convertPath } from '$lib/site';
 	import { TOOLS, toolPath } from '$lib/tools/registry';
 	import ConvertPanel from '$lib/ui/ConvertPanel.svelte';
@@ -10,13 +10,25 @@
 
 	let { data } = $props();
 	const page = $derived(data.page);
-	// facts that belong to this conversion alone, so 93 pages are not one
+	// facts that belong to this conversion alone, so 63 pages are not one
 	// template with two names swapped
 	const facts = $derived(pairFacts(data.page));
 	const notes = $derived(
 		[data.page.source.sourceNote, data.page.target.targetNote].filter(
 			(n): n is string => typeof n === 'string'
 		)
+	);
+	// The alias spellings are redirects rather than pages now, so this is where
+	// the words "JPEG", "HEIF" and "TIF" live. Deduped, since png-to-jpg and
+	// jpg-to-png must not both say the JPEG sentence twice.
+	const spellings = $derived(
+		[data.page.source, data.page.target]
+			.map((format) => ({
+				text: spellingNote(format),
+				rename: format.id === 'jpg' ? 'jpeg-to-jpg' : null
+			}))
+			.filter((n): n is { text: string; rename: string | null } => n.text !== null)
+			.filter((n, i, all) => all.findIndex((o) => o.text === n.text) === i)
 	);
 </script>
 
@@ -96,6 +108,15 @@
 	<h2 id="formats-heading">About the two formats</h2>
 	<p><strong>{page.source.name}</strong>: {page.source.blurb}</p>
 	<p><strong>{page.target.name}</strong>: {page.target.blurb}</p>
+	{#each spellings as note (note.text)}
+		<p>
+			{note.text}
+			{#if note.rename}
+				If a form has asked you for one and you have the other,
+				<a href={convertPath(note.rename)}>rename it here</a> rather than converting it.
+			{/if}
+		</p>
+	{/each}
 	<p>
 		The whole conversion happens in your browser. Your file is unpacked into raw pixels and saved
 		again as {page.targetName}. Nothing is sent to any server.

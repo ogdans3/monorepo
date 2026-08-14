@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { pairFacts } from './pairfacts';
-import { allPairSlugs, parsePairSlug } from './formats';
+
+import { pairFacts, spellingNote } from './pairfacts';
+import { FORMATS, allPairSlugs, parsePairSlug } from './formats';
 
 const facts = (slug: string) => pairFacts(parsePairSlug(slug)!);
 
@@ -45,5 +46,42 @@ describe('pairFacts', () => {
 
 	it('reads the same for an alias spelling, since it is the same conversion', () => {
 		expect(facts('heif-to-jpeg').length).toBe(facts('heic-to-jpg').length);
+	});
+});
+
+describe('how many conversions there really are', () => {
+	it('counts pages, not spellings', () => {
+		// The hub copy once said 93 because it had counted the alias spellings
+		// as separate conversions. They are 301s now, so the number a visitor
+		// is told has to be the number of pages that exist.
+		const encodable = allPairSlugs().filter((slug) => {
+			const page = parsePairSlug(slug)!;
+			return page.slug === page.canonicalSlug;
+		});
+		expect(encodable.length).toBe(63);
+		expect(allPairSlugs().length).toBe(94); // 63 plus 31 alias spellings
+	});
+});
+
+describe('spellingNote', () => {
+	it('names the other spelling for the three formats that have one', () => {
+		expect(spellingNote(FORMATS.jpg)).toContain('JPG and JPEG are the same format');
+		expect(spellingNote(FORMATS.heic)).toContain('HEIC and HEIF are the same format');
+		expect(spellingNote(FORMATS.tiff)).toContain('TIFF and TIF are the same format');
+	});
+
+	it('says nothing about formats with only one spelling', () => {
+		for (const id of ['png', 'webp', 'avif', 'gif', 'bmp', 'ico', 'svg'] as const) {
+			expect(spellingNote(FORMATS[id]), id).toBeNull();
+		}
+	});
+
+	it('keeps the copy style', () => {
+		for (const format of Object.values(FORMATS)) {
+			const note = spellingNote(format);
+			if (!note) continue;
+			expect(note).not.toContain('—');
+			expect(note).not.toContain(';');
+		}
 	});
 });

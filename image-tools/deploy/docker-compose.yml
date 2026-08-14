@@ -10,6 +10,11 @@ version: '3.8'
 # Domains: imagetoolbox.org (canonical) + www. Both must point at the swarm
 # host in DNS. ORIGIN stays on the apex, and every canonical tag in the app
 # already points there too.
+#
+# www 301s to the apex rather than serving the same pages under a second
+# hostname. The canonical tags would let a search engine work it out anyway,
+# but only after crawling everything twice, and this has to be in place before
+# DNS goes live or the very first crawl is the one that sees the duplicates.
 
 services:
   web:
@@ -27,10 +32,20 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=proxy-net"
-        - "traefik.http.routers.imagetoolbox-web.rule=Host(`imagetoolbox.org`) || Host(`www.imagetoolbox.org`)"
+        - "traefik.http.routers.imagetoolbox-web.rule=Host(`imagetoolbox.org`)"
         - "traefik.http.routers.imagetoolbox-web.tls=true"
         - "traefik.http.routers.imagetoolbox-web.tls.certresolver=myresolver"
         - "traefik.http.services.imagetoolbox-web.loadbalancer.server.port=3000"
+        # www exists only to send people to the apex. It still needs its own
+        # certificate, so it is a real router rather than a rule on the one above.
+        - "traefik.http.routers.imagetoolbox-www.rule=Host(`www.imagetoolbox.org`)"
+        - "traefik.http.routers.imagetoolbox-www.tls=true"
+        - "traefik.http.routers.imagetoolbox-www.tls.certresolver=myresolver"
+        - "traefik.http.routers.imagetoolbox-www.service=imagetoolbox-web"
+        - "traefik.http.routers.imagetoolbox-www.middlewares=imagetoolbox-to-apex"
+        - "traefik.http.middlewares.imagetoolbox-to-apex.redirectregex.regex=^https?://www\\.imagetoolbox\\.org/(.*)"
+        - "traefik.http.middlewares.imagetoolbox-to-apex.redirectregex.replacement=https://imagetoolbox.org/$${1}"
+        - "traefik.http.middlewares.imagetoolbox-to-apex.redirectregex.permanent=true"
 
 networks:
   proxy-net:
