@@ -17,6 +17,18 @@ decisions. This file is the short version of what matters when editing.
   storage. NEVER call `posthog.identify()` or `posthog.alias()`, and never
   loosen those two flags — doing so reintroduces personal data and breaks the
   GDPR basis for running banner-free.
+- **Do Not Track and GPC are checked by us, not by PostHog.** `respect_dnt`
+  does not work when `cookieless_mode` is `'always'`: the SDK already counts
+  every visitor as opted out and captures anyway, since in its model
+  cookieless capture is what an opted-out visitor gets. Verified in a
+  browser, with DNT on it still posted an event. So `+layout.svelte` checks
+  `doNotTrack` and `globalPrivacyControl` itself and does not even import the
+  library. Do not "simplify" this back to the config option. It is the only
+  way we can honour an objection, since remembering an opt-out would need the
+  device storage we promise not to use, and the privacy policy states it as
+  fact. `/tmp/e2e/privacy.mjs` covers it, and needs a non-localhost base URL
+  plus a masked `navigator.webdriver`, or PostHog's bot filter makes every
+  case pass for the wrong reason.
 - **Analytics goes through the first-party relay at `/t`**
   (`src/routes/t/[...path]/+server.ts`), so content blockers cannot drop it.
   Two things there are load-bearing: `x-forwarded-for` and `user-agent` must

@@ -17,7 +17,28 @@
 	// before the tools become usable. Measuring beats guessing: that was the
 	// single biggest thing on the critical path. The cost is that visits
 	// shorter than the idle timeout go uncounted, which is a fine trade.
-	if (browser && !['localhost', '127.0.0.1'].includes(location.hostname)) {
+
+	/**
+	 * Do Not Track and Global Privacy Control, honoured by simply not starting.
+	 *
+	 * PostHog has a respect_dnt option and it does not do this job here. With
+	 * cookieless_mode on 'always' the SDK already considers every visitor
+	 * opted out, and it captures anyway, because in its model cookieless
+	 * capture is what an opted-out visitor gets. Verified in a browser: with
+	 * DNT on it still posted an event. So the check belongs here, before the
+	 * library is even loaded, where it is ours and it is testable.
+	 *
+	 * We cannot remember an opt-out any other way. Storing one would need
+	 * exactly the device storage the privacy policy promises not to use.
+	 */
+	const objects =
+		browser &&
+		(navigator.doNotTrack === '1' ||
+			navigator.doNotTrack === 'yes' ||
+			(window as { doNotTrack?: string }).doNotTrack === '1' ||
+			(navigator as { globalPrivacyControl?: boolean }).globalPrivacyControl === true);
+
+	if (browser && !objects && !['localhost', '127.0.0.1'].includes(location.hostname)) {
 		const startAnalytics = () =>
 			import('posthog-js')
 				.then(({ default: posthog }) => {
