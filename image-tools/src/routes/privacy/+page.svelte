@@ -6,7 +6,7 @@
 	<title>Privacy Policy - imagetoolbox</title>
 	<meta
 		name="description"
-		content="How imagetoolbox handles data: your images never leave your device, analytics is anonymous and cookieless, and there are no accounts. The full policy in plain language."
+		content="How imagetoolbox handles data: your files never leave your device, analytics is anonymous and cookieless, and there are no accounts. The full policy in plain language."
 	/>
 	<link rel="canonical" href="{SITE_URL}/privacy" />
 	<meta property="og:title" content="Privacy Policy - imagetoolbox" />
@@ -17,7 +17,7 @@
 <section class="hero">
 	<h1>Privacy policy</h1>
 	<p class="lede">
-		The whole policy in one breath: your images never leave your device, the analytics cannot
+		The whole policy in one breath: your files never leave your device, the analytics cannot
 		identify you, and nothing is stored on your machine.
 	</p>
 	<p class="updated mono">Last updated 15 August 2026</p>
@@ -26,7 +26,7 @@
 <section aria-labelledby="who-heading">
 	<h2 id="who-heading">Who runs this site</h2>
 	<p>
-		imagetoolbox.org is a free collection of image tools, run by {OPERATOR.name}, a company
+		imagetoolbox.org is a free collection of image, PDF and video tools, run by {OPERATOR.name}, a company
 		registered in Norway. We are the data controller for anything described on this page.
 	</p>
 	<address>
@@ -45,17 +45,23 @@
 </section>
 
 <section aria-labelledby="images-heading">
-	<h2 id="images-heading">Your images</h2>
+	<h2 id="images-heading">Your files</h2>
 	<p>
-		Every converter and tool on this site runs inside your browser. When you drop a file, it is
-		opened and processed by code running on your own device. The file is never sent to our server
-		or to anyone else. We cannot see it, copy it or store it, and neither can our hosting
-		provider. The downloads are produced on your device too.
+		Every converter and tool on this site runs inside your browser. That is true of images, of
+		PDFs and of video. When you drop a file, it is opened and processed by code running on your
+		own device. The file is never sent to our server or to anyone else. We cannot see it, copy it
+		or store it, and neither can our hosting provider. The downloads are produced on your device
+		too.
 	</p>
 	<p>
-		The only thing our server does with your visit is send you the page itself. This is not a
-		promise we have to work to keep. It is how the site is built, and you can confirm it in your
-		browser's network tab.
+		The only thing our server does with your visit is send you the page itself, and for video the
+		conversion engine that runs it. Both travel in one direction. Nothing you drop on a page ever
+		travels back.
+	</p>
+	<p>
+		This is not a promise we have to work to keep. It is how the site is built, and you can
+		confirm it yourself in your browser's network tab: convert a file and watch that no request
+		leaves carrying it.
 	</p>
 </section>
 
@@ -163,7 +169,7 @@
 	</p>
 	<p>
 		What is worth weighing against that: the only thing that travels is a page address and a
-		hash that no longer means anything the next day. Your images are not part of this, because
+		hash that no longer means anything the next day. Your files are not part of this, because
 		they never leave your device in the first place.
 	</p>
 </section>

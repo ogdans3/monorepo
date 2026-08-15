@@ -20,13 +20,13 @@
 		The short version: the tools are free, your files stay yours and never reach us, and the
 		service is provided as is. Check important results before you rely on them.
 	</p>
-	<p class="updated mono">Last updated 13 August 2026</p>
+	<p class="updated mono">Last updated 15 August 2026</p>
 </section>
 
 <section aria-labelledby="service-heading">
 	<h2 id="service-heading">1. The service</h2>
 	<p>
-		imagetoolbox.org offers free image conversion and editing tools that run in your web browser.
+		imagetoolbox.org offers free image, PDF and video tools that run in your web browser.
 		Your files are processed on your own device and are never uploaded. There is no account, no
 		payment and no usage limit. By using the site you accept these terms. The site is operated by
 		{OPERATOR_LINE}.
@@ -36,7 +36,7 @@
 <section aria-labelledby="content-heading">
 	<h2 id="content-heading">2. Your content</h2>
 	<p>
-		You keep every right to the images you work with. Because your files never reach our servers,
+		You keep every right to the files you work with. Because they never reach our servers,
 		we do not receive them, store them or claim any rights to them. None at all.
 	</p>
 	<p>
@@ -58,7 +58,7 @@
 	<p>
 		The service is provided as is, without warranties of any kind. We care about correctness, but
 		we cannot promise the tools are free of errors or fit for a particular purpose. Browsers and
-		image formats change under our feet.
+		file formats change under our feet.
 	</p>
 	<p>
 		Check important results. In particular, if you redact or blur sensitive information, open the
@@ -79,7 +79,7 @@
 	<h2 id="privacy-heading">6. Privacy</h2>
 	<p>
 		How the site handles data is described in the
-		<a href="/privacy">privacy policy</a>. The short version: images never leave your device, and
+		<a href="/privacy">privacy policy</a>. The short version: your files never leave your device, and
 		the analytics is anonymous and cookieless.
 	</p>
 </section>
@@ -87,7 +87,7 @@
 <section aria-labelledby="ip-heading">
 	<h2 id="ip-heading">7. The site itself</h2>
 	<p>
-		The design, text and code of this website belong to its operator. The images you process are
+		The design, text and code of this website belong to its operator. The files you process are
 		yours and none of ours.
 	</p>
 </section>
