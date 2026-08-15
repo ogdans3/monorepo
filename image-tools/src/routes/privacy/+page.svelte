@@ -20,7 +20,7 @@
 		The whole policy in one breath: your images never leave your device, the analytics cannot
 		identify you, and nothing is stored on your machine.
 	</p>
-	<p class="updated mono">Last updated 14 August 2026</p>
+	<p class="updated mono">Last updated 15 August 2026</p>
 </section>
 
 <section aria-labelledby="who-heading">
@@ -136,6 +136,22 @@
 		European Union, under a data processing agreement. Our hosting provider serves the website
 		files. No images, names, email addresses or accounts are shared with anyone, because we
 		never have them in the first place.
+	</p>
+</section>
+
+<section aria-labelledby="transfers-heading">
+	<h2 id="transfers-heading">Data leaving Europe</h2>
+	<p>
+		The statistics are stored in the European Union. PostHog is a company based in the United
+		States, and parts of the network that carry the data to those servers run worldwide, so we
+		cannot claim that nothing ever crosses a border. Our agreement with PostHog covers this with
+		the European Commission's standard contractual clauses, which is the mechanism the GDPR
+		provides for exactly this situation.
+	</p>
+	<p>
+		What is worth weighing against that: the only thing that travels is a page address and a
+		hash that no longer means anything the next day. Your images are not part of this, because
+		they never leave your device in the first place.
 	</p>
 </section>
 
