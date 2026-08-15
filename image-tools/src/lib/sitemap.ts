@@ -23,6 +23,7 @@ export function sitemapPaths(): string[] {
 		'/pdf',
 		'/video',
 		'/make',
+		'/feedback',
 		'/privacy',
 		'/terms',
 		...TOOLS.map((tool) => toolPath(tool)),

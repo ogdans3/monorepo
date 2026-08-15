@@ -100,6 +100,14 @@ decisions. This file is the short version of what matters when editing.
   file size. **VP9 crashes the tab** and must not be offered. H.264 uses
   `veryfast`, not `ultrafast`, because ultrafast produced a file larger than
   the source. `plan.test.ts` pins all of this.
+- **The feedback form posts nothing.** `/feedback` composes a message with
+  `src/lib/feedback.ts` and hands it to the visitor's own mail app, so there
+  is no endpoint, no third party and no new personal data for us to hold. Do
+  not "improve" it into a form handler without updating the privacy policy
+  and COMPLIANCE.md, because collecting a message and an email address is a
+  new processing activity. The clipboard button needs a secure context and
+  falls back to a selectable box, which is why it works on the real site and
+  not over plain HTTP.
 - **Pure parts stay pure.** BMP/ICO encoders, sniffing, slugs and naming run
   in plain Node and have vitest coverage. DOM code lives only in
   `decode.ts`/`encode.ts`/UI.

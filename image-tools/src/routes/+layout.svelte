@@ -4,6 +4,7 @@
 	import logo from '$lib/assets/logo.svg';
 	import { OPERATOR_LINE, SITE_URL } from '$lib/site';
 	import { browser } from '$app/environment';
+	import { page } from '$app/state';
 
 	// Anonymous, cookieless analytics. Nothing is stored on the device and no
 	// person profiles are built, which is exactly why no consent banner is
@@ -65,6 +66,12 @@
 		}
 	}
 
+	// Carry the current page along, so a request sent from the crop tool
+	// arrives saying so instead of "the crop one I think".
+	const requestHref = $derived(
+		page.url.pathname === '/feedback' ? '/feedback' : `/feedback?from=${page.url.pathname}`
+	);
+
 	let { children } = $props();
 </script>
 
@@ -106,6 +113,7 @@
 		</p>
 		<p class="footer-operator">{OPERATOR_LINE}</p>
 		<p class="footer-links">
+			<a href={requestHref}>Request a feature</a>
 			<a href="/privacy">Privacy</a>
 			<a href="/terms">Terms</a>
 		</p>

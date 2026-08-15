@@ -11,7 +11,7 @@ describe('sitemapPaths', () => {
 
 	it('lists every tool, preset and conversion, plus the fixed pages', () => {
 		expect(paths.length).toBe(
-			8 +
+			9 +
 				TOOLS.length +
 				PRESETS.length +
 				allPairs().length +
@@ -21,7 +21,17 @@ describe('sitemapPaths', () => {
 		for (const tool of TOOLS) expect(paths).toContain(toolPath(tool));
 		for (const preset of PRESETS) expect(paths).toContain(`/make/${preset.slug}`);
 		expect(paths).toContain('/convert/heic-to-jpg');
-		for (const fixed of ['/', '/convert', '/tools', '/pdf', '/video', '/make', '/privacy', '/terms']) {
+		for (const fixed of [
+			'/',
+			'/convert',
+			'/tools',
+			'/pdf',
+			'/video',
+			'/make',
+			'/feedback',
+			'/privacy',
+			'/terms'
+		]) {
 			expect(paths).toContain(fixed);
 		}
 	});
