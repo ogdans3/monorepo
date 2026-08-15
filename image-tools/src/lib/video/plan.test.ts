@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { canCopy, estimateSeconds, fallbackPlan, planConversion, type ProbeResult } from './plan';
+import {
+	canCopy,
+	canCopyAudio,
+	canCopyVideo,
+	estimateSeconds,
+	fallbackPlan,
+	planConversion,
+	type ProbeResult
+} from './plan';
 import { VIDEO_FORMATS } from './formats';
 
 const h264: ProbeResult = {
@@ -44,14 +52,16 @@ describe('canCopy', () => {
 describe('planConversion', () => {
 	it('copies streams when it can, which is the difference between 60ms and 9s', () => {
 		const plan = planConversion(VIDEO_FORMATS.mp4, h264, 'out.mp4');
-		expect(plan.streamCopy).toBe(true);
+		expect(plan.copy).toBe('full');
+		expect(plan.framesIntact).toBe(true);
 		expect(plan.args).toEqual(['-i', 'input', '-c', 'copy', '-y', 'out.mp4']);
 		expect(plan.expectation).toBe('instant');
 	});
 
 	it('re-encodes into WebM, because WebM cannot hold H.264', () => {
 		const plan = planConversion(VIDEO_FORMATS.webm, h264, 'out.webm');
-		expect(plan.streamCopy).toBe(false);
+		expect(plan.copy).toBe('none');
+		expect(plan.framesIntact).toBe(false);
 		expect(plan.expectation).toBe('slow');
 		expect(plan.args).toContain('libvpx');
 		// measured: eight times faster than the default for the same size
@@ -104,9 +114,53 @@ describe('planConversion', () => {
 describe('fallbackPlan', () => {
 	it('re-encodes, for when a copy was attempted and refused', () => {
 		const plan = fallbackPlan(VIDEO_FORMATS.mp4, 'out.mp4');
-		expect(plan.streamCopy).toBe(false);
+		expect(plan.copy).toBe('none');
 		expect(plan.args).not.toContain('copy');
 		expect(plan.args).toContain('libx264');
+	});
+});
+
+describe('keeping the picture when only the sound is wrong', () => {
+	// Measured: treating this as all or nothing made MP4 to AVI take 2.5s on a
+	// three second clip, when the picture never needed touching at all.
+	it('copies the video into an AVI and only re-encodes the AAC', () => {
+		expect(canCopyVideo(VIDEO_FORMATS.avi, h264)).toBe(true);
+		expect(canCopyAudio(VIDEO_FORMATS.avi, h264)).toBe(false);
+		const plan = planConversion(VIDEO_FORMATS.avi, h264, 'out.avi');
+		expect(plan.copy).toBe('video');
+		expect(plan.framesIntact).toBe(true);
+		expect(plan.expectation).toBe('instant');
+		expect(plan.args.join(' ')).toContain('-c:v copy');
+		expect(plan.args.join(' ')).toContain('-c:a libmp3lame');
+		expect(plan.args).not.toContain('libx264');
+	});
+
+	it('still calls that a copy of the frames, because it is', () => {
+		const plan = planConversion(VIDEO_FORMATS.avi, h264, 'out.avi');
+		expect(plan.framesIntact).toBe(true);
+		// but not a full copy, since the audio really did change
+		expect(plan.copy).not.toBe('full');
+	});
+
+	it('keeps audio untouched when only the picture has to change', () => {
+		// MP3 audio is fine in an MP4, VP8 video is not
+		const vp8mp3 = { ...vp8, audioCodec: 'mp3' };
+		const plan = planConversion(VIDEO_FORMATS.mp4, vp8mp3, 'out.mp4');
+		expect(plan.copy).toBe('audio');
+		expect(plan.framesIntact).toBe(false);
+		expect(plan.args.join(' ')).toContain('-c:a copy');
+		expect(plan.args).toContain('libx264');
+	});
+
+	it('re-encodes both when neither fits', () => {
+		const plan = planConversion(VIDEO_FORMATS.webm, h264, 'out.webm');
+		expect(plan.copy).toBe('none');
+		expect(plan.args.join(' ')).not.toContain('copy');
+	});
+
+	it('a silent file never blocks a copy', () => {
+		expect(canCopyAudio(VIDEO_FORMATS.avi, silent)).toBe(true);
+		expect(planConversion(VIDEO_FORMATS.avi, silent, 'out.avi').copy).toBe('full');
 	});
 });
 

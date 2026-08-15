@@ -87,6 +87,14 @@ decisions. This file is the short version of what matters when editing.
   (2) `plan.ts` copies streams whenever the target container accepts the
   codecs, which is the difference between 60ms and 9s. Most real conversions
   (MOV to MP4, MKV to MP4, anything into Matroska) never re-encode at all.
+  It copies **per stream**, not all or nothing: AVI takes H.264 but not AAC,
+  so an MP4 going into an AVI keeps the picture and re-encodes only the
+  sound. Treating that as a full transcode cost 2.5s instead of 1.0s on a
+  three second clip, and the picture is the part that carries the quality.
+  A copy that ffmpeg then refuses falls back to a real encode, which is not
+  theoretical: H.264 inside an AVI will not remux into Matroska even though
+  Matroska accepts H.264, and `mkv-to-avi` and `avi-to-mkv` both land on the
+  fallback. Trying and falling back beats maintaining a table of exceptions.
   (3) The encoder settings were measured, not guessed. VP8 needs
   `-deadline realtime -cpu-used 8`, which is eight times faster for the same
   file size. **VP9 crashes the tab** and must not be offered. H.264 uses

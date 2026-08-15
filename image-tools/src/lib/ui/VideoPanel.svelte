@@ -23,7 +23,7 @@
 	let workRatio = $state(0);
 	let error = $state<string | null>(null);
 	let file = $state<File | null>(null);
-	let result = $state<{ blob: Blob; name: string; streamCopy: boolean } | null>(null);
+	let result = $state<{ blob: Blob; name: string; framesIntact: boolean; fullCopy: boolean } | null>(null);
 	let elapsed = $state(0);
 	let ticker: ReturnType<typeof setInterval> | null = null;
 
@@ -84,7 +84,8 @@
 			result = {
 				blob: converted.blob,
 				name: outputFileName(dropped.name, targetExt ?? target.extensions[0]),
-				streamCopy: converted.streamCopy
+				framesIntact: converted.framesIntact,
+				fullCopy: converted.fullCopy
 			};
 			stage = 'done';
 		} catch (e) {
@@ -169,9 +170,14 @@
 					{#if saving > 0}<span class="pill">−{saving}%</span>{/if}
 					<span class="dim">· {elapsed}s</span>
 				</span>
-				{#if result.streamCopy}
+				{#if result.fullCopy}
 					<span class="result-note">
 						Copied without re-encoding, so every frame is identical to the original.
+					</span>
+				{:else if result.framesIntact}
+					<span class="result-note">
+						The picture was copied untouched and only the sound was converted, which is why
+						it finished so quickly.
 					</span>
 				{/if}
 			</div>

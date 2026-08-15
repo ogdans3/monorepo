@@ -118,8 +118,10 @@ export async function probe(ff: FFmpeg, file: File): Promise<ProbeResult> {
 
 export interface ConvertResult {
 	blob: Blob;
-	/** True when nothing was re-encoded, which is worth telling the visitor. */
-	streamCopy: boolean;
+	/** True when the picture was copied, so every frame is untouched. */
+	framesIntact: boolean;
+	/** True when nothing at all was re-encoded. */
+	fullCopy: boolean;
 	probe: ProbeResult;
 }
 
@@ -149,13 +151,17 @@ export async function convertVideo(
 	try {
 		const plan = planConversion(target, info, outName, opts);
 		let code = await ff.exec(plan.args);
-		let streamCopy = plan.streamCopy;
+		let copy = plan.copy;
 
-		if (code !== 0 && plan.streamCopy) {
-			// the container refused what was inside after all, so pay the price
+		if (code !== 0 && plan.copy !== 'none') {
+			// The container refused what was inside after all, so pay the price.
+			// This is not theoretical: H.264 inside an AVI will not remux into
+			// Matroska even though Matroska accepts H.264, because the stream
+			// needs a bitstream filter first. Trying and falling back handles
+			// that without having to encode a table of such exceptions.
 			const retry = fallbackPlan(target, outName, opts);
 			code = await ff.exec(retry.args);
-			streamCopy = false;
+			copy = 'none';
 		}
 		if (code !== 0) throw new Error('ffmpeg could not convert that file');
 
@@ -166,7 +172,8 @@ export async function convertVideo(
 		const bytes = new Uint8Array(data);
 		return {
 			blob: new Blob([bytes as unknown as ArrayBuffer], { type: target.mime }),
-			streamCopy,
+			framesIntact: copy === 'full' || copy === 'video',
+			fullCopy: copy === 'full',
 			probe: info
 		};
 	} finally {

@@ -33,12 +33,35 @@ export interface ProbeResult {
 	height: number | null;
 }
 
+/**
+ * How much of the file survives untouched.
+ *
+ * "video" is worth separating from "full" because it is nearly as fast and
+ * far more common than it first looks. AVI takes H.264 happily but will not
+ * take AAC, so an MP4 going into an AVI needs a new audio track and nothing
+ * else. Re-encoding the picture as well, which is what treating this as all
+ * or nothing does, turns a second into a minute for no reason at all.
+ */
+export type CopyLevel = 'full' | 'video' | 'audio' | 'none';
+
 export interface ConvertPlan {
 	args: string[];
-	/** True when no stream is re-encoded, which is the fast path. */
-	streamCopy: boolean;
+	copy: CopyLevel;
+	/** True when the picture is untouched, so every frame is identical. */
+	get framesIntact(): boolean;
 	/** Shown to the visitor before they commit to waiting. */
 	expectation: 'instant' | 'quick' | 'slow';
+}
+
+function makePlan(args: string[], copy: CopyLevel, expectation: ConvertPlan['expectation']): ConvertPlan {
+	return {
+		args,
+		copy,
+		expectation,
+		get framesIntact() {
+			return copy === 'full' || copy === 'video';
+		}
+	};
 }
 
 export interface PlanOptions {
@@ -51,14 +74,23 @@ export interface PlanOptions {
 
 const IN = 'input';
 
-/** Can the target container take these streams as they are? */
-export function canCopy(target: VideoFormat, probe: ProbeResult): boolean {
+/** Will the target container take the picture as it is? */
+export function canCopyVideo(target: VideoFormat, probe: ProbeResult): boolean {
 	if (target.kind !== 'video') return false;
 	if (!probe.videoCodec) return false;
-	if (!target.copyableVideoCodecs.includes(probe.videoCodec)) return false;
-	// no audio at all is fine, it just means there is nothing to disqualify
-	if (probe.audioCodec && !target.copyableAudioCodecs.includes(probe.audioCodec)) return false;
-	return true;
+	return target.copyableVideoCodecs.includes(probe.videoCodec);
+}
+
+/** And the sound? No audio at all counts, since there is nothing to refuse. */
+export function canCopyAudio(target: VideoFormat, probe: ProbeResult): boolean {
+	if (target.kind === 'animation') return false;
+	if (!probe.audioCodec) return true;
+	return target.copyableAudioCodecs.includes(probe.audioCodec);
+}
+
+/** Both streams, which means the file is only rewrapped. */
+export function canCopy(target: VideoFormat, probe: ProbeResult): boolean {
+	return canCopyVideo(target, probe) && canCopyAudio(target, probe);
 }
 
 function gifArgs(outName: string, opts: PlanOptions): string[] {
@@ -87,9 +119,11 @@ function audioArgs(target: VideoFormat, outName: string, probe: ProbeResult): st
 	return ['-i', IN, '-vn', '-c:a', target.audioCodec ?? 'libmp3lame', '-q:a', '2', '-y', outName];
 }
 
-function encodeArgs(target: VideoFormat, outName: string, opts: PlanOptions): string[] {
-	const args = ['-i', IN, '-c:v', target.videoCodec ?? 'libx264'];
+/** Video arguments only, either a copy or a real encode. */
+function videoArgs(target: VideoFormat, copyVideo: boolean, opts: PlanOptions): string[] {
+	if (copyVideo) return ['-c:v', 'copy'];
 
+	const args = ['-c:v', target.videoCodec ?? 'libx264'];
 	if (target.videoCodec === 'libvpx') {
 		// Eight times faster than the default deadline for the same file size.
 		// Without this a one minute clip takes six minutes.
@@ -100,9 +134,25 @@ function encodeArgs(target: VideoFormat, outName: string, opts: PlanOptions): st
 		// defeats the point of converting.
 		args.push('-preset', 'veryfast', '-crf', String(opts.crf ?? 23), '-pix_fmt', 'yuv420p');
 	}
-
-	args.push('-c:a', target.audioCodec ?? 'aac', '-y', outName);
 	return args;
+}
+
+function encodeArgs(
+	target: VideoFormat,
+	outName: string,
+	opts: PlanOptions,
+	copyVideo = false,
+	copyAudio = false
+): string[] {
+	return [
+		'-i',
+		IN,
+		...videoArgs(target, copyVideo, opts),
+		'-c:a',
+		copyAudio ? 'copy' : (target.audioCodec ?? 'aac'),
+		'-y',
+		outName
+	];
 }
 
 /**
@@ -117,19 +167,29 @@ export function planConversion(
 	opts: PlanOptions = {}
 ): ConvertPlan {
 	if (target.kind === 'audio') {
-		return { args: audioArgs(target, outName, probe), streamCopy: false, expectation: 'instant' };
+		const copied = canCopyAudio(target, probe) && probe.audioCodec !== null;
+		return makePlan(audioArgs(target, outName, probe), copied ? 'audio' : 'none', 'instant');
 	}
 	if (target.kind === 'animation') {
-		return { args: gifArgs(outName, opts), streamCopy: false, expectation: 'quick' };
+		return makePlan(gifArgs(outName, opts), 'none', 'quick');
 	}
-	if (canCopy(target, probe)) {
-		return {
-			args: ['-i', IN, '-c', 'copy', '-y', outName],
-			streamCopy: true,
-			expectation: 'instant'
-		};
+
+	const video = canCopyVideo(target, probe);
+	const audio = canCopyAudio(target, probe);
+
+	if (video && audio) {
+		return makePlan(['-i', IN, '-c', 'copy', '-y', outName], 'full', 'instant');
 	}
-	return { args: encodeArgs(target, outName, opts), streamCopy: false, expectation: 'slow' };
+	if (video) {
+		// The picture is 95% of the work and all of the quality, so keeping it
+		// and re-encoding only the sound stays effectively instant. This is
+		// what an MP4 going into an AVI needs, since AVI takes H.264 but not AAC.
+		return makePlan(encodeArgs(target, outName, opts, true, false), 'video', 'instant');
+	}
+	if (audio && probe.audioCodec) {
+		return makePlan(encodeArgs(target, outName, opts, false, true), 'audio', 'slow');
+	}
+	return makePlan(encodeArgs(target, outName, opts), 'none', 'slow');
 }
 
 /**
@@ -144,7 +204,7 @@ export function fallbackPlan(
 	outName: string,
 	opts: PlanOptions = {}
 ): ConvertPlan {
-	return { args: encodeArgs(target, outName, opts), streamCopy: false, expectation: 'slow' };
+	return makePlan(encodeArgs(target, outName, opts), 'none', 'slow');
 }
 
 /** Rough seconds of work, for a progress estimate. Deliberately pessimistic. */
