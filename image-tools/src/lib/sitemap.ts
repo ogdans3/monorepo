@@ -2,6 +2,7 @@ import { allPairs } from './engine';
 import { TOOLS, toolPath } from './tools/registry';
 import { PRESETS, presetPath } from './tools/presets';
 import { SAME_NAME_PAGES } from './tools/samename';
+import { allVideoPairs, videoPath } from './video/formats';
 import { convertPath } from './site';
 
 /**
@@ -20,12 +21,14 @@ export function sitemapPaths(): string[] {
 		'/convert',
 		'/tools',
 		'/pdf',
+		'/video',
 		'/make',
 		'/privacy',
 		'/terms',
 		...TOOLS.map((tool) => toolPath(tool)),
 		...PRESETS.map((preset) => presetPath(preset)),
 		...allPairs().map((pair) => convertPath(pair.slug)),
-		...SAME_NAME_PAGES.map((page) => convertPath(page.slug))
+		...SAME_NAME_PAGES.map((page) => convertPath(page.slug)),
+		...allVideoPairs().map((pair) => videoPath(pair.slug))
 	];
 }

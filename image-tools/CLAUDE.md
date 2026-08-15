@@ -77,6 +77,21 @@ decisions. This file is the short version of what matters when editing.
   stops being worth anything.
 - **WASM codecs are lazy.** Keep them behind dynamic imports, and keep
   `optimizeDeps.exclude` in `vite.config.ts` in sync when adding one.
+- **Video is ffmpeg.wasm, and three things about it are load bearing.**
+  (1) The core is the **ESM** build, copied out of node_modules into
+  `static/ffmpeg/` by a plugin in `vite.config.ts` and gitignored. ffmpeg
+  spawns its worker with `type: "module"`, where `importScripts` does not
+  exist, so it falls through to a dynamic import and needs a default export.
+  The UMD build fails at runtime with "failed to import ffmpeg-core.js".
+  Blob URLs fail the same way, so pass the plain paths.
+  (2) `plan.ts` copies streams whenever the target container accepts the
+  codecs, which is the difference between 60ms and 9s. Most real conversions
+  (MOV to MP4, MKV to MP4, anything into Matroska) never re-encode at all.
+  (3) The encoder settings were measured, not guessed. VP8 needs
+  `-deadline realtime -cpu-used 8`, which is eight times faster for the same
+  file size. **VP9 crashes the tab** and must not be offered. H.264 uses
+  `veryfast`, not `ultrafast`, because ultrafast produced a file larger than
+  the source. `plan.test.ts` pins all of this.
 - **Pure parts stay pure.** BMP/ICO encoders, sniffing, slugs and naming run
   in plain Node and have vitest coverage. DOM code lives only in
   `decode.ts`/`encode.ts`/UI.

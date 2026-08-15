@@ -3,6 +3,7 @@
 	import { OPERATOR, SITE_URL, convertPath } from '$lib/site';
 	import { IMAGE_CATEGORIES, PDF_TOOLS, toolPath, toolsInCategory } from '$lib/tools/registry';
 	import { presetBySlug, presetPath } from '$lib/tools/presets';
+	import { parseVideoSlug, videoPath } from '$lib/video/formats';
 
 	const POPULAR_PRESETS = [
 		'compress-image-to-200kb',
@@ -53,6 +54,19 @@
 			addressCountry: 'NO'
 		}
 	});
+
+	// The video conversions worth leading with: the ones that finish in about
+	// a second, plus the two everyone searches for by name.
+	const POPULAR_VIDEO = [
+		'mov-to-mp4',
+		'mkv-to-mp4',
+		'avi-to-mp4',
+		'webm-to-mp4',
+		'mp4-to-webm',
+		'mp4-to-gif',
+		'mp4-to-mp3',
+		'mov-to-mp3'
+	].map((slug) => parseVideoSlug(slug)!);
 
 	const popular = [
 		'heic-to-jpg',
@@ -157,6 +171,21 @@
 		</div>
 	</div>
 	<p class="all-tools-link"><a href="/pdf">All PDF tools</a></p>
+</section>
+
+<section aria-labelledby="video-heading">
+	<h2 id="video-heading">Video conversion</h2>
+	<p>
+		Video converts in your browser too, with nothing uploaded and no cap on the file size. Moving
+		a video into a different container, which is what most of these are, takes about a second no
+		matter how long the video is.
+	</p>
+	<ul class="pair-links">
+		{#each POPULAR_VIDEO as pair (pair.slug)}
+			<li><a href={videoPath(pair.slug)}>{pair.sourceName} to {pair.targetName}</a></li>
+		{/each}
+	</ul>
+	<p class="all-tools-link"><a href="/video">All video conversions</a></p>
 </section>
 
 <section aria-labelledby="popular-heading">

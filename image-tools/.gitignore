@@ -21,3 +21,6 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Copied out of node_modules at build time, 32MB of WebAssembly.
+/static/ffmpeg

@@ -1,5 +1,6 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { parsePairSlug } from '$lib/engine';
+import { parseVideoSlug } from '$lib/video/formats';
 import { PDF_TOOLS } from '$lib/tools/registry';
 
 // The first three tools shipped at the root before /tools/ existed.
@@ -34,6 +35,15 @@ export const handle: Handle = ({ event, resolve }) => {
 		const page = parsePairSlug(path.slice('/convert/'.length));
 		if (page && page.slug !== page.canonicalSlug) {
 			redirect(301, `/convert/${page.canonicalSlug}`);
+		}
+	}
+
+	// Same rule for the video section: m4v-to-webm is the same page as
+	// mp4-to-webm, so it redirects rather than existing twice.
+	if (path.startsWith('/video/')) {
+		const page = parseVideoSlug(path.slice('/video/'.length));
+		if (page && page.slug !== page.canonicalSlug) {
+			redirect(301, `/video/${page.canonicalSlug}`);
 		}
 	}
 

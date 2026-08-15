@@ -4,18 +4,24 @@ import { TOOLS, toolPath } from './tools/registry';
 import { PRESETS } from './tools/presets';
 import { allPairs, allPairSlugs, parsePairSlug } from './engine';
 import { SAME_NAME_PAGES } from './tools/samename';
+import { allVideoPairs } from './video/formats';
 
 describe('sitemapPaths', () => {
 	const paths = sitemapPaths();
 
 	it('lists every tool, preset and conversion, plus the fixed pages', () => {
 		expect(paths.length).toBe(
-			7 + TOOLS.length + PRESETS.length + allPairs().length + SAME_NAME_PAGES.length
+			8 +
+				TOOLS.length +
+				PRESETS.length +
+				allPairs().length +
+				SAME_NAME_PAGES.length +
+				allVideoPairs().length
 		);
 		for (const tool of TOOLS) expect(paths).toContain(toolPath(tool));
 		for (const preset of PRESETS) expect(paths).toContain(`/make/${preset.slug}`);
 		expect(paths).toContain('/convert/heic-to-jpg');
-		for (const fixed of ['/', '/convert', '/tools', '/pdf', '/make', '/privacy', '/terms']) {
+		for (const fixed of ['/', '/convert', '/tools', '/pdf', '/video', '/make', '/privacy', '/terms']) {
 			expect(paths).toContain(fixed);
 		}
 	});

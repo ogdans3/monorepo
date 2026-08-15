@@ -32,6 +32,16 @@ Every page carries an FAQ with matching FAQPage structured data: two shared
 trust questions and then two or three that belong to that page alone,
 derived from the format table for conversions and hand-written per tool.
 
+Video conversion lives under `/video/` (30 pages plus the `/video` hub):
+MP4, MOV, WebM, MKV and AVI in every direction, plus video to GIF and video
+to MP3. It runs ffmpeg compiled to WebAssembly, in the browser, so nothing is
+uploaded and there is no size cap beyond what a tab can hold. Conversions that
+only change the container copy the streams and finish in about a second
+regardless of the video's length; conversions that change the codec rebuild
+every frame and take roughly as long as the video runs. Each page says which
+kind it is. The 32MB core is fetched only when a file is dropped, is about
+7MB over the wire once brotli has it, and is then cached by the browser.
+
 Everything runs client-side. The image tools cover crop, combine, split,
 trim, extend canvas, resize, bulk resize, rotate, flip, adjust, black and
 white, sepia, invert, replace colour, sharpen, border, round corners, drop
