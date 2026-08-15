@@ -106,7 +106,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'How do I crop a photo to a perfect square?',
-				a: 'Pick the 1:1 preset and the frame locks to a square you can drag around the picture until the right part is inside it. That is the shape most profile pictures and feed posts want. If you need an exact pixel size as well, type the width and the height into the boxes and the frame snaps to it.'
+				a: 'Pick the 1:1 preset and the frame locks to a square you can drag around the picture until the right part is inside it. That\'s the shape most profile pictures and feed posts want. If you need an exact pixel size as well, type the width and the height into the boxes and the frame snaps to it.'
 			}
 		],
 		suffix: '-cropped'
@@ -140,7 +140,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Do the images have to be the same size?',
-				a: 'No. Each one is fitted into its own cell and the parts that do not fit are cropped rather than squashed, so nothing ends up stretched. Drag a photo inside its cell to pick which part survives that crop. If you would rather see whole images with no cropping, add spacing so each cell keeps its own shape.'
+				a: 'No. Each one is fitted into its own cell and the parts that don\'t fit are cropped rather than squashed, so nothing ends up stretched. Drag a photo inside its cell to pick which part survives that crop. If you would rather see whole images with no cropping, add spacing so each cell keeps its own shape.'
 			}
 		],
 		suffix: '-combined'
@@ -174,7 +174,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'How do I resize an image without stretching it?',
-				a: 'Leave the lock on. With the lock closed you type one measurement and the other follows automatically, which keeps the original proportions and stops anything looking squashed. Turn the lock off only when something demands an exact width and height that do not match the shape of your picture, and expect distortion when you do.'
+				a: 'Leave the lock on. With the lock closed you type one measurement and the other follows automatically, which keeps the original proportions and stops anything looking squashed. Turn the lock off only when something demands an exact width and height that don\'t match the shape of your picture, and expect distortion when you do.'
 			}
 		],
 		suffix: '-resized'
@@ -204,11 +204,11 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'Why does my photo look sideways in some programs but not others?',
-				a: 'A phone does not usually turn the picture when you hold the camera sideways. It saves it the way the sensor saw it and writes a note in the file saying which way up it should be shown. Programs that read that note show it correctly and programs that ignore it show it on its side. Rotating here turns the actual pixels, so it looks right everywhere.'
+				a: 'A phone doesn\'t usually turn the picture when you hold the camera sideways. It saves it the way the sensor saw it and writes a note in the file saying which way up it should be shown. Programs that read that note show it correctly and programs that ignore it show it on its side. Rotating here turns the actual pixels, so it looks right everywhere.'
 			},
 			{
 				q: 'Does rotating a JPG lose quality?',
-				a: 'A quarter turn moves whole pixels around without changing any of them, so nothing is lost in the rotation itself. What costs you a little is saving the file again as JPG afterwards. Keep the quality slider high, or download as PNG, and the difference will not be visible.'
+				a: 'A quarter turn moves whole pixels around without changing any of them, so nothing is lost in the rotation itself. What costs you a little is saving the file again as JPG afterwards. Keep the quality slider high, or download as PNG, and the difference won\'t be visible.'
 			}
 		],
 		suffix: '-rotated'
@@ -242,7 +242,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Why does my selfie look mirrored?',
-				a: 'Most phones show you a mirrored preview while you take a selfie, because that is what you are used to seeing in a mirror, and some then save the picture the correct way round. The result is a photo that looks wrong to you and right to everyone else. Mirroring it left to right here gives you back the version you saw on screen.'
+				a: 'Most phones show you a mirrored preview while you take a selfie, because that\'s what you\'re used to seeing in a mirror, and some then save the picture the correct way round. The result is a photo that looks wrong to you and right to everyone else. Mirroring it left to right here gives you back the version you saw on screen.'
 			}
 		],
 		suffix: '-flipped'
@@ -264,19 +264,19 @@ export const TOOLS: ImageTool[] = [
 		],
 		aboutHeading: 'Blur, pixelate, and when to redact instead',
 		about: [
-			'Blur makes an area too soft to read. Pixelate turns it into big blocks. Both change the real pixels, so the download does not contain the hidden part.',
-			'One honest warning. Special software can sometimes read blurred text again. For names, card numbers and real secrets, use the redact tool instead. A solid box cannot be undone.'
+			'Blur makes an area too soft to read. Pixelate turns it into big blocks. Both change the real pixels, so the download doesn\'t contain the hidden part.',
+			'One honest warning. Special software can sometimes read blurred text again. For names, card numbers and real secrets, use the redact tool instead. A solid box can\'t be undone.'
 		],
 		next: ['redact-image', 'pixelate-image', 'remove-exif'],
 		keywords: ['censor', 'hide face', 'blur face', 'obscure'],
 		faq: [
 			{
 				q: 'Can a blurred face or number be recovered?',
-				a: 'Not from the image itself. The blur is applied to the pixels and the file you download contains only the blurred result, so there is nothing underneath to uncover. Two things do give people away: a blur so light that the shape is still readable, and posting the untouched original somewhere else. Use a strong setting and check the preview before you download.'
+				a: 'Not from the image itself. The blur is applied to the pixels and the file you download contains only the blurred result, so there\'s nothing underneath to uncover. Two things do give people away: a blur so light that the shape is still readable, and posting the untouched original somewhere else. Use a strong setting and check the preview before you download.'
 			},
 			{
 				q: 'Should I blur or pixelate?',
-				a: 'Pixelation is easier to judge, because you can see exactly how much detail is left in the blocks. Blur looks tidier in a screenshot you are going to publish. Both are safe when the setting is strong enough, and both are unsafe when it is not. For text like an account number, use a strength where you cannot read a single character.'
+				a: 'Pixelation is easier to judge, because you can see exactly how much detail is left in the blocks. Blur looks tidier in a screenshot you\'re going to publish. Both are safe when the setting is strong enough, and both are unsafe when it isn\'t. For text like an account number, use a strength where you can\'t read a single character.'
 			}
 		],
 		suffix: '-blurred'
@@ -298,15 +298,15 @@ export const TOOLS: ImageTool[] = [
 		],
 		aboutHeading: 'Why solid redaction beats blurring',
 		about: [
-			'A solid box replaces the pixels under it completely. There is nothing left to recover. That makes it the safe choice for names, addresses and card numbers.',
-			'The boxes become part of the image itself. They are not a layer someone can peel off. The covered content is gone from the file.'
+			'A solid box replaces the pixels under it completely. There\'s nothing left to recover. That makes it the safe choice for names, addresses and card numbers.',
+			'The boxes become part of the image itself. They aren\'t a layer someone can peel off. The covered content is gone from the file.'
 		],
 		next: ['blur-image', 'remove-exif'],
 		keywords: ['black box', 'censor', 'hide text', 'cover'],
 		faq: [
 			{
 				q: 'Is a black box safe for hiding sensitive information?',
-				a: 'In an image, yes. The box is painted onto the pixels and the ones underneath are gone from the file you download, so there is nothing to peel back. This is the difference between redacting a picture and drawing a black rectangle in a PDF or a Word document, where the shape is a separate layer that can simply be deleted to reveal the text under it.'
+				a: 'In an image, yes. The box is painted onto the pixels and the ones underneath are gone from the file you download, so there\'s nothing to peel back. This is the difference between redacting a picture and drawing a black rectangle in a PDF or a Word document, where the shape is a separate layer that can simply be deleted to reveal the text under it.'
 			},
 			{
 				q: 'What should I cover in a screenshot before sharing it?',
@@ -357,7 +357,7 @@ export const TOOLS: ImageTool[] = [
 		title: 'Transparent Background Maker - Free, Private, No Upload',
 		description:
 			'Make an image background transparent online free. Click a colour, tune the tolerance slider and download as PNG or WebP. No uploads, it runs in your browser.',
-		lede: 'Click the colour you want gone. The eraser spreads from that spot until it reaches a different colour, and the tolerance slider decides how strict that is.',
+		lede: 'Click the colour you want gone. The eraser spreads from that spot until it reaches a different colour, and the tolerance slider decides how strict that\'s.',
 		blurb: 'Click a colour to erase it, tune the tolerance. A classic magic wand.',
 		steps: [
 			'Drop an image in the box above, then click the colour you want to remove.',
@@ -367,7 +367,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'How the transparent background tool works',
 		about: [
 			'The eraser works like a magic wand. It starts at the pixel you clicked and spreads to neighbouring pixels of similar colour, stopping when it reaches something different. That makes it precise on logos, scans, screenshots and product photos with a plain background.',
-			'Export as PNG or WebP to keep the transparency. JPG cannot store it, so it fills the cleared areas with the colour you pick in the download bar.'
+			'Export as PNG or WebP to keep the transparency. JPG can\'t store it, so it fills the cleared areas with the colour you pick in the download bar.'
 		],
 		next: ['replace-color', 'round-corners', 'trim-image'],
 		keywords: ['remove background', 'magic wand', 'transparent png', 'cut out'],
@@ -378,7 +378,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Why are there rough or coloured edges left around my subject?',
-				a: 'The edge pixels are a blend of the subject and the old background, so they are neither one colour nor the other. A higher tolerance takes more of them but starts biting into the subject. This works best on flat, even backgrounds like a logo or a product shot on white. A photo of a person against a busy background is a job for a proper cut out.'
+				a: 'The edge pixels are a blend of the subject and the old background, so they\'re neither one colour nor the other. A higher tolerance takes more of them but starts biting into the subject. This works best on flat, even backgrounds like a logo or a product shot on white. A photo of a person against a busy background is a job for a proper cut out.'
 			}
 		],
 		suffix: '-transparent'
@@ -401,7 +401,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'What EXIF data gives away',
 		about: [
 			'Most phones and cameras hide extra info inside every photo. It can show the device, the exact time, and often the exact place it was taken. Anyone you send the file to can read it.',
-			'The clean copy is made by rebuilding the image from raw pixels. Hidden info cannot survive that. This tool simply shows you what was there before it goes.'
+			'The clean copy is made by rebuilding the image from raw pixels. Hidden info can\'t survive that. This tool simply shows you what was there before it goes.'
 		],
 		next: ['redact-image', 'compress-image'],
 		keywords: ['metadata', 'gps', 'location', 'strip data'],
@@ -412,7 +412,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Do social networks strip metadata for me?',
-				a: 'The big ones usually do when they process an upload, but you cannot rely on it, and it does nothing for a photo sent by email, posted to a forum, attached to a listing or shared in a chat that keeps the original file. Anywhere the actual file changes hands, the metadata goes with it. Strip it yourself and the question stops mattering.'
+				a: 'The big ones usually do when they process an upload, but you can\'t rely on it, and it does nothing for a photo sent by email, posted to a forum, attached to a listing or shared in a chat that keeps the original file. Anywhere the actual file changes hands, the metadata goes with it. Strip it yourself and the question stops mattering.'
 			}
 		],
 		suffix: '-clean'
@@ -442,7 +442,7 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'Where should I put a watermark so it is not annoying?',
-				a: 'A corner at low opacity is the usual answer for photos you want people to enjoy, and it is enough to say who made it. Tiling it across the whole image is for proofs and previews you do not want used as they are. The trade is always the same: the harder a watermark is to remove, the more it gets in the way of the picture.'
+				a: 'A corner at low opacity is the usual answer for photos you want people to enjoy, and it\'s enough to say who made it. Tiling it across the whole image is for proofs and previews you don\'t want used as they\'re. The trade is always the same: the harder a watermark is to remove, the more it gets in the way of the picture.'
 			},
 			{
 				q: 'Can someone remove my watermark?',
@@ -480,7 +480,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Which format compresses best, JPG or WebP?',
-				a: 'WebP, usually by a clear margin at the same visible quality, and it is the better choice for anything going on a website. JPG is the safer choice when a form, an older program or a printer has to accept the file, since it has been understood everywhere for decades. Try WebP first and fall back to JPG if something rejects it.'
+				a: 'WebP, usually by a clear margin at the same visible quality, and it\'s the better choice for anything going on a website. JPG is the safer choice when a form, an older program or a printer has to accept the file, since it has been understood everywhere for decades. Try WebP first and fall back to JPG if something rejects it.'
 			}
 		],
 		suffix: '-compressed'
@@ -497,7 +497,7 @@ export const TOOLS: ImageTool[] = [
 		blurb: 'One logo in, the full icon set out, HTML included.',
 		steps: [
 			'Drop your logo in the box above. Square works best, anything else is padded with transparency.',
-			'Check the previews, especially the 16 pixel one. Simple shapes survive, fine detail does not.',
+			'Check the previews, especially the 16 pixel one. Simple shapes survive, fine detail doesn\'t.',
 			'Download the zip and paste the HTML snippet into your page head.'
 		],
 		aboutHeading: 'What the favicon pack contains',
@@ -514,7 +514,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Where do the favicon files go?',
-				a: 'Put them in the root of your site, so the browser finds favicon.ico by itself even before it reads any of your HTML, then paste the snippet from this page into the head of your pages to point at the rest. If an old icon sticks around after you change it, that is your browser caching it, and a hard refresh clears it.'
+				a: 'Put them in the root of your site, so the browser finds favicon.ico by itself even before it reads any of your HTML, then paste the snippet from this page into the head of your pages to point at the rest. If an old icon sticks around after you change it, that\'s your browser caching it, and a hard refresh clears it.'
 			}
 		],
 		suffix: '-favicons'
@@ -537,7 +537,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About rounding corners here',
 		about: [
 			'The corners become truly transparent, not painted white, so the image sits cleanly on any background. Circle mode first cuts a square from the middle, which is what avatar pictures need.',
-			'Download as PNG or WebP to keep the transparent corners. JPG cannot store them, so it fills them with the colour you pick in the download bar.'
+			'Download as PNG or WebP to keep the transparent corners. JPG can\'t store them, so it fills them with the colour you pick in the download bar.'
 		],
 		next: ['drop-shadow', 'transparent-background'],
 		keywords: ['rounded', 'circle', 'avatar', 'radius'],
@@ -548,7 +548,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Why did my rounded corners come out black or white?',
-				a: 'That is what happens when the result is saved as JPG. The corners are transparent, JPG cannot store transparency, so every see-through pixel has to become a real colour. Save as PNG or WebP and the corners stay clear against whatever the image sits on.'
+				a: 'That\'s what happens when the result is saved as JPG. The corners are transparent, JPG can\'t store transparency, so every see-through pixel has to become a real colour. Save as PNG or WebP and the corners stay clear against whatever the image sits on.'
 			}
 		],
 		suffix: '-rounded'
@@ -582,7 +582,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Are the tiles all exactly the same size?',
-				a: 'They are as equal as the image allows. When the width does not divide evenly by the number of columns the spare pixels are spread across the tiles rather than dumped on the last one, so no single tile ends up a few pixels short in a way you would notice. Each file is named by its row and column so the order cannot get lost.'
+				a: 'They are as equal as the image allows. When the width doesn\'t divide evenly by the number of columns the spare pixels are spread across the tiles rather than dumped on the last one, so no single tile ends up a few pixels short in a way you would notice. Each file is named by its row and column so the order can\'t get lost.'
 			}
 		],
 		suffix: '-tiles'
@@ -604,7 +604,7 @@ export const TOOLS: ImageTool[] = [
 		],
 		aboutHeading: 'How sharpening works here',
 		about: [
-			'The tool compares your image with a blurry copy of itself. The parts that differ are the edges, and those get boosted. It cannot invent detail, but it makes real detail easy to see again.',
+			'The tool compares your image with a blurry copy of itself. The parts that differ are the edges, and those get boosted. It can\'t invent detail, but it makes real detail easy to see again.',
 			'Sharpening is the classic last step after shrinking a photo, which is why it pairs well with the resize tool.'
 		],
 		next: ['resize-image', 'adjust-image'],
@@ -612,7 +612,7 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'Can sharpening fix a blurry photo?',
-				a: 'It can make a slightly soft photo look crisp, which covers most pictures that lost their edge to shrinking, a cheap lens or a little camera shake. It cannot rescue one that is badly out of focus or smeared by motion, because the detail was never recorded and sharpening only exaggerates the edges that are already there.'
+				a: 'It can make a slightly soft photo look crisp, which covers most pictures that lost their edge to shrinking, a cheap lens or a little camera shake. It can\'t rescue one that\'s badly out of focus or smeared by motion, because the detail was never recorded and sharpening only exaggerates the edges that are already there.'
 			},
 			{
 				q: 'How much sharpening is too much?',
@@ -638,7 +638,7 @@ export const TOOLS: ImageTool[] = [
 		],
 		aboutHeading: 'About inverting colours here',
 		about: [
-			'Every pixel flips to its opposite. Black turns white, blue turns orange, light turns dark. It is the same look as an old film negative.',
+			'Every pixel flips to its opposite. Black turns white, blue turns orange, light turns dark. It\'s the same look as an old film negative.',
 			'Inverting is exact and loses nothing. Run it twice and you get your original image back. That also means it can turn a scanned negative into a normal photo.'
 		],
 		next: ['grayscale-image', 'adjust-image'],
@@ -646,11 +646,11 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'What is inverting an image used for?',
-				a: 'Reading a scanned negative, turning white on black diagrams into black on white so they print without eating a cartridge, checking a design against a dark background, and the occasional visual effect. It is also a quick way to see detail hidden in a very dark or very bright area, since the eye reads the flipped version differently.'
+				a: 'Reading a scanned negative, turning white on black diagrams into black on white so they print without eating a cartridge, checking a design against a dark background, and the occasional visual effect. It\'s also a quick way to see detail hidden in a very dark or very bright area, since the eye reads the flipped version differently.'
 			},
 			{
 				q: 'Does inverting twice give me the original back?',
-				a: 'Yes. Every colour is swapped for its exact opposite, so doing it a second time lands on precisely the values you started with. Nothing is estimated or thrown away. Just download as PNG rather than JPG if you are going to invert repeatedly, so the compression does not build up.'
+				a: 'Yes. Every colour is swapped for its exact opposite, so doing it a second time lands on precisely the values you started with. Nothing is estimated or thrown away. Just download as PNG rather than JPG if you\'re going to invert repeatedly, so the compression doesn\'t build up.'
 			}
 		],
 		suffix: '-inverted'
@@ -672,7 +672,7 @@ export const TOOLS: ImageTool[] = [
 		],
 		aboutHeading: 'About picking colours here',
 		about: [
-			'The palette shows the main colours in your image. It is a good starting point for picking brand colours or matching a design.',
+			'The palette shows the main colours in your image. It\'s a good starting point for picking brand colours or matching a design.',
 			'Clicks read the original pixels, not the small preview, so the values are exact.'
 		],
 		next: ['replace-color', 'image-histogram'],
@@ -684,7 +684,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'How are the dominant colours chosen?',
-				a: 'The whole image is sampled and the colours are grouped into families, then the largest families are shown in order of how much of the picture they cover. That is why a photo of grass gives you several greens rather than one. It is a good starting point for a palette, though a designer will usually adjust the result by eye.'
+				a: 'The whole image is sampled and the colours are grouped into families, then the largest families are shown in order of how much of the picture they cover. That\'s why a photo of grass gives you several greens rather than one. It\'s a good starting point for a palette, though a designer will usually adjust the result by eye.'
 			}
 		],
 		suffix: '-palette'
@@ -714,7 +714,7 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'How do I resize many photos at once?',
-				a: 'Drop the whole pile in together, set one width or one percentage, and every image is resized and packed into a single zip. There is no queue and no limit on how many you add, since the work happens on your own machine rather than on a server that has to ration it.'
+				a: 'Drop the whole pile in together, set one width or one percentage, and every image is resized and packed into a single zip. There\'s no queue and no limit on how many you add, since the work happens on your own machine rather than on a server that has to ration it.'
 			},
 			{
 				q: 'What happens if the photos are different shapes?',
@@ -741,7 +741,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About making PDFs here',
 		about: [
 			'Each image becomes one page. Match mode makes every page the same size as its image. A4 mode puts each image in the middle of a standard page, which is best for printing.',
-			'The PDF is built in your browser. Scans, receipts and ID photos never touch a server. For private papers, that is the whole point.'
+			'The PDF is built in your browser. Scans, receipts and ID photos never touch a server. For private papers, that\'s the whole point.'
 		],
 		next: ['merge-pdf', 'pdf-to-jpg'],
 		keywords: ['jpg to pdf', 'png to pdf', 'scan to pdf', 'photos to pdf'],
@@ -782,7 +782,7 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'What resolution should I choose when converting a PDF to images?',
-				a: '150 dots per inch is plenty for reading on a screen and keeps the files small. 300 is the usual choice for anything that will be printed or where small print has to stay legible. Higher than that mostly buys you a bigger file, since it cannot add detail the PDF does not contain.'
+				a: '150 dots per inch is plenty for reading on a screen and keeps the files small. 300 is the usual choice for anything that will be printed or where small print has to stay legible. Higher than that mostly buys you a bigger file, since it can\'t add detail the PDF doesn\'t contain.'
 			},
 			{
 				q: 'Can I convert just one page of a PDF?',
@@ -820,7 +820,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Does converting to grayscale make the file smaller?',
-				a: 'Usually a little, because there is less colour information to store, though the saving is smaller than most people expect and depends on the format. If size is what you are after, the compress tool will do far more for you than removing the colour will.'
+				a: 'Usually a little, because there\'s less colour information to store, though the saving is smaller than most people expect and depends on the format. If size is what you\'re after, the compress tool will do far more for you than removing the colour will.'
 			}
 		],
 		suffix: '-bw'
@@ -854,7 +854,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Should I use sepia or grayscale?',
-				a: 'Grayscale is the neutral, serious choice and it suits portraits, documents and anything modern. Sepia reads as old and warm, which is lovely on a family photograph and out of place on a product shot. If you are not sure, try grayscale first, since sepia is a strong flavour.'
+				a: 'Grayscale is the neutral, serious choice and it suits portraits, documents and anything modern. Sepia reads as old and warm, which is lovely on a family photograph and out of place on a product shot. If you\'re not sure, try grayscale first, since sepia is a strong flavour.'
 			}
 		],
 		suffix: '-sepia'
@@ -867,7 +867,7 @@ export const TOOLS: ImageTool[] = [
 		title: 'Pixelate an Image Online - Free, Private, No Upload',
 		description:
 			'Pixelate a whole image online free, with a slider for the block size. Runs in your browser with no uploads. For faces and names, redaction is safer.',
-		lede: 'Turn the whole image into blocks, with a slider for how big they are.',
+		lede: 'Turn the whole image into blocks, with a slider for how big they\'re.',
 		blurb: 'Turn the whole image into coarse blocks.',
 		steps: [
 			'Drop an image in the box above.',
@@ -884,7 +884,7 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'Can pixelated text be read again?',
-				a: 'If the blocks are small, sometimes yes. Text is predictable enough that a determined person can work backwards from coarse blocks to the characters that produced them, especially for something with a known shape like a number plate or a date. Use blocks big enough that you cannot make out a single character yourself, and the guesswork stops being possible.'
+				a: 'If the blocks are small, sometimes yes. Text is predictable enough that a determined person can work backwards from coarse blocks to the characters that produced them, especially for something with a known shape like a number plate or a date. Use blocks big enough that you can\'t make out a single character yourself, and the guesswork stops being possible.'
 			},
 			{
 				q: 'How big should the blocks be to hide a face?',
@@ -922,7 +922,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Why did other parts of the picture change too?',
-				a: 'The tolerance is set high enough to include colours you did not intend. Every pixel within that distance of the one you clicked is changed, wherever it happens to be in the image, so a sky and a pair of blue jeans can easily fall into the same range. Lower the tolerance until only the area you want is affected.'
+				a: 'The tolerance is set high enough to include colours you didn\'t intend. Every pixel within that distance of the one you clicked is changed, wherever it happens to be in the image, so a sky and a pair of blue jeans can easily fall into the same range. Lower the tolerance until only the area you want is affected.'
 			}
 		],
 		suffix: '-recoloured'
@@ -945,7 +945,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About trimming edges here',
 		about: [
 			'The colour of the top left pixel is taken as the border colour, and every edge is pulled in while it stays that colour. Transparent edges count as border whatever colour they claim to be.',
-			'A scan is never perfectly even, so raise the tolerance a little if a thin line survives. If the whole image is one colour there is nothing to keep, and the tool leaves it alone.'
+			'A scan is never perfectly even, so raise the tolerance a little if a thin line survives. If the whole image is one colour there\'s nothing to keep, and the tool leaves it alone.'
 		],
 		next: ['crop-image', 'extend-canvas'],
 		keywords: ['autocrop', 'auto crop', 'whitespace', 'margins', 'edges'],
@@ -956,7 +956,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Why is nothing being trimmed?',
-				a: 'Usually because the border is not as even as it looks. Scanner noise, a faint shadow or JPG compression can leave the margin very slightly different from pixel to pixel, so the edge never reads as one flat colour. Raising the tolerance tells it to treat close enough as the same, which is normally all it takes.'
+				a: 'Usually because the border isn\'t as even as it looks. Scanner noise, a faint shadow or JPG compression can leave the margin very slightly different from pixel to pixel, so the edge never reads as one flat colour. Raising the tolerance tells it to treat close enough as the same, which is normally all it takes.'
 			}
 		],
 		suffix: '-trimmed'
@@ -1024,7 +1024,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Does adding a border change the size of the image?',
-				a: 'Yes, it is added outside the picture, so the file comes out wider and taller by twice the border width and none of the original is covered. If you need to hit an exact final size, work out the border first and resize the photo to fit inside it, or extend the canvas to the size you want instead.'
+				a: 'Yes, it\'s added outside the picture, so the file comes out wider and taller by twice the border width and none of the original is covered. If you need to hit an exact final size, work out the border first and resize the photo to fit inside it, or extend the canvas to the size you want instead.'
 			}
 		],
 		suffix: '-bordered'
@@ -1047,14 +1047,14 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About drop shadows here',
 		about: [
 			'Room is added around the image so the shadow has somewhere to land, and that space stays transparent unless you fill it.',
-			'Download as PNG or WebP to keep it transparent. JPG cannot, so it fills the space with the colour you pick, which is white by default.'
+			'Download as PNG or WebP to keep it transparent. JPG can\'t, so it fills the space with the colour you pick, which is white by default.'
 		],
 		next: ['add-border', 'round-corners'],
 		keywords: ['shadow', 'depth', 'mockup', 'lift'],
 		faq: [
 			{
 				q: 'Why does the shadow disappear or turn into a grey box when I save?',
-				a: 'Because the file was saved as JPG, which cannot store transparency. A shadow is soft precisely because it fades into transparent space, so JPG has to fill that space with a solid colour and the effect is ruined. Download as PNG or WebP and the shadow stays soft against whatever the image sits on.'
+				a: 'Because the file was saved as JPG, which can\'t store transparency. A shadow is soft precisely because it fades into transparent space, so JPG has to fill that space with a solid colour and the effect is ruined. Download as PNG or WebP and the shadow stays soft against whatever the image sits on.'
 			},
 			{
 				q: 'How do I make a product photo look like it is floating?',
@@ -1081,7 +1081,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About vignettes here',
 		about: [
 			'A vignette is a soft shading around the edges. Old lenses did it by accident, and photographers have used it on purpose ever since, because it pushes attention towards the middle of the frame.',
-			'Keep it subtle. If you can clearly see where the shading starts, it is too strong.'
+			'Keep it subtle. If you can clearly see where the shading starts, it\'s too strong.'
 		],
 		next: ['sepia-image', 'adjust-image'],
 		keywords: ['darken edges', 'corners', 'moody', 'lomo'],
@@ -1092,7 +1092,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'When should I lighten the corners instead?',
-				a: 'Lightening gives a faded, washed out look that suits a soft or nostalgic image, and it can lift a photograph that feels heavy at the edges. It is the less common choice by a long way. If you are unsure which you want, try darkening first, since that is what almost everyone means by a vignette.'
+				a: 'Lightening gives a faded, washed out look that suits a soft or nostalgic image, and it can lift a photograph that feels heavy at the edges. It\'s the less common choice by a long way. If you\'re unsure which you want, try darkening first, since that\'s what almost everyone means by a vignette.'
 			}
 		],
 		suffix: '-vignette'
@@ -1126,7 +1126,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'What do multiply and screen actually do?',
-				a: 'Multiply keeps whatever is dark in either image, so the result is always darker and white areas vanish. That makes it the way to lay a texture or a stamp over a picture. Screen does the opposite, keeping whatever is light, so black areas vanish and the result glows. It is how light leaks and flares are added.'
+				a: 'Multiply keeps whatever is dark in either image, so the result is always darker and white areas vanish. That makes it the way to lay a texture or a stamp over a picture. Screen does the opposite, keeping whatever is light, so black areas vanish and the result glows. It\'s how light leaks and flares are added.'
 			}
 		],
 		suffix: '-blended'
@@ -1160,7 +1160,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Will the text stay sharp in the downloaded file?',
-				a: 'Yes. The preview is scaled to fit your screen, but the text is drawn into the image at its full resolution, so it comes out as crisp as the picture allows rather than looking like an enlarged screenshot. It is drawn in your device system font, with a bold option.'
+				a: 'Yes. The preview is scaled to fit your screen, but the text is drawn into the image at its full resolution, so it comes out as crisp as the picture allows rather than looking like an enlarged screenshot. It\'s drawn in your device system font, with a bold option.'
 			}
 		],
 		suffix: '-text'
@@ -1183,14 +1183,14 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'How to read a histogram',
 		about: [
 			'The width is brightness, from black on the left to white on the right, and the height is how many pixels sit at that brightness. A photo using its whole range has bars across the middle rather than a spike at one end.',
-			'Bars jammed against either edge mean detail has been lost there and no editing will bring it back. That is worth knowing before you start adjusting.'
+			'Bars jammed against either edge mean detail has been lost there and no editing will bring it back. That\'s worth knowing before you start adjusting.'
 		],
 		next: ['adjust-image', 'image-color-picker'],
 		keywords: ['levels', 'exposure', 'clipping', 'brightness chart'],
 		faq: [
 			{
 				q: 'How do I read a histogram?',
-				a: 'It is a count of how many pixels sit at each level of brightness, dark on the left and light on the right, with height showing how many. A photo with most of its bars in the middle is evenly exposed. Bars bunched to the left mean a dark picture, and bunched to the right mean a bright one. There is no correct shape, only the one that suits the picture.'
+				a: 'It\'s a count of how many pixels sit at each level of brightness, dark on the left and light on the right, with height showing how many. A photo with most of its bars in the middle is evenly exposed. Bars bunched to the left mean a dark picture, and bunched to the right mean a bright one. There\'s no correct shape, only the one that suits the picture.'
 			},
 			{
 				q: 'What does clipping mean?',
@@ -1216,7 +1216,7 @@ export const TOOLS: ImageTool[] = [
 		],
 		aboutHeading: 'About merging PDF files here',
 		about: [
-			'Pages are copied across exactly as they are, so text stays text and quality is untouched. Nothing is re-compressed.',
+			'Pages are copied across exactly as they\'re, so text stays text and quality is untouched. Nothing is re-compressed.',
 			'The whole merge happens in your browser. Contracts, invoices and scans never reach a server, which is the part that matters for documents.'
 		],
 		next: ['organise-pdf', 'split-pdf', 'pdf-page-numbers'],
@@ -1224,7 +1224,7 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'How do I combine PDF files into one document?',
-				a: 'Drop the files in, put them in the order you want with the arrows, and download the result as a single PDF. The page count of each file is shown so you can check you have the right ones. Pages are copied across as they are, so text stays selectable and nothing is re-rendered or re-compressed.'
+				a: 'Drop the files in, put them in the order you want with the arrows, and download the result as a single PDF. The page count of each file is shown so you can check you have the right ones. Pages are copied across as they\'re, so text stays selectable and nothing is re-rendered or re-compressed.'
 			},
 			{
 				q: 'Is there a limit on how many PDFs I can merge?',
@@ -1292,11 +1292,11 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'How do I save only some pages of a PDF?',
-				a: 'Click the pages you want, or type a range like 1-3, 7 if you know the numbers, and download a new PDF containing just those. The original file on your device is not touched. This is the usual way to send someone the two pages they asked for instead of a hundred page report.'
+				a: 'Click the pages you want, or type a range like 1-3, 7 if you know the numbers, and download a new PDF containing just those. The original file on your device isn\'t touched. This is the usual way to send someone the two pages they asked for instead of a hundred page report.'
 			},
 			{
 				q: 'Does extracting pages reduce the quality?',
-				a: 'No. The pages are lifted out of the original as they are, so text remains selectable and searchable and images keep their original resolution. Nothing is converted to a picture along the way, which is what separates this from printing to PDF.'
+				a: 'No. The pages are lifted out of the original as they\'re, so text remains selectable and searchable and images keep their original resolution. Nothing is converted to a picture along the way, which is what separates this from printing to PDF.'
 			}
 		],
 		suffix: '-pages'
@@ -1310,7 +1310,7 @@ export const TOOLS: ImageTool[] = [
 		description:
 			'Remove pages from a PDF online free. Click the pages you want gone and download the rest as a new file. Runs in your browser with no uploads.',
 		lede: 'Click the pages you want gone. Everything else is kept, in order.',
-		blurb: 'Remove the pages you do not want.',
+		blurb: 'Remove the pages you don\'t want.',
 		steps: [
 			'Drop a PDF in the box above.',
 			'Click the pages to remove, or type a range like 2, 5-6.',
@@ -1343,7 +1343,7 @@ export const TOOLS: ImageTool[] = [
 		title: 'Reorder PDF Pages - Free Online, No Upload',
 		description:
 			'Change the page order in a PDF online free. Move pages up or down, drop the ones you do not need, and download the rearranged file. No uploads.',
-		lede: 'Move pages around until the order is right, and drop any you do not need.',
+		lede: 'Move pages around until the order is right, and drop any you don\'t need.',
 		blurb: 'Put the pages in the right order.',
 		steps: [
 			'Drop a PDF in the box above.',
@@ -1364,7 +1364,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Does rearranging the pages change their content?',
-				a: 'No. Pages are moved as complete objects, so text, fonts, images and links inside each page are exactly what they were and only the order changes. What does not follow along is anything that referred to the old order, so a table of contents with page numbers in it will need checking.'
+				a: 'No. Pages are moved as complete objects, so text, fonts, images and links inside each page are exactly what they were and only the order changes. What doesn\'t follow along is anything that referred to the old order, so a table of contents with page numbers in it will need checking.'
 			}
 		],
 		suffix: '-reordered'
@@ -1398,7 +1398,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Can I rotate only the pages that are sideways?',
-				a: 'Yes. Click the pages that need turning and rotate just those, leaving the rest alone. That is the normal case with a scanned document, where a few sheets went through the feeder the wrong way round and the rest are fine.'
+				a: 'Yes. Click the pages that need turning and rotate just those, leaving the rest alone. That\'s the normal case with a scanned document, where a few sheets went through the feeder the wrong way round and the rest are fine.'
 			}
 		],
 		suffix: '-rotated'
@@ -1428,11 +1428,11 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'How do I add a DRAFT watermark to a PDF?',
-				a: 'Type the word, set the size, the angle and how see-through it should be, and it is stamped across every page. Large, diagonal and faint is the usual recipe, so the word is unmistakable while the text underneath stays readable. CONFIDENTIAL, SAMPLE and a company name work the same way.'
+				a: 'Type the word, set the size, the angle and how see-through it should be, and it\'s stamped across every page. Large, diagonal and faint is the usual recipe, so the word is unmistakable while the text underneath stays readable. CONFIDENTIAL, SAMPLE and a company name work the same way.'
 			},
 			{
 				q: 'Can the watermark be removed afterwards?',
-				a: 'It is drawn into each page rather than hidden in the file properties, so it will not come off by changing a setting. Someone determined enough could still edit it out with the right software, as with any watermark. Treat it as a clear statement of status rather than a lock on the document.'
+				a: 'It\'s drawn into each page rather than hidden in the file properties, so it won\'t come off by changing a setting. Someone determined enough could still edit it out with the right software, as with any watermark. Treat it as a clear statement of status rather than a lock on the document.'
 			}
 		],
 		suffix: '-watermarked'
@@ -1489,7 +1489,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About turning JPG into PDF',
 		about: [
 			'This is the usual way to send paperwork. A phone photo of a receipt, a form or an ID document is a JPG, and the office at the other end wants one PDF rather than four loose pictures.',
-			'The page starts on A4 because that is what printed paperwork expects. Switch to matching the image if the photographs themselves are the point and you do not want white margins around them.'
+			'The page starts on A4 because that\'s what printed paperwork expects. Switch to matching the image if the photographs themselves are the point and you don\'t want white margins around them.'
 		],
 		next: ['merge-pdf', 'pdf-page-numbers', 'compress-image'],
 		keywords: ['jpeg to pdf', 'photo to pdf', 'scan to pdf', 'receipt to pdf'],
@@ -1500,7 +1500,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Does the photo lose quality inside the PDF?',
-				a: 'Barely. The image is placed into the page at its own resolution, so what you see is what was in the JPG. There is a quality setting for the copy that goes into the document, which matters because a dozen phone photos at full size make a PDF too large to email. Leave it high for anything with small print on it.'
+				a: 'Barely. The image is placed into the page at its own resolution, so what you see is what was in the JPG. There\'s a quality setting for the copy that goes into the document, which matters because a dozen phone photos at full size make a PDF too large to email. Leave it high for anything with small print on it.'
 			}
 		],
 		suffix: ''
@@ -1530,11 +1530,11 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'What happens to transparent parts of a PNG in the PDF?',
-				a: 'They are filled with a solid colour, because a PDF page cannot be see-through. White is the default and suits anything that will be printed or read on a white background. If your graphic was designed against a dark background, pick that colour instead so the edges do not glow.'
+				a: 'They are filled with a solid colour, because a PDF page can\'t be see-through. White is the default and suits anything that will be printed or read on a white background. If your graphic was designed against a dark background, pick that colour instead so the edges don\'t glow.'
 			},
 			{
 				q: 'Will my screenshot still be readable in the PDF?',
-				a: 'Yes, as long as the screenshot itself was sharp. The image is placed into the page at its own resolution rather than being redrawn, so small text stays exactly as legible as it was on screen. What you cannot do is make a blurry screenshot sharp by putting it in a PDF.'
+				a: 'Yes, as long as the screenshot itself was sharp. The image is placed into the page at its own resolution rather than being redrawn, so small text stays exactly as legible as it was on screen. What you can\'t do is make a blurry screenshot sharp by putting it in a PDF.'
 			}
 		],
 		suffix: ''
@@ -1552,11 +1552,11 @@ export const TOOLS: ImageTool[] = [
 		steps: [
 			'Drop your HEIC photos in the box above, straight from the phone or from a folder.',
 			'Put them in the order you want with the arrows.',
-			'Download the PDF. Pages match the photos, and you can switch to A4 if it is going to be printed.'
+			'Download the PDF. Pages match the photos, and you can switch to A4 if it\'s going to be printed.'
 		],
 		aboutHeading: 'About turning HEIC into PDF',
 		about: [
-			'HEIC is what an iPhone saves photos as, and very little outside Apple can open it. That is awkward when someone asks for a document and all you have is a photo of it. Going straight to PDF skips a step, since a PDF opens anywhere.',
+			'HEIC is what an iPhone saves photos as, and very little outside Apple can open it. That\'s awkward when someone asks for a document and all you have is a photo of it. Going straight to PDF skips a step, since a PDF opens anywhere.',
 			'Pages match the shape of each photo by default, because photographs usually look wrong stranded in the middle of an A4 sheet. Switch to A4 when the PDF is paperwork that will be printed.'
 		],
 		next: ['merge-pdf', 'image-to-pdf', 'compress-image'],
@@ -1564,7 +1564,7 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'Can I make a PDF from iPhone photos without installing anything?',
-				a: 'Yes. The HEIC files are decoded here in the browser, so there is nothing to install and no app to give your photo library to. It works from the phone itself as well as from a computer, which is useful when the photos never left the phone in the first place.'
+				a: 'Yes. The HEIC files are decoded here in the browser, so there\'s nothing to install and no app to give your photo library to. It works from the phone itself as well as from a computer, which is useful when the photos never left the phone in the first place.'
 			},
 			{
 				q: 'Should I use A4 or match the photo?',
@@ -1590,7 +1590,7 @@ export const TOOLS: ImageTool[] = [
 		],
 		aboutHeading: 'About converting PDF pages to PNG',
 		about: [
-			'PNG is the right choice when a page is mostly text, tables, diagrams or line drawings. It stores every pixel exactly, so edges stay hard and thin lines do not pick up the smudging that JPG leaves around them.',
+			'PNG is the right choice when a page is mostly text, tables, diagrams or line drawings. It stores every pixel exactly, so edges stay hard and thin lines don\'t pick up the smudging that JPG leaves around them.',
 			'The price is size. A PNG of a text page is often several times the size of the same page as JPG. For pages that are mainly photographs, JPG or WebP will serve you better.'
 		],
 		next: ['pdf-to-jpg', 'pdf-to-text', 'compress-image'],
@@ -1625,7 +1625,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'What this can and cannot read',
 		about: [
 			'This reads the real text stored in the PDF, which is why it is exact and instant. It works for documents made by a computer, like invoices, reports and contracts.',
-			'A scanned page is a picture of text, not text, so nothing comes out. Reading those needs character recognition, which this tool does not do.'
+			'A scanned page is a picture of text, not text, so nothing comes out. Reading those needs character recognition, which this tool doesn\'t do.'
 		],
 		next: ['pdf-to-jpg', 'extract-pdf-pages'],
 		keywords: ['copy text', 'extract text', 'txt'],
@@ -1636,7 +1636,7 @@ export const TOOLS: ImageTool[] = [
 			},
 			{
 				q: 'Does the layout survive?',
-				a: 'Not really. You get the words in reading order, page by page, which is what you want for copying a quote, searching for a phrase or feeding the content somewhere else. Columns, tables and headers do not come through as they looked, because that arrangement lives in the PDF page rather than in the text.'
+				a: 'Not really. You get the words in reading order, page by page, which is what you want for copying a quote, searching for a phrase or feeding the content somewhere else. Columns, tables and headers don\'t come through as they looked, because that arrangement lives in the PDF page rather than in the text.'
 			}
 		],
 		suffix: ''
@@ -1654,11 +1654,11 @@ export const TOOLS: ImageTool[] = [
 		steps: [
 			'Drop an image in the box above. The original file is encoded as is, byte for byte.',
 			'Copy the raw data URL, the img tag or the CSS rule.',
-			'Mind the size. Base64 adds about a third, so it is for small images.'
+			'Mind the size. Base64 adds about a third, so it\'s for small images.'
 		],
 		aboutHeading: 'When Base64 makes sense',
 		about: [
-			'Putting the image inside your code saves a network request. That is worth it for tiny icons and single-file pages. The text version is about a third larger than the file, so it only makes sense for small images.',
+			'Putting the image inside your code saves a network request. That\'s worth it for tiny icons and single-file pages. The text version is about a third larger than the file, so it only makes sense for small images.',
 			'The file is encoded exactly as it is. Nothing is re-compressed, so you get byte for byte what you dropped.'
 		],
 		next: ['compress-image', 'favicon-generator'],
@@ -1666,11 +1666,11 @@ export const TOOLS: ImageTool[] = [
 		faq: [
 			{
 				q: 'When should I use a base64 image instead of a file?',
-				a: 'For small things that would otherwise cost a separate request, such as an icon, a tiny logo or a placeholder, and for places where you can only paste text and not upload a file. For anything larger, a normal image file wins, because the browser can cache it separately and will not have to parse it again with every page.'
+				a: 'For small things that would otherwise cost a separate request, such as an icon, a tiny logo or a placeholder, and for places where you can only paste text and not upload a file. For anything larger, a normal image file wins, because the browser can cache it separately and won\'t have to parse it again with every page.'
 			},
 			{
 				q: 'Why is the base64 string bigger than the original file?',
-				a: 'Because base64 rewrites the bytes using only characters that are safe to put in text, and that costs about a third more space. A 30 KB image becomes roughly 40 KB of text. It is the price of carrying a file inside a document, and the reason base64 stops being a good idea as images get larger.'
+				a: 'Because base64 rewrites the bytes using only characters that are safe to put in text, and that costs about a third more space. A 30 KB image becomes roughly 40 KB of text. It\'s the price of carrying a file inside a document, and the reason base64 stops being a good idea as images get larger.'
 			}
 		],
 		suffix: ''

@@ -14,7 +14,7 @@
 		},
 		{
 			q: 'Do I have to know the exact pixel size a platform wants?',
-			a: 'No, that is what these pages are for. Each one carries the size the platform actually asks for, so you can pick the page by name instead of hunting through help articles that were last updated three redesigns ago. The tool arrives already set to it.'
+			a: 'No, that\'s what these pages are for. Each one carries the size the platform actually asks for, so you can pick the page by name instead of hunting through help articles that were last updated three redesigns ago. The tool arrives already set to it.'
 		},
 		{
 			q: 'What if the size I need is not listed?',
@@ -45,7 +45,7 @@
 	<h1>Ready-made sizes</h1>
 	<p class="lede">
 		{PRESETS.length} pages for the sizes people actually get asked for. Each one opens with the
-		setting already filled in, so there is nothing to work out.
+		setting already filled in, so there's nothing to work out.
 	</p>
 	<TrustLine />
 </section>

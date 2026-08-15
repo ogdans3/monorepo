@@ -56,7 +56,7 @@
 	<h2 id="why-heading">Why do this in the browser?</h2>
 	<p>
 		Most free PDF sites upload your document to a server and promise to delete it later. These
-		tools never send it anywhere, so there is nothing to promise. That matters for contracts,
+		tools never send it anywhere, so there's nothing to promise. That matters for contracts,
 		invoices, medical letters and anything with a signature on it.
 	</p>
 	<p>

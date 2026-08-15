@@ -87,15 +87,15 @@
 	const SPECIFIC = [
 		{
 			q: 'What is the best free image converter?',
-			a: 'The one that does not make you wait for an upload, does not ask for an account and does not stamp a watermark on the result. This site converts between PNG, JPG, WebP, AVIF, HEIC, GIF, BMP, ICO, SVG and TIFF entirely inside your browser, so the file never travels anywhere and there is nothing to sign up for. It is free with no limit on how many images you convert.'
+			a: 'The one that doesn\'t make you wait for an upload, doesn\'t ask for an account and doesn\'t stamp a watermark on the result. This site converts between PNG, JPG, WebP, AVIF, HEIC, GIF, BMP, ICO, SVG and TIFF entirely inside your browser, so the file never travels anywhere and there\'s nothing to sign up for. It\'s free with no limit on how many images you convert.'
 		},
 		{
 			q: 'How does converting an image in the browser work?',
-			a: 'Your browser already knows how to read and write images, since that is most of what it does all day. Dropping a file here hands it to that machinery: the picture is unpacked into raw pixels, then saved again in the format you chose, all on your own device. The newer formats that browsers do not write natively are handled by small code libraries the page loads as it needs them.'
+			a: 'Your browser already knows how to read and write images, since that\'s most of what it does all day. Dropping a file here hands it to that machinery: the picture is unpacked into raw pixels, then saved again in the format you chose, all on your own device. The newer formats that browsers don\'t write natively are handled by small code libraries the page loads as it needs them.'
 		},
 		{
 			q: 'Which image format should I use?',
-			a: 'JPG for photographs that have to work everywhere, PNG when you need transparency or exact pixels such as a logo or a screenshot, and WebP for anything going on a website, since it is smaller than both at the same visible quality. AVIF is smaller still and worth using when only browsers will see the file. HEIC is what an iPhone gives you and is usually the thing to convert away from.'
+			a: 'JPG for photographs that have to work everywhere, PNG when you need transparency or exact pixels such as a logo or a screenshot, and WebP for anything going on a website, since it\'s smaller than both at the same visible quality. AVIF is smaller still and worth using when only browsers will see the file. HEIC is what an iPhone gives you and is usually the thing to convert away from.'
 		}
 	];
 </script>
@@ -205,7 +205,7 @@
 		Your browser already knows how to read most image formats, and this site adds a little extra
 		code for the rest, like HEIC and TIFF. Every file is turned into raw pixels on your own
 		computer, then saved again in the format you picked. The server only sends you this page.
-		That is why the converter is free, and why your images stay private.
+		That's why the converter is free, and why your images stay private.
 	</p>
 </section>
 

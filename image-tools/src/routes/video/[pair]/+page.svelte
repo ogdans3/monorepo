@@ -83,10 +83,10 @@
 	<p><strong>{page.source.name}</strong>: {page.source.blurb}</p>
 	<p><strong>{page.target.name}</strong>: {page.target.blurb}</p>
 	<p>
-		A video file is a container with codecs inside it, and the two are separate things. That is
-		the whole reason some conversions here finish in a second and others take minutes: moving a
-		video into a different container is bookkeeping, while changing the codec means rebuilding
-		every frame.
+		A video file is a box with codecs inside it, and the box and its contents are separate
+		things. Moving a video into a different box is bookkeeping, and takes a second. Changing the
+		codec means rebuilding every frame, and takes about as long as the video runs. That's the
+		whole difference between the quick conversions here and the slow ones.
 	</p>
 </section>
 

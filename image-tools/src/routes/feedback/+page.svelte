@@ -121,7 +121,7 @@
 	{#if fromPath}
 		<p class="hint context">
 			The page you came from, <span class="mono">{fromPath}</span>, will be added at the bottom
-			so there is no guessing about which tool you mean.
+			so there's no guessing about which tool you mean.
 		</p>
 	{/if}
 
@@ -141,7 +141,7 @@
 
 	{#if fallbackText}
 		<div class="field fallback">
-			<label for="fallback">Your browser would not let us reach the clipboard, so here it is</label>
+			<label for="fallback">Your browser wouldn't let us reach the clipboard, so here it is</label>
 			<textarea id="fallback" bind:this={fallbackBox} readonly rows="7">{fallbackText}</textarea>
 		</div>
 	{/if}
@@ -150,7 +150,7 @@
 <section aria-labelledby="how-heading">
 	<h2 id="how-heading">Where this goes</h2>
 	<p>
-		Nowhere, until you send it. There is no form handler behind this page and no third party
+		Nowhere, until you send it. There's no form handler behind this page and no third party
 		collecting anything. The message is assembled in your browser and handed to your own mail app,
 		which is the same arrangement as everything else here: the work happens on your device.
 	</p>

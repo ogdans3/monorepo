@@ -146,7 +146,7 @@
 			<span class="arrow" aria-hidden="true">→</span>
 			<span class="mono">{w} × {h} px</span>
 			<span class="mono dim">({pct}%)</span>
-			{#if upscaling}· Upscaling cannot add detail, expect some softness.{/if}
+			{#if upscaling}· Upscaling can't add detail, expect some softness.{/if}
 		</p>
 
 		<ExportBar render={renderResult} {baseName} suffix="-resized" />

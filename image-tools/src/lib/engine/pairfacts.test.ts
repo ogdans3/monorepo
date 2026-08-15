@@ -15,9 +15,9 @@ describe('pairFacts', () => {
 	});
 
 	it('warns about losing transparency, but only when there is some to lose', () => {
-		expect(facts('png-to-jpg').join(' ')).toContain('cannot store transparency');
+		expect(facts('png-to-jpg').join(' ')).toContain("can't store transparency");
 		// a JPG has no transparency to begin with, so the warning would be noise
-		expect(facts('jpg-to-png').join(' ')).not.toContain('cannot store transparency');
+		expect(facts('jpg-to-png').join(' ')).not.toContain("can't store transparency");
 	});
 
 	it('explains the on-or-off transparency of GIF', () => {
@@ -25,7 +25,7 @@ describe('pairFacts', () => {
 	});
 
 	it('is honest that lossless cannot undo lossy', () => {
-		expect(facts('jpg-to-png').join(' ')).toContain('cannot bring back detail');
+		expect(facts('jpg-to-png').join(' ')).toContain("can't bring back detail");
 		expect(facts('png-to-jpg').join(' ')).toContain('throws some detail away');
 	});
 

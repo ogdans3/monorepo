@@ -45,7 +45,7 @@
 	}
 
 	/**
-	 * A still picture dropped here is the common mistake, and ffmpeg does not
+	 * A still picture dropped here is the common mistake, and ffmpeg doesn't
 	 * consider it one: it reads a JPEG perfectly well and will hand back a
 	 * video one frame long. Better to notice and point at the right page than
 	 * to spend a 7MB download producing something nobody wanted.
@@ -122,7 +122,7 @@
 		/>
 		<p class="note">
 			One file at a time. The video is converted on your own device, so nothing is uploaded and
-			there is no size limit beyond what your browser can hold.
+			there's no size limit beyond what your browser can hold.
 		</p>
 	{/if}
 

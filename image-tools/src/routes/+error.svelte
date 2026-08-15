@@ -29,7 +29,7 @@
 	<h1>{notFound ? 'That page is not here' : 'Something went wrong'}</h1>
 	<p class="lede">
 		{#if notFound}
-			The address does not match anything on this site. It may have been a typo, or a link that
+			The address doesn't match anything on this site. It may have been a typo, or a link that
 			pointed at an older version of the site.
 		{:else}
 			{page.error?.message ?? 'An unexpected error stopped the page from loading.'}

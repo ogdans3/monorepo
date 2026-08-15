@@ -85,7 +85,7 @@
 <section aria-labelledby="same-heading">
 	<h2 id="same-heading">Same format, different spelling</h2>
 	<p>
-		JPG and JPEG are one format with two extensions, so there is nothing to convert. These pages
+		JPG and JPEG are one format with two extensions, so there's nothing to convert. These pages
 		rename the file instead of re-saving it, which keeps every pixel exactly as it was.
 	</p>
 	<ul class="pair-links">

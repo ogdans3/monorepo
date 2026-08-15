@@ -46,10 +46,10 @@ function sizeSentence(source: Format, target: Format, sourceName: string, target
 function transparencySentence(source: Format, target: Format, targetName: string): string | null {
 	if (source.transparency === 'none') return null; // nothing to lose
 	if (target.transparency === 'none') {
-		return `${targetName} cannot store transparency, so see-through areas are filled with the colour you pick below.`;
+		return `${targetName} can't store transparency, so see-through areas are filled with the colour you pick below.`;
 	}
 	if (target.transparency === 'binary' && source.transparency === 'full') {
-		return `${targetName} transparency is on or off with no in between, so soft edges are blended onto the background colour.`;
+		return `${targetName} transparency is on or off with nothing in between, so soft edges are blended onto the background colour.`;
 	}
 	return null;
 }
@@ -59,7 +59,7 @@ function qualitySentence(source: Format, target: Format, sourceName: string, tar
 		return `${sourceName} keeps every pixel exactly, while ${targetName} throws some detail away to save space. Use the quality slider to decide how much.`;
 	}
 	if (source.lossy && !target.lossy) {
-		return `${targetName} is lossless, but it cannot bring back detail ${sourceName} already discarded. The file will grow without looking better.`;
+		return `${targetName} is lossless, but it can't bring back detail ${sourceName} already discarded. The file will grow without looking better.`;
 	}
 	if (source.lossy && target.lossy) {
 		return `Both formats are lossy, so this saves the picture a second time. Keep the quality high if the image matters.`;

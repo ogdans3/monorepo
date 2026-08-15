@@ -17,8 +17,8 @@
 <section class="hero">
 	<h1>Privacy policy</h1>
 	<p class="lede">
-		The whole policy in one breath: your files never leave your device, the analytics cannot
-		identify you, and nothing is stored on your machine.
+		The short version: your files never leave your device, the analytics can't identify you,
+		and nothing is stored on your machine.
 	</p>
 	<p class="updated mono">Last updated 15 August 2026</p>
 </section>

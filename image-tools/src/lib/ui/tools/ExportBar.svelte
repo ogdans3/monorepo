@@ -77,7 +77,7 @@
 		<BackgroundPicker bind:value={background} />
 		<p class="export-note">
 			{#if format.transparency === 'none'}
-				{format.name} cannot store transparency, so anything see-through gets this colour behind
+				{format.name} can't store transparency, so anything see-through gets this colour behind
 				it.
 			{:else}
 				{format.name} transparency is on or off, so soft edges are blended onto this colour.

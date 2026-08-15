@@ -41,7 +41,7 @@ function compressPreset(label: string, bytes: number, blurbExtra: string, about:
 		h1: `Compress an image to ${label}`,
 		title: `Compress Image to ${label} - Free Online, No Upload`,
 		description: `Compress an image to under ${label} online free. The best quality that fits is found for you, right in your browser, with no uploads and no signup.`,
-		lede: `Drop an image and it is squeezed to fit under ${label}, at the best quality that still fits.`,
+		lede: `Drop an image and it's squeezed to fit under ${label}, at the best quality that still fits.`,
 		blurb: blurbExtra,
 		about,
 		bytes
@@ -275,7 +275,7 @@ export function presetFaq(preset: Preset): { q: string; a: string }[] {
 		return [
 			{
 				q: `Why is my image still bigger than ${label}?`,
-				a: `Because quality alone could not get it there. The tool lowers quality as far as it sensibly can, and on a very large photo with a tight target that is not always enough. Turn on downscaling and it will reduce the dimensions as well, which is almost always the better looking answer, since a smaller picture at decent quality beats a large one that has been crushed.`
+				a: `Because quality alone couldn't get it there. The tool lowers quality as far as it sensibly can, and on a very large photo with a tight target that's not always enough. Turn on downscaling and it will reduce the dimensions as well, which is almost always the better looking answer, since a smaller picture at decent quality beats a large one that has been crushed.`
 			},
 			{
 				q: `How much quality will I lose getting down to ${label}?`,
@@ -287,11 +287,11 @@ export function presetFaq(preset: Preset): { q: string; a: string }[] {
 	return [
 		{
 			q: `Will my photo be cropped to fit ${width} by ${height}?`,
-			a: `Yes, if it is not already that shape. The image is scaled until it covers the whole frame and the overflow is trimmed off, which keeps everything in proportion rather than stretching it. The middle is what survives, so if the important part is off to one side, crop it yourself first and then come back here.`
+			a: `Yes, if it isn't already that shape. The image is scaled until it covers the whole frame and the overflow is trimmed off, which keeps everything in proportion rather than stretching it. The middle is what survives, so if the important part is off to one side, crop it yourself first and then come back here.`
 		},
 		{
 			q: `What if my image is smaller than ${width} by ${height}?`,
-			a: `It gets enlarged to fit, and enlarging always costs sharpness, because the extra pixels have to be invented from the ones already there. It will still be exactly the right size, it just will not be as crisp as the same picture from a larger original. Start from the biggest version you have whenever you can.`
+			a: `It gets enlarged to fit, and enlarging always costs sharpness, because the extra pixels have to be invented from the ones already there. It will still be exactly the right size, it just won't be as crisp as the same picture from a larger original. Start from the biggest version you have whenever you can.`
 		}
 	];
 }

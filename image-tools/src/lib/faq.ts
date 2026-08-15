@@ -9,6 +9,9 @@
  * folded into two answers, and the visible trust line above the fold carries
  * them again. Everything after these two belongs to the page alone, which is
  * the part worth ranking.
+ *
+ * These are also the two most read sentences on the site, sitting on all 170
+ * pages, so they are worth more care than anything else in here.
  */
 
 export interface FaqItem {
@@ -19,15 +22,15 @@ export interface FaqItem {
 export function trustFaq(subject: string, plural = false): FaqItem[] {
 	const isAre = plural ? 'Are' : 'Is';
 	const runs = plural ? 'run' : 'runs';
-	const theyIt = plural ? 'they' : 'it';
+	const theyIt = plural ? 'them' : 'it';
 	return [
 		{
 			q: `${isAre} the ${subject} free?`,
-			a: `Yes. The ${subject} ${plural ? 'are' : 'is'} completely free, with no paid plans, no trials and no watermarks. You do not need an account or an email address, and there is no limit on how many files you can put through ${theyIt}.`
+			a: `Yes, properly free. No paid tier, no trial, no watermark on the result and nothing to sign up for. Put as many files through ${theyIt} as you like, as often as you like.`
 		},
 		{
 			q: 'Are my files uploaded to a server?',
-			a: `No. The ${subject} ${runs} in your browser on your own device, so your files never leave your computer or phone. That also means big files are fine, as long as your browser can handle them.`
+			a: `No. The ${subject} ${runs} inside your browser, on your own machine, so your files never go anywhere. Big ones are fine too, up to whatever your browser can hold.`
 		}
 	];
 }

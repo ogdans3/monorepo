@@ -71,9 +71,9 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: true,
 		lossy: true,
 		transparency: 'none',
-		blurb: 'The standard choice for photos. Files are small and every app can open them. It cannot store transparent backgrounds.',
+		blurb: 'The standard choice for photos. Files are small and every app can open them. It can\'t store transparent backgrounds.',
 		targetNote:
-			'JPG cannot store transparent areas, so they are filled in. White by default, and you can pick any colour.'
+			'JPG can\'t store transparent areas, so they\'re filled in. White by default, and you can pick any colour.'
 	},
 	webp: {
 		id: 'webp',
@@ -129,7 +129,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: false, // HEVC encoding is patent-encumbered; no sane browser path
 		lossy: true,
 		transparency: 'full',
-		blurb: 'The format iPhones use for photos. Files are small, but many apps outside Apple cannot open them.'
+		blurb: 'The format iPhones use for photos. Files are small, but many apps outside Apple can\'t open them.'
 	},
 	bmp: {
 		id: 'bmp',
@@ -183,7 +183,7 @@ export const FORMATS: Record<FormatId, Format> = {
 		canEncode: false,
 		lossy: false,
 		transparency: 'full',
-		blurb: 'A format used for print and scanning. Scanners often make TIFF files. It is rare on the web.',
+		blurb: 'A format used for print and scanning. Scanners often make TIFF files. It\'s rare on the web.',
 		sourceNote: 'TIFF files with many pages are read using only the first page.'
 	}
 };

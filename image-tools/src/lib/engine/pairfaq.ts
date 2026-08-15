@@ -39,7 +39,7 @@ function qualityQuestion(page: PairPage): FaqItem {
 	if (!source.lossy && target.lossy) {
 		return {
 			q,
-			a: `A little, because ${targetName} saves space by throwing away detail the eye is least likely to miss, while ${sourceName} keeps every pixel exactly. At the default quality of 90 most people cannot tell the two apart on a photo. Flat colour, sharp edges and text suffer the most, so lower the quality slider only while you are watching the preview.`
+			a: `A little, because ${targetName} saves space by throwing away detail the eye is least likely to miss, while ${sourceName} keeps every pixel exactly. At the default quality of 90 most people can't tell the two apart on a photo. Flat colour, sharp edges and text suffer the most, so lower the quality slider only while you're watching the preview.`
 		};
 	}
 	if (source.lossy && !target.lossy) {
@@ -51,7 +51,7 @@ function qualityQuestion(page: PairPage): FaqItem {
 	if (source.lossy && target.lossy) {
 		return {
 			q,
-			a: `Slightly, because the picture is compressed a second time and each pass throws away a little more. It is rarely visible in one step at a high quality setting. Where it shows is after several rounds, so work from the best original you have rather than converting the same file back and forth.`
+			a: `Slightly, because the picture is compressed a second time and each pass throws away a little more. It's rarely visible in one step at a high quality setting. Where it shows is after several rounds, so work from the best original you have rather than converting the same file back and forth.`
 		};
 	}
 	return {
@@ -74,7 +74,7 @@ function transparencyQuestion(page: PairPage): FaqItem | null {
 	if (target.transparency === 'binary' && source.transparency === 'full') {
 		return {
 			q: `Does ${targetName} keep the transparency from my ${sourceName}?`,
-			a: `Partly. ${targetName} transparency is on or off for each pixel with nothing in between, so a fully see-through area survives but a soft or faded edge cannot. Those half transparent pixels are blended onto the background colour you choose, which stops the ragged halo you would otherwise get around the edges.`
+			a: `Partly. ${targetName} transparency is on or off for each pixel with nothing in between, so a fully see-through area survives but a soft or faded edge can't. Those half transparent pixels are blended onto the background colour you choose, which stops the ragged halo you would otherwise get around the edges.`
 		};
 	}
 	return null;
@@ -89,13 +89,13 @@ function sizeQuestion(page: PairPage): FaqItem {
 	if (step <= -2) {
 		return {
 			q,
-			a: `Usually much smaller. ${targetName} compresses far harder than ${sourceName}, and it is common to see a file drop to a fraction of what it was with no visible difference. How much you save depends on the picture, since photographs compress better than screenshots and line art.`
+			a: `Usually much smaller. ${targetName} compresses far harder than ${sourceName}, and it's common to see a file drop to a fraction of what it was with no visible difference. How much you save depends on the picture, since photographs compress better than screenshots and line art.`
 		};
 	}
 	if (step === -1) {
 		return {
 			q,
-			a: `Usually a bit smaller, though the gap is not dramatic. The exact saving depends on the picture. If size is the whole reason you are here, the compress tool will hit a number you name instead of leaving it to chance.`
+			a: `Usually a bit smaller, though the gap isn't dramatic. The exact saving depends on the picture. If size is the whole reason you're here, the compress tool will hit a number you name instead of leaving it to chance.`
 		};
 	}
 	if (step === 0) {
@@ -107,7 +107,7 @@ function sizeQuestion(page: PairPage): FaqItem {
 	if (step === 1) {
 		return {
 			q,
-			a: `No, expect it to grow somewhat. ${targetName} does not compress as hard as ${sourceName}, which is the price of the wider support you are converting for. Compress it afterwards if the size matters.`
+			a: `No, expect it to grow somewhat. ${targetName} doesn't compress as hard as ${sourceName}, which is the price of the wider support you're converting for. Compress it afterwards if the size matters.`
 		};
 	}
 	return {
@@ -121,7 +121,7 @@ function metadataQuestion(page: PairPage): FaqItem {
 	const { sourceName, targetName } = page;
 	return {
 		q: `Does converting ${sourceName} to ${targetName} keep the date and location from the original?`,
-		a: `No. The image is rebuilt pixel by pixel, so the camera model, the date and any GPS location in the original are not carried into the ${targetName} file. That cuts both ways: it strips information you may not want to share, and it loses information you may have wanted to keep. Check the original with the metadata viewer first if it matters.`
+		a: `No. The image is rebuilt pixel by pixel, so the camera model, the date and any GPS location in the original aren't carried into the ${targetName} file. That cuts both ways: it strips information you may not want to share, and it loses information you may have wanted to keep. Check the original with the metadata viewer first if it matters.`
 	};
 }
 
@@ -142,7 +142,7 @@ const KNOWN: Record<string, FaqItem[]> = {
 	'heic-jpg': [
 		{
 			q: 'Why will Windows not open my HEIC photos?',
-			a: 'HEIC is the format an iPhone saves photos in by default, and Windows does not read it without an extra codec from the Microsoft Store that is not always free. Converting to JPG sidesteps the problem completely, because every version of Windows has opened JPG for decades. The same goes for older photo printers, upload forms and email clients that reject HEIC.'
+			a: 'HEIC is the format an iPhone saves photos in by default, and Windows doesn\'t read it without an extra codec from the Microsoft Store that\'s not always free. Converting to JPG sidesteps the problem completely, because every version of Windows has opened JPG for decades. The same goes for older photo printers, upload forms and email clients that reject HEIC.'
 		},
 		{
 			q: 'Can I stop my iPhone saving photos as HEIC?',
@@ -152,7 +152,7 @@ const KNOWN: Record<string, FaqItem[]> = {
 	'heic-png': [
 		{
 			q: 'Should I convert an iPhone photo to PNG or to JPG?',
-			a: 'JPG for almost anything you are sending or uploading, because the file will be a fraction of the size and nobody will see the difference. PNG only when you are going to edit the photo repeatedly and want a lossless working copy, or when whatever you are feeding it to demands PNG. A PNG of a normal phone photo is often ten times the size of the HEIC it came from.'
+			a: 'JPG for almost anything you\'re sending or uploading, because the file will be a fraction of the size and nobody will see the difference. PNG only when you\'re going to edit the photo repeatedly and want a lossless working copy, or when whatever you\'re feeding it to demands PNG. A PNG of a normal phone photo is often ten times the size of the HEIC it came from.'
 		}
 	],
 	'png-jpg': [
@@ -182,7 +182,7 @@ const KNOWN: Record<string, FaqItem[]> = {
 	'avif-jpg': [
 		{
 			q: 'Why can nothing open my AVIF file?',
-			a: 'AVIF is the newest of the common image formats. Browsers took it up quickly, but desktop software, phones on older systems and most upload forms have not caught up. Converting to JPG is the reliable fix, at the cost of a bigger file, since AVIF compresses better than anything else in wide use.'
+			a: 'AVIF is the newest of the common image formats. Browsers took it up quickly, but desktop software, phones on older systems and most upload forms haven\'t caught up. Converting to JPG is the reliable fix, at the cost of a bigger file, since AVIF compresses better than anything else in wide use.'
 		}
 	],
 	'png-ico': [
@@ -194,7 +194,7 @@ const KNOWN: Record<string, FaqItem[]> = {
 	'svg-png': [
 		{
 			q: 'What size should I export an SVG at?',
-			a: 'Twice the size it will be displayed at, so it stays sharp on a high resolution screen. An SVG has no size of its own, since it is a set of shapes rather than pixels, so the export size is a decision rather than a property of the file. Keep the SVG as your master and export a new PNG whenever you need a different size.'
+			a: 'Twice the size it will be displayed at, so it stays sharp on a high resolution screen. An SVG has no size of its own, since it\'s a set of shapes rather than pixels, so the export size is a decision rather than a property of the file. Keep the SVG as your master and export a new PNG whenever you need a different size.'
 		}
 	],
 	'gif-png': [
@@ -206,13 +206,13 @@ const KNOWN: Record<string, FaqItem[]> = {
 	'tiff-jpg': [
 		{
 			q: 'Why are scanned TIFF files so big?',
-			a: 'A scanner stores every pixel without throwing anything away, usually at 300 dots per inch or more, so a single scanned page can run to tens of megabytes. That is exactly what you want in an archive and exactly what an email will reject. JPG at a high quality setting normally cuts it by a factor of ten with no visible change on screen.'
+			a: 'A scanner stores every pixel without throwing anything away, usually at 300 dots per inch or more, so a single scanned page can run to tens of megabytes. That\'s exactly what you want in an archive and exactly what an email will reject. JPG at a high quality setting normally cuts it by a factor of ten with no visible change on screen.'
 		}
 	],
 	'bmp-png': [
 		{
 			q: 'Is anything lost converting BMP to PNG?',
-			a: 'Nothing. BMP normally stores pixels with no compression at all and PNG compresses them without discarding any, so the picture is identical and the file is very much smaller. There is no reason to keep an ordinary BMP once you have the PNG.'
+			a: 'Nothing. BMP normally stores pixels with no compression at all and PNG compresses them without discarding any, so the picture is identical and the file is very much smaller. There\'s no reason to keep an ordinary BMP once you have the PNG.'
 		}
 	]
 };

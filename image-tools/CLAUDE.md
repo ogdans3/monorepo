@@ -43,6 +43,13 @@ decisions. This file is the short version of what matters when editing.
 - **Copy style.** No em dashes and no semicolons in user-facing text. Plain
   sentences, dry tone, SEO keywords ("X to Y converter", "free", "online",
   "no upload") carried naturally in titles, descriptions and headings.
+  **Contractions in body copy.** The site once had 114,000 words and not one
+  "it's" or "don't", which is the loudest thing a reader notices without
+  being able to name it. Titles, meta descriptions and h1s stay uncontracted:
+  they are search targets and length checked. A blanket rewrite is not safe,
+  because "the best original you have" is not "you've" and "renaming it is
+  enough" is not "it's" — both are main verbs, not auxiliaries. Contract by
+  hand or guard the rule.
 - **The registry drives everything.** New format = edit
   `src/lib/engine/formats.ts` + add its decode/encode case. Pages, slugs,
   the matrix, accept lists and sitemap follow automatically. Don't hand-write

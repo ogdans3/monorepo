@@ -111,11 +111,11 @@ export function videoFaq(page: VideoPairPage): FaqItem[] {
 	} else if (page.target.kind === 'animation') {
 		items.push({
 			q: `How do I turn a ${sourceName} into a GIF?`,
-			a: `Drop the file and it is converted at a size and frame rate chosen to keep the result usable, since a GIF at full resolution and 30 frames a second would be enormous. A palette is built from your own footage rather than using the standard web colours, which is the difference between a GIF that looks like the video and one that looks like 1998.`
+			a: `Drop the file and it's converted at a size and frame rate chosen to keep the result usable, since a GIF at full resolution and 30 frames a second would be enormous. A palette is built from your own footage rather than using the standard web colours, which is the difference between a GIF that looks like the video and one that looks like 1998.`
 		});
 		items.push({
 			q: `Why is my GIF so much bigger than the video?`,
-			a: `Because GIF has no idea how to compress motion. A video codec stores what changed between frames, while a GIF stores whole pictures over and over. That is why a ten second clip can turn into several megabytes, and why keeping it to the few seconds that matter is the single most useful thing you can do.`
+			a: `Because GIF has no idea how to compress motion. A video codec stores what changed between frames, while a GIF stores whole pictures over and over. That's why a ten second clip can turn into several megabytes, and why keeping it to the few seconds that matter is the single most useful thing you can do.`
 		});
 	} else if (usuallyInstant(page)) {
 		items.push({
@@ -124,22 +124,22 @@ export function videoFaq(page: VideoPairPage): FaqItem[] {
 		});
 		items.push({
 			q: `Why is it so much faster than other converters?`,
-			a: `Because there is nothing to upload and, in this case, nothing to re-encode. Sites that upload your file spend most of their time moving it to a server and back. Here the work happens on your own machine, and for this conversion the work is little more than rewriting the file's wrapper.`
+			a: `Because there's nothing to upload and, in this case, nothing to re-encode. Sites that upload your file spend most of their time moving it to a server and back. Here the work happens on your own machine, and for this conversion the work is little more than rewriting the file's wrapper.`
 		});
 	} else {
 		items.push({
 			q: `Does converting ${sourceName} to ${targetName} lose quality?`,
-			a: `A little, because ${targetName} cannot hold what a ${sourceName} contains, so the video has to be decoded and encoded again. It is set to a quality where the difference is hard to see on normal footage. What you should not do is convert the same file back and forth repeatedly, since each pass costs a little more.`
+			a: `A little, because ${targetName} can't hold what a ${sourceName} contains, so the video has to be decoded and encoded again. It's set to a quality where the difference is hard to see on normal footage. What you should not do is convert the same file back and forth repeatedly, since each pass costs a little more.`
 		});
 		items.push({
 			q: `How long will converting a ${sourceName} to ${targetName} take?`,
-			a: `Roughly as long as the video itself, and longer for high resolution footage, because every frame is being rebuilt. A one minute clip is a minute or two of waiting. There is a progress bar rather than a guess, and the tab has to stay open, since your own machine is doing the work.`
+			a: `Roughly as long as the video itself, and longer for high resolution footage, because every frame is being rebuilt. A one minute clip is a minute or two of waiting. There's a progress bar rather than a guess, and the tab has to stay open, since your own machine is doing the work.`
 		});
 	}
 
 	items.push({
 		q: `Is there a limit on the size of the video?`,
-		a: `Not one we set, but there is a practical one. The whole file is held in your browser's memory while it works, so very large files can run a tab out of room, and a phone gives up sooner than a computer. Files up to a few hundred megabytes are comfortable on an ordinary machine.`
+		a: `Not one we set, but there's a practical one. The whole file is held in your browser's memory while it works, so very large files can run a tab out of room, and a phone gives up sooner than a computer. Files up to a few hundred megabytes are comfortable on an ordinary machine.`
 	});
 
 	return items;

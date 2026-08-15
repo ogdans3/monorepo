@@ -22,7 +22,7 @@
 	const SPECIFIC = [
 		{
 			q: 'Can you really convert video in a browser?',
-			a: 'Yes. ffmpeg, the program behind most video conversion anywhere, has been compiled to WebAssembly and runs inside the page. It is the same tool doing the same work, just on your machine instead of someone else large server. That is why nothing has to be uploaded and why there is no size limit or queue.'
+			a: 'Yes. ffmpeg, the program behind most video conversion anywhere, has been compiled to WebAssembly and runs inside the page. It\'s the same tool doing the same work, just on your machine instead of someone else large server. That\'s why nothing has to be uploaded and why there\'s no size limit or queue.'
 		},
 		{
 			q: 'Why are some conversions instant and others slow?',
@@ -30,7 +30,7 @@
 		},
 		{
 			q: 'How big a video can I convert?',
-			a: 'There is no limit imposed here, but there is a practical one. The file is held in your browser memory while it works, so a few hundred megabytes is comfortable on a computer and a phone will give up sooner. This is the opposite trade from an upload site, which caps you at a size but does the work on hardware you do not have to own.'
+			a: 'There\'s no limit imposed here, but there\'s a practical one. The file is held in your browser memory while it works, so a few hundred megabytes is comfortable on a computer and a phone will give up sooner. This is the opposite trade from an upload site, which caps you at a size but does the work on hardware you don\'t have to own.'
 		}
 	];
 </script>
@@ -55,7 +55,7 @@
 	<h1>Free online video converter</h1>
 	<p class="lede">
 		Convert video without uploading it anywhere. The whole thing runs on your own machine, so
-		there is no queue, no size cap and no waiting for a file to travel twice.
+		there's no queue, no size cap and no waiting for a file to travel twice.
 	</p>
 	<TrustLine />
 </section>
@@ -63,8 +63,8 @@
 <section aria-labelledby="instant-heading">
 	<h2 id="instant-heading">The ones that finish in a second</h2>
 	<p>
-		These conversions do not rebuild the video, they move it into a different container. Nothing
-		is re-encoded, so nothing is lost and it is over before you look up.
+		These conversions don't rebuild the video, they move it into a different container. Nothing
+		is re-encoded, so nothing is lost and it's over before you look up.
 	</p>
 	<ul class="pair-links">
 		{#each instant as pair (pair.slug)}
