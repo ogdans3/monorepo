@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SITE_URL } from '$lib/site';
+	import { OPERATOR, OPERATOR_LINE, SITE_URL } from '$lib/site';
 </script>
 
 <svelte:head>
@@ -28,7 +28,8 @@
 	<p>
 		imagetoolbox.org offers free image conversion and editing tools that run in your web browser.
 		Your files are processed on your own device and are never uploaded. There is no account, no
-		payment and no usage limit. By using the site you accept these terms.
+		payment and no usage limit. By using the site you accept these terms. The site is operated by
+		{OPERATOR_LINE}.
 	</p>
 </section>
 
@@ -110,11 +111,26 @@
 <section aria-labelledby="contact-heading">
 	<h2 id="contact-heading">10. Contact</h2>
 	<p>
-		Questions about these terms: <a href="mailto:hello@imagetoolbox.org">hello@imagetoolbox.org</a>.
+		Questions about these terms: <a href="mailto:{OPERATOR.email}">{OPERATOR.email}</a>.
 	</p>
+	<address>
+		{OPERATOR.name}<br />
+		Organisation number {OPERATOR.orgNumber}<br />
+		{OPERATOR.street}, {OPERATOR.postalCode} {OPERATOR.city}, {OPERATOR.country}
+	</address>
 </section>
 
 <style>
+	address {
+		font-style: normal;
+		font-size: 0.9375rem;
+		line-height: 1.7;
+		margin: 0.75rem 0 0;
+		padding-left: 0.9rem;
+		border-left: 1px solid var(--line);
+		color: var(--muted);
+	}
+
 	.updated {
 		margin: 0.75rem 0 0;
 		font-size: 0.8125rem;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { FORMATS, parsePairSlug } from '$lib/engine';
-	import { SITE_URL, convertPath } from '$lib/site';
+	import { OPERATOR, SITE_URL, convertPath } from '$lib/site';
 	import { IMAGE_CATEGORIES, PDF_TOOLS, toolPath, toolsInCategory } from '$lib/tools/registry';
 	import { presetBySlug, presetPath } from '$lib/tools/presets';
 
@@ -28,7 +28,30 @@
 		operatingSystem: 'Any (runs in the browser)',
 		description:
 			'Free image converter and image tools that run in your browser. Files are never uploaded. No account, no watermarks, no limits.',
-		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+		publisher: { '@id': `${SITE_URL}/#organisation` }
+	});
+
+	// Who stands behind the tools, in the form machines read. A site that asks
+	// people to trust it with private files should be willing to say whose
+	// company it is, and search engines weigh that the same way a visitor does.
+	const orgLd = JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'Organization',
+		'@id': `${SITE_URL}/#organisation`,
+		name: OPERATOR.name,
+		legalName: OPERATOR.name,
+		url: SITE_URL,
+		email: OPERATOR.email,
+		// Norwegian organisation number, digits only, as the register holds it
+		taxID: OPERATOR.orgNumber.replace(/\s/g, ''),
+		address: {
+			'@type': 'PostalAddress',
+			streetAddress: OPERATOR.street,
+			postalCode: OPERATOR.postalCode,
+			addressLocality: OPERATOR.city,
+			addressCountry: 'NO'
+		}
 	});
 
 	const popular = [
@@ -78,6 +101,7 @@
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{SITE_URL}/" />
 	{@html `<script type="application/ld+json">${appLd}<\/script>`}
+	{@html `<script type="application/ld+json">${orgLd}<\/script>`}
 </svelte:head>
 
 <section class="hero">

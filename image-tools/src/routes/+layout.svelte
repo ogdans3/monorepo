@@ -2,7 +2,7 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import logo from '$lib/assets/logo.svg';
-	import { SITE_URL } from '$lib/site';
+	import { OPERATOR_LINE, SITE_URL } from '$lib/site';
 	import { browser } from '$app/environment';
 
 	// Anonymous, cookieless analytics. Nothing is stored on the device and no
@@ -103,6 +103,7 @@
 			Free to use, with no account and no limits. Everything runs in your browser, and your
 			files never leave your device.
 		</p>
+		<p class="footer-operator">{OPERATOR_LINE}</p>
 		<p class="footer-links">
 			<a href="/privacy">Privacy</a>
 			<a href="/terms">Terms</a>
@@ -190,6 +191,12 @@
 		font-weight: 700;
 		color: var(--ink);
 		margin-bottom: 0.3rem;
+	}
+
+	/* Who is behind a site that asks you to trust it with your files. Small,
+	   but present without having to open the privacy policy to find it. */
+	.footer-operator {
+		margin-top: 0.6rem;
 	}
 
 	.footer-links {

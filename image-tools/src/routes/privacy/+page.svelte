@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SITE_URL } from '$lib/site';
+	import { OPERATOR, SITE_URL } from '$lib/site';
 </script>
 
 <svelte:head>
@@ -26,8 +26,21 @@
 <section aria-labelledby="who-heading">
 	<h2 id="who-heading">Who runs this site</h2>
 	<p>
-		imagetoolbox.org is a free collection of image tools, run from Norway. For anything about
-		privacy, write to <a href="mailto:hello@imagetoolbox.org">hello@imagetoolbox.org</a>.
+		imagetoolbox.org is a free collection of image tools, run by {OPERATOR.name}, a company
+		registered in Norway. We are the data controller for anything described on this page.
+	</p>
+	<address>
+		{OPERATOR.name}<br />
+		Organisation number {OPERATOR.orgNumber}<br />
+		{OPERATOR.street}<br />
+		{OPERATOR.postalCode}
+		{OPERATOR.city}<br />
+		{OPERATOR.country}<br />
+		<a href="mailto:{OPERATOR.email}">{OPERATOR.email}</a>
+	</address>
+	<p>
+		Write to that address about anything on this page, including any of the rights listed
+		further down.
 	</p>
 </section>
 
@@ -168,7 +181,7 @@
 	</p>
 	<p>
 		If you believe we hold personal data about you, write to
-		<a href="mailto:hello@imagetoolbox.org">hello@imagetoolbox.org</a> and we will look into it.
+		<a href="mailto:{OPERATOR.email}">{OPERATOR.email}</a> and we will look into it.
 		You can also complain to your local data protection authority. In Norway that is
 		Datatilsynet.
 	</p>
@@ -191,6 +204,16 @@
 </section>
 
 <style>
+	address {
+		font-style: normal;
+		font-size: 0.9375rem;
+		line-height: 1.7;
+		margin: 0 0 1rem;
+		padding-left: 0.9rem;
+		border-left: 1px solid var(--line);
+		color: var(--muted);
+	}
+
 	.updated {
 		margin: 0.75rem 0 0;
 		font-size: 0.8125rem;
