@@ -1,0 +1,237 @@
+/*
+ * Tokens. See DESIGN.md for why.
+ *
+ * The two decisions everything else follows from: the surface is pure white
+ * with no hidden warmth, and the ink is brown-black rather than blue-black.
+ * The second is what stops the first from reading clinical. Warmth in both
+ * the ink and the background is the move that turns a considered palette into
+ * a wellness app.
+ */
+:root {
+	--bg: oklch(1 0 0);
+	--plate: oklch(0.985 0.004 60);
+	--surface: oklch(0.968 0.006 60);
+	--surface-deep: oklch(0.94 0.008 60);
+	--line: oklch(0.9 0.008 60);
+	--ink: oklch(0.23 0.018 60);
+	--muted: oklch(0.5 0.014 60);
+	--primary: oklch(0.72 0.14 78);
+	--primary-deep: oklch(0.52 0.12 66);
+	--anatomy: oklch(0.38 0.02 60);
+	--danger: oklch(0.48 0.19 25);
+	--danger-wash: oklch(0.97 0.02 25);
+
+	/*
+	 * The pain ramp is data, not chrome, which is why it is kept apart from
+	 * the palette above. Lightness falls monotonically from 0.88 to 0.45, so
+	 * the whole scale still reads as light-to-dark in greyscale and under any
+	 * colour blindness. Never used without the number beside it.
+	 */
+	--pain-1: oklch(0.88 0.09 85);
+	--pain-3: oklch(0.8 0.13 70);
+	--pain-5: oklch(0.7 0.16 47);
+	--pain-7: oklch(0.58 0.19 32);
+	--pain-9: oklch(0.45 0.2 22);
+
+	--font-ui:
+		system-ui,
+		-apple-system,
+		'Segoe UI',
+		Roboto,
+		'Helvetica Neue',
+		sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+	--r-s: 6px;
+	--r-m: 10px;
+	--r-l: 16px;
+	/* ease-out-quart: fast to start, settles rather than stops */
+	--ease: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font-family: var(--font-ui);
+	font-size: 1rem;
+	line-height: 1.6;
+	-webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+	line-height: 1.2;
+	text-wrap: balance;
+	font-weight: 640;
+	letter-spacing: -0.011em;
+}
+
+h1 {
+	font-size: 2.125rem;
+	margin: 0 0 0.75rem;
+}
+
+h2 {
+	font-size: 1.375rem;
+	margin: 0 0 0.75rem;
+}
+
+h3 {
+	font-size: 1.125rem;
+	margin: 0 0 0.5rem;
+}
+
+p {
+	text-wrap: pretty;
+	/* A wall of text about your own body is the WebMD failure mode. */
+	max-width: 68ch;
+}
+
+a {
+	color: var(--ink);
+	text-decoration: underline;
+	text-decoration-color: oklch(0.72 0.14 78 / 0.55);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+	transition:
+		color 120ms var(--ease),
+		text-decoration-color 120ms var(--ease);
+}
+
+a:hover,
+a:focus-visible {
+	color: var(--primary-deep);
+	text-decoration-color: var(--primary-deep);
+}
+
+:focus-visible {
+	outline: 2px solid var(--primary-deep);
+	outline-offset: 2px;
+	border-radius: 3px;
+}
+
+::selection {
+	background: oklch(0.72 0.14 78 / 0.25);
+}
+
+.mono {
+	font-family: var(--font-mono);
+}
+
+.lede {
+	font-size: 1.125rem;
+	color: var(--muted);
+	max-width: 60ch;
+	margin: 0;
+}
+
+.muted {
+	color: var(--muted);
+}
+
+/* Buttons. One solid primary per screen, ghost for everything secondary. */
+.btn,
+.btn-ghost {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	/* 24px minimum target is the floor, and some of these people have wrist
+	   or shoulder pain, so the real controls are considerably bigger. */
+	min-height: 2.75rem;
+	padding: 0.6rem 1.15rem;
+	border-radius: var(--r-s);
+	font: 600 0.9375rem/1.2 var(--font-ui);
+	cursor: pointer;
+	text-decoration: none;
+	transition:
+		background-color 120ms var(--ease),
+		border-color 120ms var(--ease);
+}
+
+.btn {
+	background: var(--primary-deep);
+	color: oklch(1 0 0);
+	border: 1px solid transparent;
+}
+
+.btn:hover {
+	background: oklch(0.44 0.11 62);
+}
+
+.btn-ghost {
+	background: transparent;
+	color: var(--ink);
+	border: 1px solid var(--line);
+}
+
+.btn-ghost:hover {
+	border-color: var(--muted);
+}
+
+.btn:disabled,
+.btn-ghost:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+/* Segmented choices: views, bodies, pain qualities. */
+.chip {
+	min-height: 2.5rem;
+	padding: 0.5rem 0.9rem;
+	border: 1px solid var(--line);
+	border-radius: 99px;
+	background: var(--bg);
+	color: var(--ink);
+	font: 600 0.875rem/1.2 var(--font-ui);
+	cursor: pointer;
+	transition:
+		background-color 120ms var(--ease),
+		border-color 120ms var(--ease);
+}
+
+.chip:hover {
+	border-color: var(--muted);
+}
+
+.chip[aria-pressed='true'] {
+	background: var(--ink);
+	border-color: var(--ink);
+	color: oklch(1 0 0);
+}
+
+.plate {
+	background: var(--plate);
+	border: 1px solid var(--line);
+	border-radius: var(--r-l);
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
