@@ -1,0 +1,3 @@
+name: pain map
+description: Map a pain on five views of the body, narrow it down on a muscle diagram, and see which patterns it matches. Runs entirely in the browser.
+http_port: 3000

@@ -10,8 +10,17 @@ looks. Read them first.
 
 ## Status
 
-Early. The scaffold, the design tokens and the parametric body system exist.
-The anatomy is the open question: see the note at the bottom.
+The whole flow works end to end: pick areas on any of the five views, narrow
+each one down on a muscle diagram, rate it on an explained scale, answer the
+safety questions, read the profile. Covered by `/tmp/e2e/flow.mjs`, which walks
+it with two areas and checks the result.
+
+What is unfinished, plainly: six regions have their own detailed diagram (hip
+and groin, lower back, shoulder, knee, neck, sole of the foot) and seven more
+borrow a neighbour's where that is anatomically right. Ten regions have no
+close-up yet, and the flow says so rather than pretending. The diagrams read as
+schematic anatomy rather than as medical illustration, and the silhouettes are
+consistent but not polished.
 
 ## How the anatomy works
 
@@ -35,6 +44,38 @@ draft put it at 61% by eye and gave the body a long torso on short legs.
 Shapes are filled with the plate colour and stacked, so each one hides the
 lines behind it. That is how layered line art works, and it is what makes the
 arms read as being in front of the ribs.
+
+## How the interpretation works
+
+`src/lib/pain/conditions.ts` defines each condition as a list of features. The
+score is how many matched out of how many there are, shown as a fraction, and
+both the matched and the unmatched features are listed on screen.
+
+It is deliberately not a probability. Getting one from a pain map needs
+validated likelihood ratios this project does not have, so a percentage would be
+a number invented to look confident. A fraction with its working shown is just
+as specific to read and it survives being asked where it came from.
+
+Two rules keep the list from becoming noise. A condition only appears if one of
+its key features matched, and only if the person named a location: without the
+second rule "worse with activity", which is true of nearly all musculoskeletal
+pain, surfaced three conditions from an answer that named nowhere at all.
+
+Red flags live in `redflags.ts` and never enter the ranking. A raised flag is a
+different kind of statement from a match, and it renders above everything else
+and cannot be dismissed. That matters more here than in a tool people take to a
+clinician, because this product's audience is specifically people who are not
+going to see anyone.
+
+## Deploy
+
+Single container, per the conventions in `/home/ai_user/git/README.md`. The
+dashboard discovers it through the `pain-map` symlink in the git root, since
+discovery only reads top-level folders and this lives in the monorepo.
+
+```sh
+docker build -t pain-map . && docker run -p 3000:3000 pain-map
+```
 
 ## Commands
 
