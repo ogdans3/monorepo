@@ -1,42 +1,49 @@
 <script lang="ts">
-	import { frontPaths, sidePaths } from '$lib/anatomy/silhouette';
-	import { VIEW_H, VIEW_W } from '$lib/anatomy/proportions';
+	import type { BodyKind } from '$lib/anatomy/proportions';
+	import { VIEWS, type View } from '$lib/anatomy/regions';
+	import BodyMap from '$lib/ui/BodyMap.svelte';
 
-	const views = [
-		{ label: 'male front', paths: frontPaths('male') },
-		{ label: 'female front', paths: frontPaths('female') },
-		{ label: 'male side', paths: sidePaths('male') },
-		{ label: 'female side', paths: sidePaths('female') }
-	];
+	let body = $state<BodyKind>('male');
+	let view = $state<View>('front');
+	let selected = $state<string[]>([]);
 </script>
 
-<div class="row">
-	{#each views as v (v.label)}
-		<figure>
-			<svg viewBox="0 0 {VIEW_W} {VIEW_H}" width="180" aria-hidden="true">
-				<!-- Filled with the plate colour and stacked, so each shape hides the
-				     lines behind it. Head and neck first, then the torso over the
-				     neck join, then the arms over the shoulders. -->
-				<g fill="var(--plate)" stroke="var(--anatomy)" stroke-width="1.6" stroke-linejoin="round">
-					<path d={v.paths.headNeck} />
-					<path d={v.paths.body} />
-					<path d={v.paths.armLeft} />
-					<path d={v.paths.armRight} />
-				</g>
-			</svg>
-			<figcaption class="mono">{v.label}</figcaption>
-		</figure>
-	{/each}
-</div>
+<main>
+	<h1>Where does it hurt?</h1>
+	<p class="lede">Pick the rough areas. You will say exactly where in a moment.</p>
+
+	<div class="controls">
+		<div class="group" role="group" aria-label="Body">
+			{#each [{ id: 'male', label: 'Male' }, { id: 'female', label: 'Female' }] as opt (opt.id)}
+				<button
+					class="chip"
+					aria-pressed={body === opt.id}
+					onclick={() => (body = opt.id as BodyKind)}>{opt.label}</button
+				>
+			{/each}
+		</div>
+		<div class="group" role="group" aria-label="View">
+			{#each VIEWS as v (v.id)}
+				<button class="chip" aria-pressed={view === v.id} onclick={() => (view = v.id)}>
+					{v.label}
+				</button>
+			{/each}
+		</div>
+	</div>
+
+	<div class="plate stage">
+		<BodyMap {body} {view} bind:selected />
+	</div>
+
+	<p class="count mono">{selected.length} selected: {selected.join(', ') || 'none'}</p>
+</main>
 
 <style>
-	.row {
-		display: flex;
-		gap: 1rem;
-		padding: 2rem;
-		align-items: flex-start;
-	}
-	figure { margin: 0; text-align: center; }
-	figcaption { font-size: 0.75rem; color: var(--muted); }
-	svg { background: var(--plate); border-radius: 12px; }
+	main { max-width: 44rem; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+	.controls { display: flex; flex-direction: column; gap: 0.6rem; margin: 1.75rem 0; }
+	.group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+	/* Sized to the figure rather than to the page: a 200 by 520 body wants a
+	   tall narrow column, and letting it stretch wide leaves it stranded. */
+	.stage { padding: 1.5rem; max-width: 24rem; margin: 0 auto; }
+	.count { font-size: 0.8125rem; color: var(--muted); margin-top: 1rem; }
 </style>
