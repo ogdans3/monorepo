@@ -89,11 +89,11 @@ export class ListService {
     const outcome: LinkOutcome = !row
       ? { kind: 'unknown' }
       : row.revokedAt
-        ? { kind: 'revoked' }
+        ? { kind: 'gone', reason: 'revoked', linkId: row.id, listId: row.listId }
         : // The link outlives its list, so "deleted" is distinguishable from
           // "never existed". The app can say which, instead of a shrug.
           !row.listId
-          ? { kind: 'deleted' }
+          ? { kind: 'gone', reason: 'deleted', linkId: row.id, listId: null }
           : { kind: 'link', listId: row.listId, linkId: row.id, access: row.access as Access };
 
     this.cache.rememberLink(tokenHash, outcome);
@@ -110,10 +110,10 @@ export class ListService {
           token,
           access: outcome.access,
         };
-      case 'revoked':
-        throw ApiError.gone('This link was replaced. Ask whoever shared it for the new one.');
-      case 'deleted':
-        throw ApiError.gone('This list has been deleted.');
+      case 'gone':
+        throw outcome.reason === 'revoked'
+          ? ApiError.gone('This link was replaced. Ask whoever shared it for the new one.')
+          : ApiError.gone('This list has been deleted.');
       case 'unknown':
         throw ApiError.unauthorized('That link is not valid.');
     }
@@ -528,7 +528,7 @@ export class ListService {
       )
       .returning({ id: shareLinks.id });
     if (revoked.length === 0) throw ApiError.notFound('That link is already gone.');
-    this.cache.expireLink(linkId, 'revoked');
+    this.cache.expireLink(ctx.listId, linkId, 'revoked');
     this.hub.evictLink(ctx.listId, linkId, 'rotated');
   }
 
@@ -585,7 +585,7 @@ export class ListService {
 
     // The old token answers 410 from memory from here on, and the new one is
     // already resolvable, so the caller's reconnect costs no query at all.
-    this.cache.expireLink(ctx.linkId, 'revoked');
+    this.cache.expireLink(ctx.listId, ctx.linkId, 'revoked');
     this.cache.rememberLink(hashShareToken(token), {
       kind: 'link',
       listId: ctx.listId,

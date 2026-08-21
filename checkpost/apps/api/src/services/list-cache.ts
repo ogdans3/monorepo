@@ -4,15 +4,18 @@ import { TtlCache } from '../lib/ttl-cache.js';
 /**
  * What a token resolved to last time we asked the database.
  *
- * `revoked` and `deleted` are terminal: a share-link row never comes back to
- * life and a deleted list is never undeleted, so those answers are as cacheable
- * as a successful one. `unknown` is the only outcome that can legitimately
- * change, which is why it gets its own short lifetime below.
+ * `gone` is terminal: a share-link row never comes back to life and a deleted
+ * list is never undeleted, so that answer is as cacheable as a successful one.
+ * It carries its ids so it stays indexed, which is what lets the reaper forget
+ * it when the row is finally deleted for real. `listId` is null when the list
+ * has gone and the link row is all that is left of it.
+ *
+ * `unknown` is the only outcome that can legitimately change, and the only one
+ * with a lifetime.
  */
 export type LinkOutcome =
   | { kind: 'link'; listId: string; linkId: string; access: Access }
-  | { kind: 'revoked' }
-  | { kind: 'deleted' }
+  | { kind: 'gone'; reason: 'revoked' | 'deleted'; linkId: string; listId: string | null }
   | { kind: 'unknown' };
 
 export interface CachedSnapshot {
@@ -27,8 +30,14 @@ export interface CachedPreview {
 
 export interface ListCacheOptions {
   enabled: boolean;
+  /** Zero means entries never expire, and only capacity removes one. */
   ttlMs: number;
   maxEntries: number;
+  /**
+   * Snapshots are bounded separately, because one of them is a whole list while
+   * every other entry is a handful of bytes.
+   */
+  maxSnapshots: number;
   /** How long a list may go without its `last_active_at` being rewritten. */
   touchIntervalMs: number;
 }
@@ -43,9 +52,10 @@ export interface ListCacheStats {
 }
 
 /**
- * A token nobody has ever seen is only cached briefly. Caching it as long as a
- * real answer would mean a link minted somewhere this process cannot see stays
- * refused for an hour; 30 seconds is still enough to blunt a flood of guesses.
+ * A token nobody has ever seen is the one answer that is allowed to go stale on
+ * its own, so it is the one answer with a clock on it. Everything else here can
+ * only become wrong through a write this process makes, and is corrected there.
+ * Thirty seconds is still plenty to blunt a flood of guesses.
  */
 const UNKNOWN_TTL_MS = 30_000;
 
@@ -55,10 +65,16 @@ const UNKNOWN_TTL_MS = 30_000;
  * Every read Checkpost serves repeatedly is here: the token lookup that runs on
  * literally every authenticated request, the list snapshot, the revision that
  * decides whether a polling client has anything to fetch, and the copy-link
- * preview. Lifetimes are long on purpose, because the TTL is not what keeps
- * this correct — **every write goes through `ListService` or `AdminService` in
- * this process, and both invalidate here in the same breath**. The TTL is a
- * memory bound and a backstop, not the consistency model.
+ * preview.
+ *
+ * By default nothing in here expires, which sounds reckless and is not: an
+ * entry is not evicted by a clock because a clock knows nothing about whether
+ * it is still true. **Every write goes through `ListService` or `AdminService`
+ * in this process, and both invalidate here in the same breath**, so an entry
+ * is correct until the moment something makes it wrong, and then it is gone.
+ * What bounds the cache is capacity: it fills to `maxEntries` and the least
+ * recently used entry makes room for the newest, forever. A TTL is available
+ * (`CACHE_TTL_SECONDS`) for anyone who wants a belt as well as braces.
  *
  * That is also the one thing to know before running a second API instance: this
  * cache is in-process, so an instance would not see the other's writes until
@@ -91,7 +107,7 @@ export class ListCache {
       ttlMs,
       onEvict: (hash, outcome) => this.#unindex(hash, outcome),
     });
-    this.#snapshots = new TtlCache({ maxEntries, ttlMs });
+    this.#snapshots = new TtlCache({ maxEntries: options.maxSnapshots, ttlMs });
     this.#revisions = new TtlCache({ maxEntries, ttlMs });
     this.#previews = new TtlCache({ maxEntries, ttlMs });
     this.#touched = new TtlCache({ maxEntries, ttlMs: options.touchIntervalMs });
@@ -122,10 +138,10 @@ export class ListCache {
    * "410, this link was replaced" immediately — and now does so without a
    * query, which is what makes an evicted client cheap instead of expensive.
    */
-  expireLink(linkId: string, reason: 'revoked' | 'deleted'): void {
+  expireLink(listId: string, linkId: string, reason: 'revoked' | 'deleted'): void {
     if (!this.#options.enabled) return;
     const hash = this.#hashByLink.get(linkId);
-    if (hash) this.rememberLink(hash, { kind: reason });
+    if (hash) this.rememberLink(hash, { kind: 'gone', reason, linkId, listId });
   }
 
   /** Same, for every link on a list: a reissue, or the list itself going. */
@@ -134,7 +150,11 @@ export class ListCache {
     const hashes = this.#hashesByList.get(listId);
     if (!hashes) return;
     // Copied first: remembering an outcome rewrites the set being iterated.
-    for (const hash of [...hashes]) this.rememberLink(hash, { kind: reason });
+    for (const hash of [...hashes]) {
+      const current = this.#links.peek(hash);
+      if (!current || current.kind === 'unknown') continue;
+      this.rememberLink(hash, { kind: 'gone', reason, linkId: current.linkId, listId });
+    }
   }
 
   /**
@@ -161,10 +181,11 @@ export class ListCache {
    *
    * A read is two statements, and READ COMMITTED gives each its own view, so a
    * write landing between them means the rows and the revision that came back
-   * do not describe the same moment. Momentarily wrong is one thing; cached for
-   * an hour is another. Since `invalidateList` records the new revision the
-   * instant a write commits, anything that arrives here older than what we
-   * already know is exactly that torn read, and is dropped on the floor.
+   * do not describe the same moment. Momentarily wrong is one thing; cached
+   * until the process restarts is another. Since `invalidateList` records the
+   * new revision the instant a write commits, anything that arrives here older
+   * than what we already know is exactly that torn read, and is dropped on the
+   * floor.
    */
   rememberSnapshot(listId: string, snapshot: CachedSnapshot): void {
     if (!this.#options.enabled) return;
@@ -309,9 +330,15 @@ export class ListCache {
   // Internals
   // ---------------------------------------------------------------------------
 
+  /**
+   * Terminal answers stay indexed as well as live ones. Without that, a link
+   * cached as `410` would be unreachable from its own id, and the reaper could
+   * not tell it that the row it describes has finally been deleted for good.
+   */
   #index(tokenHash: string, outcome: LinkOutcome): void {
-    if (outcome.kind !== 'link') return;
+    if (outcome.kind === 'unknown') return;
     this.#hashByLink.set(outcome.linkId, tokenHash);
+    if (!outcome.listId) return;
     let hashes = this.#hashesByList.get(outcome.listId);
     if (!hashes) {
       hashes = new Set();
@@ -321,10 +348,11 @@ export class ListCache {
   }
 
   #unindex(tokenHash: string, outcome: LinkOutcome): void {
-    if (outcome.kind !== 'link') return;
+    if (outcome.kind === 'unknown') return;
     if (this.#hashByLink.get(outcome.linkId) === tokenHash) {
       this.#hashByLink.delete(outcome.linkId);
     }
+    if (!outcome.listId) return;
     const hashes = this.#hashesByList.get(outcome.listId);
     if (!hashes) return;
     hashes.delete(tokenHash);

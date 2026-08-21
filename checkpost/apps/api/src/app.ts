@@ -43,8 +43,10 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
   const hub = new RealtimeHub();
   const cache = new ListCache({
     enabled: env.CACHE_ENABLED,
+    // Zero seconds means no expiry at all. See `CACHE_TTL_SECONDS` in env.ts.
     ttlMs: env.CACHE_TTL_SECONDS * 1000,
     maxEntries: env.CACHE_MAX_ENTRIES,
+    maxSnapshots: env.CACHE_MAX_SNAPSHOTS,
     touchIntervalMs: env.TOUCH_INTERVAL_SECONDS * 1000,
   });
   const listService = new ListService(

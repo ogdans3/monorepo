@@ -125,11 +125,12 @@ describe('a cached read is never a stale one', () => {
   it('refuses a torn read rather than caching it', () => {
     // A snapshot is two statements, so a write landing between them can produce
     // rows and a revision from different moments. Momentarily wrong is the
-    // nature of a read; cached for an hour is a bug.
+    // nature of a read; cached until the process restarts is a bug.
     const cache = new ListCache({
       enabled: true,
-      ttlMs: 60_000,
+      ttlMs: 0,
       maxEntries: 10,
+      maxSnapshots: 10,
       touchIntervalMs: 60_000,
     });
     const list = { id: 'a', title: 'Trip', revision: 4, createdAt: '', updatedAt: '' };
@@ -231,13 +232,81 @@ describe('the cache itself', () => {
     expect(cache.get('c')).toBe(3);
   });
 
-  it('forgets an entry once its time is up', async () => {
+  it('forgets an entry once its time is up, when it has one', async () => {
     const cache = new TtlCache<string>({ maxEntries: 8, ttlMs: 20 });
     cache.set('a', 'here');
     expect(cache.get('a')).toBe('here');
     await new Promise((resolve) => setTimeout(resolve, 40));
     expect(cache.get('a')).toBeUndefined();
     expect(cache.size).toBe(0);
+  });
+
+  it('keeps an entry indefinitely when there is no lifetime', async () => {
+    // The default. Nothing here is evicted by a clock, because a clock knows
+    // nothing about whether an entry is still true.
+    const cache = new TtlCache<string>({ maxEntries: 8, ttlMs: 0 });
+    cache.set('a', 'here');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(cache.sweep()).toBe(0);
+    expect(cache.get('a')).toBe('here');
+  });
+
+  it('still gives an unknown token a short life of its own', async () => {
+    // The one answer that can go stale without this process doing anything, so
+    // the one answer with a clock on it even when the cache has none.
+    const cache = new ListCache({
+      enabled: true,
+      ttlMs: 0,
+      maxEntries: 8,
+      maxSnapshots: 8,
+      touchIntervalMs: 60_000,
+    });
+    cache.rememberLink('hash-a', { kind: 'unknown' });
+    cache.rememberLink('hash-b', { kind: 'gone', reason: 'deleted', linkId: 'k1', listId: null });
+    expect(cache.link('hash-a')).toEqual({ kind: 'unknown' });
+
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 60_000);
+    expect(cache.link('hash-a')).toBeUndefined();
+    // Terminal answers have no clock: the row they describe is never coming back.
+    expect(cache.link('hash-b')).toEqual({
+      kind: 'gone',
+      reason: 'deleted',
+      linkId: 'k1',
+      listId: null,
+    });
+  });
+
+  it('keeps a terminal answer reachable by its own id', () => {
+    // Until the reaper deletes the row for real, at which point 401 becomes the
+    // honest answer and the entry has to be findable to be dropped.
+    const cache = new ListCache({
+      enabled: true,
+      ttlMs: 0,
+      maxEntries: 8,
+      maxSnapshots: 8,
+      touchIntervalMs: 60_000,
+    });
+    cache.rememberLink('hash-a', { kind: 'gone', reason: 'deleted', linkId: 'k1', listId: null });
+    cache.forgetLink('k1');
+    expect(cache.link('hash-a')).toBeUndefined();
+  });
+
+  it('bounds snapshots on their own, being much the largest entries', () => {
+    const cache = new ListCache({
+      enabled: true,
+      ttlMs: 0,
+      maxEntries: 100,
+      maxSnapshots: 1,
+      touchIntervalMs: 60_000,
+    });
+    const list = (id: string) => ({ id, title: id, revision: 0, createdAt: '', updatedAt: '' });
+    cache.rememberSnapshot('a', { list: list('a'), items: [] });
+    cache.rememberSnapshot('b', { list: list('b'), items: [] });
+    expect(cache.snapshot('a')).toBeUndefined();
+    expect(cache.snapshot('b')).toBeDefined();
+    // The cheap entries are not affected by the snapshot ceiling.
+    expect(cache.revision('a')).toBe(0);
+    expect(cache.revision('b')).toBe(0);
   });
 
   it('tells its owner about every entry it lets go', () => {
@@ -257,8 +326,9 @@ describe('the cache itself', () => {
   it('leaves no index behind when a link entry goes', () => {
     const cache = new ListCache({
       enabled: true,
-      ttlMs: 60_000,
+      ttlMs: 0,
       maxEntries: 1,
+      maxSnapshots: 1,
       touchIntervalMs: 60_000,
     });
     cache.rememberLink('hash-a', { kind: 'link', listId: 'l1', linkId: 'k1', access: 'admin' });

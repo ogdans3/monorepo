@@ -1,7 +1,11 @@
 export interface TtlCacheOptions<V> {
   /** Hard ceiling on entries. The oldest is dropped first. */
   maxEntries: number;
-  /** Default lifetime, in milliseconds. `set` may shorten it per entry. */
+  /**
+   * Default lifetime, in milliseconds. `set` may shorten it per entry.
+   * Zero or less means entries never expire, and capacity is the only thing
+   * that ever removes one.
+   */
   ttlMs: number;
   /**
    * Called whenever an entry stops being cached: evicted, expired, replaced,
@@ -24,14 +28,18 @@ interface Entry<V> {
 }
 
 /**
- * A bounded map with an expiry, and least-recently-used eviction once it is
- * full.
+ * A bounded map with least-recently-used eviction, and optionally an expiry.
  *
  * Insertion order in a `Map` is the LRU order for free: a hit deletes and
  * re-inserts the key, so the first key the iterator yields is always the one
  * nobody has wanted for the longest. Expiry is checked on read rather than by a
  * timer, because a timer per entry is how a cache becomes the thing that keeps
  * the process awake.
+ *
+ * With `ttlMs` at zero nothing expires and capacity is the whole policy: the
+ * cache fills up and then, forever after, the least recently used entry makes
+ * room for the newest. That is the right default here, because entries are
+ * invalidated by the writes that make them wrong rather than by the clock.
  */
 export class TtlCache<V> {
   readonly #entries = new Map<string, Entry<V>>();
@@ -44,7 +52,7 @@ export class TtlCache<V> {
 
   constructor(options: TtlCacheOptions<V>) {
     this.#max = Math.max(1, options.maxEntries);
-    this.#ttl = options.ttlMs;
+    this.#ttl = options.ttlMs > 0 ? options.ttlMs : Infinity;
     this.#onEvict = options.onEvict;
   }
 
@@ -80,6 +88,8 @@ export class TtlCache<V> {
   set(key: string, value: V, ttlMs = this.#ttl): void {
     const previous = this.#entries.get(key);
     if (previous) this.#drop(key, previous.value);
+    // Infinity + anything is Infinity, so "never expires" needs no special case
+    // on the read side: the comparison below is simply never true.
     this.#entries.set(key, { value, expiresAt: Date.now() + ttlMs });
     while (this.#entries.size > this.#max) {
       const oldest = this.#entries.keys().next();

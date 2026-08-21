@@ -92,9 +92,16 @@ is an in-process cache in front of Postgres holding exactly those things, plus
 the copy-link preview, in `apps/api/src/services/list-cache.ts`.
 
 It is not a TTL cache hoping for the best. **Every write invalidates it in the
-same breath**, which is what lets the lifetime be an hour instead of seconds:
-the TTL is a memory bound, not the consistency model. Three consequences worth
-knowing:
+same breath**, which is why entries do not expire at all by default. A clock
+knows nothing about whether an entry is still true; the write that makes one
+wrong does, and removes it there. What bounds the cache is capacity: it fills to
+`CACHE_MAX_ENTRIES` and then the least recently used entry makes room for the
+newest, forever. Snapshots have a smaller ceiling of their own
+(`CACHE_MAX_SNAPSHOTS`), because one of them is a whole list while every other
+entry is a few dozen bytes. `CACHE_TTL_SECONDS` is there for anyone who wants a
+belt as well as braces; zero, the default, means no expiry.
+
+Three consequences worth knowing:
 
 - **A dead link is refused from memory.** Replacing or revoking a link rewrites
   its cached answer to `410` rather than dropping it, so the hard cut stays
@@ -107,6 +114,11 @@ knowing:
   `TOUCH_INTERVAL_SECONDS`. It used to be a write on every read. It only decides
   whether a list nobody has opened in a year gets reaped, so one stamp per ten
   minutes says exactly the same thing.
+
+The one thing nothing in the process can correct is a change made *to the
+database* from outside it: an edit in `psql`, a restore from a backup. With no
+expiry, the cache will not notice. Restart the API, which is the whole flush
+procedure, because none of this is on disk.
 
 `AdminService` is the one place that writes behind `ListService`'s back, so it
 takes the cache as a constructor argument rather than optionally reaching for
@@ -169,13 +181,13 @@ one backed by Postgres `LISTEN/NOTIFY`. The interface is the seam.
 
 **The read cache is in-process too, and it is not as forgiving.** It is correct
 because the writes that would invalidate it happen in the same process. A second
-instance breaks that: it would keep serving its own cached answer, for up to
-`CACHE_TTL_SECONDS`, to a list somebody edited on the other one — and worse,
-keep accepting a link the other instance revoked. **Run more than one API
-container and you must set `CACHE_ENABLED=0`**, which turns every cache method
-into a miss and nothing else. The seam for doing better is the same one:
-`ListCache` is one class, and a shared Redis or a `LISTEN/NOTIFY` invalidation
-channel would slot in behind it.
+instance breaks that: it would go on serving its own cached answer for a list
+somebody edited on the other one — and worse, go on accepting a link the other
+instance revoked. With no expiry, "go on" means until it restarts. **Run more
+than one API container and you must set `CACHE_ENABLED=0`**, which turns every
+cache method into a miss and nothing else. The seam for doing better is the same
+one: `ListCache` is one class, and a shared Redis or a `LISTEN/NOTIFY`
+invalidation channel would slot in behind it.
 
 ## Running it on the AI Central dashboard
 
