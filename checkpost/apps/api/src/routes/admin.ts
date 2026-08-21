@@ -22,7 +22,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     return;
   }
 
-  const service = new AdminService(app.db);
+  const service = new AdminService(app.db, app.cache);
 
   /**
    * Basic auth. Compared in constant time so the response cannot be used to
@@ -74,6 +74,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
           totals,
           lists,
           orphanLinks,
+          cache: app.cache.stats(),
           databaseHost,
           webOrigin,
           csrf,
@@ -116,6 +117,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
             totals,
             lists,
             orphanLinks,
+            cache: app.cache.stats(),
             databaseHost,
             webOrigin,
             csrf,

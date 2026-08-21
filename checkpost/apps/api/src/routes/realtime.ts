@@ -72,12 +72,15 @@ export async function realtimeRoutes(app: FastifyInstance): Promise<void> {
 
       const unsubscribe = service.subscribeTo(link, subscriber);
 
+      // The greeting needs the revision and nothing else. Reading the whole
+      // list to find it would make every reconnect cost as much as opening the
+      // list, which on a flaky connection is most of the traffic.
       void service
-        .snapshot(link.listId)
-        .then(({ list }) => {
+        .revisionOf(link.listId)
+        .then((revision) => {
           subscriber.send({
             type: 'hello',
-            revision: list.revision,
+            revision,
             presence: Math.max(1, app.hub.presence(link.listId)),
           });
         })

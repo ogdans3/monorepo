@@ -43,6 +43,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       LIST_TTL_DAYS: ${LIST_TTL_DAYS:-365}
       EVENT_RETENTION_DAYS: ${EVENT_RETENTION_DAYS:-14}
+      # The read cache is in-process. Anything running more than one replica of
+      # this service has to set CACHE_ENABLED=0.
+      CACHE_ENABLED: ${CACHE_ENABLED:-1}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-3600}
+      CACHE_MAX_ENTRIES: ${CACHE_MAX_ENTRIES:-10000}
+      TOUCH_INTERVAL_SECONDS: ${TOUCH_INTERVAL_SECONDS:-600}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
       # Bind address is a variable so a deployment can keep this off the public

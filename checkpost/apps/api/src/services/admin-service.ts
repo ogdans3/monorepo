@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../db/index.js';
 import { items, listEvents, lists, shareLinks } from '../db/schema.js';
+import type { ListCache } from './list-cache.js';
 
 export interface AdminTotals {
   lists: number;
@@ -33,8 +34,21 @@ export interface AdminList {
  * the product is allowed to do.
  */
 export class AdminService {
-  constructor(private readonly db: Database) {}
+  /**
+   * The cache is not optional here. This class reaches lists by id and writes
+   * behind `ListService`'s back, so it is the one place where forgetting to
+   * invalidate would leave a revoked link working.
+   */
+  constructor(
+    private readonly db: Database,
+    private readonly cache: ListCache,
+  ) {}
 
+  /**
+   * Deliberately uncached, unlike everything a client asks for. This runs once
+   * per page load by one person, and an operator looking at a number to decide
+   * whether to delete something should be looking at the real one.
+   */
   async totals(): Promise<AdminTotals> {
     const week = sql`now() - interval '7 days'`;
     const [row] = await this.db.execute<{
@@ -137,7 +151,7 @@ export class AdminService {
    * before you press the button.
    */
   async reissueLink(listId: string, tokenHash: string): Promise<void> {
-    await this.db.transaction(async (tx) => {
+    const revision = await this.db.transaction(async (tx) => {
       const [bumped] = await tx
         .update(lists)
         .set({ revision: sql`${lists.revision} + 1`, updatedAt: new Date() })
@@ -159,7 +173,14 @@ export class AdminService {
         actor: 'admin',
         data: {},
       });
+
+      return bumped.revision;
     });
+
+    // Every link on the list was just revoked, so every cached token for it has
+    // to start answering 410 immediately. This is a hard cut like any other.
+    this.cache.expireLinks(listId, 'revoked');
+    this.cache.invalidateList(listId, revision);
   }
 
   async deleteList(listId: string): Promise<boolean> {
@@ -167,6 +188,7 @@ export class AdminService {
       .delete(lists)
       .where(eq(lists.id, listId))
       .returning({ id: lists.id });
+    this.cache.forgetList(listId);
     return deleted.length > 0;
   }
 }

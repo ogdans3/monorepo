@@ -19,6 +19,7 @@ import { FIRST_KEY, keyBetween, keysBetween } from '../lib/fractional-index.js';
 import { generateShareToken, hashShareToken } from '../lib/tokens.js';
 import type { RealtimeHub, Subscriber } from '../realtime/hub.js';
 import { toChangeEvent, toItem, toList } from '../serialize.js';
+import type { ListCache, LinkOutcome } from './list-cache.js';
 
 /** Byte-wise ordering, so Postgres agrees with the clients' local sort. */
 const POSITION_ORDER = sql`${items.position} COLLATE "C"`;
@@ -47,6 +48,11 @@ export class ListService {
     private readonly db: Database,
     private readonly hub: RealtimeHub,
     private readonly options: ServiceOptions,
+    /**
+     * Read cache. Every write below invalidates through it in the same breath,
+     * which is what lets its lifetimes be long. See `list-cache.ts`.
+     */
+    readonly cache: ListCache,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -63,6 +69,12 @@ export class ListService {
    * was replaced" instead of the useless "invalid link".
    */
   async resolveLink(token: string): Promise<LinkContext> {
+    const tokenHash = hashShareToken(token);
+    // This runs on every authenticated request, including each frame of a
+    // reconnect storm, so it is the single read most worth not making.
+    const cached = this.cache.link(tokenHash);
+    if (cached) return this.#contextFor(cached, token);
+
     const [row] = await this.db
       .select({
         id: shareLinks.id,
@@ -71,22 +83,40 @@ export class ListService {
         access: shareLinks.access,
       })
       .from(shareLinks)
-      .where(eq(shareLinks.tokenHash, hashShareToken(token)))
+      .where(eq(shareLinks.tokenHash, tokenHash))
       .limit(1);
 
-    if (!row) throw ApiError.unauthorized('That link is not valid.');
-    if (row.revokedAt) {
-      throw ApiError.gone('This link was replaced. Ask whoever shared it for the new one.');
+    const outcome: LinkOutcome = !row
+      ? { kind: 'unknown' }
+      : row.revokedAt
+        ? { kind: 'revoked' }
+        : // The link outlives its list, so "deleted" is distinguishable from
+          // "never existed". The app can say which, instead of a shrug.
+          !row.listId
+          ? { kind: 'deleted' }
+          : { kind: 'link', listId: row.listId, linkId: row.id, access: row.access as Access };
+
+    this.cache.rememberLink(tokenHash, outcome);
+    return this.#contextFor(outcome, token);
+  }
+
+  /** One place where a resolved token becomes either a context or the answer. */
+  #contextFor(outcome: LinkOutcome, token: string): LinkContext {
+    switch (outcome.kind) {
+      case 'link':
+        return {
+          listId: outcome.listId,
+          linkId: outcome.linkId,
+          token,
+          access: outcome.access,
+        };
+      case 'revoked':
+        throw ApiError.gone('This link was replaced. Ask whoever shared it for the new one.');
+      case 'deleted':
+        throw ApiError.gone('This list has been deleted.');
+      case 'unknown':
+        throw ApiError.unauthorized('That link is not valid.');
     }
-    // The link outlives its list, so "deleted" is distinguishable from "never
-    // existed". The app can say which, instead of a shrug.
-    if (!row.listId) throw ApiError.gone('This list has been deleted.');
-    return {
-      listId: row.listId,
-      linkId: row.id,
-      token,
-      access: row.access as Access,
-    };
   }
 
   // -------------------------------------------------------------------------
@@ -94,6 +124,11 @@ export class ListService {
   // -------------------------------------------------------------------------
 
   async snapshot(listId: string, access: Access = 'admin'): Promise<Snapshot> {
+    // Access is not part of the cached value: the rows are the same whoever
+    // asks, and only the "what may you do with them" line differs.
+    const cached = this.cache.snapshot(listId);
+    if (cached) return { list: cached.list, items: cached.items, access };
+
     const [listRow] = await this.db.select().from(lists).where(eq(lists.id, listId)).limit(1);
     if (!listRow) throw ApiError.gone('This list has been deleted.');
     const itemRows = await this.db
@@ -101,8 +136,29 @@ export class ListService {
       .from(items)
       .where(eq(items.listId, listId))
       .orderBy(asc(POSITION_ORDER));
+
+    const fresh = { list: toList(listRow), items: itemRows.map(toItem) };
+    this.cache.rememberSnapshot(listId, fresh);
     // The client renders what it is allowed to do, so it is told.
-    return { list: toList(listRow), items: itemRows.map(toItem), access };
+    return { ...fresh, access };
+  }
+
+  /**
+   * Just the revision. The socket's greeting and every "anything new?" poll
+   * want this and nothing else, and reading a whole list to find one integer is
+   * how a big list makes an idle client expensive.
+   */
+  async revisionOf(listId: string): Promise<number> {
+    const cached = this.cache.revision(listId);
+    if (cached !== undefined) return cached;
+    const [row] = await this.db
+      .select({ revision: lists.revision })
+      .from(lists)
+      .where(eq(lists.id, listId))
+      .limit(1);
+    if (!row) throw ApiError.gone('This list has been deleted.');
+    this.cache.rememberRevision(listId, row.revision);
+    return row.revision;
   }
 
   /**
@@ -118,14 +174,11 @@ export class ListService {
     | { kind: 'events'; revision: number; events: ChangeEvent[] }
     | { kind: 'resync'; snapshot: Snapshot }
   > {
-    const [listRow] = await this.db
-      .select({ revision: lists.revision })
-      .from(lists)
-      .where(eq(lists.id, listId))
-      .limit(1);
-    if (!listRow) throw ApiError.gone('This list has been deleted.');
-    if (since >= listRow.revision) {
-      return { kind: 'events', revision: listRow.revision, events: [] };
+    // The overwhelmingly common answer is "nothing has happened since you last
+    // asked", and a warm revision makes that answer free.
+    const revision = await this.revisionOf(listId);
+    if (since >= revision) {
+      return { kind: 'events', revision, events: [] };
     }
 
     const [oldest] = await this.db
@@ -163,13 +216,23 @@ export class ListService {
     return this.hub.subscribe(ctx.listId, ctx.linkId, subscriber);
   }
 
-  /** Cheap best-effort liveness stamp; failures are never worth a 500. */
+  /**
+   * Cheap best-effort liveness stamp; failures are never worth a 500.
+   *
+   * Throttled, because this used to be a write on every single read. The column
+   * only decides whether a year-old list gets reaped, so one write per list per
+   * `TOUCH_INTERVAL_SECONDS` carries exactly the same information.
+   */
   touch(listId: string): void {
+    if (!this.cache.shouldTouch(listId)) return;
+    // Marked before the write, so a burst of concurrent reads sends one update
+    // rather than one each.
+    this.cache.markTouched(listId);
     void this.db
       .update(lists)
       .set({ lastActiveAt: new Date() })
       .where(eq(lists.id, listId))
-      .catch(() => {});
+      .catch(() => this.cache.forgetTouch(listId));
   }
 
   // -------------------------------------------------------------------------
@@ -182,18 +245,22 @@ export class ListService {
     token: string;
   }> {
     const token = generateShareToken();
-    return this.db.transaction(async (tx) => {
+    const created = await this.db.transaction(async (tx) => {
       const [listRow] = await tx.insert(lists).values({ title: body.title }).returning();
       if (!listRow) throw ApiError.badRequest('Could not create the list.');
 
       // Whoever makes a list gets admin on it. Every other level exists only
       // because an admin chose to hand it out.
-      await tx.insert(shareLinks).values({
-        listId: listRow.id,
-        tokenHash: hashShareToken(token),
-        access: 'admin',
-        label: 'Made the list',
-      });
+      const [linkRow] = await tx
+        .insert(shareLinks)
+        .values({
+          listId: listRow.id,
+          tokenHash: hashShareToken(token),
+          access: 'admin',
+          label: 'Made the list',
+        })
+        .returning({ id: shareLinks.id });
+      if (!linkRow) throw ApiError.badRequest('Could not create the list.');
 
       let itemRows: Item[] = [];
       const seeds = body.items ?? [];
@@ -217,8 +284,22 @@ export class ListService {
       // Creation itself is revision 0: nobody can be listening yet, and there
       // is no earlier state for anyone to diff against.
       void actor;
-      return { list: toList(listRow), items: itemRows, token };
+      return { list: toList(listRow), items: itemRows, linkId: linkRow.id };
     });
+
+    // Primed after the commit, never inside it: caching a list a rolled-back
+    // transaction never created would be worse than a cold start. The client's
+    // very next call is `GET /list` with the token it has just been handed, and
+    // both answers are already in hand here.
+    this.cache.rememberLink(hashShareToken(token), {
+      kind: 'link',
+      listId: created.list.id,
+      linkId: created.linkId,
+      access: 'admin',
+    });
+    this.cache.rememberSnapshot(created.list.id, { list: created.list, items: created.items });
+    this.cache.markTouched(created.list.id);
+    return { list: created.list, items: created.items, token };
   }
 
   async updateTitle(ctx: LinkContext, title: string, actor: string | null): Promise<List> {
@@ -242,6 +323,8 @@ export class ListService {
       id: lists.id,
     });
     if (deleted.length === 0) throw ApiError.gone('This list has already been deleted.');
+    // Every link on the list now answers 410, and says so without a query.
+    this.cache.forgetList(ctx.listId);
     this.hub.evictLink(ctx.listId, ctx.linkId, 'deleted');
   }
 
@@ -409,6 +492,13 @@ export class ListService {
       .returning();
     if (!row) throw ApiError.badRequest('Could not make the link.');
 
+    this.cache.rememberLink(hashShareToken(token), {
+      kind: 'link',
+      listId: ctx.listId,
+      linkId: row.id,
+      access: row.access as Access,
+    });
+
     return {
       token,
       link: {
@@ -438,6 +528,7 @@ export class ListService {
       )
       .returning({ id: shareLinks.id });
     if (revoked.length === 0) throw ApiError.notFound('That link is already gone.');
+    this.cache.expireLink(linkId, 'revoked');
     this.hub.evictLink(ctx.listId, linkId, 'rotated');
   }
 
@@ -452,7 +543,7 @@ export class ListService {
    */
   async rotateLink(ctx: LinkContext, actor: string | null): Promise<{ token: string }> {
     const token = generateShareToken();
-    await this.db.transaction(async (tx) => {
+    const rotated = await this.db.transaction(async (tx) => {
       const [bumped] = await tx
         .update(lists)
         .set({
@@ -488,7 +579,20 @@ export class ListService {
         actor,
         data: {},
       });
+
+      return { revision: bumped.revision, linkId: link.id, access: old?.access ?? ctx.access };
     });
+
+    // The old token answers 410 from memory from here on, and the new one is
+    // already resolvable, so the caller's reconnect costs no query at all.
+    this.cache.expireLink(ctx.linkId, 'revoked');
+    this.cache.rememberLink(hashShareToken(token), {
+      kind: 'link',
+      listId: ctx.listId,
+      linkId: rotated.linkId,
+      access: rotated.access as Access,
+    });
+    this.cache.invalidateList(ctx.listId, rotated.revision);
 
     // Evicts holders of the link just revoked, including the caller, which
     // reconnects with the token it has just been handed.
@@ -502,6 +606,13 @@ export class ListService {
 
   /** What a copy link is about to make, without exposing the list itself. */
   async copyPreview(ctx: LinkContext): Promise<{ title: string; itemCount: number }> {
+    // A copy link is the one link made to be shared widely, so the same two
+    // numbers get asked for over and over.
+    const cached = this.cache.preview(ctx.listId);
+    if (cached) return cached;
+    const warm = this.cache.snapshot(ctx.listId);
+    if (warm) return { title: warm.list.title, itemCount: warm.items.length };
+
     const [row] = await this.db
       .select({
         title: lists.title,
@@ -511,7 +622,9 @@ export class ListService {
       .where(eq(lists.id, ctx.listId))
       .limit(1);
     if (!row) throw ApiError.gone('This list has been deleted.');
-    return { title: row.title, itemCount: Number(row.itemCount) };
+    const preview = { title: row.title, itemCount: Number(row.itemCount) };
+    this.cache.rememberPreview(ctx.listId, preview);
+    return preview;
   }
 
   /**
@@ -524,7 +637,7 @@ export class ListService {
    */
   async copyFromLink(ctx: LinkContext): Promise<{ snapshot: Snapshot; token: string }> {
     const token = generateShareToken();
-    const listId = await this.db.transaction(async (tx) => {
+    const copied = await this.db.transaction(async (tx) => {
       const [source] = await tx
         .select({ title: lists.title })
         .from(lists)
@@ -556,17 +669,28 @@ export class ListService {
         );
       }
 
-      await tx.insert(shareLinks).values({
-        listId: copy.id,
-        tokenHash: hashShareToken(token),
-        access: 'admin',
-        label: 'Made from a copy link',
-      });
+      const [link] = await tx
+        .insert(shareLinks)
+        .values({
+          listId: copy.id,
+          tokenHash: hashShareToken(token),
+          access: 'admin',
+          label: 'Made from a copy link',
+        })
+        .returning({ id: shareLinks.id });
+      if (!link) throw ApiError.badRequest('Could not make the copy.');
 
-      return copy.id;
+      return { listId: copy.id, linkId: link.id };
     });
 
-    return { snapshot: await this.snapshot(listId, 'admin'), token };
+    this.cache.rememberLink(hashShareToken(token), {
+      kind: 'link',
+      listId: copied.listId,
+      linkId: copied.linkId,
+      access: 'admin',
+    });
+    this.cache.markTouched(copied.listId);
+    return { snapshot: await this.snapshot(copied.listId, 'admin'), token };
   }
 
   // -------------------------------------------------------------------------
@@ -584,6 +708,10 @@ export class ListService {
       .delete(shareLinks)
       .where(and(isNull(shareLinks.listId), lt(shareLinks.createdAt, cutoff)))
       .returning({ id: shareLinks.id });
+    // Dropped rather than expired: the row is really gone now, so the honest
+    // answer changes from 410 to 401 and the next request should go and find
+    // that out.
+    for (const link of deleted) this.cache.forgetLink(link.id);
     return deleted.length;
   }
 
@@ -597,6 +725,11 @@ export class ListService {
     return deleted.length;
   }
 
+  /** Drops cache entries that have expired. Housekeeping, nothing depends on it. */
+  sweepCache(): number {
+    return this.cache.sweep();
+  }
+
   /**
    * Deletes lists nobody has touched in `ttlDays`. Without owners there is no
    * other point at which a list stops existing, and an unbounded table of
@@ -608,6 +741,7 @@ export class ListService {
       .delete(lists)
       .where(lt(lists.lastActiveAt, cutoff))
       .returning({ id: lists.id });
+    for (const list of deleted) this.cache.forgetList(list.id);
     return deleted.length;
   }
 
@@ -643,7 +777,7 @@ export class ListService {
       if (!bumped) throw ApiError.gone('This list has been deleted.');
 
       const { result, event } = await fn(tx, bumped.revision);
-      if (!event) return { result, change: null };
+      if (!event) return { result, change: null, revision: bumped.revision };
 
       const [row] = await tx
         .insert(listEvents)
@@ -655,8 +789,16 @@ export class ListService {
           data: event.data,
         })
         .returning();
-      return { result, change: row ? toChangeEvent(row) : null };
+      return { result, change: row ? toChangeEvent(row) : null, revision: bumped.revision };
     });
+
+    // Invalidated here rather than inside the transaction: until it commits,
+    // the cached snapshot is still the truth. The new revision is recorded on
+    // the way past, so the next `?since=` poll is answered from memory.
+    this.cache.invalidateList(listId, outcome.revision);
+    // The same transaction wrote `last_active_at`, so a touch now would be a
+    // second write saying the same thing.
+    this.cache.markTouched(listId);
 
     if (outcome.change) this.hub.broadcast(listId, outcome.change);
     return { result: outcome.result, event: outcome.change };

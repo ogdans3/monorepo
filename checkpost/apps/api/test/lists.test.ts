@@ -389,6 +389,10 @@ describe('housekeeping', () => {
     await h.app.db.execute(
       sql`update lists set last_active_at = now() - interval '400 days' where id = ${list.list.id}`,
     );
+    // Ageing the row behind the API's back leaves the API believing it stamped
+    // this list a moment ago, and the stamp is throttled. Making the list is a
+    // touch like any other, so without this the read below has nothing to do.
+    h.app.cache.forgetTouch(list.list.id);
     await snapshot(h.app, list.token);
     await new Promise((resolve) => setTimeout(resolve, 50)); // touch() is fire-and-forget
     expect(await h.app.listService.pruneAbandonedLists(365)).toBe(0);

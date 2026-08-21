@@ -38,6 +38,25 @@ server-side.
 That row lock is what serialises concurrent writers, and the change-log row and
 the broadcast hang off it. `ListService.#mutate` exists so this cannot be forgotten.
 
+**Every write invalidates the read cache in the same breath.** `ListCache` sits
+in front of Postgres for token lookups, snapshots, revisions and copy previews,
+with an hour-long lifetime. That lifetime is safe *only* because the writes that
+would make an entry wrong happen in this process and invalidate it. `#mutate`
+does it for every list mutation; the link paths do it by hand, and a revocation
+rewrites the cached answer to `410` rather than dropping it, so the hard cut
+survives. **`AdminService` writes behind `ListService`'s back**, which is why it
+takes the cache as a required constructor argument. Adding a write path there
+without an invalidation is how a revoked link keeps working for an hour.
+
+**The cache is in-process, so more than one API container needs
+`CACHE_ENABLED=0`.** Same reasoning as `MIGRATE_ON_BOOT`. Unlike `RealtimeHub`,
+where a second instance only costs a beat of latency, here it costs correctness.
+
+**Anything that changes the database behind the API's back must clear the
+cache.** `test/helpers.ts` does it after its `truncate`, and a test that ages a
+row by hand also has to `forgetTouch` it. This is the failure mode to suspect
+first when a test passes alone and fails in a suite.
+
 **Access lives on the link, not the list.** One list has many live links at
 different levels, so there is deliberately no unique index forcing one. Every
 list route names the access it needs through `requireAccess`, which is why

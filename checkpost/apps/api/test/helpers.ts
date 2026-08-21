@@ -10,8 +10,8 @@ export interface Harness {
   reset(): Promise<void>;
 }
 
-export async function createHarness(): Promise<Harness> {
-  const env = loadEnv();
+export async function createHarness(overrides: Record<string, string> = {}): Promise<Harness> {
+  const env = loadEnv({ ...process.env, ...overrides });
   const built = await buildApp(env);
   return {
     app: built.app,
@@ -19,6 +19,9 @@ export async function createHarness(): Promise<Harness> {
     async reset() {
       // Cascades take care of items, links and events.
       await built.app.db.execute(sql`truncate table lists cascade`);
+      // The API did not make that happen, so nothing invalidated the read
+      // cache. Every other way rows disappear goes through a service that does.
+      built.app.cache.clear();
     },
   };
 }

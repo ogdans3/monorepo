@@ -14,12 +14,14 @@ import { itemRoutes } from './routes/items.js';
 import { listRoutes } from './routes/lists.js';
 import { metaRoutes } from './routes/meta.js';
 import { realtimeRoutes } from './routes/realtime.js';
+import { ListCache } from './services/list-cache.js';
 import { ListService } from './services/list-service.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
     db: Database;
     hub: RealtimeHub;
+    cache: ListCache;
     listService: ListService;
     rateLimits: { create: number; rotate: number };
     adminConfig: {
@@ -39,10 +41,21 @@ export interface BuiltApp {
 export async function buildApp(env: Env): Promise<BuiltApp> {
   const { db, close: closeDb } = createDb(env.DATABASE_URL);
   const hub = new RealtimeHub();
-  const listService = new ListService(db, hub, {
-    webOrigin: env.PUBLIC_WEB_ORIGIN,
-    eventRetentionDays: env.EVENT_RETENTION_DAYS,
+  const cache = new ListCache({
+    enabled: env.CACHE_ENABLED,
+    ttlMs: env.CACHE_TTL_SECONDS * 1000,
+    maxEntries: env.CACHE_MAX_ENTRIES,
+    touchIntervalMs: env.TOUCH_INTERVAL_SECONDS * 1000,
   });
+  const listService = new ListService(
+    db,
+    hub,
+    {
+      webOrigin: env.PUBLIC_WEB_ORIGIN,
+      eventRetentionDays: env.EVENT_RETENTION_DAYS,
+    },
+    cache,
+  );
 
   const app = Fastify({
     logger: buildLogger(env),
@@ -64,6 +77,7 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
   });
   app.decorate('db', db);
   app.decorate('hub', hub);
+  app.decorate('cache', cache);
   app.decorate('listService', listService);
   registerContext(app);
 
@@ -133,6 +147,7 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
   return {
     app,
     async close() {
+      cache.clear();
       hub.closeAll();
       await app.close();
       await closeDb();

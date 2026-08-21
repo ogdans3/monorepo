@@ -1,4 +1,5 @@
 import type { AdminList, AdminTotals } from '../services/admin-service.js';
+import type { ListCacheStats } from '../services/list-cache.js';
 import { VERSION } from '../version.js';
 
 /**
@@ -31,6 +32,8 @@ export interface PageInput {
   totals: AdminTotals;
   lists: AdminList[];
   orphanLinks: number;
+  /** Reads served from memory since this process started. */
+  cache: ListCacheStats;
   databaseHost: string;
   webOrigin: string;
   csrf: (listId: string) => string;
@@ -40,8 +43,9 @@ export interface PageInput {
 }
 
 export function renderAdmin(input: PageInput): string {
-  const { totals, lists, orphanLinks, databaseHost, csrf, revealed, notice } = input;
+  const { totals, lists, orphanLinks, cache, databaseHost, csrf, revealed, notice } = input;
   const open = totals.items - totals.done;
+  const cacheLabel = cache.enabled ? `${Math.round(cache.hitRate * 100)}%` : 'off';
 
   return `<!doctype html>
 <html lang="en">
@@ -84,6 +88,9 @@ ${
     <div><dt>Touched this week</dt><dd>${totals.activeThisWeek}</dd></div>
     <div><dt>Empty lists</dt><dd>${totals.emptyLists}</dd></div>
     <div><dt>Links awaiting the reaper</dt><dd>${orphanLinks}</dd></div>
+    <div><dt>Reads from cache</dt><dd>${cacheLabel}<span class="of"> of ${
+      cache.hits + cache.misses
+    }</span></dd></div>
   </dl>
 </section>
 

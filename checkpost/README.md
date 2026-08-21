@@ -81,8 +81,36 @@ same algorithm runs on the server and in the Flutter client, byte for byte.
 
 WebSockets carry changes but are only a *hint*: clients also reconcile with
 `GET /changes?since=` on connect and on resume, which is why a dropped
-connection is a non-event and why the API scales past one instance without a
-message bus.
+connection is a non-event.
+
+## Not spamming the database
+
+Almost every read Checkpost serves is the same read. A token resolves to a link
+on every single request. A list is looked at far more often than it changes. And
+the answer to "anything new since revision N?" is nearly always "no". So there
+is an in-process cache in front of Postgres holding exactly those things, plus
+the copy-link preview, in `apps/api/src/services/list-cache.ts`.
+
+It is not a TTL cache hoping for the best. **Every write invalidates it in the
+same breath**, which is what lets the lifetime be an hour instead of seconds:
+the TTL is a memory bound, not the consistency model. Three consequences worth
+knowing:
+
+- **A dead link is refused from memory.** Replacing or revoking a link rewrites
+  its cached answer to `410` rather than dropping it, so the hard cut stays
+  immediate *and* an evicted client in a reconnect loop costs no queries at all.
+- **A poll that has nothing to fetch costs nothing.** The revision is recorded
+  as each write commits, so `GET /list/changes?since=` answers "nothing new"
+  without a query. The socket's greeting reads the same number instead of the
+  whole list.
+- **`last_active_at` is throttled**, to one write per list per
+  `TOUCH_INTERVAL_SECONDS`. It used to be a write on every read. It only decides
+  whether a list nobody has opened in a year gets reaped, so one stamp per ten
+  minutes says exactly the same thing.
+
+`AdminService` is the one place that writes behind `ListService`'s back, so it
+takes the cache as a constructor argument rather than optionally reaching for
+it. The hit rate is on `/v1/admin`, next to the other counts.
 
 ## The operator console
 
@@ -139,6 +167,16 @@ nothing. Clients on the other instance find out a beat later instead of
 instantly. When "a beat later" stops being good enough, swap `RealtimeHub` for
 one backed by Postgres `LISTEN/NOTIFY`. The interface is the seam.
 
+**The read cache is in-process too, and it is not as forgiving.** It is correct
+because the writes that would invalidate it happen in the same process. A second
+instance breaks that: it would keep serving its own cached answer, for up to
+`CACHE_TTL_SECONDS`, to a list somebody edited on the other one — and worse,
+keep accepting a link the other instance revoked. **Run more than one API
+container and you must set `CACHE_ENABLED=0`**, which turns every cache method
+into a miss and nothing else. The seam for doing better is the same one:
+`ListCache` is one class, and a shared Redis or a `LISTEN/NOTIFY` invalidation
+channel would slot in behind it.
+
 ## Running it on the AI Central dashboard
 
 The dashboard scans the top level of `~/git` for a compose file, and does not
@@ -170,4 +208,5 @@ decided, the browser client is a local-development thing.
 - Set `PUBLIC_APP_STORE_URL` / `PUBLIC_PLAY_STORE_URL` once the app is listed.
   While they are empty the site says so plainly instead of showing dead buttons.
 - `MIGRATE_ON_BOOT=1` is right for one API container. With more than one, turn
-  it off and run `pnpm db:migrate` as a release step.
+  it off and run `pnpm db:migrate` as a release step, and set `CACHE_ENABLED=0`:
+  the read cache is in-process and one instance cannot see the other's writes.

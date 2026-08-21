@@ -28,8 +28,11 @@ export function startReaper(
       const events = await service.pruneEvents();
       const abandoned = await service.pruneAbandonedLists(options.listTtlDays);
       const links = await service.pruneOrphanLinks();
+      // Expired cache entries hold a slot until something asks for them. The
+      // reaper is already the place where nothing-in-particular gets tidied up.
+      const cached = service.sweepCache();
       if (events > 0 || abandoned > 0 || links > 0) {
-        log.info({ events, abandoned, links }, 'reaper swept');
+        log.info({ events, abandoned, links, cached }, 'reaper swept');
       }
     } catch (error) {
       log.error({ error }, 'reaper failed');

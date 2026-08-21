@@ -44,6 +44,29 @@ const envSchema = z.object({
   ADMIN_USER: z.string().default(''),
   ADMIN_PASSWORD: z.string().default(''),
 
+  /**
+   * The read cache in front of Postgres (apps/api/src/services/list-cache.ts).
+   *
+   * It is in-process and invalidated by the writes that happen in this process,
+   * which is what lets its lifetime be long. Turn it off for a deployment
+   * running more than one API container, where one instance cannot see the
+   * other's writes and the only bound on staleness would be the TTL.
+   */
+  CACHE_ENABLED: z
+    .string()
+    .default('1')
+    .transform((v) => v !== '0' && v.toLowerCase() !== 'false'),
+  /** How long an unwritten entry survives. A memory bound, not a correctness one. */
+  CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+  /** Ceiling per cache. The least recently used entry goes first. */
+  CACHE_MAX_ENTRIES: z.coerce.number().int().positive().default(10_000),
+  /**
+   * How often a list's `last_active_at` may be rewritten. It only decides
+   * whether the reaper eventually deletes an abandoned list, so writing it on
+   * every read was a write per read for no extra information.
+   */
+  TOUCH_INTERVAL_SECONDS: z.coerce.number().int().positive().default(600),
+
   /** Requests per IP per minute across the whole API. */
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   /** New lists per IP per hour. The one endpoint that grows the database. */
