@@ -31,7 +31,10 @@
 	const LAYOUTS: { id: CombineLayout; label: string }[] = [
 		{ id: 'horizontal', label: 'Side by side' },
 		{ id: 'vertical', label: 'Stacked' },
-		{ id: 'grid', label: 'Grid' }
+		// The count is in the label because the reason it is unavailable cannot be
+		// a tooltip: a disabled button fires no mouse events, so the title never
+		// shows and the rule stays a secret from the one person who needs it.
+		{ id: 'grid', label: 'Grid of 4' }
 	];
 
 	let nextId = 1;
