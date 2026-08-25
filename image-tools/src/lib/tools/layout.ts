@@ -109,6 +109,23 @@ export function naturalCanvas(
 	};
 }
 
+/**
+ * Shrinks a canvas to an export limit without changing its shape.
+ *
+ * Both axes by the same factor, always from the size that was asked for rather
+ * than from a size already shrunk once. Applying it to its own output compounds:
+ * each extra bit of spacing then gets taken out of a canvas that cannot grow,
+ * and the images give up a little more room every time.
+ */
+export function fitWithin(
+	width: number,
+	height: number,
+	max: number
+): { width: number; height: number } {
+	const over = Math.max(width / max, height / max, 1);
+	return { width: Math.round(width / over), height: Math.round(height / over) };
+}
+
 interface Segment {
 	start: number;
 	size: number;

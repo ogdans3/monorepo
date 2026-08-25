@@ -5,6 +5,7 @@ import {
 	containRect,
 	coverSource,
 	evenSplits,
+	fitWithin,
 	matchedColumn,
 	matchedRow,
 	moveDivider,
@@ -168,6 +169,28 @@ describe('coverSource', () => {
 
 	it('fills exactly when aspects match', () => {
 		expect(coverSource(200, 100, 100, 50, 0.5, 0.5)).toEqual({ sx: 0, sy: 0, sw: 200, sh: 100 });
+	});
+});
+
+describe('fitWithin', () => {
+	it('leaves a canvas that already fits alone', () => {
+		expect(fitWithin(1500, 600, 8000)).toEqual({ width: 1500, height: 600 });
+	});
+
+	it('scales both axes by the same factor', () => {
+		expect(fitWithin(9000, 2000, 8000)).toEqual({ width: 8000, height: 1778 });
+		expect(fitWithin(2000, 16000, 8000)).toEqual({ width: 1000, height: 8000 });
+	});
+
+	it('keeps the shape of the size that was asked for, however often it changes', () => {
+		// Feeding a clamped size back in is what squeezed the images: the width
+		// could not grow, so every extra gutter came out of the pictures instead,
+		// and the canvas drifted taller with each nudge of the spacing.
+		const once = fitWithin(9000, 2000, 8000);
+		const compounded = fitWithin(once.width + 800, once.height + 400, 8000);
+		const asked = fitWithin(9800, 2400, 8000);
+		expect(asked.width / asked.height).toBeCloseTo(9800 / 2400, 2);
+		expect(compounded.width / compounded.height).not.toBeCloseTo(9800 / 2400, 2);
 	});
 });
 

@@ -6,6 +6,7 @@
 		cellRects,
 		containRect,
 		coverSource,
+		fitWithin,
 		moveDivider,
 		naturalCanvas,
 		splitFractionAt,
@@ -43,6 +44,15 @@
 	let bgColor = $state('#ffffff');
 	let outW = $state(2000);
 	let outH = $state(1400);
+	/**
+	 * The canvas as asked for, before the export limit is applied to it. Kept
+	 * separately because the limit must never compound: with only the clamped
+	 * size to work from, every spacing step past the limit would take its gutters
+	 * out of a canvas that could not grow, and the images would shrink a little
+	 * more each time.
+	 */
+	let baseW = $state(2000);
+	let baseH = $state(1400);
 	let sizeTouched = $state(false);
 	let loading = $state(false);
 	let loadError = $state<string | null>(null);
@@ -106,12 +116,21 @@
 		if (!sizeTouched) setSize(nat.width, nat.height);
 	}
 
-	/** Applies a size, shrinking it to the export limit without changing its shape. */
+	/**
+	 * Applies a size, shrinking it to the export limit without changing its
+	 * shape. Both axes scale by the same amount, so a canvas that has hit the
+	 * limit keeps the images and the spacing in the proportions you can see.
+	 */
 	function setSize(w: number, h: number) {
-		const over = Math.max(w / MAX_SIZE, h / MAX_SIZE, 1);
-		outW = clampSize(Math.round(w / over));
-		outH = clampSize(Math.round(h / over));
+		baseW = Math.max(16, Math.round(w));
+		baseH = Math.max(16, Math.round(h));
+		const fitted = fitWithin(baseW, baseH, MAX_SIZE);
+		outW = clampSize(fitted.width);
+		outH = clampSize(fitted.height);
 	}
+
+	/** True when the images want a bigger canvas than we are willing to export. */
+	const capped = $derived(baseW > outW || baseH > outH);
 
 	const clampSize = (v: number) => Math.min(MAX_SIZE, Math.max(16, v || 16));
 
@@ -130,9 +149,9 @@
 		spacing = next;
 		if (!slots.length || delta === 0) return;
 		const n = slots.length;
-		if (layout === 'grid') setSize(outW + delta * 3, outH + delta * 3);
-		else if (layout === 'horizontal') setSize(outW + delta * (n + 1), outH + delta * 2);
-		else setSize(outW + delta * 2, outH + delta * (n + 1));
+		if (layout === 'grid') setSize(baseW + delta * 3, baseH + delta * 3);
+		else if (layout === 'horizontal') setSize(baseW + delta * (n + 1), baseH + delta * 2);
+		else setSize(baseW + delta * 2, baseH + delta * (n + 1));
 	}
 
 	function pickLayout(id: CombineLayout) {
@@ -482,7 +501,7 @@
 					max="8000"
 					value={outW}
 					aria-label="Output width in pixels"
-					onchange={(e) => ((outW = clampSize(+e.currentTarget.value)), (sizeTouched = true))}
+					onchange={(e) => (setSize(clampSize(+e.currentTarget.value), outH), (sizeTouched = true))}
 				/>
 				<span class="mono dim">×</span>
 				<input
@@ -491,9 +510,12 @@
 					max="8000"
 					value={outH}
 					aria-label="Output height in pixels"
-					onchange={(e) => ((outH = clampSize(+e.currentTarget.value)), (sizeTouched = true))}
+					onchange={(e) => (setSize(outW, clampSize(+e.currentTarget.value)), (sizeTouched = true))}
 				/>
 				<span class="mono dim">px</span>
+				{#if capped}
+					<span class="dim">Held at the {MAX_SIZE}px limit, so the images share what is left.</span>
+				{/if}
 				{#if sizeTouched}
 					<button
 						class="btn-ghost"
