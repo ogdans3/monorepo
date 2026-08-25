@@ -4,9 +4,11 @@
 	import {
 		cellAt,
 		cellRects,
+		containRect,
 		coverSource,
-		evenSplits,
 		moveDivider,
+		naturalCanvas,
+		splitFractionAt,
 		type CombineLayout
 	} from '$lib/tools/layout';
 	import Dropzone from '../Dropzone.svelte';
@@ -18,8 +20,12 @@
 		source: HTMLCanvasElement;
 		w: number;
 		h: number;
+		/** `contain` shows the whole image, `cover` crops it into its cell. */
+		fit: 'contain' | 'cover';
 		pan: { x: number; y: number };
 	}
+
+	const MAX_SIZE = 8000;
 
 	const LAYOUTS: { id: CombineLayout; label: string }[] = [
 		{ id: 'horizontal', label: 'Side by side' },
@@ -32,7 +38,7 @@
 	let layout = $state<CombineLayout>('horizontal');
 	let splits = $state<number[]>([]);
 	let gridSplits = $state<[number, number]>([0.5, 0.5]);
-	let gap = $state(0);
+	let spacing = $state(0);
 	let bgMode = $state<'white' | 'transparent' | 'custom'>('white');
 	let bgColor = $state('#ffffff');
 	let outW = $state(2000);
@@ -46,8 +52,10 @@
 	let wrapWidth = $state(0);
 	let addInput = $state<HTMLInputElement>();
 
+	// One spacing value does both jobs: the gutter between images and the frame
+	// around them. It is space the images sit inside, not space taken out of them.
 	const rects = $derived(
-		cellRects(layout, slots.length, splits, gridSplits, outW, outH, gap)
+		cellRects(layout, slots.length, splits, gridSplits, outW, outH, spacing, spacing)
 	);
 	const displayScale = $derived(wrapWidth > 0 && outW > 0 ? wrapWidth / outW : 0);
 
@@ -63,6 +71,9 @@
 					source: rawToCanvas(raw),
 					w: raw.width,
 					h: raw.height,
+					// Whole image by default. Cropping is a choice you make per
+					// image, not something the tool does to you on the way in.
+					fit: 'contain',
 					pan: { x: 0.5, y: 0.5 }
 				});
 			}
@@ -77,31 +88,55 @@
 
 	function afterSlotsChanged() {
 		if (layout === 'grid' && slots.length !== 4) layout = slots.length > 2 ? 'vertical' : 'horizontal';
-		splits = evenSplits(slots.length);
-		if (!sizeTouched) autoSize();
+		applyNatural();
 	}
 
-	/** A default output size where evenly split cells match the images' shapes. */
-	function autoSize() {
+	/**
+	 * Sizes the canvas from the images themselves and gives every cell the shape
+	 * of the image in it, so the default result crops nothing.
+	 *
+	 * The size is skipped once someone has typed one in: they asked for an exact
+	 * canvas and are entitled to keep it.
+	 */
+	function applyNatural() {
 		if (!slots.length) return;
-		if (layout === 'horizontal') {
-			const sumAspect = slots.reduce((s, i) => s + i.w / i.h, 0);
-			outH = clampSize(Math.round(outW / sumAspect));
-		} else if (layout === 'vertical') {
-			const sumInvAspect = slots.reduce((s, i) => s + i.h / i.w, 0);
-			outH = clampSize(Math.round(outW * sumInvAspect));
-		} else {
-			outH = clampSize(Math.round(outW * 0.75));
-		}
+		const nat = naturalCanvas(layout, slots, spacing);
+		splits = nat.splits;
+		gridSplits = nat.gridSplits;
+		if (!sizeTouched) setSize(nat.width, nat.height);
 	}
 
-	const clampSize = (v: number) => Math.min(8000, Math.max(16, v || 16));
+	/** Applies a size, shrinking it to the export limit without changing its shape. */
+	function setSize(w: number, h: number) {
+		const over = Math.max(w / MAX_SIZE, h / MAX_SIZE, 1);
+		outW = clampSize(Math.round(w / over));
+		outH = clampSize(Math.round(h / over));
+	}
+
+	const clampSize = (v: number) => Math.min(MAX_SIZE, Math.max(16, v || 16));
+
+	/**
+	 * Spacing is added around the images rather than taken out of them, so the
+	 * canvas grows by exactly what the new gutters and frame need. The splits are
+	 * left alone, because a divider somebody dragged is not ours to reset.
+	 */
+	function setSpacing(next: number) {
+		const delta = next - spacing;
+		spacing = next;
+		if (sizeTouched || !slots.length || delta === 0) return;
+		const n = slots.length;
+		if (layout === 'grid') setSize(outW + delta * 3, outH + delta * 3);
+		else if (layout === 'horizontal') setSize(outW + delta * (n + 1), outH + delta * 2);
+		else setSize(outW + delta * 2, outH + delta * (n + 1));
+	}
 
 	function pickLayout(id: CombineLayout) {
 		layout = id;
-		splits = evenSplits(slots.length);
-		gridSplits = [0.5, 0.5];
-		if (!sizeTouched) autoSize();
+		applyNatural();
+	}
+
+	function setFit(i: number, fit: Slot['fit']) {
+		slots[i].fit = fit;
 	}
 
 	function swap(i: number, j: number) {
@@ -125,18 +160,25 @@
 		for (let i = 0; i < slots.length && i < rects.length; i++) {
 			const slot = slots[i];
 			const r = rects[i];
-			const cover = coverSource(slot.w, slot.h, r.w, r.h, slot.pan.x, slot.pan.y);
-			ctx.drawImage(
-				slot.source,
-				cover.sx,
-				cover.sy,
-				cover.sw,
-				cover.sh,
-				r.x * scale,
-				r.y * scale,
-				r.w * scale,
-				r.h * scale
-			);
+			if (slot.fit === 'cover') {
+				const cover = coverSource(slot.w, slot.h, r.w, r.h, slot.pan.x, slot.pan.y);
+				ctx.drawImage(
+					slot.source,
+					cover.sx,
+					cover.sy,
+					cover.sw,
+					cover.sh,
+					r.x * scale,
+					r.y * scale,
+					r.w * scale,
+					r.h * scale
+				);
+			} else {
+				// The whole image, centred. Where the cell is a different shape,
+				// the background shows rather than the edges being cut off.
+				const d = containRect(slot.w, slot.h, r);
+				ctx.drawImage(slot.source, d.x * scale, d.y * scale, d.w * scale, d.h * scale);
+			}
 		}
 	}
 
@@ -157,14 +199,20 @@
 		const rect = wrapEl.getBoundingClientRect();
 
 		const onMove = (ev: PointerEvent) => {
-			const fx = (ev.clientX - rect.left) / rect.width;
-			const fy = (ev.clientY - rect.top) / rect.height;
+			// Pointer → output pixels → the content fraction the splits are in.
+			const px = ((ev.clientX - rect.left) / rect.width) * outW;
+			const py = ((ev.clientY - rect.top) / rect.height) * outH;
 			if (kind === 'split') {
-				splits = moveDivider(splits, index, layout === 'horizontal' ? fx : fy);
+				const along = layout === 'horizontal' ? px : py;
+				const total = layout === 'horizontal' ? outW : outH;
+				const f = splitFractionAt(along, total, spacing, spacing, slots.length, index);
+				splits = moveDivider(splits, index, f);
 			} else if (kind === 'grid-v') {
-				gridSplits = [moveDivider([gridSplits[0]], 0, fx)[0], gridSplits[1]];
+				const f = splitFractionAt(px, outW, spacing, spacing, 2, 0);
+				gridSplits = [moveDivider([gridSplits[0]], 0, f)[0], gridSplits[1]];
 			} else {
-				gridSplits = [gridSplits[0], moveDivider([gridSplits[1]], 0, fy)[0]];
+				const f = splitFractionAt(py, outH, spacing, spacing, 2, 0);
+				gridSplits = [gridSplits[0], moveDivider([gridSplits[1]], 0, f)[0]];
 			}
 		};
 		const onUp = () => {
@@ -184,6 +232,8 @@
 		const py = ((e.clientY - rect.top) / rect.height) * outH;
 		const index = cellAt(rects, px, py);
 		if (index < 0 || index >= slots.length) return;
+		// Nothing to pan when the whole image is already showing.
+		if (slots[index].fit !== 'cover') return;
 
 		e.preventDefault();
 		const target = e.currentTarget as HTMLElement;
@@ -243,6 +293,25 @@
 		sizeTouched = false;
 	}
 
+	const anyCropped = $derived(slots.some((s) => s.fit === 'cover'));
+
+	/**
+	 * Where a handle sits, as a percentage of the canvas: the middle of the
+	 * gutter between the two cells it separates. The split fraction itself is a
+	 * fraction of the content, which is a different number as soon as there is
+	 * any spacing.
+	 */
+	function dividerPct(a: number, b: number, axis: 'x' | 'y'): number {
+		const first = rects[a];
+		const second = rects[b];
+		if (!first || !second) return 50;
+		const mid =
+			axis === 'x'
+				? (first.x + first.w + second.x) / 2 / outW
+				: (first.y + first.h + second.y) / 2 / outH;
+		return mid * 100;
+	}
+
 	const prevLabel = $derived(layout === 'vertical' ? '↑' : '←');
 	const nextLabel = $derived(layout === 'vertical' ? '↓' : '→');
 </script>
@@ -289,12 +358,14 @@
 				<canvas bind:this={canvasEl} onpointerdown={startPanDrag} aria-label="Combined image preview. Drag an image to position it inside its cell."></canvas>
 
 				{#if layout !== 'grid'}
-					{#each splits as pos, i (i)}
+					{#each splits as _pos, i (i)}
 						<button
 							class="divider"
 							class:divider-v={layout === 'horizontal'}
 							class:divider-h={layout === 'vertical'}
-							style={layout === 'horizontal' ? `left: ${pos * 100}%` : `top: ${pos * 100}%`}
+							style={layout === 'horizontal'
+								? `left: ${dividerPct(i, i + 1, 'x')}%`
+								: `top: ${dividerPct(i, i + 1, 'y')}%`}
 							aria-label="Divider {i + 1}. Drag to change the split."
 							onpointerdown={(e) => startDividerDrag(e, 'split', i)}
 						></button>
@@ -302,57 +373,90 @@
 				{:else}
 					<button
 						class="divider divider-v"
-						style="left: {gridSplits[0] * 100}%"
+						style="left: {dividerPct(0, 1, 'x')}%"
 						aria-label="Vertical divider. Drag to change the split."
 						onpointerdown={(e) => startDividerDrag(e, 'grid-v', 0)}
 					></button>
 					<button
 						class="divider divider-h"
-						style="top: {gridSplits[1] * 100}%"
+						style="top: {dividerPct(0, 2, 'y')}%"
 						aria-label="Horizontal divider. Drag to change the split."
 						onpointerdown={(e) => startDividerDrag(e, 'grid-h', 0)}
 					></button>
 				{/if}
 
-				{#each slots as slot, i (slot.id)}
-					{#if rects[i] && displayScale > 0}
-						<div
-							class="cell-controls"
-							style:left="{(rects[i].x + rects[i].w) * displayScale - 8}px"
-							style:top="{rects[i].y * displayScale + 8}px"
-						>
-							<button
-								class="cell-btn"
-								aria-label="Move {slot.name} earlier"
-								disabled={i === 0}
-								onclick={() => swap(i, i - 1)}>{prevLabel}</button
-							>
-							<button
-								class="cell-btn"
-								aria-label="Move {slot.name} later"
-								disabled={i === slots.length - 1}
-								onclick={() => swap(i, i + 1)}>{nextLabel}</button
-							>
-							<button class="cell-btn" aria-label="Remove {slot.name}" onclick={() => removeSlot(i)}
-								>×</button
-							>
-						</div>
-					{/if}
-				{/each}
 			</div>
 		</div>
 
+		<ul class="slots">
+			{#each slots as slot, i (slot.id)}
+				<li class="slot">
+					<span class="slot-index mono dim">{i + 1}</span>
+					<span class="slot-name">{slot.name}</span>
+					<span class="slot-size mono dim">{slot.w} × {slot.h}</span>
+					<span class="slot-fit" role="group" aria-label="How {slot.name} fills its cell">
+						<button
+							class="mini"
+							class:active={slot.fit === 'contain'}
+							aria-pressed={slot.fit === 'contain'}
+							title="Show all of it, letting the background show where the cell is a different shape"
+							onclick={() => setFit(i, 'contain')}>Fit</button
+						>
+						<button
+							class="mini"
+							class:active={slot.fit === 'cover'}
+							aria-pressed={slot.fit === 'cover'}
+							title="Crop it to fill its cell, then drag it in the preview to choose which part shows"
+							onclick={() => setFit(i, 'cover')}>Fill</button
+						>
+					</span>
+					<span class="slot-move">
+						<button
+							class="mini"
+							aria-label="Move {slot.name} earlier"
+							disabled={i === 0}
+							onclick={() => swap(i, i - 1)}>{prevLabel}</button
+						>
+						<button
+							class="mini"
+							aria-label="Move {slot.name} later"
+							disabled={i === slots.length - 1}
+							onclick={() => swap(i, i + 1)}>{nextLabel}</button
+						>
+						<button class="mini" aria-label="Remove {slot.name}" onclick={() => removeSlot(i)}
+							>×</button
+						>
+					</span>
+				</li>
+			{/each}
+		</ul>
+
 		{#if slots.length === 1}
 			<p class="hint" role="status">Add at least one more image to combine.</p>
+		{:else if anyCropped}
+			<p class="hint">
+				Drag the dividers to change the split. Drag an image set to Fill to choose which part
+				shows.
+			</p>
 		{:else}
-			<p class="hint">Drag the dividers to change the split. Drag an image to choose what shows.</p>
+			<p class="hint">
+				Every image is here in full. Drag the dividers to change the split, or switch one to Fill
+				to crop it into its cell instead.
+			</p>
 		{/if}
 
 		<div class="settings">
 			<div class="quality spacing">
 				<label for="gap">Spacing</label>
-				<input id="gap" type="range" min="0" max="60" bind:value={gap} />
-				<output class="mono" for="gap">{gap}px</output>
+				<input
+					id="gap"
+					type="range"
+					min="0"
+					max="200"
+					value={spacing}
+					oninput={(e) => setSpacing(+e.currentTarget.value)}
+				/>
+				<output class="mono" for="gap">{spacing}px</output>
 			</div>
 
 			<div class="bg-row" role="group" aria-label="Background">
@@ -385,6 +489,16 @@
 					onchange={(e) => ((outH = clampSize(+e.currentTarget.value)), (sizeTouched = true))}
 				/>
 				<span class="mono dim">px</span>
+				{#if sizeTouched}
+					<button
+						class="btn-ghost"
+						title="Back to the size the images ask for"
+						onclick={() => {
+							sizeTouched = false;
+							applyNatural();
+						}}>Fit to images</button
+					>
+				{/if}
 			</div>
 		</div>
 
@@ -506,33 +620,77 @@
 		height: 2px;
 	}
 
-	.cell-controls {
-		position: absolute;
-		transform: translateX(-100%);
+	.slots {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.slot {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.3rem 0.1rem;
+		border-bottom: 1px solid var(--line);
+		font-size: 0.875rem;
+	}
+
+	.slot:last-child {
+		border-bottom: 0;
+	}
+
+	.slot-index {
+		width: 1.2rem;
+		text-align: right;
+	}
+
+	.slot-name {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.slot-size {
+		font-size: 0.8125rem;
+	}
+
+	.slot-fit,
+	.slot-move {
 		display: flex;
 		gap: 3px;
 	}
 
-	.cell-btn {
-		width: 26px;
+	.mini {
+		min-width: 26px;
 		height: 26px;
-		padding: 0;
+		padding: 0 7px;
 		border: 1px solid var(--line);
 		border-radius: var(--r-s);
-		background: oklch(1 0 0 / 0.92);
+		background: var(--bg);
 		color: var(--ink);
 		font-size: 0.8125rem;
 		line-height: 1;
 		cursor: pointer;
 	}
 
-	.cell-btn:hover:not(:disabled) {
+	.mini:hover:not(:disabled) {
 		border-color: var(--muted);
 	}
 
-	.cell-btn:disabled {
+	.mini:disabled {
 		opacity: 0.4;
 		cursor: default;
+	}
+
+	.mini.active {
+		background: var(--primary);
+		border-color: var(--primary);
+		color: #fff;
 	}
 
 	.hint {

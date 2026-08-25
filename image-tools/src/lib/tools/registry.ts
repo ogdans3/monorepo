@@ -118,29 +118,38 @@ export const TOOLS: ImageTool[] = [
 		h1: 'Combine images into one',
 		title: 'Combine Images Into One - Free Online, No Upload',
 		description:
-			'Combine multiple images into one online free. Side by side, stacked or in a grid, with draggable dividers, adjustable spacing and full control of the crop.',
-		lede: 'Put photos side by side, stack them or build a grid. Drag the dividers to decide how much room each image gets, and drag any image to choose which part shows.',
-		blurb: 'Side by side, stacked or a grid, with draggable dividers.',
+			'Combine multiple images into one online free. Side by side, stacked or in a grid, with no cropping, adjustable spacing and an output size that fits the images.',
+		lede: 'Put photos side by side, stack them or build a grid. Every image comes through whole, at a size worked out from the images themselves, and you decide if any of them gets cropped.',
+		blurb: 'Side by side, stacked or a grid, with nothing cropped off.',
 		steps: [
 			'Drop two or more images in the box above.',
-			'Pick a layout, drag the dividers to set the split, and drag any image to position it inside its cell.',
-			'Set the output size and spacing, then download the combined image.'
+			'Pick a layout. Each image gets a cell its own shape, so nothing is cut off.',
+			'Add spacing if you want a gap and a border, then download the combined image.'
 		],
 		aboutHeading: 'About combining images here',
 		about: [
-			'Each image fills its own cell, and you can drag it to choose which part shows. Nothing gets squashed or stretched. Moving the lines changes how much room each image gets, which makes side by side shots and simple collages quick to build.',
-			'The preview is shrunk to fit your screen. The download uses the exact size you set.'
+			'Images of different sizes are matched on the shared edge, so a row is scaled to the tallest of them and a column to the widest. Each one keeps its own proportions and nothing is squashed, stretched or cut off. The output size follows from that: the images laid end to end, plus whatever spacing you asked for.',
+			'Spacing is added around the images rather than taken out of them, so turning it up grows the canvas instead of eating into the pictures. Set an exact output size and it stays put, and the cells share out whatever room is left.',
+			'You can still crop. Switch any single image to Fill and it covers its cell, and you drag it to choose which part shows. The preview is shrunk to fit your screen. The download uses the exact size shown.'
 		],
 		next: ['blend-images', 'split-image', 'image-to-pdf'],
 		keywords: ['collage', 'side by side', 'merge photos', 'grid'],
 		faq: [
 			{
 				q: 'How do I put two photos side by side?',
-				a: 'Drop both images, choose the side by side layout and you get one picture with the two of them next to each other. Drag the divider between them to give one more room than the other, and drag either photo inside its own cell to choose which part shows. The result downloads as a single file.'
+				a: 'Drop both images and choose the side by side layout. You get one picture with the two of them next to each other, both of them whole, and the output size is worked out from the photos rather than guessed. Drag the divider between them to give one more room than the other. The result downloads as a single file.'
 			},
 			{
 				q: 'Do the images have to be the same size?',
-				a: 'No. Each one is fitted into its own cell and the parts that don\'t fit are cropped rather than squashed, so nothing ends up stretched. Drag a photo inside its cell to pick which part survives that crop. If you would rather see whole images with no cropping, add spacing so each cell keeps its own shape.'
+				a: 'No. They are matched on the edge they share, so side by side scales them all to the height of the tallest and stacking scales them to the width of the widest. Nothing is cropped or stretched to make that work, and the combined image comes out as wide as the pieces laid end to end.'
+			},
+			{
+				q: 'Why is my image cropped, and how do I stop it?',
+				a: 'Nothing is cropped unless you ask for it. Each image starts on Fit, which shows all of it, and the cell it sits in starts out the same shape as the image. If you drag a divider or type your own output size, a cell can end up a different shape, and then a Fit image sits centred with background around it rather than losing its edges. Press Fill on an image to crop it into its cell instead, and drag it to choose which part shows.'
+			},
+			{
+				q: 'How do I add a border or a gap between the images?',
+				a: 'The spacing slider does both at once. It puts the same gap between the images and around the outside, and it is added to the canvas rather than taken out of the pictures, so the images stay exactly as big as they were and the combined image gets bigger. Pick a background colour to set what shows in that space.'
 			}
 		],
 		suffix: '-combined'
