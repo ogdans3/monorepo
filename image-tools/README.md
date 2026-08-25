@@ -77,7 +77,7 @@ pnpm dev        # dev server
 pnpm test       # engine unit tests
 pnpm check      # svelte-check
 pnpm build      # production build (prerenders all pages)
-pnpm start      # serve the build (PORT env, defaults to 3000)
+pnpm start      # serve the build via serve.js (PORT env, defaults to 3000)
 ```
 
 ## How the engine works
@@ -106,6 +106,36 @@ The tools follow the same pattern with their own registry
 landing section, sitemap and cross-links. Pure logic (flood fill, crop
 geometry, combine layout math) lives in `src/lib/tools/` under vitest;
 the editors in `src/lib/ui/tools/` are the only DOM-bound parts.
+
+## Caching
+
+Every response says how long it may be kept, because the ones that don't get
+guessed at. Two classes, decided in `cache-policy.js`:
+
+| | |
+|---|---|
+| `/_app/immutable/*`, `/ffmpeg/<version>/*` | a year, `immutable`, never revalidated |
+| everything else | `no-cache`, revalidated every time |
+
+`no-cache` does not mean "do not store", it means "ask first", and the ETag
+turns nearly every one of those questions into a 304 with no body. So a deploy
+is live for everyone the moment it lands, and costs one small request rather
+than a re-download.
+
+That policy needs `serve.js` as the entrypoint instead of the adapter's
+`build/index.js`. adapter-node sends no `cache-control` at all except on the
+hashed assets, has no option to change it, and serves prerendered pages and
+`static/` off disk before any SvelteKit hook runs, so the header cannot come
+from inside the app. `serve.js` wraps the adapter's exported `handler`, which
+is the documented way in. Without it, browsers fall back to heuristic freshness
+and quietly reuse a page for a fraction of its age, so the longer a deployment
+has been up, the longer visitors keep seeing the previous one.
+
+The ffmpeg core sits under its version number for the same reason. The bytes
+are identical from one deploy to the next, but the file is freshly copied, so
+its ETag changes and every visitor would download 32MB again for nothing.
+
+Which build is live: `curl -s https://imagetoolbox.org/_app/version.json`.
 
 ## Deploy
 

@@ -12,5 +12,8 @@ FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/build ./build
+# The entrypoint is ours rather than the adapter's, so that every response
+# carries a cache-control header. Both files are dependency-free.
+COPY --from=build /app/serve.js /app/cache-policy.js ./
 EXPOSE 3000
-CMD ["node", "build/index.js"]
+CMD ["node", "serve.js"]

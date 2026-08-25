@@ -82,11 +82,27 @@ decisions. This file is the short version of what matters when editing.
 - **`lastmod` comes from `CONTENT_UPDATED` in `site.ts`**, a hand-set date.
   Bump it when the words change, not when the build runs, or the signal
   stops being worth anything.
+- **Every response states its cache policy, and `serve.js` is why.**
+  adapter-node sets `cache-control` on `/_app/immutable/` and nothing else,
+  has no option for it, and serves prerendered pages and `static/` off disk
+  before any hook runs, so it cannot be done from inside the app. `serve.js`
+  wraps the adapter's exported `handler` and sets the header first. Do not
+  put the entrypoint back to `build/index.js`: with no header the browser
+  applies heuristic freshness, and visitors keep the last deploy's pages for
+  hours without one request that would tell them otherwise. The policy is
+  `cache-policy.js`, plain dependency-free JS so both the server and the test
+  can import it, and the Dockerfile copies it next to `serve.js`.
+- **A URL that is cached for a year has to carry its version.** That is why
+  the ffmpeg core is copied to `static/ffmpeg/<version>/` and the loader
+  builds its paths from `__FFMPEG_CORE_VERSION__`, defined in
+  `vite.config.ts` from the same constant that does the copying. Unversioned,
+  the 32MB core is byte-identical between deploys but freshly copied, so its
+  ETag changes and everyone downloads it again.
 - **WASM codecs are lazy.** Keep them behind dynamic imports, and keep
   `optimizeDeps.exclude` in `vite.config.ts` in sync when adding one.
 - **Video is ffmpeg.wasm, and three things about it are load bearing.**
   (1) The core is the **ESM** build, copied out of node_modules into
-  `static/ffmpeg/` by a plugin in `vite.config.ts` and gitignored. ffmpeg
+  `static/ffmpeg/<version>/` by a plugin in `vite.config.ts` and gitignored. ffmpeg
   spawns its worker with `type: "module"`, where `importScripts` does not
   exist, so it falls through to a dynamic import and needs a default export.
   The UMD build fails at runtime with "failed to import ffmpeg-core.js".

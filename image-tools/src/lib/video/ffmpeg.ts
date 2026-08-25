@@ -12,9 +12,15 @@ import { looksReadable, parseProbe } from './probe';
  * is reported rather than hidden behind a spinner that looks broken.
  */
 
-/** Where the build puts the core. See the copy plugin in vite.config.ts. */
-const CORE_JS = '/ffmpeg/ffmpeg-core.js';
-const CORE_WASM = '/ffmpeg/ffmpeg-core.wasm';
+/**
+ * Where the build puts the core. See the copy plugin in vite.config.ts, which
+ * defines this and copies the files under the same version, so the URL changes
+ * whenever the bytes do. That is what earns it a year in the browser's cache
+ * instead of a 32MB download after every deploy.
+ */
+declare const __FFMPEG_CORE_VERSION__: string;
+const CORE_JS = `/ffmpeg/${__FFMPEG_CORE_VERSION__}/ffmpeg-core.js`;
+const CORE_WASM = `/ffmpeg/${__FFMPEG_CORE_VERSION__}/ffmpeg-core.wasm`;
 
 /** The name the file has inside ffmpeg's own filesystem. */
 const INPUT = 'input';
