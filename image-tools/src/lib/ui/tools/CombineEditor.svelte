@@ -119,11 +119,16 @@
 	 * Spacing is added around the images rather than taken out of them, so the
 	 * canvas grows by exactly what the new gutters and frame need. The splits are
 	 * left alone, because a divider somebody dragged is not ours to reset.
+	 *
+	 * This happens even to an output size somebody typed in. Spacing that did not
+	 * move the canvas would have to come out of the pictures, which is the thing
+	 * this control exists not to do, so a typed size sets where the images start
+	 * rather than locking the canvas for good.
 	 */
 	function setSpacing(next: number) {
 		const delta = next - spacing;
 		spacing = next;
-		if (sizeTouched || !slots.length || delta === 0) return;
+		if (!slots.length || delta === 0) return;
 		const n = slots.length;
 		if (layout === 'grid') setSize(outW + delta * 3, outH + delta * 3);
 		else if (layout === 'horizontal') setSize(outW + delta * (n + 1), outH + delta * 2);

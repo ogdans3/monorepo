@@ -39,7 +39,7 @@ export const OPERATOR_LINE = `${OPERATOR.name}, org. no. ${OPERATOR.orgNumber}, 
  * registry-driven site means edits to the format table, pairfacts, the tool
  * registry or the presets. Leave it alone for styling and plumbing.
  */
-export const CONTENT_UPDATED = '2026-08-13';
+export const CONTENT_UPDATED = '2026-08-25';
 
 /** Conversion pages live under /convert, mirroring /tools. */
 export function convertPath(slug: string): string {

@@ -129,7 +129,7 @@ export const TOOLS: ImageTool[] = [
 		aboutHeading: 'About combining images here',
 		about: [
 			'Images of different sizes are matched on the shared edge, so a row is scaled to the tallest of them and a column to the widest. Each one keeps its own proportions and nothing is squashed, stretched or cut off. The output size follows from that: the images laid end to end, plus whatever spacing you asked for.',
-			'Spacing is added around the images rather than taken out of them, so turning it up grows the canvas instead of eating into the pictures. Set an exact output size and it stays put, and the cells share out whatever room is left.',
+			'Spacing is added around the images rather than taken out of them, so turning it up grows the canvas instead of eating into the pictures. That holds even after you have typed your own output size, because spacing that left the canvas alone would have to come out of the pictures instead. A size you type says how much room the images get, and the spacing goes around it.',
 			'You can still crop. Switch any single image to Fill and it covers its cell, and you drag it to choose which part shows. The preview is shrunk to fit your screen. The download uses the exact size shown.'
 		],
 		next: ['blend-images', 'split-image', 'image-to-pdf'],
