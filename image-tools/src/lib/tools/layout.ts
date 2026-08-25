@@ -53,60 +53,140 @@ export function matchedRow(sizes: ImageSize[]): { extents: number[]; cross: numb
 	return { cross, extents: sizes.map((s) => Math.max(1, Math.round((s.w * cross) / s.h))) };
 }
 
-/** The same, down a column: every image scaled to the widest one's width. */
-export function matchedColumn(sizes: ImageSize[]): { extents: number[]; cross: number } {
-	const cross = Math.max(1, ...sizes.map((s) => s.w));
-	return { cross, extents: sizes.map((s) => Math.max(1, Math.round((s.h * cross) / s.w))) };
+/**
+ * How many columns a layout puts an image row into.
+ *
+ * The three layouts are one geometry wearing three hats: a strip is a grid one
+ * row deep, a stack is a grid one column wide, and the grid is whatever number
+ * of columns was asked for. Everything below works in rows and columns only.
+ */
+export function columnsFor(layout: CombineLayout, count: number, gridColumns: number): number {
+	if (count < 1) return 1;
+	if (layout === 'horizontal') return count;
+	if (layout === 'vertical') return 1;
+	return Math.min(Math.max(1, Math.round(gridColumns)), count);
+}
+
+/** Rows needed to hold `count` images at `columns` across. */
+export function rowsFor(count: number, columns: number): number {
+	return Math.max(1, Math.ceil(Math.max(0, count) / Math.max(1, columns)));
+}
+
+/** Row-major chunks: 5 images, 2 columns → [[a, b], [c, d], [e]]. */
+export function chunk<T>(items: T[], columns: number): T[][] {
+	const size = Math.max(1, Math.round(columns));
+	const out: T[][] = [];
+	for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+	return out;
+}
+
+/**
+ * Where the dividers sit. `rows` divides the canvas top to bottom, and `cols`
+ * holds one set of fractions per row.
+ *
+ * Columns are per row rather than shared down the grid, which is what lets a
+ * last row of two images fill the width instead of leaving a hole where the
+ * third would have been, and what lets every cell keep the shape of the image
+ * in it whatever its neighbours are doing.
+ */
+export interface GridSplits {
+	rows: number[];
+	cols: number[][];
 }
 
 export interface NaturalCanvas {
 	width: number;
 	height: number;
-	splits: number[];
-	gridSplits: [number, number];
+	splits: GridSplits;
+}
+
+const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
+const EMPTY: NaturalCanvas = { width: 16, height: 16, splits: { rows: [], cols: [] } };
+
+/**
+ * A strip: every image at its own shape, laid end to end.
+ *
+ * Each row is its images at a common height, the canvas is as wide as the row
+ * that wants the most, and any other row is stretched to match rather than
+ * squeezed, so nothing is ever scaled down to make the arithmetic work. Every
+ * cell ends up the shape of the image in it, which is what makes side by side
+ * and stacked come out flush with no letterboxing anywhere.
+ */
+export function justifiedCanvas(
+	sizes: ImageSize[],
+	columns: number,
+	spacing: number
+): NaturalCanvas {
+	if (sizes.length === 0) return EMPTY;
+
+	const rows = chunk(sizes, columns).map(matchedRow);
+	const width = Math.max(
+		...rows.map((row) => sum(row.extents) + spacing * (row.extents.length - 1) + spacing * 2)
+	);
+	const heights = rows.map((row) => {
+		const content = width - spacing * 2 - spacing * (row.extents.length - 1);
+		return Math.max(1, Math.round((row.cross * content) / sum(row.extents)));
+	});
+
+	return {
+		width,
+		height: sum(heights) + spacing * (heights.length - 1) + spacing * 2,
+		splits: {
+			rows: splitsFromExtents(heights),
+			cols: rows.map((row) => splitsFromExtents(row.extents))
+		}
+	};
 }
 
 /**
- * The canvas the images ask for: each one at its own shape, spacing added
- * around and between them rather than taken out of them.
+ * A grid: columns that line up down the page and rows that line up across it.
  *
- * This is the whole answer to "what size should the output be". A strip is as
- * long as its images laid end to end, and as thick as the thickest, plus a
- * frame of `spacing` and a gutter of `spacing` between each pair. The splits
- * come back with it, so every cell matches the shape of the image in it and
- * nothing has to be cropped to fit.
+ * That alignment is the whole point of calling it a grid, and it is also the
+ * one thing a strip cannot give you, since a row of its own shapes never lands
+ * on the same boundaries as the row above. The price is that a cell is not
+ * always the shape of its image: each column is as wide as the widest image in
+ * it and each row as tall as the tallest, so nothing is ever scaled down and
+ * anything shorter or narrower than its cell sits centred with the background
+ * showing. Press Fill on an image to crop it into its cell instead.
+ *
+ * A last row with fewer images than columns leaves the remaining cells empty,
+ * rather than stretching one image across the gap.
  */
+export function alignedCanvas(
+	sizes: ImageSize[],
+	columns: number,
+	spacing: number
+): NaturalCanvas {
+	if (sizes.length === 0) return EMPTY;
+
+	const cols = Math.max(1, Math.min(Math.round(columns), sizes.length));
+	const rows = chunk(sizes, cols);
+	const colWidths = Array.from({ length: cols }, (_, c) =>
+		Math.max(1, ...rows.map((row) => row[c]?.w ?? 1))
+	);
+	const rowHeights = rows.map((row) => Math.max(1, ...row.map((image) => image.h)));
+	// One set of column fractions, handed to every row, is what keeps them
+	// aligned. Dragging one moves it in every row at once.
+	const colSplits = splitsFromExtents(colWidths);
+
+	return {
+		width: sum(colWidths) + spacing * (cols - 1) + spacing * 2,
+		height: sum(rowHeights) + spacing * (rows.length - 1) + spacing * 2,
+		splits: { rows: splitsFromExtents(rowHeights), cols: rows.map(() => colSplits) }
+	};
+}
+
+/** The canvas a layout asks for, which is the two above under one name. */
 export function naturalCanvas(
 	layout: CombineLayout,
 	sizes: ImageSize[],
+	columns: number,
 	spacing: number
 ): NaturalCanvas {
-	const n = sizes.length;
-	if (n === 0) return { width: 16, height: 16, splits: [], gridSplits: [0.5, 0.5] };
-
-	if (layout === 'grid') {
-		// Four cells of one size, big enough for the largest image once they are
-		// all matched on height. Even splits, because a shared divider cannot
-		// follow two rows of different proportions at once.
-		const { extents, cross } = matchedRow(sizes);
-		const cellW = Math.max(...extents);
-		return {
-			width: cellW * 2 + spacing * 3,
-			height: cross * 2 + spacing * 3,
-			splits: evenSplits(n),
-			gridSplits: [0.5, 0.5]
-		};
-	}
-
-	const { extents, cross } = layout === 'horizontal' ? matchedRow(sizes) : matchedColumn(sizes);
-	const along = extents.reduce((a, b) => a + b, 0) + spacing * (n + 1);
-	const across = cross + spacing * 2;
-	return {
-		width: layout === 'horizontal' ? along : across,
-		height: layout === 'horizontal' ? across : along,
-		splits: splitsFromExtents(extents),
-		gridSplits: [0.5, 0.5]
-	};
+	return layout === 'grid'
+		? alignedCanvas(sizes, columns, spacing)
+		: justifiedCanvas(sizes, columns, spacing);
 }
 
 /**
@@ -153,7 +233,7 @@ function segments(splits: number[], total: number, gap: number, pad: number): Se
 
 /**
  * Inverse of the above for one divider: a pointer position along the axis, in
- * output pixels, back to the content fraction that `splits` is made of.
+ * output pixels, back to the content fraction that the splits are made of.
  *
  * Without it a dragged handle drifts away from the pointer as the spacing goes
  * up, because the frame and the gutters are pixels the fractions know nothing
@@ -173,36 +253,33 @@ export function splitFractionAt(
 }
 
 /**
- * Pixel rect per image cell. `splits` sizes the strip layouts. The grid is
- * 2 × 2 (four images), sized by `gridSplits` [vertical, horizontal] and
- * ordered row-major. `gap` sits between cells, `pad` frames the lot.
+ * Pixel rect per image cell, row-major. `gap` sits between cells, `pad` frames
+ * the lot. Rows are laid down the canvas and each row divides the full width
+ * between its own images, so a short last row shares out the whole width.
  */
 export function cellRects(
-	layout: CombineLayout,
+	splits: GridSplits,
 	count: number,
-	splits: number[],
-	gridSplits: [number, number],
 	W: number,
 	H: number,
 	gap: number,
 	pad = 0
 ): PxRect[] {
-	if (layout === 'grid') {
-		const cols = segments([gridSplits[0]], W, gap, pad);
-		const rows = segments([gridSplits[1]], H, gap, pad);
-		return [
-			{ x: cols[0].start, y: rows[0].start, w: cols[0].size, h: rows[0].size },
-			{ x: cols[1].start, y: rows[0].start, w: cols[1].size, h: rows[0].size },
-			{ x: cols[0].start, y: rows[1].start, w: cols[0].size, h: rows[1].size },
-			{ x: cols[1].start, y: rows[1].start, w: cols[1].size, h: rows[1].size }
-		].slice(0, count);
+	const rows = segments(splits.rows, H, gap, pad);
+	const out: PxRect[] = [];
+	for (let r = 0; r < rows.length && out.length < count; r++) {
+		for (const col of segments(splits.cols[r] ?? [], W, gap, pad)) {
+			out.push({ x: col.start, y: rows[r].start, w: col.size, h: rows[r].size });
+		}
 	}
-	if (layout === 'horizontal') {
-		const h = Math.max(1, H - pad * 2);
-		return segments(splits, W, gap, pad).map((s) => ({ x: s.start, y: pad, w: s.size, h }));
-	}
-	const w = Math.max(1, W - pad * 2);
-	return segments(splits, H, gap, pad).map((s) => ({ x: pad, y: s.start, w, h: s.size }));
+	return out.slice(0, count);
+}
+
+/** Index of the cell at row `r`, column `c`, given each row's cell count. */
+export function cellIndex(splits: GridSplits, r: number, c: number): number {
+	let index = 0;
+	for (let i = 0; i < r; i++) index += (splits.cols[i]?.length ?? 0) + 1;
+	return index + c;
 }
 
 /**

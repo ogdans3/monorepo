@@ -3,14 +3,18 @@
 	import { readImageFile, rawToCanvas } from './load';
 	import {
 		cellAt,
+		cellIndex,
 		cellRects,
+		columnsFor,
 		containRect,
 		coverSource,
 		fitWithin,
 		moveDivider,
 		naturalCanvas,
+		rowsFor,
 		splitFractionAt,
-		type CombineLayout
+		type CombineLayout,
+		type GridSplits
 	} from '$lib/tools/layout';
 	import Dropzone from '../Dropzone.svelte';
 	import ExportBar from './ExportBar.svelte';
@@ -28,20 +32,22 @@
 
 	const MAX_SIZE = 8000;
 
+	// Three names for one geometry: a strip is a grid one row deep, a stack is a
+	// grid one column wide, and the grid is however many columns you ask for.
 	const LAYOUTS: { id: CombineLayout; label: string }[] = [
 		{ id: 'horizontal', label: 'Side by side' },
 		{ id: 'vertical', label: 'Stacked' },
-		// The count is in the label because the reason it is unavailable cannot be
-		// a tooltip: a disabled button fires no mouse events, so the title never
-		// shows and the rule stays a secret from the one person who needs it.
-		{ id: 'grid', label: 'Grid of 4' }
+		{ id: 'grid', label: 'Grid' }
 	];
 
 	let nextId = 1;
 	let slots = $state<Slot[]>([]);
 	let layout = $state<CombineLayout>('horizontal');
-	let splits = $state<number[]>([]);
-	let gridSplits = $state<[number, number]>([0.5, 0.5]);
+	let splits = $state<GridSplits>({ rows: [], cols: [] });
+	/** Columns asked for in the grid layout. The other two work theirs out. */
+	let gridColumns = $state(2);
+	/** Whether the shape is the one somebody chose or the one we guessed. */
+	let shapeTouched = $state(false);
 	let spacing = $state(0);
 	let bgMode = $state<'white' | 'transparent' | 'custom'>('white');
 	let bgColor = $state('#ffffff');
@@ -67,9 +73,9 @@
 
 	// One spacing value does both jobs: the gutter between images and the frame
 	// around them. It is space the images sit inside, not space taken out of them.
-	const rects = $derived(
-		cellRects(layout, slots.length, splits, gridSplits, outW, outH, spacing, spacing)
-	);
+	const columns = $derived(columnsFor(layout, slots.length, gridColumns));
+	const rows = $derived(rowsFor(slots.length, columns));
+	const rects = $derived(cellRects(splits, slots.length, outW, outH, spacing, spacing));
 	const displayScale = $derived(wrapWidth > 0 && outW > 0 ? wrapWidth / outW : 0);
 
 	async function onfiles(files: File[]) {
@@ -100,7 +106,10 @@
 	}
 
 	function afterSlotsChanged() {
-		if (layout === 'grid' && slots.length !== 4) layout = slots.length > 2 ? 'vertical' : 'horizontal';
+		// Squarish by default, so five images are three and two rather than a
+		// column of pairs with one stray at the bottom.
+		if (!shapeTouched) gridColumns = Math.ceil(Math.sqrt(Math.max(1, slots.length)));
+		gridColumns = Math.min(gridColumns, Math.max(1, slots.length));
 		applyNatural();
 	}
 
@@ -113,9 +122,8 @@
 	 */
 	function applyNatural() {
 		if (!slots.length) return;
-		const nat = naturalCanvas(layout, slots, spacing);
+		const nat = naturalCanvas(layout, slots, columns, spacing);
 		splits = nat.splits;
-		gridSplits = nat.gridSplits;
 		if (!sizeTouched) setSize(nat.width, nat.height);
 	}
 
@@ -148,18 +156,38 @@
 	 * rather than locking the canvas for good.
 	 */
 	function setSpacing(next: number) {
-		const delta = next - spacing;
+		if (next === spacing || !slots.length) {
+			spacing = next;
+			return;
+		}
+		// How much bigger the canvas the images asked for has just become. Taking
+		// the difference rather than the new size itself is what keeps a typed
+		// output size and a dragged divider intact while still adding the room.
+		const before = naturalCanvas(layout, slots, columns, spacing);
+		const after = naturalCanvas(layout, slots, columns, next);
 		spacing = next;
-		if (!slots.length || delta === 0) return;
-		const n = slots.length;
-		if (layout === 'grid') setSize(baseW + delta * 3, baseH + delta * 3);
-		else if (layout === 'horizontal') setSize(baseW + delta * (n + 1), baseH + delta * 2);
-		else setSize(baseW + delta * 2, baseH + delta * (n + 1));
+		setSize(baseW + (after.width - before.width), baseH + (after.height - before.height));
 	}
 
 	function pickLayout(id: CombineLayout) {
 		layout = id;
 		applyNatural();
+	}
+
+	/**
+	 * Columns and rows are two views of one number: every image has to land in a
+	 * cell, so choosing one decides the other. Setting rows to 2 with five images
+	 * means three columns, and the tool says so rather than dropping an image.
+	 */
+	function setColumns(next: number) {
+		gridColumns = Math.min(Math.max(1, Math.round(next) || 1), Math.max(1, slots.length));
+		shapeTouched = true;
+		applyNatural();
+	}
+
+	function setRows(next: number) {
+		const wanted = Math.max(1, Math.round(next) || 1);
+		setColumns(Math.ceil(slots.length / Math.min(wanted, Math.max(1, slots.length))));
 	}
 
 	function setFit(i: number, fit: Slot['fit']) {
@@ -218,7 +246,17 @@
 		if (ctx) draw(ctx, displayScale);
 	});
 
-	function startDividerDrag(e: PointerEvent, kind: 'split' | 'grid-v' | 'grid-h', index: number) {
+	/**
+	 * Drags one divider. A row divider moves the boundary between two rows down
+	 * the canvas, and a column divider moves one boundary inside a single row,
+	 * which is why it needs to know which row it belongs to.
+	 */
+	function startDividerDrag(
+		e: PointerEvent,
+		kind: 'row' | 'col',
+		row: number,
+		index: number
+	) {
 		if (!wrapEl) return;
 		e.preventDefault();
 		const target = e.currentTarget as HTMLElement;
@@ -229,17 +267,18 @@
 			// Pointer → output pixels → the content fraction the splits are in.
 			const px = ((ev.clientX - rect.left) / rect.width) * outW;
 			const py = ((ev.clientY - rect.top) / rect.height) * outH;
-			if (kind === 'split') {
-				const along = layout === 'horizontal' ? px : py;
-				const total = layout === 'horizontal' ? outW : outH;
-				const f = splitFractionAt(along, total, spacing, spacing, slots.length, index);
-				splits = moveDivider(splits, index, f);
-			} else if (kind === 'grid-v') {
-				const f = splitFractionAt(px, outW, spacing, spacing, 2, 0);
-				gridSplits = [moveDivider([gridSplits[0]], 0, f)[0], gridSplits[1]];
+			if (kind === 'row') {
+				const f = splitFractionAt(py, outH, spacing, spacing, rows, index);
+				splits = { ...splits, rows: moveDivider(splits.rows, index, f) };
 			} else {
-				const f = splitFractionAt(py, outH, spacing, spacing, 2, 0);
-				gridSplits = [gridSplits[0], moveDivider([gridSplits[1]], 0, f)[0]];
+				const inRow = (splits.cols[row]?.length ?? 0) + 1;
+				const f = splitFractionAt(px, outW, spacing, spacing, inRow, index);
+				// In a grid the columns line up, so a column divider is one divider
+				// wearing several hats and has to move in every row at once.
+				const cols = splits.cols.map((set, r) =>
+					layout === 'grid' || r === row ? moveDivider(set, index, f) : set
+				);
+				splits = { ...splits, cols };
 			}
 		};
 		const onUp = () => {
@@ -315,9 +354,10 @@
 
 	function startOver() {
 		slots = [];
-		splits = [];
+		splits = { rows: [], cols: [] };
 		loadError = null;
 		sizeTouched = false;
+		shapeTouched = false;
 	}
 
 	const anyCropped = $derived(slots.some((s) => s.fit === 'cover'));
@@ -339,6 +379,59 @@
 		return mid * 100;
 	}
 
+	/** Every divider on the canvas, ready to render: rows first, then each row's. */
+	const handles = $derived.by(() => {
+		const out: {
+			key: string;
+			kind: 'row' | 'col';
+			row: number;
+			index: number;
+			pct: number;
+			/** For a column divider, the top and height of the row it lives in, in %. */
+			from: number;
+			size: number;
+			label: string;
+		}[] = [];
+		for (let r = 0; r < splits.rows.length; r++) {
+			out.push({
+				key: `row-${r}`,
+				kind: 'row',
+				row: r,
+				index: r,
+				pct: dividerPct(cellIndex(splits, r, 0), cellIndex(splits, r + 1, 0), 'y'),
+				from: 0,
+				size: 100,
+				label: `Divider below row ${r + 1}. Drag to change the split.`
+			});
+		}
+		for (let r = 0; r < splits.cols.length; r++) {
+			// A grid's columns are shared, so one handle spanning the whole canvas
+			// says what is true. A strip's belong to their row and only span it.
+			const aligned = layout === 'grid';
+			if (aligned && r > 0) break;
+			const cell = rects[cellIndex(splits, r, 0)];
+			const from = aligned || !cell ? 0 : (cell.y / outH) * 100;
+			const size = aligned || !cell ? 100 : (cell.h / outH) * 100;
+			for (let c = 0; c < (splits.cols[r]?.length ?? 0); c++) {
+				out.push({
+					key: `col-${r}-${c}`,
+					kind: 'col',
+					row: r,
+					index: c,
+					pct: dividerPct(cellIndex(splits, r, c), cellIndex(splits, r, c + 1), 'x'),
+					from,
+					size,
+					label: aligned
+						? `Column divider ${c + 1}. Drag to change the split.`
+						: splits.rows.length > 0
+							? `Divider ${c + 1} in row ${r + 1}. Drag to change the split.`
+							: `Divider ${c + 1}. Drag to change the split.`
+				});
+			}
+		}
+		return out;
+	});
+
 	const prevLabel = $derived(layout === 'vertical' ? '↑' : '←');
 	const nextLabel = $derived(layout === 'vertical' ? '↓' : '→');
 </script>
@@ -358,13 +451,33 @@
 						class="chip"
 						class:active={layout === l.id}
 						aria-pressed={layout === l.id}
-						disabled={l.id === 'grid' && slots.length !== 4}
-						title={l.id === 'grid' && slots.length !== 4 ? 'The grid needs exactly 4 images' : undefined}
 						onclick={() => pickLayout(l.id)}
 					>
 						{l.label}
 					</button>
 				{/each}
+				{#if layout === 'grid'}
+					<span class="shape">
+						<label for="grid-cols">Columns</label>
+						<input
+							id="grid-cols"
+							type="number"
+							min="1"
+							max={Math.max(1, slots.length)}
+							value={columns}
+							onchange={(e) => setColumns(+e.currentTarget.value)}
+						/>
+						<label for="grid-rows">Rows</label>
+						<input
+							id="grid-rows"
+							type="number"
+							min="1"
+							max={Math.max(1, slots.length)}
+							value={rows}
+							onchange={(e) => setRows(+e.currentTarget.value)}
+						/>
+					</span>
+				{/if}
 			</div>
 			<div class="toolbar-group">
 				<button class="btn-ghost" onclick={() => addInput?.click()}>Add images</button>
@@ -384,33 +497,18 @@
 			<div class="canvas-wrap" bind:this={wrapEl} bind:clientWidth={wrapWidth}>
 				<canvas bind:this={canvasEl} onpointerdown={startPanDrag} aria-label="Combined image preview. Drag an image to position it inside its cell."></canvas>
 
-				{#if layout !== 'grid'}
-					{#each splits as _pos, i (i)}
-						<button
-							class="divider"
-							class:divider-v={layout === 'horizontal'}
-							class:divider-h={layout === 'vertical'}
-							style={layout === 'horizontal'
-								? `left: ${dividerPct(i, i + 1, 'x')}%`
-								: `top: ${dividerPct(i, i + 1, 'y')}%`}
-							aria-label="Divider {i + 1}. Drag to change the split."
-							onpointerdown={(e) => startDividerDrag(e, 'split', i)}
-						></button>
-					{/each}
-				{:else}
+				{#each handles as handle (handle.key)}
 					<button
-						class="divider divider-v"
-						style="left: {dividerPct(0, 1, 'x')}%"
-						aria-label="Vertical divider. Drag to change the split."
-						onpointerdown={(e) => startDividerDrag(e, 'grid-v', 0)}
+						class="divider"
+						class:divider-v={handle.kind === 'col'}
+						class:divider-h={handle.kind === 'row'}
+						style={handle.kind === 'col'
+							? `left: ${handle.pct}%; top: ${handle.from}%; height: ${handle.size}%`
+							: `top: ${handle.pct}%`}
+						aria-label={handle.label}
+						onpointerdown={(e) => startDividerDrag(e, handle.kind, handle.row, handle.index)}
 					></button>
-					<button
-						class="divider divider-h"
-						style="top: {dividerPct(0, 2, 'y')}%"
-						aria-label="Horizontal divider. Drag to change the split."
-						onpointerdown={(e) => startDividerDrag(e, 'grid-h', 0)}
-					></button>
-				{/if}
+				{/each}
 
 			</div>
 		</div>
@@ -575,7 +673,28 @@
 	.toolbar-group {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
 		gap: 0.4rem;
+	}
+
+	/* Rows and columns are two views of one number, so they sit together and
+	   each one answers when the other moves. */
+	.shape {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-left: 0.2rem;
+		font-size: 0.875rem;
+		color: var(--muted);
+	}
+
+	.shape input {
+		width: 3.4rem;
+		padding: 0.3rem 0.4rem;
+		border: 1px solid var(--line);
+		border-radius: var(--r-s);
+		font: 500 0.875rem var(--font-mono);
+		color: var(--ink);
 	}
 
 	.stage {
@@ -621,8 +740,6 @@
 	}
 
 	.divider-v {
-		top: 0;
-		bottom: 0;
 		width: 20px;
 		transform: translateX(-50%);
 		cursor: col-resize;
@@ -634,6 +751,9 @@
 		bottom: 0;
 		width: 2px;
 	}
+
+	/* A column divider is only as tall as the row it divides, so its height comes
+	   from the row rather than from the canvas. */
 
 	.divider-h {
 		left: 0;

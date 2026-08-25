@@ -119,17 +119,18 @@ export const TOOLS: ImageTool[] = [
 		title: 'Combine Images Into One - Free Online, No Upload',
 		description:
 			'Combine multiple images into one online free. Side by side, stacked or in a grid, with no cropping, adjustable spacing and an output size that fits the images.',
-		lede: 'Put photos side by side, stack them or build a grid. Every image comes through whole, at a size worked out from the images themselves, and you decide if any of them gets cropped.',
+		lede: 'Put photos side by side, stack them, or build a grid of any number of rows and columns. Every image comes through whole, at a size worked out from the images themselves.',
 		blurb: 'Side by side, stacked or a grid, with nothing cropped off.',
 		steps: [
 			'Drop two or more images in the box above.',
-			'Pick a layout. Each image gets a cell its own shape, so nothing is cut off.',
+			'Pick a layout. For a grid, set how many columns you want and the rows follow.',
 			'Add spacing if you want a gap and a border, then download the combined image.'
 		],
 		aboutHeading: 'About combining images here',
 		about: [
 			'Images of different sizes are matched on the shared edge, so a row is scaled to the tallest of them and a column to the widest. Each one keeps its own proportions and nothing is squashed, stretched or cut off. The output size follows from that: the images laid end to end, plus whatever spacing you asked for.',
 			'Spacing is added around the images rather than taken out of them, so turning it up grows the canvas instead of eating into the pictures. That holds even after you have typed your own output size, because spacing that left the canvas alone would have to come out of the pictures instead. A size you type says how much room the images get, and the spacing goes around it.',
+			'The grid works differently on purpose. Columns line up down the page and rows line up across it, which is the whole point of calling it a grid, so a cell is not always the shape of its image. Each column is as wide as the widest image in it and each row as tall as the tallest, nothing is ever scaled down, and anything smaller than its cell sits centred with the background showing.',
 			'You can still crop. Switch any single image to Fill and it covers its cell, and you drag it to choose which part shows. The preview is shrunk to fit your screen. The download uses the exact size shown.'
 		],
 		next: ['blend-images', 'split-image', 'image-to-pdf'],
@@ -146,6 +147,10 @@ export const TOOLS: ImageTool[] = [
 			{
 				q: 'Why is my image cropped, and how do I stop it?',
 				a: 'Nothing is cropped unless you ask for it. Each image starts on Fit, which shows all of it, and the cell it sits in starts out the same shape as the image. If you drag a divider or type your own output size, a cell can end up a different shape, and then a Fit image sits centred with background around it rather than losing its edges. Press Fill on an image to crop it into its cell instead, and drag it to choose which part shows.'
+			},
+			{
+				q: 'How many images can go in the grid, and can I choose the rows and columns?',
+				a: 'Any number up to eight, in whatever shape you like. Set the columns and the rows follow, or set the rows and the columns follow, because every image has to land in a cell and choosing one decides the other. Five images in three columns gives you a row of three and a row of two, and the empty cell at the end stays empty rather than stretching an image across it.'
 			},
 			{
 				q: 'How do I add a border or a gap between the images?',
