@@ -1154,6 +1154,41 @@ export const TOOLS: ImageTool[] = [
 		suffix: '-blended'
 	},
 	{
+		slug: 'draw-on-image',
+		category: 'annotate',
+		name: 'Draw',
+		h1: 'Draw on an image',
+		title: 'Draw on an Image Online - Free, No Upload',
+		description:
+			'Draw arrows, boxes, circles and lines on an image online free. Pick any colour and thickness, right in your browser, with no upload and no account.',
+		lede: 'Point at something. Drag an arrow, a box, a circle or a line onto the picture, in whatever colour reads against it.',
+		blurb: 'Arrows, boxes and circles in any colour.',
+		steps: [
+			'Drop an image in the box above.',
+			'Pick a shape and a colour, then drag on the image. An arrow points the way you drag it.',
+			'Keep going until it says what you mean, then choose a format and download.'
+		],
+		aboutHeading: 'About drawing on images here',
+		about: [
+			'This is the tool for pointing at things: a red arrow at the button somebody cannot find, a box around the part of the receipt that matters, a circle around one face in a group. Four shapes, seven colours that hold up against a photograph, any other colour you like, and a thickness slider.',
+			'Thickness is a share of the image rather than a number of pixels, so the same setting looks the same on a phone screenshot and on a photo from a real camera. Each mark keeps the colour and thickness it was drawn with, so changing them affects the next one and leaves the rest alone.',
+			'Ctrl+Z, or Cmd+Z on a Mac, undoes the last mark. Nothing is uploaded: the drawing happens on a canvas in your browser and the download is made there too, at the full size of the original.'
+		],
+		next: ['add-text-to-image', 'crop-image', 'blur-image'],
+		keywords: ['annotate', 'arrow', 'circle', 'markup', 'highlight', 'shapes'],
+		faq: [
+			{
+				q: 'How do I draw an arrow on a picture?',
+				a: 'Pick Arrow, pick a colour, then drag from where the arrow should start to what it should point at. The head lands where you let go, so the direction is simply the direction you dragged. The head is sized from the thickness slider rather than the length, so a short arrow still looks like an arrow rather than a triangle.'
+			},
+			{
+				q: 'Can I undo a shape after drawing it?',
+				a: 'Yes. Undo removes the last mark and can be pressed as many times as you need, and Ctrl+Z or Cmd+Z does the same from the keyboard. Reset clears every mark at once and keeps the picture, and Start over drops the picture too. Nothing is written into the image until you download it.'
+			}
+		],
+		suffix: '-drawn'
+	},
+	{
 		slug: 'add-text-to-image',
 		category: 'annotate',
 		name: 'Add text',
