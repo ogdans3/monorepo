@@ -110,9 +110,17 @@ the editors in `src/lib/ui/tools/` are the only DOM-bound parts.
 ## Carrying a result into the next tool
 
 Convert to JPG, blur a face, then crop, without a download and a re-upload
-between each step. Every tool's export bar and every converted file have a
-**Continue in...** picker, and any page you reach on your own offers what you
-are carrying instead of loading it uninvited.
+between each step. Every tool's export bar and every converted file carry a
+**Continue in** row: the two or three steps that obviously follow this one as
+buttons you can hit without opening anything, and every other tool behind one
+more click with a search box. A dropdown of thirty-six tools is a filing
+cabinet, and picking the next step is not filing.
+
+The image then follows you until you say otherwise. Any tool you open loads
+what you are carrying, once, and says at the top of the page where it came
+from. Press **Start over** and it is let go, because pressing Start over only
+to be handed the same image again would be a tool arguing with you. Reloading
+forgets it too, since the only copy was in the tab.
 
 The mechanism is deliberately the smallest one that could work, because of what
 this site promises. Files never leave the device, so there is no server to park
@@ -122,11 +130,11 @@ storage to save them a click would be a bigger promise broken than the click was
 worth. What is left is a variable in the running tab, which is exactly right: it
 lasts as long as the tab does and not a moment longer.
 
-Two seams make it reach everywhere. All 30 tool editors take their files
-through one `Dropzone`, so the offer to continue lives there and every tool got
-it at once. Twenty of them export through one `ExportBar`, and every conversion
-goes through one `FileRow`, so the picker lives in those two places rather than
-in each tool. The rest have it added by hand next to their own download button.
+Two seams make it reach everywhere. Every tool editor takes its files through
+one `Dropzone`, so opening the carried image lives there and all of them got it
+at once. Twenty export through one `ExportBar`, and every conversion goes
+through one `FileRow`, so the picker lives in those two places rather than in
+each tool. The rest have it added by hand next to their own download button.
 
 - `src/lib/tools/handoff.ts` decides what a tool will take and where a result
   can usefully go, and is covered by tests.
@@ -137,8 +145,8 @@ in each tool. The rest have it added by hand next to their own download button.
   to JPG still saves a JPG at the end. Dropping a file of your own clears that.
 
 What it does not do is capture work you did not ask it to carry. Crop an image
-and then click a link without pressing **Continue in**, and what you are offered
-is still the file you arrived with, because the crop was never handed over.
+and then click a link without pressing **Continue in**, and what follows you is
+still the file you arrived with, because the crop was never handed over.
 
 ## Caching
 

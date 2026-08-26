@@ -7,6 +7,7 @@
 	import Breadcrumbs from '../Breadcrumbs.svelte';
 	import Faq from '../Faq.svelte';
 	import { pageFaq } from '$lib/faq';
+	import { carry } from '../carry.svelte';
 
 	let { tool, children }: { tool: ImageTool; children: Snippet } = $props();
 
@@ -54,6 +55,13 @@
 	<p class="lede">{tool.lede}</p>
 	<TrustLine />
 </section>
+
+{#if carry.opened}
+	<p class="carried" role="status">
+		Working on <span class="mono">{carry.opened.file.name}</span>, carried over from
+		{carry.opened.from}. Start over to use a different file.
+	</p>
+{/if}
 
 {@render children()}
 
@@ -116,6 +124,16 @@
 </section>
 
 <style>
+	.carried {
+		margin: 0 0 0.9rem;
+		padding: 0.5rem 0.7rem;
+		border: 1px solid var(--line);
+		border-radius: var(--r-s);
+		background: var(--surface);
+		font-size: 0.875rem;
+		color: var(--muted);
+	}
+
 	.all-tools {
 		margin: 0.75rem 0 1rem;
 		font-size: 0.875rem;

@@ -93,11 +93,16 @@ decisions. This file is the short version of what matters when editing.
   tests; `takes: 'pdf'` in the registry is what stops a PNG being offered to
   `merge-pdf`.
 - **The chain reaches every tool through two shared components.** `Dropzone`
-  makes the offer to continue, so all 30 editors and every conversion page got
-  it without being touched, and `ContinueIn` is the picker used by `ExportBar`,
+  opens the carried image, so every editor and every conversion page got it
+  without being touched, and `ContinueIn` is the picker used by `ExportBar`,
   `FileRow` and the few editors that download on their own. A new tool that
   uses both gets chaining for free. One that rolls its own dropzone or download
   button does not, and should say why.
+- **Opening the carried image happens once per page, and Start over lets it
+  go.** `carry.shouldOpen` is what enforces it: a dropzone that comes back
+  after the file was opened there means Start over was pressed, and handing the
+  same image straight back would be a tool arguing with its user. Do not
+  "improve" this into always opening.
 - **Every response states its cache policy, and `serve.js` is why.**
   adapter-node sets `cache-control` on `/_app/immutable/` and nothing else,
   has no option for it, and serves prerendered pages and `static/` off disk

@@ -19,7 +19,13 @@ let carried = $state<CarriedFile | null>(null);
  * than from a drop. It is what lets the export bar keep the format you already
  * chose: convert to JPG and go on to crop, and the crop still saves a JPG.
  */
-let opened = $state<File | null>(null);
+let opened = $state<CarriedFile | null>(null);
+/**
+ * Where the carried file has already been opened. A dropzone coming back after
+ * that means the visitor pressed Start over, which is them saying they want a
+ * different file, so the carried one is let go rather than loaded again.
+ */
+let openedAt: { path: string; file: File } | null = null;
 
 export const carry = {
 	get current(): CarriedFile | null {
@@ -43,12 +49,32 @@ export const carry = {
 		carried = null;
 	},
 
-	/** What this page is working on: a carried file, or null for a fresh drop. */
-	get openedType(): string {
-		return opened?.type ?? '';
+	/**
+	 * What this page is working on, when it came from another tool rather than
+	 * from a drop. Null the moment somebody drops a file of their own.
+	 */
+	get opened(): CarriedFile | null {
+		return opened;
 	},
 
-	markOpened(file: File | null): void {
-		opened = file;
+	get openedType(): string {
+		return opened?.file.type ?? '';
+	},
+
+	markOpened(held: CarriedFile | null): void {
+		opened = held;
+	},
+
+	/**
+	 * Whether this page should open the carried file by itself. It should, once:
+	 * carrying on is the whole point, and a visitor who wanted an empty tool has
+	 * Start over, which lands here a second time and gets the file dropped.
+	 */
+	shouldOpen(path: string, file: File): boolean {
+		return !(openedAt?.path === path && openedAt.file === file);
+	},
+
+	noteOpened(path: string, file: File): void {
+		openedAt = { path, file };
 	}
 };

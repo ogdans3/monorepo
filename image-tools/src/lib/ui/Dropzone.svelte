@@ -32,22 +32,14 @@
 	let dragDepth = $state(0);
 	const dragging = $derived(dragDepth > 0);
 
-	/**
-	 * A result carried out of another tool, if this one can read it. Every tool
-	 * and every conversion page takes its files through this component, so
-	 * offering it here is what makes the chain work in any order without each
-	 * tool knowing anything about it.
-	 */
 	let used = $state(false);
-	const waiting = $derived(
-		carry.current && !used && acceptsFile(carry.current.file, accept) ? carry.current : null
-	);
 
 	function useCarried() {
 		const held = carry.current;
 		if (!held) return;
 		used = true;
-		carry.markOpened(held.file);
+		carry.markOpened(held);
+		carry.noteOpened(page.url.pathname, held.file);
 		onfiles([held.file]);
 	}
 
@@ -57,15 +49,28 @@
 		onfiles(files);
 	}
 
-	// A destination the visitor chose opens straight away. Anywhere else asks
-	// first, because finding an image already loaded is only welcome if you
-	// asked for it.
+	/**
+	 * The image you were working on follows you. Every tool and every conversion
+	 * page takes its files through this component, so opening it here is what
+	 * makes a chain of tools work in any order without a single tool knowing
+	 * anything about it.
+	 *
+	 * Once per page, though. A dropzone that comes back after the file was
+	 * opened here means Start over was pressed, and pressing Start over only to
+	 * be handed the same image again would be a tool arguing with you. That is
+	 * the moment to let it go.
+	 */
 	$effect(() => {
 		const held = carry.current;
-		if (!held?.to || used) return;
-		if (held.to !== page.url.pathname) return;
-		if (!acceptsFile(held.file, accept)) return;
-		carry.arrived();
+		if (used || !held || !acceptsFile(held.file, accept)) return;
+		if (!carry.shouldOpen(page.url.pathname, held.file)) {
+			// Let it go completely, including the line at the top of the page that
+			// says what is being worked on. Start over has to leave nothing behind.
+			carry.markOpened(null);
+			carry.forget();
+			return;
+		}
+		if (held.to) carry.arrived();
 		useCarried();
 	});
 
@@ -126,15 +131,7 @@
 	<span class="zone-hint">or click to browse. Paste works too</span>
 </label>
 
-{#if waiting}
-	<p class="carried">
-		<button class="btn-ghost" onclick={useCarried}>
-			Continue with {waiting.file.name}
-		</button>
-		<span class="carried-note">from {waiting.from}, still open in this tab</span>
-		<button class="carried-drop" onclick={() => carry.forget()} title="Forget it">Forget</button>
-	</p>
-{/if}
+
 
 <style>
 	.zone {
@@ -191,28 +188,5 @@
 		color: var(--muted);
 	}
 
-	.carried {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 0.6rem 0 0;
-		font-size: 0.875rem;
-	}
 
-	.carried-note {
-		flex: 1;
-		min-width: 10rem;
-		color: var(--muted);
-	}
-
-	.carried-drop {
-		padding: 0.2rem 0.4rem;
-		border: 0;
-		background: none;
-		color: var(--muted);
-		font-size: 0.8125rem;
-		text-decoration: underline;
-		cursor: pointer;
-	}
 </style>
