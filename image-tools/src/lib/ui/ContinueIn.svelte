@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { destinationsFor, toolPath } from '$lib/tools/handoff';
+	import { conversionsFor, destinationsFor, hubFor, toolPath } from '$lib/tools/handoff';
 	import { CATEGORIES, toolMatches, type ImageTool } from '$lib/tools/registry';
 	import { carry } from './carry.svelte';
 
@@ -25,12 +25,9 @@
 	} = $props();
 
 	/**
-	 * A dropdown of thirty-five tools is a filing cabinet, and picking the next
-	 * step is not filing. Nearly every visitor wants one of the two or three
-	 * steps that obviously follow this one, which the registry already names,
-	 * so those are buttons you can hit without opening anything. The rest are
-	 * one click and a search box away, in the open, rather than behind a
-	 * control that hides its own contents until you commit to it.
+	 * The two or three steps that obviously follow this one are buttons you can
+	 * hit without opening anything, since that is what nearly everybody wants.
+	 * Everything else is one click and a search box away.
 	 */
 	const SHORTCUTS = 3;
 
@@ -41,6 +38,8 @@
 
 	const all = $derived(destinationsFor({ name, type }, exclude));
 	const shortcuts = $derived(all.slice(0, SHORTCUTS));
+	const hub = $derived(hubFor({ name, type }));
+
 	const matches = $derived(all.filter((tool) => toolMatches(tool, query)));
 	const groups = $derived(
 		CATEGORIES.map((category) => ({
@@ -49,12 +48,32 @@
 		})).filter((group) => group.tools.length > 0)
 	);
 
-	async function go(tool: ImageTool) {
+	/**
+	 * Converting is a next step like any other, and the one people arrive at
+	 * this site for. Only out of the format the result is already in, though:
+	 * every pair page reads anything, so offering all sixty-three would be
+	 * offering the same page sixty-three times.
+	 */
+	const conversions = $derived(
+		conversionsFor({ name, type }).filter(
+			(conversion) => !query.trim() || conversion.slug.includes(query.trim().toLowerCase())
+		)
+	);
+
+	/**
+	 * Hands the result over and follows it. The file is exactly what Download
+	 * would produce, so a chain of tools and a chain of download-then-upload end
+	 * at identical bytes. `landing` is false for the hub, which is a list rather
+	 * than somewhere to open a picture.
+	 */
+	async function go(to: string, landing = true) {
 		busy = true;
+		carry.handing = true;
 		try {
-			carry.hand(await produce(), from, toolPath(tool));
-			await goto(toolPath(tool));
+			carry.hand(await produce(), from, landing ? to : undefined);
+			await goto(to);
 		} finally {
+			carry.handing = false;
 			busy = false;
 			open = false;
 		}
@@ -75,21 +94,19 @@
 		<span class="label" id="continue-label">Continue in</span>
 		<div class="picks" role="group" aria-labelledby="continue-label">
 			{#each shortcuts as tool (tool.slug)}
-				<button class="chip" disabled={disabled || busy} onclick={() => go(tool)}>
+				<button class="chip" disabled={disabled || busy} onclick={() => go(toolPath(tool))}>
 					{tool.name}
 				</button>
 			{/each}
-			{#if all.length > shortcuts.length}
-				<button
-					class="chip more"
-					aria-expanded={open}
-					aria-controls="continue-panel"
-					disabled={disabled || busy}
-					onclick={toggle}
-				>
-					{open ? 'Close' : `All ${all.length}`}
-				</button>
-			{/if}
+			<button
+				class="chip"
+				aria-expanded={open}
+				aria-controls="continue-panel"
+				disabled={disabled || busy}
+				onclick={toggle}
+			>
+				{open ? 'Close' : busy ? 'Working…' : 'All tools'}
+			</button>
 		</div>
 
 		{#if open}
@@ -98,7 +115,7 @@
 				<input
 					id="continue-search"
 					type="search"
-					placeholder="Search tools"
+					placeholder="Search tools and conversions"
 					autocomplete="off"
 					spellcheck="false"
 					bind:value={query}
@@ -106,18 +123,40 @@
 						if (e.key === 'Escape') toggle();
 					}}
 				/>
+
+				{#if conversions.length > 0}
+					<div class="group">
+						<span class="group-label">Convert</span>
+						<div class="group-tools">
+							{#each conversions as conversion (conversion.slug)}
+								<button class="chip" disabled={busy} onclick={() => go(conversion.path)}>
+									{conversion.label}
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
 				{#each groups as group (group.id)}
 					<div class="group">
 						<span class="group-label">{group.label}</span>
 						<div class="group-tools">
 							{#each group.tools as tool (tool.slug)}
-								<button class="chip" disabled={busy} onclick={() => go(tool)}>{tool.name}</button>
+								<button class="chip" disabled={busy} onclick={() => go(toolPath(tool))}>
+									{tool.name}
+								</button>
 							{/each}
 						</div>
 					</div>
-				{:else}
-					<p class="empty">Nothing matches that. Try a shorter word.</p>
 				{/each}
+
+				{#if groups.length === 0 && conversions.length === 0}
+					<p class="empty">Nothing matches that. Try a shorter word.</p>
+				{/if}
+
+				<button class="hub" disabled={busy} onclick={() => go(hub, false)}>
+					Take it to the full list instead
+				</button>
 			</div>
 		{/if}
 	</div>
@@ -140,10 +179,6 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.4rem;
-	}
-
-	.more {
-		font-variant-numeric: tabular-nums;
 	}
 
 	/*
@@ -208,5 +243,24 @@
 		margin: 0;
 		font-size: 0.875rem;
 		color: var(--muted);
+	}
+
+	.hub {
+		align-self: flex-start;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: var(--ink);
+		font: inherit;
+		font-size: 0.875rem;
+		text-decoration: underline;
+		text-decoration-color: color-mix(in oklch, var(--primary) 45%, transparent);
+		text-underline-offset: 3px;
+		cursor: pointer;
+	}
+
+	.hub:hover,
+	.hub:focus-visible {
+		text-decoration-color: var(--primary);
 	}
 </style>

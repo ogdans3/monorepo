@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { acceptsFile, destinationsFor, groupDestinations, toolAccept, toolTakes } from './handoff';
+import {
+	acceptsFile,
+	conversionsFor,
+	destinationsFor,
+	formatOf,
+	groupDestinations,
+	hubFor,
+	toolAccept,
+	toolTakes
+} from './handoff';
 import { TOOLS, toolBySlug } from './registry';
 
 const png = { name: 'holiday-cropped.png', type: 'image/png' };
@@ -85,6 +94,35 @@ describe('destinationsFor', () => {
 			const reachable = destinationsFor(png, tool.slug);
 			expect(reachable.length, tool.slug).toBe(images.length - 1);
 		}
+	});
+});
+
+describe('conversionsFor', () => {
+	it('offers the conversions out of the format the result already is', () => {
+		const labels = conversionsFor(png).map((c) => c.label);
+		expect(labels).toContain('to JPG');
+		expect(labels).toContain('to WebP');
+		// Every pair page reads anything, so a page for converting *to* PNG is
+		// the same page again rather than a next step.
+		expect(labels).not.toContain('to PNG');
+		expect(conversionsFor(png).every((c) => c.slug.startsWith('png-to-'))).toBe(true);
+	});
+
+	it('reads the format off the name, and off the type when it has to', () => {
+		expect(formatOf({ name: 'holiday.JPG', type: '' })?.id).toBe('jpg');
+		expect(formatOf({ name: 'no-extension', type: 'image/webp' })?.id).toBe('webp');
+		expect(formatOf({ name: 'scan.pdf', type: 'application/pdf' })).toBeUndefined();
+	});
+
+	it('offers nothing for a file it cannot place', () => {
+		expect(conversionsFor(pdf)).toEqual([]);
+	});
+});
+
+describe('hubFor', () => {
+	it('sends an image to the image tools and a document to the PDF ones', () => {
+		expect(hubFor(png)).toBe('/tools');
+		expect(hubFor(pdf)).toBe('/pdf');
 	});
 });
 

@@ -1,4 +1,4 @@
-import { acceptAttribute } from '$lib/engine';
+import { acceptAttribute, allPairs, resolveFormat, type Format } from '$lib/engine';
 import { PDF_CATEGORY, TOOLS, toolPath, type ImageTool } from './registry';
 
 /**
@@ -86,6 +86,52 @@ export function destinationsFor(
 		.map((slug) => usable.find((tool) => tool.slug === slug))
 		.filter((tool): tool is ImageTool => Boolean(tool));
 	return [...preferred, ...usable.filter((tool) => !preferred.includes(tool))];
+}
+
+export interface Conversion {
+	slug: string;
+	/** e.g. "to JPG", since the source is the file you are already holding. */
+	label: string;
+	path: string;
+}
+
+/**
+ * The format a result already is, worked out from its name and type. The engine
+ * sniffs bytes, which is the honest way in, but this file is deciding where a
+ * link should point and the extension is enough for that.
+ */
+export function formatOf(file: { name: string; type: string }): Format | undefined {
+	const ext = file.name.slice(file.name.lastIndexOf('.') + 1);
+	return resolveFormat(ext) ?? [...file.type.matchAll(/image\/([a-z0-9+]+)/g)]
+		.map((m) => resolveFormat(m[1]))
+		.find(Boolean);
+}
+
+/**
+ * Conversions worth offering for a result: the ones out of the format it is
+ * already in. Every pair page can read anything, so listing all sixty-three
+ * would be listing the same page sixty-three times over. From here, "to WebP"
+ * is a real next step and "HEIC to JPG" is not, because this is not a HEIC.
+ */
+export function conversionsFor(file: { name: string; type: string }): Conversion[] {
+	const source = formatOf(file);
+	if (!source) return [];
+	return allPairs()
+		.filter((pair) => pair.source.id === source.id)
+		.map((pair) => ({
+			slug: pair.slug,
+			label: `to ${pair.target.name}`,
+			path: `/convert/${pair.slug}`
+		}));
+}
+
+/**
+ * The hub to send somebody to when they want the whole list. It already exists,
+ * with search, categories and a description of every tool, which is why the
+ * picker does not try to be a second one.
+ */
+export function hubFor(file: { name: string; type: string }): string {
+	return acceptsFile(file, 'application/pdf,.pdf') ? '/pdf' : '/tools';
 }
 
 /** Groups a destination list for a picker: PDF tools live in their own section. */

@@ -112,15 +112,24 @@ the editors in `src/lib/ui/tools/` are the only DOM-bound parts.
 Convert to JPG, blur a face, then crop, without a download and a re-upload
 between each step. Every tool's export bar and every converted file carry a
 **Continue in** row: the two or three steps that obviously follow this one as
-buttons you can hit without opening anything, and every other tool behind one
-more click with a search box. A dropdown of thirty-six tools is a filing
-cabinet, and picking the next step is not filing.
+buttons you can hit without opening anything, then **All tools**, which opens
+a searchable panel of every tool and every conversion out of the format the
+result is already in. A dropdown of thirty-six tools is a filing cabinet, and
+picking the next step is not filing.
 
-The image then follows you until you say otherwise. Any tool you open loads
-what you are carrying, once, and says at the top of the page where it came
-from. Press **Start over** and it is let go, because pressing Start over only
-to be handed the same image again would be a tool arguing with you. Reloading
-forgets it too, since the only copy was in the tab.
+The image then follows you until you say otherwise, and what follows you is
+what is on screen rather than what was handed over last. Leave a tool by any
+route at all, a link, the breadcrumb, the panel's way out to the full list, and
+the result is rendered on the way past. Without that, cropping an image and
+then walking to the next tool quietly loses the crop, which is the sort of bug
+that makes a feature worse than not having it. The navigation is stopped, the
+result is made, and it carries on where it was going, so the cost is the
+moment it takes to render.
+
+Any tool you open loads what you are carrying, once, and says at the top of the
+page where it came from. Press **Start over** and it is let go, because
+pressing Start over only to be handed the same image again would be a tool
+arguing with you. Reloading forgets it too, since the only copy was in the tab.
 
 The mechanism is deliberately the smallest one that could work, because of what
 this site promises. Files never leave the device, so there is no server to park
@@ -144,9 +153,10 @@ each tool. The rest have it added by hand next to their own download button.
 - A file carried in keeps its format, so a chain that starts with a conversion
   to JPG still saves a JPG at the end. Dropping a file of your own clears that.
 
-What it does not do is capture work you did not ask it to carry. Crop an image
-and then click a link without pressing **Continue in**, and what follows you is
-still the file you arrived with, because the crop was never handed over.
+The two places it does not reach: the Back button, because cancelling a Back
+and re-issuing it pushes a new history entry rather than going back, and
+pressing Back is not somebody saying "bring this with me"; and the tools that
+produce a zip rather than one image, which have nothing single to carry.
 
 ## Caching
 

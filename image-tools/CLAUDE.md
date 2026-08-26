@@ -98,6 +98,13 @@ decisions. This file is the short version of what matters when editing.
   `FileRow` and the few editors that download on their own. A new tool that
   uses both gets chaining for free. One that rolls its own dropzone or download
   button does not, and should say why.
+- **What follows you is what is on screen, and `ExportBar` is what makes that
+  true.** It stops an internal navigation, renders the current result, then
+  continues to where it was going. Rendering cannot happen in advance (that
+  means encoding a full-size image after every edit) and cannot happen during
+  navigation (that is synchronous), so cancel-render-resume is the only shape
+  left. Only for `link` and `goto`: cancelling a `popstate` and re-issuing it
+  pushes a new history entry instead of going back.
 - **Opening the carried image happens once per page, and Start over lets it
   go.** `carry.shouldOpen` is what enforces it: a dropzone that comes back
   after the file was opened there means Start over was pressed, and handing the
