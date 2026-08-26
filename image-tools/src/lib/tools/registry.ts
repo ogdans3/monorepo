@@ -74,6 +74,13 @@ export interface ImageTool {
 	faq: { q: string; a: string }[];
 	/** Output name suffix, e.g. "-cropped". */
 	suffix: string;
+	/**
+	 * What the tool reads. Images unless stated, which is why only the PDF tools
+	 * that take a document carry it: "pdf" in a slug is the input on
+	 * `pdf-to-jpg` and the output on `jpg-to-pdf`. Used to work out where a
+	 * finished result can go next, and what each dropzone will take.
+	 */
+	takes?: 'image' | 'pdf';
 }
 
 export const TOOLS: ImageTool[] = [
@@ -774,6 +781,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'pdf-to-jpg',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'PDF to JPG',
 		h1: 'Convert a PDF to images',
 		title: 'PDF to JPG Converter - Free, Private, No Upload',
@@ -1216,6 +1224,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'merge-pdf',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'Merge PDF',
 		h1: 'Merge PDF files',
 		title: 'Merge PDF Files - Free Online, No Upload',
@@ -1250,6 +1259,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'split-pdf',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'Split PDF',
 		h1: 'Split a PDF',
 		title: 'Split PDF Online - Free, Private, No Upload',
@@ -1284,6 +1294,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'extract-pdf-pages',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'Extract pages',
 		h1: 'Extract pages from a PDF',
 		title: 'Extract PDF Pages - Free Online, No Upload',
@@ -1318,6 +1329,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'delete-pdf-pages',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'Delete pages',
 		h1: 'Delete pages from a PDF',
 		title: 'Delete Pages from a PDF - Free Online, No Upload',
@@ -1352,6 +1364,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'organise-pdf',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'Reorder pages',
 		h1: 'Reorder PDF pages',
 		title: 'Reorder PDF Pages - Free Online, No Upload',
@@ -1386,6 +1399,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'rotate-pdf',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'Rotate PDF',
 		h1: 'Rotate PDF pages',
 		title: 'Rotate PDF Pages - Free Online, No Upload',
@@ -1420,6 +1434,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'watermark-pdf',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'Watermark PDF',
 		h1: 'Add a watermark to a PDF',
 		title: 'Watermark a PDF - Free Online, No Upload',
@@ -1454,6 +1469,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'pdf-page-numbers',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'Page numbers',
 		h1: 'Add page numbers to a PDF',
 		title: 'Add Page Numbers to a PDF - Free Online, No Upload',
@@ -1590,6 +1606,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'pdf-to-png',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'PDF to PNG',
 		h1: 'Convert a PDF to PNG images',
 		title: 'PDF to PNG Converter - Free, Private, No Upload',
@@ -1624,6 +1641,7 @@ export const TOOLS: ImageTool[] = [
 	{
 		slug: 'pdf-to-text',
 		category: 'pdf',
+		takes: 'pdf',
 		name: 'PDF to text',
 		h1: 'Extract text from a PDF',
 		title: 'PDF to Text - Copy Text from a PDF, Free, No Upload',

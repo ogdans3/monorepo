@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import {
 		FORMATS,
 		encodeRaw,
@@ -7,6 +8,9 @@
 		type FormatId,
 		type RawImage
 	} from '$lib/engine';
+	import { toolBySlug } from '$lib/tools/registry';
+	import { carry } from '../carry.svelte';
+	import ContinueIn from '../ContinueIn.svelte';
 	import { downloadBlob } from '../download';
 	import BackgroundPicker from '../BackgroundPicker.svelte';
 
@@ -25,9 +29,21 @@
 		defaultFormat?: FormatId;
 	} = $props();
 
+	/**
+	 * A file carried in from another tool keeps its format, so converting to JPG
+	 * and then cropping saves a JPG rather than quietly going back to PNG. Only
+	 * as a starting value, and only if this tool offers that format at all.
+	 */
+	function startingFormat(): FormatId {
+		const carriedId = (Object.keys(FORMATS) as FormatId[]).find(
+			(id) => FORMATS[id].mime === carry.openedType
+		);
+		return carriedId && formats.includes(carriedId) ? carriedId : defaultFormat;
+	}
+
 	// the prop is only the starting value, the user picks from there
 	// svelte-ignore state_referenced_locally
-	let formatId = $state(defaultFormat);
+	let formatId = $state(startingFormat());
 	let quality = $state(90);
 	let background = $state('#ffffff');
 	let busy = $state(false);
@@ -35,12 +51,20 @@
 	const format = $derived(FORMATS[formatId]);
 	const outName = $derived(editedFileName(baseName, suffix, format.extensions[0]));
 
+	/** Which tool this is, taken from the URL so no editor has to say. */
+	const here = $derived(toolBySlug(page.url.pathname.split('/').filter(Boolean).pop() ?? ''));
+
+	/** The finished result, encoded exactly as the Download button would. */
+	async function result(): Promise<File> {
+		const raw = await render();
+		const blob = await encodeRaw(raw, format, { quality, background });
+		return new File([blob], outName, { type: format.mime });
+	}
+
 	async function download() {
 		busy = true;
 		try {
-			const raw = await render();
-			const blob = await encodeRaw(raw, format, { quality, background });
-			downloadBlob(blob, outName);
+			downloadBlob(await result(), outName);
 		} finally {
 			busy = false;
 		}
@@ -62,6 +86,14 @@
 			{/each}
 		</div>
 		<span class="export-name mono" title={outName}>{outName}</span>
+		<ContinueIn
+			produce={result}
+			from={here?.name ?? 'the last step'}
+			name={outName}
+			type={format.mime}
+			exclude={here?.slug}
+			disabled={busy}
+		/>
 		<button class="btn" onclick={download} disabled={busy}>
 			{busy ? 'Rendering…' : 'Download'}
 		</button>

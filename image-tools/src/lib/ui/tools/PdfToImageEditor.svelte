@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { FORMATS, editedFileName, encodeRaw, zipBlobs, type FormatId } from '$lib/engine';
 	import { untrack } from 'svelte';
+	import ContinueIn from '../ContinueIn.svelte';
 	import { downloadBlob } from '../download';
 	import Dropzone from '../Dropzone.svelte';
 
@@ -176,6 +177,17 @@
 						{#if page.url}<img src={page.url} alt="Page {page.n}" />{/if}
 						<div class="page-foot">
 							<span class="mono dim">{page.n} · {page.w} × {page.h}</span>
+							<ContinueIn
+								produce={async () =>
+									new File(
+										[await pageBlob(page)],
+										editedFileName(baseName, `-page-${page.n}`, format.extensions[0]),
+										{ type: format.mime }
+									)}
+								from="PDF to image"
+								name={editedFileName(baseName, `-page-${page.n}`, format.extensions[0])}
+								type={format.mime}
+							/>
 							<button class="btn-ghost" onclick={() => downloadPage(page)}>Download</button>
 						</div>
 					</li>

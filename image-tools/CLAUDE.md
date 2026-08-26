@@ -82,6 +82,22 @@ decisions. This file is the short version of what matters when editing.
 - **`lastmod` comes from `CONTENT_UPDATED` in `site.ts`**, a hand-set date.
   Bump it when the words change, not when the build runs, or the signal
   stops being worth anything.
+- **The carried file lives in memory and nowhere else.** Continuing from one
+  tool into the next holds the result in a module-level `$state`
+  (`src/lib/ui/carry.svelte.ts`). Do not "improve" this into sessionStorage or
+  IndexedDB. Writing a visitor's photograph into device storage is a new
+  processing activity, it breaks what the privacy page says in plain words, and
+  the ePrivacy basis for running without a banner is that nothing is stored.
+  The slot holds one file, not a history, because five intermediate PNGs is a
+  hundred megabytes. `src/lib/tools/handoff.ts` holds the pure part and has
+  tests; `takes: 'pdf'` in the registry is what stops a PNG being offered to
+  `merge-pdf`.
+- **The chain reaches every tool through two shared components.** `Dropzone`
+  makes the offer to continue, so all 30 editors and every conversion page got
+  it without being touched, and `ContinueIn` is the picker used by `ExportBar`,
+  `FileRow` and the few editors that download on their own. A new tool that
+  uses both gets chaining for free. One that rolls its own dropzone or download
+  button does not, and should say why.
 - **Every response states its cache policy, and `serve.js` is why.**
   adapter-node sets `cache-control` on `/_app/immutable/` and nothing else,
   has no option for it, and serves prerendered pages and `static/` off disk

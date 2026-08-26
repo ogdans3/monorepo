@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { FORMATS, editedFileName, encodeRaw, formatBytes, type FormatId, type RawImage } from '$lib/engine';
 	import { readImageFile, rawToCanvas, steppedScale } from './load';
+	import ContinueIn from '../ContinueIn.svelte';
 	import { downloadBlob } from '../download';
 	import Dropzone from '../Dropzone.svelte';
 
@@ -137,10 +138,17 @@
 		debounce = setTimeout(() => void run(), 250);
 	}
 
+	const outName = $derived(
+		editedFileName(baseName, '-compressed', FORMATS[formatId].extensions[0])
+	);
+
 	function download() {
 		if (!result) return;
-		downloadBlob(result.blob, editedFileName(baseName, '-compressed', FORMATS[formatId].extensions[0]));
+		downloadBlob(result.blob, outName);
 	}
+
+	/** The compressed file itself, for carrying on into another tool. */
+	const compressed = () => new File([result!.blob], outName, { type: FORMATS[formatId].mime });
 
 	function startOver() {
 		runId++;
@@ -208,6 +216,13 @@
 					<span class="mono strong">{formatBytes(result.blob.size)}</span>
 					<span class="mono dim">· quality {result.quality} · {result.width} × {result.height} px</span>
 				</span>
+				<ContinueIn
+					produce={compressed}
+					from="Compress"
+					name={outName}
+					type={FORMATS[formatId].mime}
+					exclude="compress-image"
+				/>
 				<button class="btn" onclick={download}>Download</button>
 			{:else if failure}
 				<span class="result-text error" role="alert">{failure}</span>

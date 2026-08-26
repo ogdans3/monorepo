@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { FORMATS, convertFile, formatBytes, outputFileName, sniffFormat, zipBlobs } from '$lib/engine';
+	import ContinueIn from '../ContinueIn.svelte';
 	import { downloadBlob } from '../download';
 	import Dropzone from '../Dropzone.svelte';
 
@@ -116,6 +117,12 @@
 						{/if}
 					</span>
 				</div>
+				<ContinueIn
+					produce={() => new File([row.blob], row.outName, { type: row.blob.type })}
+					from="Rename"
+					name={row.outName}
+					type={row.blob.type}
+				/>
 				<button class="btn" onclick={() => downloadBlob(row.blob, row.outName)}>Download</button>
 			</li>
 		{/each}

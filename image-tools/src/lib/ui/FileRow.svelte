@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatBytes } from '$lib/engine';
+	import ContinueIn from './ContinueIn.svelte';
 	import type { Job } from './converter.svelte';
 
 	let {
@@ -11,6 +12,14 @@
 		onremove: () => void;
 		onretry: () => void;
 	} = $props();
+
+	/**
+	 * The converted file, ready to carry into a tool. "Convert to JPG, then blur
+	 * a face" is then two steps on one image rather than a download and a fresh
+	 * upload.
+	 */
+	const carried = () =>
+		new File([job.result!.blob], job.result!.name, { type: job.result!.blob.type });
 
 	const savings = $derived(
 		job.result ? Math.round((1 - job.result.blob.size / job.file.size) * 100) : 0
@@ -43,6 +52,12 @@
 
 	<div class="row-actions">
 		{#if job.status === 'done' && job.url && job.result}
+			<ContinueIn
+				produce={carried}
+				from="the converter"
+				name={job.result.name}
+				type={job.result.blob.type}
+			/>
 			<a class="btn" href={job.url} download={job.result.name}>Download</a>
 		{:else if job.status === 'error'}
 			<button class="btn-ghost" onclick={onretry}>Retry</button>

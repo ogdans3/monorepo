@@ -59,6 +59,13 @@
 		travels back.
 	</p>
 	<p>
+		Carrying a result from one tool into the next does not change that. The file waits in the
+		memory of the tab you are looking at, which is the same place it was already being worked
+		on. It is not written to your disk, not put in storage the browser keeps, and not sent
+		anywhere. Close the tab or reload the page and it is gone, which is why the offer to
+		continue disappears too.
+	</p>
+	<p>
 		This is not a promise we have to work to keep. It is how the site is built, and you can
 		confirm it yourself in your browser's network tab: convert a file and watch that no request
 		leaves carrying it.

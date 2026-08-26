@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { acceptAttribute } from '$lib/engine';
+	import { acceptsFile } from '$lib/tools/handoff';
+	import { carry } from './carry.svelte';
 
 	let {
 		headline,
@@ -29,6 +32,43 @@
 	let dragDepth = $state(0);
 	const dragging = $derived(dragDepth > 0);
 
+	/**
+	 * A result carried out of another tool, if this one can read it. Every tool
+	 * and every conversion page takes its files through this component, so
+	 * offering it here is what makes the chain work in any order without each
+	 * tool knowing anything about it.
+	 */
+	let used = $state(false);
+	const waiting = $derived(
+		carry.current && !used && acceptsFile(carry.current.file, accept) ? carry.current : null
+	);
+
+	function useCarried() {
+		const held = carry.current;
+		if (!held) return;
+		used = true;
+		carry.markOpened(held.file);
+		onfiles([held.file]);
+	}
+
+	/** A file of their own replaces whatever was being carried on from before. */
+	function fresh(files: File[]) {
+		carry.markOpened(null);
+		onfiles(files);
+	}
+
+	// A destination the visitor chose opens straight away. Anywhere else asks
+	// first, because finding an image already loaded is only welcome if you
+	// asked for it.
+	$effect(() => {
+		const held = carry.current;
+		if (!held?.to || used) return;
+		if (held.to !== page.url.pathname) return;
+		if (!acceptsFile(held.file, accept)) return;
+		carry.arrived();
+		useCarried();
+	});
+
 	function draggedFiles(e: DragEvent): boolean {
 		return Array.from(e.dataTransfer?.types ?? []).includes('Files');
 	}
@@ -56,19 +96,19 @@
 		e.preventDefault();
 		dragDepth = 0;
 		const files = Array.from(e.dataTransfer?.files ?? []);
-		if (files.length) onfiles(files);
+		if (files.length) fresh(files);
 	}
 
 	function windowPaste(e: ClipboardEvent) {
 		const files = Array.from(e.clipboardData?.files ?? []);
-		if (files.length) onfiles(files);
+		if (files.length) fresh(files);
 	}
 
 	function pick() {
 		if (!input?.files) return;
 		const files = Array.from(input.files);
 		input.value = '';
-		if (files.length) onfiles(files);
+		if (files.length) fresh(files);
 	}
 </script>
 
@@ -85,6 +125,16 @@
 	<span class="zone-headline">{dragging ? 'Drop to convert' : headline}</span>
 	<span class="zone-hint">or click to browse. Paste works too</span>
 </label>
+
+{#if waiting}
+	<p class="carried">
+		<button class="btn-ghost" onclick={useCarried}>
+			Continue with {waiting.file.name}
+		</button>
+		<span class="carried-note">from {waiting.from}, still open in this tab</span>
+		<button class="carried-drop" onclick={() => carry.forget()} title="Forget it">Forget</button>
+	</p>
+{/if}
 
 <style>
 	.zone {
@@ -139,5 +189,30 @@
 	.zone-hint {
 		font-size: 0.875rem;
 		color: var(--muted);
+	}
+
+	.carried {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0.6rem 0 0;
+		font-size: 0.875rem;
+	}
+
+	.carried-note {
+		flex: 1;
+		min-width: 10rem;
+		color: var(--muted);
+	}
+
+	.carried-drop {
+		padding: 0.2rem 0.4rem;
+		border: 0;
+		background: none;
+		color: var(--muted);
+		font-size: 0.8125rem;
+		text-decoration: underline;
+		cursor: pointer;
 	}
 </style>
