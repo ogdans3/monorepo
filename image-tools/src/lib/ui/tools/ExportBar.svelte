@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
 		FORMATS,
@@ -60,6 +61,49 @@
 		const blob = await encodeRaw(raw, format, { quality, background });
 		return new File([blob], outName, { type: format.mime });
 	}
+
+	/** Where a picture is worth having with you when you arrive. */
+	const CARRIES = ['/tools', '/pdf', '/convert'];
+
+	let capturing = false;
+
+	/**
+	 * Whatever is on screen follows you, not whatever was handed over last.
+	 *
+	 * Without this, cropping an image and then reaching the next tool by any
+	 * route other than the buttons below hands on the file you arrived with, so
+	 * the crop quietly vanishes. The result cannot be rendered in advance, since
+	 * that would mean encoding the full-size image after every edit, and it
+	 * cannot be rendered during navigation either, because that is synchronous.
+	 * So the navigation is stopped, the result is made, and then it carries on
+	 * to exactly where it was going.
+	 *
+	 * Only for links and code-driven navigation. Cancelling a Back button and
+	 * re-issuing it would push a new entry onto the history instead of going
+	 * back, and pressing Back is not somebody saying "bring this with me".
+	 */
+	beforeNavigate((nav) => {
+		if (capturing || carry.handing || busy) return;
+		if (nav.type !== 'link' && nav.type !== 'goto') return;
+		const to = nav.to?.url;
+		if (!to || to.origin !== location.origin) return;
+		if (!CARRIES.some((path) => to.pathname === path || to.pathname.startsWith(`${path}/`))) return;
+
+		nav.cancel();
+		capturing = true;
+		busy = true;
+		void (async () => {
+			try {
+				carry.hand(await result(), here?.name ?? 'the last step');
+			} catch {
+				// Nothing renderable, so travel with whatever was already held.
+			} finally {
+				busy = false;
+				await goto(to);
+				capturing = false;
+			}
+		})();
+	});
 
 	async function download() {
 		busy = true;

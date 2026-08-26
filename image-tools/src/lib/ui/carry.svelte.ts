@@ -50,6 +50,14 @@ export const carry = {
 	},
 
 	/**
+	 * True while a picker is deliberately handing a result over. The capture that
+	 * runs when you navigate away checks it, so a result is never rendered twice
+	 * for one journey.
+	 */
+	handing: false,
+
+
+	/**
 	 * What this page is working on, when it came from another tool rather than
 	 * from a drop. Null the moment somebody drops a file of their own.
 	 */
