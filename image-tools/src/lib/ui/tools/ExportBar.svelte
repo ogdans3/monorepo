@@ -86,18 +86,19 @@
 			{/each}
 		</div>
 		<span class="export-name mono" title={outName}>{outName}</span>
-		<ContinueIn
-			produce={result}
-			from={here?.name ?? 'the last step'}
-			name={outName}
-			type={format.mime}
-			exclude={here?.slug}
-			disabled={busy}
-		/>
 		<button class="btn" onclick={download} disabled={busy}>
 			{busy ? 'Rendering…' : 'Download'}
 		</button>
 	</div>
+
+	<ContinueIn
+		produce={result}
+		from={here?.name ?? 'the last step'}
+		name={outName}
+		type={format.mime}
+		exclude={here?.slug}
+		disabled={busy}
+	/>
 	{#if format.lossy}
 		<div class="quality">
 			<label for="export-quality">Quality</label>

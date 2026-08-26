@@ -48,16 +48,18 @@
 		{:else}
 			<span class="row-meta">{formatBytes(job.file.size)}</span>
 		{/if}
-	</div>
-
-	<div class="row-actions">
-		{#if job.status === 'done' && job.url && job.result}
+		{#if job.status === 'done' && job.result}
 			<ContinueIn
 				produce={carried}
 				from="the converter"
 				name={job.result.name}
 				type={job.result.blob.type}
 			/>
+		{/if}
+	</div>
+
+	<div class="row-actions">
+		{#if job.status === 'done' && job.url && job.result}
 			<a class="btn" href={job.url} download={job.result.name}>Download</a>
 		{:else if job.status === 'error'}
 			<button class="btn-ghost" onclick={onretry}>Retry</button>
