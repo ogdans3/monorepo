@@ -27,7 +27,7 @@ marks, no celebration when a box is placed.
 ## Anti-references
 
 - **Visio and its descendants**: stencils, ribbons, and a shape library nobody
-  reads. The five shapes here cover what a flow chart is made of.
+  reads. Three shapes cover what a flow chart is made of.
 - **Whiteboard products**: infinite canvases full of cursors, comments and
   sticky notes. This is one person drawing one diagram.
 - **Diagram sites that want an account** before letting you export the thing
@@ -37,13 +37,17 @@ marks, no celebration when a box is placed.
 
 1. **The paper is the page.** The canvas fills the window. Everything else is
    one row of controls and a line of help at the bottom.
-2. **Drawing beats configuring.** Place, name, connect. No inspector panel of
-   properties for a box that only needs a word in it.
-3. **It leaves the way it came.** Mermaid in, Mermaid out, plus SVG, PNG and a
+2. **Drawing beats configuring.** The next step is one button on the shape you
+   just made, not a trip to a toolbar and back. No inspector panel of properties
+   for a box that mostly needs words in it.
+3. **The box holds what you have to say.** A step is often a sentence and
+   sometimes a paragraph. A single-line field is what makes people abbreviate
+   their own diagram until it stops saying anything.
+4. **It leaves the way it came.** Mermaid in, Mermaid out, plus SVG, PNG and a
    file. A diagram that cannot get out is a diagram you have to redraw.
-4. **Nothing is uploaded.** The work stays in the tab and in this browser's
+5. **Nothing is uploaded.** The work stays in the tab and in this browser's
    storage. There is no server to send it to.
-5. **Every state drawn.** Empty, placing, dragging, connecting, selected,
+6. **Every state drawn.** Empty, placing, dragging, connecting, selected,
    imported with lines skipped. None of them an afterthought.
 
 ## Accessibility & Inclusion

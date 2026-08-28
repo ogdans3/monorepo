@@ -28,7 +28,7 @@
 	const selectedNode = $derived(doc.nodes.find((n) => n.id === selected) ?? null);
 	const selectedEdge = $derived(doc.edges.find((e) => e.id === selected) ?? null);
 
-	const SHAPES: NodeShape[] = ['terminator', 'process', 'decision', 'io', 'note'];
+	const SHAPES: NodeShape[] = ['process', 'decision', 'terminator'];
 
 	$effect(() => {
 		editor.restore();
@@ -184,21 +184,13 @@
 	<header>
 		<h1>Flow chart</h1>
 
-		<div class="group" role="group" aria-label="Add a shape">
-			{#each SHAPES as shape (shape)}
-				<button
-					class="chip"
-					class:active={tool === shape}
-					aria-pressed={tool === shape}
-					title="{SHAPE_LABELS[shape]} — then click the paper"
-					onclick={() => (tool = tool === shape ? null : shape)}
-				>
-					{SHAPE_LABELS[shape]}
-				</button>
-			{/each}
-		</div>
-
 		<div class="group">
+			<button
+				class="btn primary"
+				title="Or double click the paper"
+				onclick={() => (tool = tool === 'process' ? null : 'process')}
+				aria-pressed={tool !== null}>Add a step</button
+			>
 			<button class="btn" onclick={() => editor.undo()} disabled={!editor.canUndo}>Undo</button>
 			<button class="btn" onclick={() => editor.redo()} disabled={!editor.canRedo}>Redo</button>
 			<button
@@ -213,13 +205,13 @@
 		</div>
 
 		<div class="group right">
-			<button class="btn" onclick={openText}>Text</button>
 			<label class="btn" title="Open a .json or .mmd file">
 				Open<input type="file" accept=".json,.mmd,.txt,application/json,text/plain" onchange={onFile} />
 			</label>
+			<button class="btn" onclick={openText}>As text</button>
 			<button class="btn" onclick={exportSvg}>SVG</button>
 			<button class="btn" onclick={exportPng}>PNG</button>
-			<button class="btn primary" onclick={exportJson}>Save</button>
+			<button class="btn" onclick={exportJson}>Save</button>
 		</div>
 	</header>
 
@@ -230,15 +222,15 @@
 			{#if status}
 				{status}
 			{:else if tool}
-				Click the paper to place a {SHAPE_LABELS[tool].toLowerCase()}.
+				Click anywhere on the paper to put it there.
 			{:else if selectedNode}
-				{selectedNode.text || 'Unnamed'} — double click to rename, shift-drag to connect it,
-				Delete to remove.
+				Press a <span class="key">+</span> for the next step, or drag one onto another shape to
+				join them. Double click to write in it, Delete to remove it.
 			{:else if selectedEdge}
-				Arrow selected. Double click it to label the branch, Delete to remove.
+				Arrow selected. Double click it to label the branch, Delete to remove it.
 			{:else}
-				Pick a shape and click the paper. Shift-drag from one shape to another to connect them.
-				Drag the paper to move around, scroll to zoom.
+				Double click the paper to add a step. Select a shape and press one of its
+				<span class="key">+</span> buttons to carry on from there.
 			{/if}
 		</p>
 
@@ -261,23 +253,38 @@
 	</main>
 
 	{#if editing}
-		<div class="sheet" role="dialog" aria-label="Rename">
+		<div class="sheet" role="dialog" aria-label="Write in this shape">
 			<label for="node-text">{editing.isEdge ? 'Arrow label' : 'What happens here'}</label>
-			<input
+			<!--
+				A box rather than a line. A step is often a sentence, sometimes a
+				short paragraph, and a single-line field is what makes people
+				abbreviate their own diagram until it stops saying anything.
+			-->
+			<textarea
 				id="node-text"
+				rows={editing.isEdge ? 1 : 4}
 				value={editing.text}
-				{@attach (input: HTMLInputElement) => {
-					// Focused on open, because the sheet exists to be typed into.
-					input.focus();
-					input.select();
+				{@attach (box: HTMLTextAreaElement) => {
+					box.focus();
+					box.select();
 				}}
 				onkeydown={(e) => {
-					if (e.key === 'Enter') applyEdit(e.currentTarget.value);
+					// Enter makes a new line, since that is what a box is for. The
+					// two ways out are the ones a text box always has.
 					if (e.key === 'Escape') editing = null;
+					if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) applyEdit(e.currentTarget.value);
+					if (e.key === 'Enter' && editing?.isEdge) {
+						e.preventDefault();
+						applyEdit(e.currentTarget.value);
+					}
 				}}
 				onblur={(e) => applyEdit(e.currentTarget.value)}
-			/>
-			<span class="sheet-hint">Enter to keep it, Escape to leave it</span>
+			></textarea>
+			<span class="sheet-hint">
+				{editing.isEdge
+					? 'Enter to keep it, Escape to leave it'
+					: 'Enter makes a new line. Click away or press Cmd/Ctrl+Enter to keep it, Escape to leave it'}
+			</span>
 		</div>
 	{/if}
 
@@ -388,6 +395,17 @@
 		color: var(--danger);
 	}
 
+	.key {
+		display: inline-block;
+		min-width: 1.1em;
+		padding: 0 0.25em;
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		background: var(--surface);
+		font: 600 0.75rem/1.4 var(--font-mono);
+		text-align: center;
+	}
+
 	.sheet {
 		position: absolute;
 		left: 50%;
@@ -409,12 +427,14 @@
 		color: var(--muted);
 	}
 
-	.sheet input {
-		padding: 0.45rem 0.6rem;
+	.sheet textarea {
+		padding: 0.5rem 0.6rem;
 		border: 1px solid var(--line);
 		border-radius: var(--r-s);
 		font: inherit;
+		line-height: 1.45;
 		color: var(--ink);
+		resize: vertical;
 	}
 
 	.sheet-hint {

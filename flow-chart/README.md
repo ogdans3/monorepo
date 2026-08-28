@@ -53,16 +53,31 @@ and runs perfectly by hand, and simply never appears in the dashboard.
 
 | | |
 |---|---|
-| Add a shape | Pick one in the toolbar, then click the paper |
-| Rename | Double click it, or select it and press Enter |
-| Connect | Shift-drag from one shape onto another |
+| Add the first shape | Double click the paper |
+| Add the next one | Select a shape and press one of its **+** buttons. It arrives joined on |
+| Add one somewhere else | Drag a **+** onto empty paper |
+| Connect two | Drag a **+** onto another shape |
+| Write in it | Double click it, or select it and press Enter. It is a box, not a line: paragraphs are fine, and Enter makes a new line |
+| Change what it is | Select it and pick Step, Decision or Start/end |
 | Move | Drag it. Positions land on an 8px grid |
 | Delete | Select and press Delete |
 | Move around | Drag the paper, scroll to zoom, **Fit** to see everything |
 | Undo | Ctrl or Cmd + Z, shift to redo |
 
+Almost every shape in a flow chart follows another one, so that is the one
+action with a button on it. The **+** buds appear on whatever is selected, and
+a press puts the next step in that direction and joins it up.
+
 **Tidy up** arranges the shapes in rows by following the arrows, which is also
 what makes an imported diagram usable, since Mermaid carries no positions.
+
+## Three shapes
+
+Something happens, something is decided, and the thing starts or stops. Every
+other shape in the old stencils is a distinction the reader has to be taught and
+a menu the writer has to think about, in exchange for nothing the words in the
+box do not already say. A file drawn when there were five still opens: the two
+that went away become the nearest thing that stayed.
 
 ## The four ideas it hangs on
 
@@ -89,9 +104,11 @@ retyping one is why people give up on drawing them.
 
 ## Mermaid
 
-A deliberate subset: `flowchart TD`, the five shapes this editor draws, and
+A deliberate subset: `flowchart TD`, the three shapes this editor draws, and
 arrows labelled either way round (`A -- yes --> B` and `A -->|yes| B`). Both
-spellings get written by hand, so both are read.
+spellings get written by hand, so both are read. Mermaid's other shapes still
+open, as steps, because a shape this editor cannot draw is no reason to refuse
+somebody's diagram.
 
 `subgraph`, `classDef`, `style` and the rest are **listed as skipped** rather
 than guessed at. A diagram that silently loses a branch is worse than one that

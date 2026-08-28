@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	addConnected,
 	addNode,
 	bounds,
 	connect,
@@ -7,6 +8,7 @@ import {
 	fitSize,
 	parseDoc,
 	remove,
+	placeNear,
 	setShape,
 	setText,
 	wrapText
@@ -70,7 +72,7 @@ describe('editing a document', () => {
 
 describe('text fitting', () => {
 	it('wraps on words, and narrower inside a diamond', () => {
-		const text = 'check whether the order has already been paid for';
+		const text = 'check whether the order has already been paid for in full';
 		expect(wrapText(text, 'process').length).toBeGreaterThan(1);
 		expect(wrapText(text, 'decision').length).toBeGreaterThan(wrapText(text, 'process').length);
 	});
@@ -78,6 +80,63 @@ describe('text fitting', () => {
 	it('keeps one empty line for an empty label, so a box is still a box', () => {
 		expect(wrapText('')).toEqual(['']);
 		expect(fitSize('process', '').h).toBeGreaterThan(0);
+	});
+
+	it('keeps the line breaks somebody typed', () => {
+		expect(wrapText('one\ntwo\nthree')).toEqual(['one', 'two', 'three']);
+		// including a deliberate blank line in the middle of a paragraph
+		expect(wrapText('one\n\ntwo')).toEqual(['one', '', 'two']);
+	});
+
+	it('drops a single trailing blank, which is just an empty last line', () => {
+		expect(wrapText('one\n')).toEqual(['one']);
+	});
+
+	it('grows a long note downwards rather than sideways off the page', () => {
+		const paragraph = 'the customer is told what went wrong and what to do next '.repeat(4);
+		const small = fitSize('process', 'short');
+		const big = fitSize('process', paragraph);
+		// Height follows the lines it takes, whatever that turns out to be.
+		expect(big.h).toBeGreaterThanOrEqual(wrapText(paragraph, 'process').length * 20);
+		expect(big.h).toBeGreaterThan(small.h * 2.5);
+		// Wide enough to read, nowhere near as wide as the text is long.
+		expect(big.w).toBeLessThan(400);
+	});
+
+	it('leaves a word that is longer than the line alone', () => {
+		const lines = wrapText('https://example.com/a/very/long/path/that/will/not/fit');
+		expect(lines).toHaveLength(1);
+	});
+});
+
+describe('adding a node onto another one', () => {
+	it('places it clear of the one it came from, and joins them', () => {
+		const { doc, a } = twoNodes();
+		const added = addConnected(doc, a, 'down')!;
+		const from = doc.nodes.find((n) => n.id === a)!;
+		const made = added.doc.nodes.find((n) => n.id === added.id)!;
+		expect(made.y - from.y).toBeGreaterThan((from.h + made.h) / 2);
+		expect(added.doc.edges.some((e) => e.from === a && e.to === added.id)).toBe(true);
+	});
+
+	it('points the arrow back the way it came when going up or left', () => {
+		const { doc, a } = twoNodes();
+		for (const direction of ['up', 'left'] as const) {
+			const added = addConnected(doc, a, direction)!;
+			expect(added.doc.edges.some((e) => e.from === added.id && e.to === a)).toBe(true);
+		}
+	});
+
+	it('puts each direction where its name says', () => {
+		const node = twoNodes().doc.nodes[0];
+		expect(placeNear(node, 'down', 'process').y).toBeGreaterThan(node.y);
+		expect(placeNear(node, 'up', 'process').y).toBeLessThan(node.y);
+		expect(placeNear(node, 'right', 'process').x).toBeGreaterThan(node.x);
+		expect(placeNear(node, 'left', 'process').x).toBeLessThan(node.x);
+	});
+
+	it('has nothing to add onto a node that is not there', () => {
+		expect(addConnected(twoNodes().doc, 'ghost', 'down')).toBeNull();
 	});
 });
 
@@ -106,6 +165,14 @@ describe('reading a file back', () => {
 		const { doc, a } = twoNodes();
 		const broken = { ...doc, nodes: doc.nodes.filter((n) => n.id !== a) };
 		expect(parseDoc(broken).edges).toHaveLength(0);
+	});
+
+	it('opens a file from when there were more shapes', () => {
+		// Two shapes were retired. A diagram drawn with them still opens, with
+		// those boxes becoming the nearest thing that stayed.
+		const old = { nodes: [{ id: 'a', shape: 'io', text: 'Form', x: 0, y: 0 }], edges: [] };
+		expect(parseDoc(old).nodes[0].shape).toBe('process');
+		expect(parseDoc(old).nodes[0].text).toBe('Form');
 	});
 
 	it('survives a file that is not one of ours', () => {

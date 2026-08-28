@@ -39,10 +39,15 @@ chart is read at a glance and a distinctive font is a distraction inside a box.
 
 ## Shapes
 
-The five that a flow chart is made of, and no more: stadium for start and end,
-rectangle for a step, diamond for a decision, parallelogram for input and
-output, folded corner for a note. Anything else is a picture, not a flow chart.
-Outlines are 2px so they hold up when the PNG is dropped into a slide.
+Three, and no more: a rectangle for a step, a diamond for a decision, a stadium
+for a start or an end. Outlines are 2px so they hold up when the PNG lands in a
+slide. A box grows downwards as text is added and stops widening at what the
+wrap allows, so a paragraph makes a tall box rather than a box the width of the
+page.
+
+The **+** buds on a selected shape are the accent's other job. They are drawn
+last so a neighbouring box can never bury one, and they are the only round
+things on the canvas, which is what tells them apart from the diagram.
 
 ## Motion
 

@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { arrowHead, edgeAnchor, hits, midpoint, pathOf, route, type Point } from '$lib/flow/geometry';
 	import {
+		addConnected,
 		addNode,
 		connect,
 		moveNode,
 		remove,
-		setText,
 		wrapText,
+		type Direction,
 		type FlowDoc,
 		type FlowNode,
 		type NodeShape
@@ -37,6 +38,7 @@
 	let hovered = $state<string | null>(null);
 
 	const nodeById = $derived(new Map(doc.nodes.map((node) => [node.id, node])));
+	const selectedNode = $derived(doc.nodes.find((node) => node.id === selected) ?? null);
 
 	/**
 	 * Every edge, already routed. Derived rather than computed while drawing so
@@ -81,13 +83,8 @@
 
 		if (!node) {
 			if (tool) {
-				const { doc: next, id } = addNode(doc, tool, round(point.x), round(point.y));
-				commit(next);
-				selected = id;
+				place(event, tool, point);
 				tool = null;
-				// On release, not now: the rest of this click ends with focus back
-				// on the canvas, which would blur the name box the moment it opened.
-				track(event, () => {}, () => onedit(id));
 			} else {
 				selected = null;
 				startPan(event);
@@ -98,6 +95,83 @@
 		selected = node.id;
 		if (event.shiftKey || event.metaKey || event.ctrlKey) startLink(event, node);
 		else startDrag(event, node);
+	}
+
+	/** A double click on empty paper is the quickest way to a new step. */
+	function onDoubleClick(event: MouseEvent) {
+		const point = at(event);
+		if (nodeAt(point)) return;
+		place(event as unknown as PointerEvent, 'process', point);
+	}
+
+	function place(event: PointerEvent, shape: NodeShape, point: { x: number; y: number }) {
+		const { doc: next, id } = addNode(doc, shape, round(point.x), round(point.y));
+		commit(next);
+		selected = id;
+		// On release, not now: the rest of this click ends with focus back on the
+		// canvas, which would blur the name box the moment it opened.
+		if (event.pointerId !== undefined) track(event, () => {}, () => onedit(id));
+		else queueMicrotask(() => onedit(id));
+	}
+
+	/**
+	 * The four buds on a selected node.
+	 *
+	 * Clicking one adds the next step already joined on, which is how a flow
+	 * chart gets drawn: one thing after another, not a pile of boxes wired up
+	 * afterwards. Dragging one instead lands it wherever you let go, or joins an
+	 * existing node if you let go on top of it. Shift-drag still works and is
+	 * still not something anybody discovers on their own, which is why these
+	 * exist.
+	 */
+	const BUD_OFFSET = 16;
+
+	function buds(node: FlowNode): { dir: Direction; x: number; y: number }[] {
+		return [
+			{ dir: 'down', x: node.x, y: node.y + node.h / 2 + BUD_OFFSET },
+			{ dir: 'up', x: node.x, y: node.y - node.h / 2 - BUD_OFFSET },
+			{ dir: 'right', x: node.x + node.w / 2 + BUD_OFFSET, y: node.y },
+			{ dir: 'left', x: node.x - node.w / 2 - BUD_OFFSET, y: node.y }
+		];
+	}
+
+	function onBud(event: PointerEvent, node: FlowNode, dir: Direction) {
+		event.stopPropagation();
+		let dragged = false;
+		track(
+			event,
+			(move) => {
+				dragged = true;
+				linking = { from: node.id, to: at(move) };
+				hovered = nodeAt(at(move))?.id ?? null;
+			},
+			(end) => {
+				const wasDragging = dragged;
+				linking = null;
+				hovered = null;
+				if (!wasDragging) {
+					// A click: the next step, in the direction of the bud.
+					const added = addConnected(doc, node.id, dir);
+					if (!added) return;
+					commit(added.doc);
+					selected = added.id;
+					queueMicrotask(() => onedit(added.id));
+					return;
+				}
+				const point = at(end);
+				const target = nodeAt(point);
+				if (target && target.id !== node.id) {
+					commit(connect(doc, node.id, target.id));
+					selected = target.id;
+					return;
+				}
+				// Dropped on empty paper: a new step, there, joined on.
+				const { doc: withNode, id } = addNode(doc, 'process', round(point.x), round(point.y));
+				commit(connect(withNode, node.id, id));
+				selected = id;
+				queueMicrotask(() => onedit(id));
+			}
+		);
 	}
 
 	function startPan(event: PointerEvent) {
@@ -213,13 +287,10 @@
 		return wrapText(node.text || '', node.shape);
 	}
 
+	/** The diamond, as the only shape that is not a rounded rectangle. */
 	function outline(node: FlowNode): string {
 		const { x, y, w, h } = node;
-		const l = x - w / 2;
-		const t = y - h / 2;
-		if (node.shape === 'decision') return `${x},${t} ${x + w / 2},${y} ${x},${t + h} ${l},${y}`;
-		const skew = Math.min(w * 0.18, 26);
-		return `${l + skew},${t} ${l + w},${t} ${l + w - skew},${t + h} ${l},${t + h}`;
+		return `${x},${y - h / 2} ${x + w / 2},${y} ${x},${y + h / 2} ${x - w / 2},${y}`;
 	}
 </script>
 
@@ -230,6 +301,7 @@
 	role="application"
 	aria-label="Flow chart canvas. Click to place a shape, drag to move it, shift-drag from a shape to connect it."
 	onpointerdown={onPointerDown}
+	ondblclick={onDoubleClick}
 	onwheel={onWheel}
 >
 	<defs>
@@ -291,14 +363,8 @@
 				}}
 				role="presentation"
 			>
-				{#if node.shape === 'decision' || node.shape === 'io'}
+				{#if node.shape === 'decision'}
 					<polygon points={outline(node)} />
-				{:else if node.shape === 'note'}
-					<path
-						d="M {node.x - node.w / 2} {node.y - node.h / 2} H {node.x + node.w / 2 - 14} L {node.x +
-							node.w / 2} {node.y - node.h / 2 + 14} V {node.y + node.h / 2} H {node.x -
-							node.w / 2} Z"
-					/>
 				{:else}
 					<rect
 						x={node.x - node.w / 2}
@@ -317,10 +383,26 @@
 					>{line}</text>
 				{/each}
 				{#if !node.text}
-					<text class="node-label hint" x={node.x} y={node.y + 6}>double click to name</text>
+					<text class="node-label hint" x={node.x} y={node.y + 6}>double click to write</text>
 				{/if}
 			</g>
 		{/each}
+		{#if selectedNode}
+			{#each buds(selectedNode) as bud (bud.dir)}
+				<g
+					class="bud"
+					role="button"
+					tabindex="-1"
+					aria-label="Add a step {bud.dir} from here"
+					onpointerdown={(e) => onBud(e, selectedNode, bud.dir)}
+				>
+					<circle cx={bud.x} cy={bud.y} r="11" />
+					<path
+						d="M {bud.x - 5} {bud.y} H {bud.x + 5} M {bud.x} {bud.y - 5} V {bud.y + 5}"
+					/>
+				</g>
+			{/each}
+		{/if}
 	</g>
 </svg>
 
@@ -339,31 +421,21 @@
 	}
 
 	.node rect,
-	.node polygon,
-	.node path {
+	.node polygon {
 		fill: var(--surface);
 		stroke: var(--ink);
 		stroke-width: 2;
 		cursor: move;
 	}
 
-	.node.note rect,
-	.node.note path {
-		fill: oklch(0.98 0.03 95);
-		stroke: var(--muted);
-		stroke-width: 1.5;
-	}
-
 	.node.selected rect,
-	.node.selected polygon,
-	.node.selected path {
+	.node.selected polygon {
 		stroke: var(--accent);
 		stroke-width: 2.5;
 	}
 
 	.node.target rect,
-	.node.target polygon,
-	.node.target path {
+	.node.target polygon {
 		fill: var(--accent-wash);
 		stroke: var(--accent);
 	}
@@ -420,6 +492,30 @@
 		fill: var(--muted);
 		pointer-events: none;
 		user-select: none;
+	}
+
+	/* Drawn after every node, because SVG paints in source order and a bud
+	   underneath the box next door is a button nobody can press. */
+	.bud circle {
+		fill: var(--surface);
+		stroke: var(--accent);
+		stroke-width: 1.5;
+		cursor: crosshair;
+	}
+
+	.bud path {
+		stroke: var(--accent);
+		stroke-width: 1.75;
+		stroke-linecap: round;
+		pointer-events: none;
+	}
+
+	.bud:hover circle {
+		fill: var(--accent);
+	}
+
+	.bud:hover path {
+		stroke: #fff;
 	}
 
 	.linking {

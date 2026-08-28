@@ -51,8 +51,6 @@ describe('shapes', () => {
 			shapeMarkup(addNode(EMPTY, shape, 0, 0, 'x').doc.nodes[0]);
 		expect(at('process')).toContain('<rect');
 		expect(at('decision')).toContain('<polygon');
-		expect(at('io')).toContain('<polygon');
-		expect(at('note')).toContain('<path');
 		// A terminator is a rectangle rounded until it is a stadium.
 		expect(at('terminator')).toMatch(/rx="\d+"/);
 	});

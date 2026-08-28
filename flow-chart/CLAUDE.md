@@ -30,6 +30,10 @@ src/routes      +page.svelte, the toolbar and the sheets
   is full of selection rings, the grid and the half-drawn arrow. That is also
   what keeps the PNG identical to the SVG, since the PNG is that SVG drawn onto
   a canvas.
+- **Three shapes, and the retired ones still load.** `RETIRED` in `model.ts`
+  maps `io` and `note` onto `process` so a file drawn before they went away
+  still opens, and the Mermaid reader maps their syntax the same way. Adding a
+  fourth shape is a product decision, not a tidy-up: the count is the feature.
 - **Text wraps in one place.** `wrapText` in `model.ts` decides the lines, and
   both the canvas and the export use it. Two wrapping rules means a label that
   fits on screen and overflows in the file.

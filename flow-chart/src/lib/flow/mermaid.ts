@@ -17,9 +17,7 @@ import { EMPTY, fitSize, nextId, type FlowDoc, type FlowNode, type NodeShape } f
 const SHAPE_SYNTAX: Record<NodeShape, [string, string]> = {
 	process: ['[', ']'],
 	decision: ['{', '}'],
-	terminator: ['([', '])'],
-	io: ['[/', '/]'],
-	note: ['>', ']']
+	terminator: ['([', '])']
 };
 
 /** Mermaid ids have to be bare words, and they have to stay unique. */
@@ -65,11 +63,16 @@ export interface ParseResult {
 	skipped: string[];
 }
 
+/**
+ * Mermaid has more shapes than this editor draws, and a file using one of them
+ * should still open. The ones with no equivalent here become a step, which is
+ * what they read as anyway once the diagram is in front of somebody.
+ */
 const NODE_PATTERNS: [NodeShape, RegExp][] = [
 	['terminator', /^([A-Za-z0-9_]+)\(\[(.*)\]\)$/],
-	['io', /^([A-Za-z0-9_]+)\[\/(.*)\/\]$/],
+	['process', /^([A-Za-z0-9_]+)\[\/(.*)\/\]$/],
 	['decision', /^([A-Za-z0-9_]+)\{(.*)\}$/],
-	['note', /^([A-Za-z0-9_]+)>(.*)\]$/],
+	['process', /^([A-Za-z0-9_]+)>(.*)\]$/],
 	['process', /^([A-Za-z0-9_]+)\[(.*)\]$/],
 	['terminator', /^([A-Za-z0-9_]+)\((.*)\)$/]
 ];

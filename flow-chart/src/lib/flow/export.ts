@@ -41,12 +41,6 @@ export function shapeMarkup(node: FlowNode): string {
 			return `<polygon points="${x},${top} ${x + w / 2},${y} ${x},${top + h} ${left},${y}" ${common} />`;
 		case 'terminator':
 			return `<rect x="${left}" y="${top}" width="${w}" height="${h}" rx="${h / 2}" ${common} />`;
-		case 'io': {
-			const skew = Math.min(w * 0.18, 26);
-			return `<polygon points="${left + skew},${top} ${left + w},${top} ${left + w - skew},${top + h} ${left},${top + h}" ${common} />`;
-		}
-		case 'note':
-			return `<path d="M ${left} ${top} H ${left + w - 14} L ${left + w} ${top + 14} V ${top + h} H ${left} Z" fill="#fbf7ec" stroke="${LINE}" stroke-width="1.5" />`;
 		default:
 			return `<rect x="${left}" y="${top}" width="${w}" height="${h}" rx="10" ${common} />`;
 	}

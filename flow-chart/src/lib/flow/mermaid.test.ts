@@ -7,15 +7,24 @@ describe('toMermaid', () => {
 		let doc: FlowDoc = EMPTY;
 		const start = addNode(doc, 'terminator', 0, 0, 'Start');
 		const check = addNode(start.doc, 'decision', 0, 0, 'Paid?');
-		const io = addNode(check.doc, 'io', 0, 0, 'Receipt');
-		doc = connect(connect(io.doc, start.id, check.id), check.id, io.id, 'yes');
+		const step = addNode(check.doc, 'process', 0, 0, 'Send a receipt');
+		doc = connect(connect(step.doc, start.id, check.id), check.id, step.id, 'yes');
 
 		const text = toMermaid(doc);
 		expect(text.split('\n')[0]).toBe('flowchart TD');
 		expect(text).toContain('(["Start"])');
 		expect(text).toContain('{"Paid?"}');
-		expect(text).toContain('[/"Receipt"/]');
+		expect(text).toContain('["Send a receipt"]');
 		expect(text).toMatch(/-- "yes" -->/);
+	});
+
+	it('opens a file using a shape this editor does not draw', () => {
+		// Mermaid has more shapes than three. One of them should not stop a
+		// diagram loading, so it becomes the nearest thing that is drawn.
+		const { doc, skipped } = fromMermaid('flowchart TD\n A[/Fill the form/] --> B>Note]');
+		expect(skipped).toEqual([]);
+		expect(doc.nodes.map((n) => n.shape)).toEqual(['process', 'process']);
+		expect(doc.nodes.map((n) => n.text)).toEqual(['Fill the form', 'Note']);
 	});
 
 	it('does not let a label break the syntax it sits in', () => {

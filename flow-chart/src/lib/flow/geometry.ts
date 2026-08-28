@@ -39,19 +39,7 @@ export function edgeAnchor(node: FlowNode, towards: Point): Point {
 		return roundedRectAnchor(node, dx, dy, hh);
 	}
 
-	if (node.shape === 'io') {
-		// A parallelogram leaning right. Its slanted sides mean the horizontal
-		// crossing moves with y, so the box is narrowed by however far up or
-		// down the line leaves.
-		const skew = Math.min(hw * 0.35, 26);
-		const scale = Math.min(hw / Math.abs(dx || 1e-9), hh / Math.abs(dy || 1e-9));
-		const y = dy * scale;
-		const lean = (y / hh) * skew * (dx >= 0 ? -1 : 1);
-		const t = Math.min((hw - Math.abs(lean)) / Math.abs(dx || 1e-9), hh / Math.abs(dy || 1e-9));
-		return { x: node.x + dx * t, y: node.y + dy * t };
-	}
-
-	return roundedRectAnchor(node, dx, dy, node.shape === 'note' ? 0 : 10);
+	return roundedRectAnchor(node, dx, dy, 10);
 }
 
 /** Rectangle crossing, pulled in at the corners so a radius does not show. */
