@@ -1,0 +1,3 @@
+name: flow chart
+description: Draw a flow chart in the browser. Boxes, decisions and arrows, tidied up on demand, out as SVG, PNG or Mermaid. Nothing leaves the tab.
+http_port: 3000
