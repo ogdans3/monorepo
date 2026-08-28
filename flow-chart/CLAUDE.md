@@ -40,6 +40,11 @@ src/routes      +page.svelte, the toolbar and the sheets
   on their own machine. Nothing is uploaded, and there is no server side beyond
   serving the page, so do not add one.
 
+- **A new project here needs a symlink before the dashboard can see it.**
+  `ln -s monorepo/flow-chart ~/git/flow-chart`, relative, made once on the
+  host. Discovery reads only the top level of `~/git`. This is not in the
+  monorepo's own README, which is why it gets missed.
+
 ## Testing
 
 ```sh

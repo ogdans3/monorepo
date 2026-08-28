@@ -33,6 +33,22 @@ The dashboard picks the project up from `Dockerfile` and `.dashboard.yaml`, and
 reaches the container over the `aicentral` network, which is why `HOST` is
 `0.0.0.0` in the image.
 
+## Running it on the AI Central dashboard
+
+The dashboard scans the top level of `~/git` and does not look inside
+directories, so a project that lives in this monorepo is reached through a
+symlink made once on the host:
+
+```bash
+ln -s monorepo/flow-chart ~/git/flow-chart
+```
+
+**Relative on purpose.** The dashboard container mounts the git directory, and
+an absolute symlink would point outside that mount and break inside the
+container. Every other project in this repository is set up the same way. It is
+also the step that is easy to forget: without it the folder is complete, builds
+and runs perfectly by hand, and simply never appears in the dashboard.
+
 ## Drawing
 
 | | |
