@@ -57,7 +57,8 @@ and runs perfectly by hand, and simply never appears in the dashboard.
 | Add the next one | Select a shape and press one of its **+** buttons. It arrives joined on |
 | Add one somewhere else | Drag a **+** onto empty paper |
 | Connect two | Drag a **+** onto another shape |
-| Write in it | Double click it, or select it and press Enter. It is a box, not a line: paragraphs are fine, and Enter makes a new line |
+| Write in it | Select it and press **Write**, or double click it, or press Enter. It is a box, not a line: paragraphs are fine, and Enter makes a new line |
+| Label an arrow | Double click the arrow |
 | Change what it is | Select it and pick Step, Decision or Start/end |
 | Move | Drag it. Positions land on an 8px grid |
 | Delete | Select and press Delete |

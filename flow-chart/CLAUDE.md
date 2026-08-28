@@ -34,6 +34,13 @@ src/routes      +page.svelte, the toolbar and the sheets
   maps `io` and `note` onto `process` so a file drawn before they went away
   still opens, and the Mermaid reader maps their syntax the same way. Adding a
   fourth shape is a product decision, not a tidy-up: the count is the feature.
+- **A captured pointer retargets the click pair, so double click is handled on
+  the canvas.** `setPointerCapture` during a drag means `click` and `dblclick`
+  are dispatched to the element that captured, not to the shape under the
+  cursor. An `ondblclick` on a node therefore looks right and never fires,
+  which is how double clicking a box to write in it silently did nothing.
+  `onDoubleClick` in `Canvas.svelte` owns every double click and works out what
+  was under it. Do not move it back onto the shapes.
 - **Text wraps in one place.** `wrapText` in `model.ts` decides the lines, and
   both the canvas and the export use it. Two wrapping rules means a label that
   fits on screen and overflows in the file.

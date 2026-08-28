@@ -97,10 +97,29 @@
 		else startDrag(event, node);
 	}
 
-	/** A double click on empty paper is the quickest way to a new step. */
+	/**
+	 * Every double click on the canvas, wherever it looks like it landed.
+	 *
+	 * It has to be handled here rather than on each shape, because the drag
+	 * handling captures the pointer and a captured pointer retargets the click
+	 * pair to the element that captured it. Putting `ondblclick` on the shape
+	 * looks right and never fires, which is how double clicking a box to write
+	 * in it silently did nothing.
+	 */
 	function onDoubleClick(event: MouseEvent) {
 		const point = at(event);
-		if (nodeAt(point)) return;
+		const node = nodeAt(point);
+		if (node) {
+			selected = node.id;
+			onedit(node.id);
+			return;
+		}
+		// The first click of this pair will have selected an arrow if there was
+		// one under it, so that is how an arrow gets its label.
+		if (selected && doc.edges.some((edge) => edge.id === selected)) {
+			onedit(selected);
+			return;
+		}
 		place(event as unknown as PointerEvent, 'process', point);
 	}
 
@@ -225,7 +244,10 @@
 	) {
 		// SVGElement rather than Element: the pointer events are on the former.
 		const target = event.currentTarget as SVGElement;
-		event.preventDefault();
+		// Deliberately no preventDefault. It stops the browser building the pair
+		// of clicks a double click is made of, which is how double clicking a
+		// shape to write in it quietly stopped working. Text selection during a
+		// drag is handled with user-select in the stylesheet instead.
 		target.setPointerCapture(event.pointerId);
 		const move = (e: PointerEvent) => onMove(e);
 		const up = (e: PointerEvent) => {
@@ -353,14 +375,11 @@
 		{/if}
 
 		{#each doc.nodes as node (node.id)}
+			<!-- No ondblclick here: see onDoubleClick, which owns it for the canvas. -->
 			<g
 				class="node {node.shape}"
 				class:selected={selected === node.id}
 				class:target={hovered === node.id && linking !== null && linking.from !== node.id}
-				ondblclick={(e) => {
-					e.stopPropagation();
-					onedit(node.id);
-				}}
 				role="presentation"
 			>
 				{#if node.shape === 'decision'}
@@ -413,6 +432,7 @@
 		height: 100%;
 		background: var(--paper);
 		touch-action: none;
+		user-select: none;
 		cursor: grab;
 	}
 

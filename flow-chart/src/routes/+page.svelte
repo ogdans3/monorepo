@@ -227,7 +227,7 @@
 				Press a <span class="key">+</span> for the next step, or drag one onto another shape to
 				join them. Double click to write in it, Delete to remove it.
 			{:else if selectedEdge}
-				Arrow selected. Double click it to label the branch, Delete to remove it.
+				Double click the arrow to label the branch, Delete to remove it.
 			{:else}
 				Double click the paper to add a step. Select a shape and press one of its
 				<span class="key">+</span> buttons to carry on from there.
@@ -236,6 +236,10 @@
 
 		{#if selectedNode}
 			<div class="inspector">
+				<!-- A button for it, because double click is the fastest way in and
+				     the least discoverable: somebody who does not try it concludes
+				     the text cannot be changed at all. -->
+				<button class="chip write" onclick={() => openEditor(selectedNode.id)}>Write</button>
 				<span class="inspector-label">Shape</span>
 				{#each SHAPES as shape (shape)}
 					<button
@@ -389,6 +393,12 @@
 		font-size: 0.8125rem;
 		color: var(--muted);
 		padding: 0 0.25rem;
+	}
+
+	.chip.write {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: #fff;
 	}
 
 	.chip.danger {
