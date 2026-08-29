@@ -1,5 +1,6 @@
 import {
 	EMPTY,
+	edgeDefaults,
 	fitSize,
 	nextId,
 	nodeDefaults,
@@ -156,7 +157,7 @@ export function fromMermaid(text: string): ParseResult {
 			const from = ensure(line.slice(0, arrow.index).trim());
 			const to = ensure(line.slice(arrow.index + arrow[0].length).trim());
 			if (from && to && from !== to && !doc.edges.some((e) => e.from === from && e.to === to)) {
-				doc.edges.push({ id: nextId('e'), from, to, label });
+				doc.edges.push({ id: nextId('e'), from, to, ...edgeDefaults(), label });
 			} else if (!from || !to) {
 				skipped.push(line);
 			}

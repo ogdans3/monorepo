@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { download, toPng, toSvg } from '$lib/flow/export';
 	import { tidy } from '$lib/flow/layout';
 	import { fromMermaid, looksLikeMermaid, toMermaid } from '$lib/flow/mermaid';
@@ -7,6 +8,7 @@
 		connect,
 		parseDoc,
 		setEdgeLabel,
+		updateEdge,
 		updateNode,
 		visibleDoc,
 		withRecent,
@@ -15,6 +17,7 @@
 	} from '$lib/flow/model';
 	import { Editor, recentColours } from '$lib/flow/store.svelte';
 	import Canvas from '$lib/ui/Canvas.svelte';
+	import EdgePanel from '$lib/ui/EdgePanel.svelte';
 	import Inspector from '$lib/ui/Inspector.svelte';
 
 	const editor = new Editor();
@@ -34,15 +37,27 @@
 	const selectedNode = $derived(doc.nodes.find((n) => n.id === selected) ?? null);
 	const selectedEdge = $derived(doc.edges.find((e) => e.id === selected) ?? null);
 	const panelNode = $derived(panel ? (doc.nodes.find((n) => n.id === panel!.id) ?? null) : null);
+	const panelEdge = $derived(panel ? (doc.edges.find((e) => e.id === panel!.id) ?? null) : null);
 	/** Collapsed nodes still holding something back, for stepping a presentation. */
 	const foldedIds = $derived(
 		visibleDoc(doc).nodes.filter((node) => node.collapsed).map((node) => node.id)
 	);
 
+	/**
+	 * Opening the page, once.
+	 *
+	 * Everything in here is untracked on purpose. Read `editor.doc` normally and
+	 * this becomes an effect that runs after every change, which quietly means
+	 * restoring the saved copy over the top of the edit, resetting the history
+	 * so Undo has nothing to go back to, and refitting the view while somebody
+	 * is still dragging.
+	 */
 	$effect(() => {
-		editor.restore();
-		if (editor.doc.nodes.length === 0) startingPoint();
-		queueMicrotask(() => canvas?.fit());
+		untrack(() => {
+			editor.restore();
+			if (editor.doc.nodes.length === 0) startingPoint();
+			queueMicrotask(() => canvas?.fit());
+		});
 	});
 
 	/** An empty canvas teaches nothing, so it opens with the first two boxes. */
@@ -58,13 +73,8 @@
 	}
 
 	function openEditor(id: string) {
-		if (doc.nodes.some((node) => node.id === id)) {
-			selected = id;
-			panel = { id, focusText: true };
-			return;
-		}
-		const edge = doc.edges.find((e) => e.id === id);
-		if (edge) editing = { id, text: edge.label };
+		selected = id;
+		panel = { id, focusText: true };
 	}
 
 	function applyEdit(text: string) {
@@ -82,9 +92,14 @@
 	}
 
 	$effect(() => {
-		// The panel follows the selection: picking a shape is asking about it.
-		if (selected && doc.nodes.some((node) => node.id === selected)) {
-			if (panel?.id !== selected) panel = { id: selected, focusText: false };
+		// The panel follows the selection, for an arrow as much as for a shape:
+		// picking one is asking about it.
+		const exists =
+			selected &&
+			(doc.nodes.some((node) => node.id === selected) ||
+				doc.edges.some((edge) => edge.id === selected));
+		if (exists) {
+			if (panel?.id !== selected) panel = { id: selected!, focusText: false };
 		} else if (panel) {
 			panel = null;
 		}
@@ -312,7 +327,12 @@
 			</div>
 		{/if}
 
-		<p class="hint" role="status" class:hidden={presenting} class:beside={panelNode !== null}>
+		<p
+			class="hint"
+			role="status"
+			class:hidden={presenting}
+			class:beside={panelNode !== null || panelEdge !== null}
+		>
 			{#if status}
 				{status}
 			{:else if tool}
@@ -321,12 +341,27 @@
 				Press a <span class="key">+</span> for the next step, or drag one onto another shape to
 				join them. Everything about it is in the panel.
 			{:else if selectedEdge}
-				Double click the arrow to label the branch, Delete to remove it.
+				The arrow's line, ends, colour and label are in the panel. Delete removes it.
 			{:else}
 				Double click the paper to add a step. Select a shape and press one of its
 				<span class="key">+</span> buttons to carry on from there.
 			{/if}
 		</p>
+
+		{#if panelEdge && !presenting}
+			<EdgePanel
+				edge={panelEdge}
+				recent={recentColours.list}
+				update={(change, coalesce) =>
+					editor.commit(updateEdge(doc, panelEdge.id, change), coalesce)}
+				oncolour={(colour) => recentColours.remember(colour)}
+				remove={() => canvas?.deleteSelected()}
+				close={() => {
+					panel = null;
+					selected = null;
+				}}
+			/>
+		{/if}
 
 		{#if panelNode && !presenting}
 			<Inspector

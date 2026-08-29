@@ -58,10 +58,12 @@ and runs perfectly by hand, and simply never appears in the dashboard.
 | Add one somewhere else | Drag a **+** onto empty paper |
 | Connect two | Drag a **+** onto another shape |
 | Write in it | Select it, or double click it. The panel opens at the side with the title, the subtitle and the rest of the text |
-| Label an arrow | Double click the arrow, then **OK** |
+| Show only the first lines | Slide **On the shape** in the panel. The shape gets that many lines and an ellipsis, the panel keeps all of it |
+| Change an arrow | Click it. The panel has the label, solid/dashed/dotted, thickness, elbow/straight/curved, what sits on each end, and the colour |
 | Colour it | Pick a swatch in the panel, or any colour you like. The ones you use come back under **Recent** |
-| Change the type | Font, bold, italic and five sizes, per shape, in the panel |
-| Fold a branch | Select a shape with something under it and press the chevron on its bottom edge, or **Fold away** in the panel. It becomes **+3**, and pressing that brings it back |
+| Change the type | Ten fonts, bold, italic and a size slider, per shape, in the panel |
+| Size a shape by hand | Drag any of its four corners. **Fit to the text** in the panel gives it back to the text |
+| Fold a branch | Turn **Folding** on for a shape with something under it. It keeps a button on its bottom edge from then on, which folds and unfolds as often as you like |
 | Present | **Present** hides the editor. Space reveals the next folded branch, ← puts it back, Escape leaves |
 | Change what it is | Select it and pick Step, Decision or Start/end |
 | Move | Drag it. Positions land on an 8px grid |
@@ -119,9 +121,11 @@ would pass through another shape, it leaves sideways, runs down a clear lane and
 comes back in. Drawn straight it reads as an arrow into every box it crosses,
 which is the wrong diagram.
 
-**4. Folding is the same document, drawn smaller.** A collapsed branch is
-hidden, not deleted, and it disappears only when *every* way into it goes
-through something folded. Collapse one branch of a decision and the step both
+**4. Folding is a property of the shape, not a mood it is in.** Turning it on
+gives the shape a button that stays there whether the branch is folded or not,
+because a fold you cannot undo without hunting through a panel is a fold nobody
+risks. A collapsed branch is hidden, not deleted, and it disappears only when
+*every* way into it goes through something folded. Collapse one branch of a decision and the step both
 branches meet at stays, because the other branch still reaches it. Everything
 downstream, the routing, the export, the hit testing, works on the visible
 document, so a folded branch is not merely invisible: it is not there to be

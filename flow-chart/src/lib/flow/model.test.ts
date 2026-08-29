@@ -8,8 +8,12 @@ import {
 	fitSize,
 	parseDoc,
 	remove,
+	dashOf,
 	hiddenUnder,
+	MIN_NODE,
 	nodeText,
+	resizeNode,
+	updateEdge,
 	withRecent,
 	placeNear,
 	NO_COLOUR,
@@ -28,6 +32,7 @@ const sizeOf = (title: string, over: Partial<Parameters<typeof fitSize>[0]> = {}
 		body: '',
 		showSubtitle: true,
 		showBody: false,
+		bodyClamp: 0,
 		font: 'sans',
 		size: 15,
 		bold: false,
@@ -169,6 +174,7 @@ describe('the three pieces of text', () => {
 		body: 'Finance needs the reference from the order, which is on the packing slip.',
 		showSubtitle: true,
 		showBody: false,
+		bodyClamp: 0,
 		font: 'sans' as const,
 		size: 15,
 		bold: false,
@@ -239,7 +245,7 @@ describe('collapsing a branch', () => {
 
 	it('folds away what hangs off the collapsed node', () => {
 		const { doc, ids } = branching();
-		const folded = updateNode(doc, ids.yes, { collapsed: true });
+		const folded = updateNode(doc, ids.yes, { foldable: true, collapsed: true });
 		// "yes" itself stays, and it is still the way back to what it is hiding.
 		expect(visibleIds(folded).has(ids.yes)).toBe(true);
 		// "done" is still reached through "no", so it stays as well.
@@ -248,7 +254,8 @@ describe('collapsing a branch', () => {
 
 	it('only hides a node when every way in is through something collapsed', () => {
 		const { doc, ids } = branching();
-		const both = updateNode(updateNode(doc, ids.yes, { collapsed: true }), ids.no, {
+		const both = updateNode(updateNode(doc, ids.yes, { foldable: true, collapsed: true }), ids.no, {
+			foldable: true,
 			collapsed: true
 		});
 		expect(visibleIds(both).has(ids.done)).toBe(false);
@@ -257,7 +264,7 @@ describe('collapsing a branch', () => {
 
 	it('takes the arrows to hidden nodes out of the drawing too', () => {
 		const { doc, ids } = branching();
-		const folded = updateNode(doc, ids.check, { collapsed: true });
+		const folded = updateNode(doc, ids.check, { foldable: true, collapsed: true });
 		const drawn = visibleDoc(folded);
 		expect(drawn.nodes.map((n) => n.title).sort()).toEqual(['check', 'start']);
 		expect(drawn.edges).toHaveLength(1);
@@ -265,7 +272,7 @@ describe('collapsing a branch', () => {
 
 	it('says how many are folded away, for the badge on the node', () => {
 		const { doc, ids } = branching();
-		expect(hiddenUnder(updateNode(doc, ids.check, { collapsed: true }), ids.check)).toBe(3);
+		expect(hiddenUnder(updateNode(doc, ids.check, { foldable: true, collapsed: true }), ids.check)).toBe(3);
 		expect(hiddenUnder(doc, ids.check)).toBe(0);
 	});
 
@@ -274,7 +281,7 @@ describe('collapsing a branch', () => {
 		const a = addNode(doc, 'process', 0, 0, 'a');
 		const b = addNode(a.doc, 'process', 0, 0, 'b');
 		doc = connect(connect(b.doc, a.id, b.id), b.id, a.id);
-		expect(visibleIds(updateNode(doc, a.id, { collapsed: true })).size).toBeGreaterThan(0);
+		expect(visibleIds(updateNode(doc, a.id, { foldable: true, collapsed: true })).size).toBeGreaterThan(0);
 	});
 });
 
@@ -339,5 +346,158 @@ describe('reading a file back', () => {
 		expect(parseDoc(null)).toEqual(EMPTY);
 		expect(parseDoc({ nodes: 'no', edges: 7 })).toEqual(EMPTY);
 		expect(parseDoc({ nodes: [{ id: 'a', x: 'over there' }] }).nodes[0].x).toBe(0);
+	});
+});
+
+describe('shortening the body on the shape', () => {
+	const long = (over = {}) => ({
+		shape: 'process' as const,
+		title: 'Refund',
+		subtitle: '',
+		body: 'One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen',
+		showSubtitle: false,
+		showBody: true,
+		bodyClamp: 0,
+		font: 'sans' as const,
+		size: 15,
+		bold: false,
+		italic: false,
+		...over
+	});
+
+	it('shows all of it when nothing is asked for', () => {
+		const lines = nodeText(long()).lines.filter((line) => line.kind === 'body');
+		expect(lines.length).toBeGreaterThan(2);
+		expect(lines.some((line) => line.text.includes('…'))).toBe(false);
+	});
+
+	it('cuts to the number of lines asked for and marks the cut', () => {
+		const lines = nodeText(long({ bodyClamp: 2 })).lines.filter((line) => line.kind === 'body');
+		expect(lines).toHaveLength(2);
+		expect(lines[1].text.endsWith('…')).toBe(true);
+	});
+
+	it('leaves a body that already fits alone', () => {
+		const lines = nodeText(long({ body: 'Two words', bodyClamp: 3 })).lines.filter(
+			(l) => l.kind === 'body'
+		);
+		expect(lines).toEqual([expect.objectContaining({ text: 'Two words' })]);
+	});
+
+	it('makes the box shorter, which is the point of asking', () => {
+		expect(nodeText(long({ bodyClamp: 1 })).h).toBeLessThan(nodeText(long()).h);
+	});
+
+	it('never shortens the title or the subtitle', () => {
+		const lines = nodeText(
+			long({ title: 'A title long enough to wrap onto a second line by itself', bodyClamp: 1 })
+		).lines;
+		expect(lines.filter((l) => l.kind === 'title').some((l) => l.text.includes('…'))).toBe(false);
+	});
+});
+
+describe('a box sized by hand', () => {
+	it('keeps the size it was dragged to, whatever the text does', () => {
+		const { doc, id } = addNode(EMPTY, 'process', 0, 0, 'Short');
+		const dragged = resizeNode(doc, id, 400, 300);
+		const node = dragged.nodes[0];
+		expect([node.w, node.h]).toEqual([400, 300]);
+
+		const typed = updateNode(dragged, id, { title: 'Something very much longer than before' });
+		expect([typed.nodes[0].w, typed.nodes[0].h]).toEqual([400, 300]);
+	});
+
+	it('goes back to fitting its text when that is asked for', () => {
+		const { doc, id } = addNode(EMPTY, 'process', 0, 0, 'Short');
+		const dragged = resizeNode(doc, id, 400, 300);
+		const refitted = updateNode(dragged, id, { sized: false });
+		expect(refitted.nodes[0].w).toBeLessThan(400);
+	});
+
+	it('will not be dragged smaller than something you can grab', () => {
+		const { doc, id } = addNode(EMPTY, 'process', 0, 0, 'x');
+		const tiny = resizeNode(doc, id, 2, 2).nodes[0];
+		expect(tiny.w).toBeGreaterThanOrEqual(MIN_NODE.w);
+		expect(tiny.h).toBeGreaterThanOrEqual(MIN_NODE.h);
+	});
+});
+
+describe('folding is a setting, and folded is a state', () => {
+	function pair() {
+		const a = addNode(EMPTY, 'process', 0, 0, 'top');
+		const b = addNode(a.doc, 'process', 0, 200, 'under');
+		return { doc: connect(b.doc, a.id, b.id), a: a.id, b: b.id };
+	}
+
+	it('hides nothing while the node is only marked as collapsed', () => {
+		// Collapsed without foldable is a file that never asked to fold.
+		const { doc, a } = pair();
+		expect(visibleIds(updateNode(doc, a, { collapsed: true })).size).toBe(2);
+	});
+
+	it('hides once it is both foldable and folded', () => {
+		const { doc, a } = pair();
+		const folded = updateNode(doc, a, { foldable: true, collapsed: true });
+		expect(visibleIds(folded).size).toBe(1);
+	});
+
+	it('shows again when it is unfolded, and can be folded once more', () => {
+		const { doc, a } = pair();
+		const folded = updateNode(doc, a, { foldable: true, collapsed: true });
+		const open = updateNode(folded, a, { collapsed: false });
+		expect(visibleIds(open).size).toBe(2);
+		expect(visibleIds(updateNode(open, a, { collapsed: true })).size).toBe(1);
+	});
+
+	it('treats an old file that was folded as one that meant to be foldable', () => {
+		const old = {
+			nodes: [{ id: 'a', title: 'top', collapsed: true, x: 0, y: 0 }],
+			edges: []
+		};
+		expect(parseDoc(old).nodes[0].foldable).toBe(true);
+	});
+});
+
+describe('arrows have a look of their own', () => {
+	it('starts solid, two wide, with one head', () => {
+		const { doc, a } = twoNodes();
+		void a;
+		expect(doc.edges[0]).toMatchObject({ style: 'solid', width: 2, head: 'arrow', tail: 'none' });
+	});
+
+	it('dashes and dots scale with the width so a thick line still reads', () => {
+		expect(dashOf({ style: 'solid', width: 2 })).toBeUndefined();
+		const thin = dashOf({ style: 'dashed', width: 2 })!;
+		const thick = dashOf({ style: 'dashed', width: 6 })!;
+		expect(Number(thick.split(' ')[0])).toBeGreaterThan(Number(thin.split(' ')[0]));
+	});
+
+	it('changes one arrow and leaves the others alone', () => {
+		const { doc } = twoNodes();
+		const changed = updateEdge(doc, doc.edges[0].id, { style: 'dotted', colour: '#ff0000' });
+		expect(changed.edges[0]).toMatchObject({ style: 'dotted', colour: '#ff0000' });
+		expect(changed.nodes).toEqual(doc.nodes);
+	});
+
+	it('reads an arrow back from a file, and fills in what is missing', () => {
+		const file = {
+			nodes: [
+				{ id: 'a', title: 'a', x: 0, y: 0 },
+				{ id: 'b', title: 'b', x: 0, y: 100 }
+			],
+			edges: [{ id: 'e1', from: 'a', to: 'b', style: 'dashed' }]
+		};
+		expect(parseDoc(file).edges[0]).toMatchObject({ style: 'dashed', width: 2, head: 'arrow' });
+	});
+
+	it('refuses a style it does not know rather than drawing nothing', () => {
+		const file = {
+			nodes: [
+				{ id: 'a', title: 'a', x: 0, y: 0 },
+				{ id: 'b', title: 'b', x: 0, y: 100 }
+			],
+			edges: [{ id: 'e1', from: 'a', to: 'b', style: 'zigzag', head: 'spiral' }]
+		};
+		expect(parseDoc(file).edges[0]).toMatchObject({ style: 'solid', head: 'arrow' });
 	});
 });

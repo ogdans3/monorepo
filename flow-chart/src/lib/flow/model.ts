@@ -17,8 +17,33 @@
  */
 export type NodeShape = 'process' | 'decision' | 'terminator';
 
-/** The face a node is written in. Three, for the same reason there are three shapes. */
-export type FontKey = 'sans' | 'serif' | 'mono';
+/**
+ * Faces to write in. Three are on chips because they are what nearly everybody
+ * picks; the rest are in the dropdown beside them, because the day you want a
+ * condensed grotesque for a wall poster you really do want it, and a list of
+ * ten is not a menu anybody has to read.
+ */
+export const FONTS = {
+	sans: { label: 'Plain', stack: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" },
+	serif: { label: 'Serif', stack: "Georgia, 'Iowan Old Style', 'Times New Roman', serif" },
+	mono: { label: 'Mono', stack: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace" },
+	humanist: { label: 'Humanist', stack: "'Segoe UI', Tahoma, Verdana, sans-serif" },
+	grotesque: { label: 'Grotesque', stack: "Helvetica, 'Helvetica Neue', Arial, sans-serif" },
+	rounded: { label: 'Rounded', stack: "'Trebuchet MS', 'Segoe UI', system-ui, sans-serif" },
+	slab: { label: 'Slab', stack: "Rockwell, 'Courier Bold', Georgia, serif" },
+	book: { label: 'Book', stack: "'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif" },
+	narrow: { label: 'Narrow', stack: "'Arial Narrow', 'Helvetica Neue Condensed', Impact, sans-serif" },
+	hand: { label: 'Hand', stack: "'Comic Sans MS', 'Segoe Print', 'Bradley Hand', cursive" }
+} as const;
+
+export type FontKey = keyof typeof FONTS;
+
+/** The three that sit on chips. The rest are one click further away. */
+export const QUICK_FONTS: FontKey[] = ['sans', 'serif', 'mono'];
+
+export const FONT_LABELS = Object.fromEntries(
+	Object.entries(FONTS).map(([key, font]) => [key, font.label])
+) as Record<FontKey, string>;
 
 export interface FlowNode {
 	id: string;
@@ -43,8 +68,26 @@ export interface FlowNode {
 	size: number;
 	bold: boolean;
 	italic: boolean;
+	/**
+	 * How many lines of the body to show on the shape before cutting it off with
+	 * an ellipsis. Zero shows all of it. The rest is always in the panel: this
+	 * decides how much of it is on the picture, which is a different question.
+	 */
+	bodyClamp: number;
+	/**
+	 * Whether this node can be folded at all. A setting rather than a state, so
+	 * the button that folds and unfolds it is always there to press: a fold you
+	 * cannot undo without hunting through a panel is a fold nobody uses twice.
+	 */
+	foldable: boolean;
 	/** Hides everything that hangs off this node until it is opened again. */
 	collapsed: boolean;
+	/**
+	 * True once somebody has dragged the corners. After that the box is the size
+	 * they made it and text stops pushing it around, which is the whole point of
+	 * having dragged it.
+	 */
+	sized: boolean;
 	/** Centre of the node, in diagram coordinates. */
 	x: number;
 	y: number;
@@ -52,12 +95,74 @@ export interface FlowNode {
 	h: number;
 }
 
+/** How the line is drawn: solid unless it means something else. */
+export type LineStyle = 'solid' | 'dashed' | 'dotted';
+/** What sits at each end. */
+export type EndCap = 'none' | 'arrow' | 'hollow' | 'dot';
+/** The path it takes between two shapes. */
+export type EdgeRoute = 'elbow' | 'straight' | 'curve';
+
 export interface FlowEdge {
 	id: string;
 	from: string;
 	to: string;
 	/** Shown on the line. A decision's branches are the reason this exists. */
 	label: string;
+	style: LineStyle;
+	/** Stroke width in diagram units. */
+	width: number;
+	colour: string;
+	/** An arrow at the far end by default, and nothing at the near end. */
+	head: EndCap;
+	tail: EndCap;
+	route: EdgeRoute;
+}
+
+export const EDGE_COLOUR = '#6b6355';
+
+export function edgeDefaults(): Omit<FlowEdge, 'id' | 'from' | 'to'> {
+	return {
+		label: '',
+		style: 'solid',
+		width: 2,
+		colour: EDGE_COLOUR,
+		head: 'arrow',
+		tail: 'none',
+		route: 'elbow'
+	};
+}
+
+export const LINE_STYLE_LABELS: Record<LineStyle, string> = {
+	solid: 'Solid',
+	dashed: 'Dashed',
+	dotted: 'Dotted'
+};
+
+export const END_CAP_LABELS: Record<EndCap, string> = {
+	none: 'None',
+	arrow: 'Arrow',
+	hollow: 'Hollow',
+	dot: 'Dot'
+};
+
+export const EDGE_ROUTE_LABELS: Record<EdgeRoute, string> = {
+	elbow: 'Elbow',
+	straight: 'Straight',
+	curve: 'Curved'
+};
+
+/** The dash pattern for a style, scaled so it still reads on a thick line. */
+export function dashOf(edge: Pick<FlowEdge, 'style' | 'width'>): string | undefined {
+	if (edge.style === 'dashed') return `${edge.width * 3} ${edge.width * 2.2}`;
+	if (edge.style === 'dotted') return `${edge.width * 0.1} ${edge.width * 2}`;
+	return undefined;
+}
+
+export function updateEdge(doc: FlowDoc, id: string, patch: Partial<FlowEdge>): FlowDoc {
+	return {
+		...doc,
+		edges: doc.edges.map((edge) => (edge.id === id ? { ...edge, ...patch } : edge))
+	};
 }
 
 export interface FlowDoc {
@@ -83,12 +188,6 @@ export const SHAPE_LABELS: Record<NodeShape, string> = {
 	process: 'Step',
 	decision: 'Decision',
 	terminator: 'Start or end'
-};
-
-export const FONT_LABELS: Record<FontKey, string> = {
-	sans: 'Plain',
-	serif: 'Serif',
-	mono: 'Mono'
 };
 
 /** The white a box is unless somebody chooses otherwise. */
@@ -134,9 +233,16 @@ export function nodeDefaults(): Omit<FlowNode, 'id' | 'shape' | 'x' | 'y' | 'w' 
 		size: DEFAULT_SIZE,
 		bold: false,
 		italic: false,
-		collapsed: false
+		bodyClamp: 0,
+		foldable: false,
+		collapsed: false,
+		sized: false
 	};
 }
+
+export const SIZE_MIN = 10;
+export const SIZE_MAX = 48;
+export const MIN_NODE = { w: 72, h: 44 };
 
 /** Shapes that were offered once and now fold into the nearest one that stayed. */
 const RETIRED: Record<string, NodeShape> = { io: 'process', note: 'process' };
@@ -208,7 +314,17 @@ const BLOCK_GAP = 0.45;
 
 type TextOf = Pick<
 	FlowNode,
-	'shape' | 'title' | 'subtitle' | 'body' | 'showSubtitle' | 'showBody' | 'font' | 'size' | 'bold' | 'italic'
+	| 'shape'
+	| 'title'
+	| 'subtitle'
+	| 'body'
+	| 'showSubtitle'
+	| 'showBody'
+	| 'bodyClamp'
+	| 'font'
+	| 'size'
+	| 'bold'
+	| 'italic'
 >;
 
 /**
@@ -239,7 +355,7 @@ export function nodeText(node: TextOf): NodeText {
 	let widest = 0;
 	for (const [index, block] of blocks.entries()) {
 		if (index > 0) y += block.size * BLOCK_GAP;
-		for (const line of wrapText(block.text, node.shape)) {
+		for (const line of clamped(wrapText(block.text, node.shape), block.kind, node.bodyClamp)) {
 			const height = block.size * LINE_HEIGHT;
 			y += height;
 			lines.push({ text: line, kind: block.kind, size: block.size, y: y - height * 0.28 });
@@ -258,10 +374,49 @@ export function nodeText(node: TextOf): NodeText {
 	};
 }
 
-/** Just the size, for the places that only need to know how big a node got. */
-export function fitSize(node: TextOf): { w: number; h: number } {
+/**
+ * Cuts a block off after so many lines and marks the cut with an ellipsis.
+ *
+ * The ellipsis replaces the tail of the last line it keeps rather than sitting
+ * on a line of its own, because a box that ends "...\n..." looks broken, and
+ * the point of clamping is that the shape stays the size of a shape.
+ */
+function clamped(lines: string[], kind: TextLine['kind'], limit: number): string[] {
+	if (kind !== 'body' || limit <= 0 || lines.length <= limit) return lines;
+	const kept = lines.slice(0, limit);
+	const last = kept[kept.length - 1].replace(/[\s.,;:]+$/, '');
+	kept[kept.length - 1] = `${last}…`;
+	return kept;
+}
+
+/**
+ * Just the size. A box somebody has dragged keeps the size they made it: after
+ * that, text moving the walls around is the tool undoing their work.
+ */
+export function fitSize(node: TextOf & Partial<Pick<FlowNode, 'sized' | 'w' | 'h'>>): {
+	w: number;
+	h: number;
+} {
+	if (node.sized && node.w && node.h) return { w: node.w, h: node.h };
 	const { w, h } = nodeText(node);
 	return { w, h };
+}
+
+/** A box dragged by its corner, never smaller than something you can grab. */
+export function resizeNode(doc: FlowDoc, id: string, w: number, h: number): FlowDoc {
+	return {
+		...doc,
+		nodes: doc.nodes.map((node) =>
+			node.id === id
+				? {
+						...node,
+						sized: true,
+						w: Math.max(MIN_NODE.w, Math.round(w)),
+						h: Math.max(MIN_NODE.h, Math.round(h))
+					}
+				: node
+		)
+	};
 }
 
 /**
@@ -404,7 +559,7 @@ export function connect(doc: FlowDoc, from: string, to: string, label = ''): Flo
 	if (from === to) return doc;
 	if (!doc.nodes.some((n) => n.id === from) || !doc.nodes.some((n) => n.id === to)) return doc;
 	if (doc.edges.some((e) => e.from === from && e.to === to)) return doc;
-	return { ...doc, edges: [...doc.edges, { id: nextId('e'), from, to, label }] };
+	return { ...doc, edges: [...doc.edges, { id: nextId('e'), from, to, ...edgeDefaults(), label }] };
 }
 
 /** Removes nodes and edges by id. A node takes its edges with it. */
@@ -428,7 +583,9 @@ export function remove(doc: FlowDoc, ids: string[]): FlowDoc {
  * wrong.
  */
 export function visibleIds(doc: FlowDoc): Set<string> {
-	const collapsed = new Set(doc.nodes.filter((node) => node.collapsed).map((node) => node.id));
+	const collapsed = new Set(
+		doc.nodes.filter((node) => node.foldable && node.collapsed).map((node) => node.id)
+	);
 	if (collapsed.size === 0) return new Set(doc.nodes.map((node) => node.id));
 
 	const children = new Map<string, string[]>();
@@ -479,7 +636,7 @@ export function visibleDoc(doc: FlowDoc): FlowDoc {
 /** How many nodes a collapsed node is holding out of sight. */
 export function hiddenUnder(doc: FlowDoc, id: string): number {
 	const node = doc.nodes.find((item) => item.id === id);
-	if (!node?.collapsed) return 0;
+	if (!node?.collapsed || !node.foldable) return 0;
 	const open = visibleIds({
 		...doc,
 		nodes: doc.nodes.map((item) => (item.id === id ? { ...item, collapsed: false } : item))
@@ -547,11 +704,16 @@ export function parseDoc(raw: unknown): FlowDoc {
 			showSubtitle: node.showSubtitle !== false,
 			showBody: node.showBody === true,
 			colour: text(node.colour) || NO_COLOUR,
-			font: (node.font === 'serif' || node.font === 'mono' ? node.font : 'sans') as FontKey,
+			font: (typeof node.font === 'string' && node.font in FONTS ? node.font : 'sans') as FontKey,
 			size: Number.isFinite(node.size) ? Number(node.size) : DEFAULT_SIZE,
 			bold: node.bold === true,
 			italic: node.italic === true,
-			collapsed: node.collapsed === true
+			bodyClamp: Number.isFinite(node.bodyClamp) ? Math.max(0, Number(node.bodyClamp)) : 0,
+			// A file from before folding was a setting: something already folded
+			// was foldable by definition.
+			foldable: node.foldable === true || node.collapsed === true,
+			collapsed: node.collapsed === true,
+			sized: node.sized === true
 		};
 		nodes.push({ ...built, ...fitSize(built) });
 	}
@@ -563,11 +725,23 @@ export function parseDoc(raw: unknown): FlowDoc {
 		if (typeof edge?.from !== 'string' || typeof edge?.to !== 'string') continue;
 		// An edge to a node that is not in the file would draw from nowhere.
 		if (!ids.has(edge.from) || !ids.has(edge.to)) continue;
+		const caps: EndCap[] = ['none', 'arrow', 'hollow', 'dot'];
 		edges.push({
 			id: typeof edge.id === 'string' ? edge.id : nextId('e'),
 			from: edge.from,
 			to: edge.to,
-			label: typeof edge.label === 'string' ? edge.label : ''
+			...edgeDefaults(),
+			label: text(edge.label),
+			style: (['solid', 'dashed', 'dotted'] as LineStyle[]).includes(edge.style as LineStyle)
+				? (edge.style as LineStyle)
+				: 'solid',
+			width: Number.isFinite(edge.width) ? Math.max(1, Number(edge.width)) : 2,
+			colour: text(edge.colour) || EDGE_COLOUR,
+			head: caps.includes(edge.head as EndCap) ? (edge.head as EndCap) : 'arrow',
+			tail: caps.includes(edge.tail as EndCap) ? (edge.tail as EndCap) : 'none',
+			route: (['elbow', 'straight', 'curve'] as EdgeRoute[]).includes(edge.route as EdgeRoute)
+				? (edge.route as EdgeRoute)
+				: 'elbow'
 		});
 	}
 

@@ -1,4 +1,4 @@
-import type { FlowNode } from './model';
+import type { EdgeRoute, FlowNode } from './model';
 
 /**
  * Where an arrow meets a shape, and how it gets there.
@@ -69,7 +69,17 @@ function roundedRectAnchor(node: FlowNode, dx: number, dy: number, radius: numbe
  * A single elbow keeps that while still connecting anything to anything, and it
  * is one bend rather than a router with opinions, which nobody has to predict.
  */
-export function route(from: FlowNode, to: FlowNode, others: FlowNode[] = []): Point[] {
+export function route(
+	from: FlowNode,
+	to: FlowNode,
+	others: FlowNode[] = [],
+	kind: EdgeRoute = 'elbow'
+): Point[] {
+	// A line asked to be straight is straight, even through something: somebody
+	// who chose it wants the shortest way, not the tidiest.
+	if (kind === 'straight' || kind === 'curve') {
+		return [edgeAnchor(from, { x: to.x, y: to.y }), edgeAnchor(to, { x: from.x, y: from.y })];
+	}
 	const direct = simpleRoute(from, to);
 	const blocked = others.filter(
 		(node) => node.id !== from.id && node.id !== to.id && crosses(direct, node)
@@ -180,6 +190,19 @@ export function arrowHead(points: Point[], size = 9): [Point, Point] {
 		{ x: tip.x - size * Math.cos(angle - spread), y: tip.y - size * Math.sin(angle - spread) },
 		{ x: tip.x - size * Math.cos(angle + spread), y: tip.y - size * Math.sin(angle + spread) }
 	];
+}
+
+/**
+ * A curve between two points, bowed sideways so two arrows between the same
+ * pair do not lie on top of each other.
+ */
+export function curveOf(points: Point[], bend = 0.18): string {
+	const [a, b] = [points[0], points[points.length - 1]];
+	const mx = (a.x + b.x) / 2;
+	const my = (a.y + b.y) / 2;
+	const dx = b.x - a.x;
+	const dy = b.y - a.y;
+	return `M ${a.x} ${a.y} Q ${mx - dy * bend} ${my + dx * bend} ${b.x} ${b.y}`;
 }
 
 /** An SVG path with square corners rounded off, so the elbow is not a spike. */

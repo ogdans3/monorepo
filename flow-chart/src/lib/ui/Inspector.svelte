@@ -1,9 +1,12 @@
 <script lang="ts">
 	import {
+		FONTS,
 		FONT_LABELS,
 		NO_COLOUR,
+		QUICK_FONTS,
 		SHAPE_LABELS,
-		SIZE_STEPS,
+		SIZE_MAX,
+		SIZE_MIN,
 		SWATCHES,
 		hasChildren,
 		hiddenUnder,
@@ -36,7 +39,7 @@
 	} = $props();
 
 	const SHAPES: NodeShape[] = ['process', 'decision', 'terminator'];
-	const FONTS: FontKey[] = ['sans', 'serif', 'mono'];
+	const ALL_FONTS = Object.keys(FONTS) as FontKey[];
 
 	const folded = $derived(node.collapsed ? hiddenUnder(doc, node.id) : 0);
 
@@ -112,6 +115,23 @@
 				value={node.body}
 				oninput={(e) => update({ body: e.currentTarget.value }, true)}
 			></textarea>
+			<!--
+				How much of it goes on the shape. All of it is often too much for a
+				diagram and exactly right for the panel, so the shape gets the first
+				few lines and an ellipsis, and the rest stays here.
+			-->
+			<div class="row slider">
+				<span class="small">On the shape</span>
+				<input
+					type="range"
+					min="0"
+					max="8"
+					step="1"
+					value={node.bodyClamp}
+					oninput={(e) => update({ bodyClamp: +e.currentTarget.value })}
+				/>
+				<output class="mono">{node.bodyClamp === 0 ? 'all' : `${node.bodyClamp}…`}</output>
+			</div>
 		</label>
 
 		<div class="field">
@@ -165,7 +185,7 @@
 		<div class="field">
 			<span>Type</span>
 			<div class="row">
-				{#each FONTS as font (font)}
+				{#each QUICK_FONTS as font (font)}
 					<button
 						class="chip"
 						class:active={node.font === font}
@@ -173,6 +193,18 @@
 						onclick={() => update({ font })}>{FONT_LABELS[font]}</button
 					>
 				{/each}
+				<!-- The three above are what nearly everybody picks. The rest are
+				     here rather than on chips nobody reads. -->
+				<select
+					class="fonts"
+					aria-label="Font"
+					value={node.font}
+					onchange={(e) => update({ font: e.currentTarget.value as FontKey })}
+				>
+					{#each ALL_FONTS as font (font)}
+						<option value={font} style:font-family={FONTS[font].stack}>{FONT_LABELS[font]}</option>
+					{/each}
+				</select>
 			</div>
 			<div class="row">
 				<button
@@ -187,26 +219,57 @@
 					aria-pressed={node.italic}
 					onclick={() => update({ italic: !node.italic })}>I</button
 				>
-				<span class="spacer"></span>
-				{#each SIZE_STEPS as size (size)}
-					<button
-						class="chip size"
-						class:active={node.size === size}
-						aria-pressed={node.size === size}
-						aria-label="Text size {size}"
-						onclick={() => update({ size })}
-						style:font-size="{Math.max(11, size * 0.72)}px">A</button
-					>
-				{/each}
 			</div>
+			<div class="row slider">
+				<span class="small">Size</span>
+				<input
+					type="range"
+					min={SIZE_MIN}
+					max={SIZE_MAX}
+					step="1"
+					value={node.size}
+					oninput={(e) => update({ size: +e.currentTarget.value }, true)}
+				/>
+				<output class="mono">{node.size}</output>
+			</div>
+		</div>
+
+		<div class="field">
+			<span>Size</span>
+			<div class="row">
+				<span class="small">{Math.round(node.w)} × {Math.round(node.h)}</span>
+				<button class="chip" disabled={!node.sized} onclick={() => update({ sized: false })}>
+					Fit to the text
+				</button>
+			</div>
+			<span class="hint">Drag the corners of the shape to size it by hand.</span>
 		</div>
 
 		{#if hasChildren(doc, node.id)}
 			<div class="field">
-				<span>Branch</span>
-				<button class="chip wide" onclick={() => update({ collapsed: !node.collapsed })}>
-					{node.collapsed ? `Open the ${folded} steps under this` : 'Fold away what is under this'}
-				</button>
+				<span class="with-toggle">
+					Folding
+					<button
+						class="toggle"
+						class:on={node.foldable}
+						aria-pressed={node.foldable}
+						onclick={() => update({ foldable: !node.foldable, collapsed: false })}
+						title="Put a fold button on this shape">{node.foldable ? 'on' : 'off'}</button
+					>
+				</span>
+				{#if node.foldable}
+					<button
+						class="chip wide"
+						onclick={() => update({ collapsed: !node.collapsed })}
+					>
+						{node.collapsed ? `Show the ${folded} under this` : 'Fold away what is under this'}
+					</button>
+					<span class="hint">
+						The button on the shape does this too, and stays there either way.
+					</span>
+				{:else}
+					<span class="hint">Turn this on to get a fold button on the shape.</span>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -320,10 +383,6 @@
 		gap: 0.3rem;
 	}
 
-	.spacer {
-		flex: 1;
-	}
-
 	.chip.wide {
 		width: 100%;
 		justify-content: center;
@@ -337,12 +396,6 @@
 		font-style: italic;
 	}
 
-	.chip.size {
-		min-width: 2rem;
-		justify-content: center;
-		padding: 0.2rem 0.4rem;
-	}
-
 	.chip.danger {
 		color: var(--danger);
 	}
@@ -354,10 +407,39 @@
 		gap: 0.3rem;
 	}
 
-	.swatches .hint {
+	.hint,
+	.small {
 		font-size: 0.75rem;
 		color: var(--muted);
-		margin-right: 0.15rem;
+	}
+
+	.small {
+		min-width: 4.4rem;
+	}
+
+	.slider input {
+		flex: 1;
+		min-width: 5rem;
+	}
+
+	.mono {
+		font: 0.75rem var(--font-mono);
+		color: var(--muted);
+		min-width: 2rem;
+		text-align: right;
+	}
+
+	.fonts {
+		flex: 1;
+		min-width: 6rem;
+		padding: 0.25rem 0.35rem;
+		border: 1px solid var(--line);
+		border-radius: var(--r-s);
+		background: var(--bg);
+		font: inherit;
+		font-size: 0.8125rem;
+		color: var(--ink);
+		cursor: pointer;
 	}
 
 	.recent {

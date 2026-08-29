@@ -100,6 +100,6 @@ describe('what the file carries of the styling', () => {
 		const b = addNode(a.doc, 'process', 0, 200, 'Hidden away');
 		const doc = connect(b.doc, a.id, b.id);
 		expect(toSvg(doc)).toContain('Hidden away');
-		expect(toSvg(updateNode(doc, a.id, { collapsed: true }))).not.toContain('Hidden away');
+		expect(toSvg(updateNode(doc, a.id, { foldable: true, collapsed: true }))).not.toContain('Hidden away');
 	});
 });

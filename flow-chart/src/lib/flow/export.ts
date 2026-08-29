@@ -1,11 +1,14 @@
-import { arrowHead, midpoint, pathOf, route } from './geometry';
+import { arrowHead, curveOf, midpoint, pathOf, route } from './geometry';
 import {
+	FONTS,
 	bounds,
+	dashOf,
 	nodeText,
 	visibleDoc,
+	type EndCap,
 	type FlowDoc,
-	type FlowNode,
-	type FontKey
+	type FlowEdge,
+	type FlowNode
 } from './model';
 
 /**
@@ -25,12 +28,7 @@ const PAD = 24;
 const INK = '#221f1a';
 const LINE = '#6b6355';
 const FILL = '#ffffff';
-const FONTS: Record<FontKey, string> = {
-	sans: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-	serif: "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
-	mono: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
-};
-const FONT = FONTS.sans;
+const FONT = FONTS.sans.stack;
 
 function esc(text: string): string {
 	return text
@@ -72,12 +70,31 @@ export function labelMarkup(node: FlowNode): string {
 			const opacity = line.kind === 'body' ? ' opacity="0.9"' : '';
 			return (
 				`<text x="${node.x}" y="${top + line.y}" text-anchor="middle" ` +
-				`font-family="${FONTS[node.font] ?? FONT}" font-size="${line.size}" ` +
+				`font-family="${FONTS[node.font]?.stack ?? FONT}" font-size="${line.size}" ` +
 				`font-weight="${line.kind === 'title' ? weight : 400}"${style}${opacity} ` +
 				`fill="${fill}">${esc(line.text) || '&#8203;'}</text>`
 			);
 		})
 		.join('');
+}
+
+/**
+ * What sits on the end of a line. `tail` is the same shapes pointing the other
+ * way, which is why this takes a flag rather than being written twice.
+ */
+function capMarkup(edge: FlowEdge, points: { x: number; y: number }[], atStart: boolean): string {
+	const cap: EndCap = atStart ? edge.tail : edge.head;
+	if (cap === 'none') return '';
+	const line = atStart ? [...points].reverse() : points;
+	const tip = line[line.length - 1];
+	if (cap === 'dot') {
+		return `<circle cx="${tip.x}" cy="${tip.y}" r="${edge.width * 2}" fill="${edge.colour}" />`;
+	}
+	const [a, b] = arrowHead(line, edge.width * 4.5);
+	const points3 = `${tip.x},${tip.y} ${a.x},${a.y} ${b.x},${b.y}`;
+	return cap === 'hollow'
+		? `<polygon points="${points3}" fill="${FILL}" stroke="${edge.colour}" stroke-width="${edge.width}" />`
+		: `<polygon points="${points3}" fill="${edge.colour}" />`;
 }
 
 export function toSvg(input: FlowDoc): string {
@@ -94,19 +111,21 @@ export function toSvg(input: FlowDoc): string {
 		const from = nodeById.get(edge.from);
 		const to = nodeById.get(edge.to);
 		if (!from || !to) continue;
-		const points = route(from, to, doc.nodes);
-		const [a, b] = arrowHead(points);
-		const tip = points[points.length - 1];
+		const points = route(from, to, doc.nodes, edge.route);
+		const dash = dashOf(edge);
+		const d = edge.route === 'curve' ? curveOf(points) : pathOf(points);
 		edges.push(
-			`<path d="${pathOf(points)}" fill="none" stroke="${LINE}" stroke-width="2" />` +
-				`<polygon points="${tip.x},${tip.y} ${a.x},${a.y} ${b.x},${b.y}" fill="${LINE}" />`
+			`<path d="${d}" fill="none" stroke="${edge.colour}" stroke-width="${edge.width}" ` +
+				`stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ''} />` +
+				capMarkup(edge, points, false) +
+				capMarkup(edge, points, true)
 		);
 		if (edge.label.trim()) {
 			const mid = midpoint(points);
 			const width = edge.label.length * 7 + 10;
 			edges.push(
 				`<rect x="${mid.x - width / 2}" y="${mid.y - 11}" width="${width}" height="20" rx="4" fill="${FILL}" />` +
-					`<text x="${mid.x}" y="${mid.y + 4}" text-anchor="middle" font-family="${FONT}" font-size="13" fill="${LINE}">${esc(edge.label)}</text>`
+					`<text x="${mid.x}" y="${mid.y + 4}" text-anchor="middle" font-family="${FONT}" font-size="13" fill="${edge.colour}">${esc(edge.label)}</text>`
 			);
 		}
 	}

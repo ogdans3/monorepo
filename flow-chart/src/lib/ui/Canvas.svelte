@@ -1,14 +1,25 @@
 <script lang="ts">
-	import { arrowHead, edgeAnchor, hits, midpoint, pathOf, route, type Point } from '$lib/flow/geometry';
 	import {
+		arrowHead,
+		curveOf,
+		edgeAnchor,
+		hits,
+		midpoint,
+		pathOf,
+		route,
+		type Point
+	} from '$lib/flow/geometry';
+	import {
+		FONTS,
 		addConnected,
 		addNode,
 		connect,
-		hasChildren,
+		dashOf,
 		hiddenUnder,
 		moveNode,
 		nodeText,
 		remove,
+		resizeNode,
 		updateNode,
 		visibleDoc,
 		type Direction,
@@ -65,8 +76,19 @@
 				const to = nodeById.get(edge.to);
 				if (!from || !to) return null;
 				// The other nodes, so an arrow that skips ahead goes round them.
-				const points = route(from, to, doc.nodes);
-				return { edge, points, head: arrowHead(points), mid: midpoint(points) };
+				const points = route(from, to, doc.nodes, edge.route);
+				const back = [...points].reverse();
+				return {
+					edge,
+					points,
+					d: edge.route === 'curve' ? curveOf(points) : pathOf(points),
+					dash: dashOf(edge),
+					head: arrowHead(points, edge.width * 4.5),
+					tail: arrowHead(back, edge.width * 4.5),
+					tip: points[points.length - 1],
+					start: points[0],
+					mid: midpoint(points)
+				};
 			})
 			.filter((wire): wire is NonNullable<typeof wire> => wire !== null)
 	);
@@ -324,24 +346,57 @@
 		selected = null;
 	}
 
-	const FONTS = {
-		sans: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-		serif: "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
-		mono: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
-	};
-
 	/** Folds a branch away, or brings it back. */
 	function toggleCollapse(node: FlowNode) {
 		commit(updateNode(full, node.id, { collapsed: !node.collapsed }));
 	}
 
-	/** The little handle that says how many are folded away under a node. */
+	/**
+	 * The fold button, on every node set to fold, always: open or shut, selected
+	 * or not, and in a presentation too. A control that only turns up once the
+	 * branch is already hidden is one you can fold exactly once.
+	 */
 	function badge(node: FlowNode): { count: number; x: number; y: number } | null {
-		if (!hasChildren(full, node.id)) return null;
-		const count = node.collapsed ? hiddenUnder(full, node.id) : 0;
-		if (!node.collapsed && !presenting) return { count: 0, x: node.x, y: node.y + node.h / 2 };
-		if (!node.collapsed) return null;
-		return { count, x: node.x, y: node.y + node.h / 2 };
+		if (!node.foldable) return null;
+		return {
+			count: node.collapsed ? hiddenUnder(full, node.id) : 0,
+			x: node.x,
+			y: node.y + node.h / 2
+		};
+	}
+
+	/** The corners of a selected node, for dragging its size. */
+	const CORNERS = [
+		{ id: 'nw', sx: -1, sy: -1 },
+		{ id: 'ne', sx: 1, sy: -1 },
+		{ id: 'sw', sx: -1, sy: 1 },
+		{ id: 'se', sx: 1, sy: 1 }
+	] as const;
+
+	function startResize(event: PointerEvent, node: FlowNode, sx: number, sy: number) {
+		event.stopPropagation();
+		const start = at(event);
+		const from = { w: node.w, h: node.h, x: node.x, y: node.y };
+		let changed = false;
+		track(event, (move) => {
+			const point = at(move);
+			// The opposite corner stays put, so the box grows the way the hand is
+			// going rather than from the middle outwards.
+			const w = Math.max(1, from.w + (point.x - start.x) * sx);
+			const h = Math.max(1, from.h + (point.y - start.y) * sy);
+			const sized = resizeNode(full, node.id, w, h);
+			const made = sized.nodes.find((item) => item.id === node.id)!;
+			commit(
+				moveNode(
+					sized,
+					node.id,
+					from.x + ((made.w - from.w) / 2) * sx,
+					from.y + ((made.h - from.h) / 2) * sy
+				),
+				changed
+			);
+			changed = true;
+		});
 	}
 
 	/** The diamond, as the only shape that is not a rounded rectangle. */
@@ -380,13 +435,51 @@
 				}}
 				role="presentation"
 			>
-				<path class="hit" d={pathOf(wire.points)} />
-				<path class="line" d={pathOf(wire.points)} />
-				<polygon
-					class="head"
-					points="{wire.points[wire.points.length - 1].x},{wire.points[wire.points.length - 1]
-						.y} {wire.head[0].x},{wire.head[0].y} {wire.head[1].x},{wire.head[1].y}"
+				<path class="hit" d={wire.d} />
+				<path
+					class="line"
+					d={wire.d}
+					style:stroke={wire.edge.colour}
+					stroke-width={wire.edge.width}
+					stroke-dasharray={wire.dash}
 				/>
+				{#if wire.edge.head === 'dot'}
+					<circle
+						class="cap"
+						style:fill={wire.edge.colour}
+						cx={wire.tip.x}
+						cy={wire.tip.y}
+						r={wire.edge.width * 2}
+					/>
+				{:else if wire.edge.head !== 'none'}
+					<polygon
+						class="cap"
+						class:hollow={wire.edge.head === 'hollow'}
+						style:fill={wire.edge.head === 'hollow' ? 'var(--paper)' : wire.edge.colour}
+						style:stroke={wire.edge.colour}
+						stroke-width={wire.edge.width}
+						points="{wire.tip.x},{wire.tip.y} {wire.head[0].x},{wire.head[0].y} {wire.head[1]
+							.x},{wire.head[1].y}"
+					/>
+				{/if}
+				{#if wire.edge.tail === 'dot'}
+					<circle
+						class="cap"
+						style:fill={wire.edge.colour}
+						cx={wire.start.x}
+						cy={wire.start.y}
+						r={wire.edge.width * 2}
+					/>
+				{:else if wire.edge.tail !== 'none'}
+					<polygon
+						class="cap"
+						style:fill={wire.edge.tail === 'hollow' ? 'var(--paper)' : wire.edge.colour}
+						style:stroke={wire.edge.colour}
+						stroke-width={wire.edge.width}
+						points="{wire.start.x},{wire.start.y} {wire.tail[0].x},{wire.tail[0].y} {wire.tail[1]
+							.x},{wire.tail[1].y}"
+					/>
+				{/if}
 				{#if wire.edge.label.trim()}
 					<rect
 						class="label-plate"
@@ -396,7 +489,9 @@
 						height="20"
 						rx="4"
 					/>
-					<text class="edge-label" x={wire.mid.x} y={wire.mid.y + 4}>{wire.edge.label}</text>
+					<text class="edge-label" style:fill={wire.edge.colour} x={wire.mid.x} y={wire.mid.y + 4}
+						>{wire.edge.label}</text
+					>
 				{/if}
 			</g>
 		{/each}
@@ -436,7 +531,7 @@
 						class="node-label {line.kind}"
 						x={node.x}
 						y={node.y - text.textHeight / 2 + line.y}
-						font-family={FONTS[node.font]}
+						font-family={FONTS[node.font].stack}
 						font-size={line.size}
 						font-weight={line.kind === 'title' && node.bold ? 700 : 400}
 						font-style={node.italic ? 'italic' : 'normal'}>{line.text}</text
@@ -449,7 +544,10 @@
 		{/each}
 		{#each doc.nodes as node (node.id)}
 			{@const mark = badge(node)}
-			{#if mark && (node.collapsed || selected === node.id)}
+			<!-- Always, once the node is set to fold. Gating it on the selection is
+			     how you end up with a branch you can hide and not get back. -->
+			{#if mark}
+				{@const wide = node.collapsed ? 52 : 34}
 				<g
 					class="fold"
 					class:folded={node.collapsed}
@@ -463,17 +561,38 @@
 						toggleCollapse(node);
 					}}
 				>
-					<rect x={mark.x - (node.collapsed ? 18 : 11)} y={mark.y - 9} width={node.collapsed ? 36 : 22} height="18" rx="9" />
+					<rect x={mark.x - wide / 2} y={mark.y - 13} width={wide} height="26" rx="13" />
 					{#if node.collapsed}
-						<text x={mark.x} y={mark.y + 4}>+{mark.count}</text>
+						<text x={mark.x + 5} y={mark.y + 5}>{mark.count}</text>
+						<path
+							d="M {mark.x - 15} {mark.y - 3} L {mark.x - 9} {mark.y + 4} L {mark.x - 3} {mark.y -
+								3}"
+						/>
 					{:else}
-						<path d="M {mark.x - 5} {mark.y - 2} L {mark.x} {mark.y + 3} L {mark.x + 5} {mark.y - 2}" />
+						<path
+							d="M {mark.x - 7} {mark.y + 3} L {mark.x} {mark.y - 4} L {mark.x + 7} {mark.y + 3}"
+						/>
 					{/if}
 				</g>
 			{/if}
 		{/each}
 
 		{#if selectedNode && !presenting}
+			{#each CORNERS as corner (corner.id)}
+				<rect
+					class="grip"
+					role="button"
+					tabindex="-1"
+					aria-label="Resize from the {corner.id} corner"
+					x={selectedNode.x + (corner.sx * selectedNode.w) / 2 - 5}
+					y={selectedNode.y + (corner.sy * selectedNode.h) / 2 - 5}
+					width="10"
+					height="10"
+					rx="2"
+					style:cursor={corner.sx === corner.sy ? 'nwse-resize' : 'nesw-resize'}
+					onpointerdown={(e) => startResize(e, selectedNode, corner.sx, corner.sy)}
+				/>
+			{/each}
 			{#each buds(selectedNode) as bud (bud.dir)}
 				<g
 					class="bud"
@@ -623,7 +742,7 @@
 
 	.fold text {
 		text-anchor: middle;
-		font: 600 11px var(--font-mono);
+		font: 600 13px var(--font-mono);
 		fill: var(--muted);
 		pointer-events: none;
 		user-select: none;
@@ -649,6 +768,16 @@
 	.fold:hover rect {
 		border-color: var(--muted);
 		stroke: var(--muted);
+	}
+
+	.cap.hollow {
+		stroke-linejoin: round;
+	}
+
+	.grip {
+		fill: var(--surface);
+		stroke: var(--accent);
+		stroke-width: 1.5;
 	}
 
 	.linking {

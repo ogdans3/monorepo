@@ -45,6 +45,14 @@ src/routes      +page.svelte, the toolbar and the sheets
   lines, their sizes and where each one sits, and both the canvas and the
   export draw what it returns. Two layout rules means a label that fits on
   screen and overflows in the file.
+- **Folding is a setting, and the button outlives the fold.** `foldable` is
+  what puts the button on a shape; `collapsed` is only whether it is folded
+  right now. The button is drawn for every foldable node regardless of the
+  selection, because gating it on selection is how a branch gets hidden with no
+  obvious way back. `hiddenUnder` returns 0 for a node that is not foldable.
+- **A hand-sized node stays hand-sized.** `resizeNode` sets `sized`, and
+  `fitSize` leaves such a node alone, so typing into it does not undo the drag.
+  `sized: false` is what "Fit to the text" means.
 - **The canvas draws `visibleDoc`, and edits the whole document.** Hit testing
   and routing use the visible slice so a folded branch cannot be clicked; every
   mutation is made against `full`, because ids are the same in both and an
@@ -52,6 +60,11 @@ src/routes      +page.svelte, the toolbar and the sheets
 - **Mermaid says what it skipped.** Anything the reader does not understand
   goes in `skipped` and the page shows it. Never guess at a line: a diagram
   that quietly loses a branch is worse than one that admits it.
+- **The setup effect is untracked.** The `$effect` in `+page.svelte` that
+  restores the saved diagram and fits the view reads `editor.doc`, so left
+  tracked it re-runs after every change: `restore()` puts the saved copy back
+  over the edit and resets the history so Undo has nothing to go back to, and
+  the view refits while somebody is mid drag. Keep the body inside `untrack`.
 - **The diagram is in local storage on purpose.** It is the visitor's own work
   on their own machine. Nothing is uploaded, and there is no server side beyond
   serving the page, so do not add one.
