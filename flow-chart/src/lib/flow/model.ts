@@ -17,10 +17,34 @@
  */
 export type NodeShape = 'process' | 'decision' | 'terminator';
 
+/** The face a node is written in. Three, for the same reason there are three shapes. */
+export type FontKey = 'sans' | 'serif' | 'mono';
+
 export interface FlowNode {
 	id: string;
 	shape: NodeShape;
-	text: string;
+	/**
+	 * Three pieces of text, because a box in a flow chart is usually a name with
+	 * something behind it. The title is always on the shape. The subtitle is the
+	 * qualifier that makes the name exact, shown by default because it is
+	 * usually short and usually needed. The body is the paragraph nobody wants
+	 * on the diagram but everybody wants somewhere, so it is hidden by default
+	 * and always readable in the panel.
+	 */
+	title: string;
+	subtitle: string;
+	body: string;
+	showSubtitle: boolean;
+	showBody: boolean;
+	/** Fill. The outline and the text are derived from it, never set apart. */
+	colour: string;
+	font: FontKey;
+	/** Title size in diagram units. The other two follow from it. */
+	size: number;
+	bold: boolean;
+	italic: boolean;
+	/** Hides everything that hangs off this node until it is opened again. */
+	collapsed: boolean;
 	/** Centre of the node, in diagram coordinates. */
 	x: number;
 	y: number;
@@ -60,6 +84,59 @@ export const SHAPE_LABELS: Record<NodeShape, string> = {
 	decision: 'Decision',
 	terminator: 'Start or end'
 };
+
+export const FONT_LABELS: Record<FontKey, string> = {
+	sans: 'Plain',
+	serif: 'Serif',
+	mono: 'Mono'
+};
+
+/** The white a box is unless somebody chooses otherwise. */
+export const NO_COLOUR = '#ffffff';
+
+/**
+ * Colours to start from: pale enough that black text still reads on them, and
+ * far enough apart to mean different things at a glance. A custom colour can be
+ * anything, and the recent ones sit beside these in the panel.
+ */
+export const SWATCHES = [
+	NO_COLOUR,
+	'#fde8e8',
+	'#fdf0d5',
+	'#fbf8cc',
+	'#e4f5e4',
+	'#dcf1f4',
+	'#e5e6fb',
+	'#f6e4f6',
+	'#eceff1'
+];
+
+export const SIZE_STEPS = [13, 15, 18, 22, 28];
+export const DEFAULT_SIZE = 15;
+
+/** The most recently chosen colours, newest first and without repeats. */
+export function withRecent(recent: string[], colour: string, limit = 8): string[] {
+	const clean = colour.trim().toLowerCase();
+	if (!clean || clean === NO_COLOUR) return recent;
+	return [clean, ...recent.filter((item) => item.toLowerCase() !== clean)].slice(0, limit);
+}
+
+/** Everything a node needs that a caller has not said anything about. */
+export function nodeDefaults(): Omit<FlowNode, 'id' | 'shape' | 'x' | 'y' | 'w' | 'h'> {
+	return {
+		title: '',
+		subtitle: '',
+		body: '',
+		showSubtitle: true,
+		showBody: false,
+		colour: NO_COLOUR,
+		font: 'sans',
+		size: DEFAULT_SIZE,
+		bold: false,
+		italic: false,
+		collapsed: false
+	};
+}
 
 /** Shapes that were offered once and now fold into the nearest one that stayed. */
 const RETIRED: Record<string, NodeShape> = { io: 'process', note: 'process' };
@@ -105,15 +182,86 @@ export function seedIds(doc: FlowDoc): void {
  * that needs a paragraph gets a paragraph, because the alternative is somebody
  * abbreviating their own diagram to fit a box.
  */
-export function fitSize(shape: NodeShape, text: string): { w: number; h: number } {
-	const base = SIZES[shape];
-	const lines = wrapText(text, shape);
-	const longest = lines.reduce((most, line) => Math.max(most, line.length), 0);
-	const padding = shape === 'decision' ? 100 : 44;
+export interface TextLine {
+	text: string;
+	kind: 'title' | 'subtitle' | 'body';
+	size: number;
+	/** Baseline, measured down from the top of the whole block of text. */
+	y: number;
+}
+
+export interface NodeText {
+	lines: TextLine[];
+	/** Height of the text itself, before the shape's padding. */
+	textHeight: number;
+	w: number;
+	h: number;
+}
+
+/** Roughly how wide a character is. Enough to size a box around it. */
+const charWidth = (size: number, bold: boolean) => size * (bold ? 0.6 : 0.56);
+
+const LINE_HEIGHT = 1.35;
+const SUB_RATIO = 0.82;
+const BODY_RATIO = 0.76;
+const BLOCK_GAP = 0.45;
+
+type TextOf = Pick<
+	FlowNode,
+	'shape' | 'title' | 'subtitle' | 'body' | 'showSubtitle' | 'showBody' | 'font' | 'size' | 'bold' | 'italic'
+>;
+
+/**
+ * The lines a node shows, where each one sits, and how big the box has to be
+ * to hold them.
+ *
+ * One function for both, because the canvas and the exported SVG have to agree
+ * about it exactly: two wrapping rules means a label that fits on screen and
+ * overflows in the file. Everything downstream draws what this returns.
+ */
+export function nodeText(node: TextOf): NodeText {
+	const blocks: { text: string; kind: TextLine['kind']; size: number }[] = [
+		{ text: node.title, kind: 'title', size: node.size }
+	];
+	if (node.showSubtitle && node.subtitle.trim()) {
+		blocks.push({
+			text: node.subtitle,
+			kind: 'subtitle',
+			size: Math.round(node.size * SUB_RATIO)
+		});
+	}
+	if (node.showBody && node.body.trim()) {
+		blocks.push({ text: node.body, kind: 'body', size: Math.round(node.size * BODY_RATIO) });
+	}
+
+	const lines: TextLine[] = [];
+	let y = 0;
+	let widest = 0;
+	for (const [index, block] of blocks.entries()) {
+		if (index > 0) y += block.size * BLOCK_GAP;
+		for (const line of wrapText(block.text, node.shape)) {
+			const height = block.size * LINE_HEIGHT;
+			y += height;
+			lines.push({ text: line, kind: block.kind, size: block.size, y: y - height * 0.28 });
+			widest = Math.max(widest, charWidth(block.size, node.bold) * line.length);
+		}
+	}
+
+	const base = SIZES[node.shape];
+	const padX = node.shape === 'decision' ? 96 : 44;
+	const padY = node.shape === 'decision' ? 44 : 26;
 	return {
-		w: Math.max(base.w, Math.round(Math.min(longest, WRAP_AT[shape]) * 8.3 + padding)),
-		h: Math.max(base.h, 26 + lines.length * 20 + (shape === 'decision' ? 36 : 0))
+		lines,
+		textHeight: y,
+		w: Math.max(base.w, Math.round(widest + padX)),
+		h: Math.max(base.h, Math.round(y + padY))
 	};
+}
+
+/** Just the size, for the places that only need to know how big a node got. */
+export function fitSize(node: TextOf): { w: number; h: number } {
+	const { w, h } = nodeText(node);
+	return { w, h };
 }
 
 /**
@@ -193,13 +341,50 @@ export function addNode(
 	shape: NodeShape,
 	x: number,
 	y: number,
-	text = ''
+	title = '',
+	extra: Partial<FlowNode> = {}
 ): { doc: FlowDoc; id: string } {
 	const id = nextId();
-	const size = fitSize(shape, text);
+	const node: FlowNode = {
+		id,
+		shape,
+		x,
+		y,
+		w: 0,
+		h: 0,
+		...nodeDefaults(),
+		title,
+		...extra
+	};
 	return {
-		doc: { ...doc, nodes: [...doc.nodes, { id, shape, text, x, y, ...size }] },
+		doc: { ...doc, nodes: [...doc.nodes, { ...node, ...fitSize(node) }] },
 		id
+	};
+}
+
+/**
+ * Changes anything about a node and resizes it to suit.
+ *
+ * One way in for every setting, because they all affect the box: a longer
+ * title, a bigger font, a subtitle switched on and a shape swapped for a
+ * diamond are the same problem, and four functions that each remembered to
+ * resize would eventually be three that did.
+ */
+export function updateNode(doc: FlowDoc, id: string, patch: Partial<FlowNode>): FlowDoc {
+	return {
+		...doc,
+		nodes: doc.nodes.map((node) => {
+			if (node.id !== id) return node;
+			const next = { ...node, ...patch };
+			return { ...next, ...fitSize(next) };
+		})
+	};
+}
+
+export function setEdgeLabel(doc: FlowDoc, id: string, label: string): FlowDoc {
+	return {
+		...doc,
+		edges: doc.edges.map((edge) => (edge.id === id ? { ...edge, label } : edge))
 	};
 }
 
@@ -207,25 +392,6 @@ export function moveNode(doc: FlowDoc, id: string, x: number, y: number): FlowDo
 	return {
 		...doc,
 		nodes: doc.nodes.map((node) => (node.id === id ? { ...node, x, y } : node))
-	};
-}
-
-export function setText(doc: FlowDoc, id: string, text: string): FlowDoc {
-	return {
-		...doc,
-		nodes: doc.nodes.map((node) =>
-			node.id === id ? { ...node, text, ...fitSize(node.shape, text) } : node
-		),
-		edges: doc.edges.map((edge) => (edge.id === id ? { ...edge, label: text } : edge))
-	};
-}
-
-export function setShape(doc: FlowDoc, id: string, shape: NodeShape): FlowDoc {
-	return {
-		...doc,
-		nodes: doc.nodes.map((node) =>
-			node.id === id ? { ...node, shape, ...fitSize(shape, node.text) } : node
-		)
 	};
 }
 
@@ -252,6 +418,81 @@ export function remove(doc: FlowDoc, ids: string[]): FlowDoc {
 	};
 }
 
+/**
+ * Which nodes are on screen once the collapsed ones have folded away.
+ *
+ * The rule that makes joins behave: a node disappears only when *every* way in
+ * goes through something collapsed. Collapse the "no" branch of a decision and
+ * the step both branches meet at stays, because the "yes" branch still reaches
+ * it, which is what anybody would expect and what a plain descendant walk gets
+ * wrong.
+ */
+export function visibleIds(doc: FlowDoc): Set<string> {
+	const collapsed = new Set(doc.nodes.filter((node) => node.collapsed).map((node) => node.id));
+	if (collapsed.size === 0) return new Set(doc.nodes.map((node) => node.id));
+
+	const children = new Map<string, string[]>();
+	for (const node of doc.nodes) children.set(node.id, []);
+	for (const edge of doc.edges) children.get(edge.from)?.push(edge.to);
+
+	// Everything hanging off something collapsed, however far down. Walked once
+	// per collapsed node, and never back onto that node itself: a loop that
+	// returns to it would otherwise file it as hidden under itself, and the
+	// whole diagram would disappear behind a box that had gone with it.
+	const below = new Set<string>();
+	for (const root of collapsed) {
+		const seen = new Set<string>([root]);
+		const queue = [...(children.get(root) ?? [])];
+		while (queue.length) {
+			const id = queue.shift()!;
+			if (seen.has(id)) continue;
+			seen.add(id);
+			below.add(id);
+			queue.push(...(children.get(id) ?? []));
+		}
+	}
+
+	// Then walk from everything that is not down there, stopping at each
+	// collapsed node. Anything reached this way has a way in of its own.
+	const visible = new Set<string>();
+	const open = doc.nodes.filter((node) => !below.has(node.id)).map((node) => node.id);
+	while (open.length) {
+		const id = open.shift()!;
+		if (visible.has(id)) continue;
+		visible.add(id);
+		if (collapsed.has(id)) continue;
+		open.push(...(children.get(id) ?? []));
+	}
+	return visible;
+}
+
+/** The document as it is drawn: without what the collapsed nodes are hiding. */
+export function visibleDoc(doc: FlowDoc): FlowDoc {
+	const visible = visibleIds(doc);
+	if (visible.size === doc.nodes.length) return doc;
+	return {
+		nodes: doc.nodes.filter((node) => visible.has(node.id)),
+		edges: doc.edges.filter((edge) => visible.has(edge.from) && visible.has(edge.to))
+	};
+}
+
+/** How many nodes a collapsed node is holding out of sight. */
+export function hiddenUnder(doc: FlowDoc, id: string): number {
+	const node = doc.nodes.find((item) => item.id === id);
+	if (!node?.collapsed) return 0;
+	const open = visibleIds({
+		...doc,
+		nodes: doc.nodes.map((item) => (item.id === id ? { ...item, collapsed: false } : item))
+	});
+	const now = visibleIds(doc);
+	return open.size - now.size;
+}
+
+/** Nodes with something under them, which are the ones worth a collapse control. */
+export function hasChildren(doc: FlowDoc, id: string): boolean {
+	return doc.edges.some((edge) => edge.from === id);
+}
+
 /** The rectangle every node sits inside, for fitting the view to the diagram. */
 export function bounds(doc: FlowDoc): { x: number; y: number; w: number; h: number } {
 	if (doc.nodes.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
@@ -273,6 +514,8 @@ export function bounds(doc: FlowDoc): { x: number; y: number; w: number; h: numb
  * dropped rather than trusted: this is the one place where something that did
  * not come from us gets in, and half a diagram beats a page that will not load.
  */
+const text = (value: unknown): string => (typeof value === 'string' ? value : '');
+
 export function parseDoc(raw: unknown): FlowDoc {
 	const source = raw as Partial<FlowDoc> | null;
 	if (!source || typeof source !== 'object') return EMPTY;
@@ -287,17 +530,30 @@ export function parseDoc(raw: unknown): FlowDoc {
 		const shape: NodeShape = (
 			named in SIZES ? named : (RETIRED[named] ?? 'process')
 		) as NodeShape;
-		const text = typeof node.text === 'string' ? node.text : '';
-		const size = fitSize(shape, text);
-		nodes.push({
+		const legacy = item as { text?: unknown };
+		const built: FlowNode = {
 			id: node.id,
 			shape,
-			text,
 			x: Number.isFinite(node.x) ? Number(node.x) : 0,
 			y: Number.isFinite(node.y) ? Number(node.y) : 0,
-			w: Number.isFinite(node.w) ? Number(node.w) : size.w,
-			h: Number.isFinite(node.h) ? Number(node.h) : size.h
-		});
+			w: 0,
+			h: 0,
+			...nodeDefaults(),
+			// A file written when a node held one string still opens, with that
+			// string as the title, which is where it was being read anyway.
+			title: text(node.title) || text(legacy.text),
+			subtitle: text(node.subtitle),
+			body: text(node.body),
+			showSubtitle: node.showSubtitle !== false,
+			showBody: node.showBody === true,
+			colour: text(node.colour) || NO_COLOUR,
+			font: (node.font === 'serif' || node.font === 'mono' ? node.font : 'sans') as FontKey,
+			size: Number.isFinite(node.size) ? Number(node.size) : DEFAULT_SIZE,
+			bold: node.bold === true,
+			italic: node.italic === true,
+			collapsed: node.collapsed === true
+		};
+		nodes.push({ ...built, ...fitSize(built) });
 	}
 
 	const ids = new Set(nodes.map((n) => n.id));

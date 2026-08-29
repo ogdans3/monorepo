@@ -41,9 +41,14 @@ src/routes      +page.svelte, the toolbar and the sheets
   which is how double clicking a box to write in it silently did nothing.
   `onDoubleClick` in `Canvas.svelte` owns every double click and works out what
   was under it. Do not move it back onto the shapes.
-- **Text wraps in one place.** `wrapText` in `model.ts` decides the lines, and
-  both the canvas and the export use it. Two wrapping rules means a label that
-  fits on screen and overflows in the file.
+- **Text is laid out in one place.** `nodeText` in `model.ts` decides the
+  lines, their sizes and where each one sits, and both the canvas and the
+  export draw what it returns. Two layout rules means a label that fits on
+  screen and overflows in the file.
+- **The canvas draws `visibleDoc`, and edits the whole document.** Hit testing
+  and routing use the visible slice so a folded branch cannot be clicked; every
+  mutation is made against `full`, because ids are the same in both and an
+  operation that only saw the slice would quietly drop what is folded.
 - **Mermaid says what it skipped.** Anything the reader does not understand
   goes in `skipped` and the page shows it. Never guess at a line: a diagram
   that quietly loses a branch is worse than one that admits it.

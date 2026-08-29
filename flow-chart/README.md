@@ -57,8 +57,12 @@ and runs perfectly by hand, and simply never appears in the dashboard.
 | Add the next one | Select a shape and press one of its **+** buttons. It arrives joined on |
 | Add one somewhere else | Drag a **+** onto empty paper |
 | Connect two | Drag a **+** onto another shape |
-| Write in it | Select it and press **Write**, or double click it, or press Enter. It is a box, not a line: paragraphs are fine, and Enter makes a new line |
-| Label an arrow | Double click the arrow |
+| Write in it | Select it, or double click it. The panel opens at the side with the title, the subtitle and the rest of the text |
+| Label an arrow | Double click the arrow, then **OK** |
+| Colour it | Pick a swatch in the panel, or any colour you like. The ones you use come back under **Recent** |
+| Change the type | Font, bold, italic and five sizes, per shape, in the panel |
+| Fold a branch | Select a shape with something under it and press the chevron on its bottom edge, or **Fold away** in the panel. It becomes **+3**, and pressing that brings it back |
+| Present | **Present** hides the editor. Space reveals the next folded branch, ← puts it back, Escape leaves |
 | Change what it is | Select it and pick Step, Decision or Start/end |
 | Move | Drag it. Positions land on an 8px grid |
 | Delete | Select and press Delete |
@@ -71,6 +75,23 @@ a press puts the next step in that direction and joins it up.
 
 **Tidy up** arranges the shapes in rows by following the arrows, which is also
 what makes an imported diagram usable, since Mermaid carries no positions.
+
+## A title, a subtitle, and the rest
+
+A box in a flow chart is usually a name with something behind it, so a shape
+holds three pieces of text rather than one.
+
+- **Title** is always on the shape.
+- **Subtitle** is the qualifier that makes the name exact. Shown by default,
+  because it is usually short and usually needed.
+- **More text** is the paragraph nobody wants on the diagram and everybody
+  wants somewhere. Hidden by default, always readable in the panel, and
+  switched on per shape when it earns its place.
+
+Both are toggles rather than settings buried in a menu, because whether a
+subtitle belongs on the diagram is a decision that changes per shape and per
+audience. What is switched off is left out of the SVG and the PNG too: the
+picture is what you see, not what you have written.
 
 ## Three shapes
 
@@ -98,7 +119,15 @@ would pass through another shape, it leaves sideways, runs down a clear lane and
 comes back in. Drawn straight it reads as an arrow into every box it crosses,
 which is the wrong diagram.
 
-**4. It goes out as text as well as pictures.** A flow chart is usually on its
+**4. Folding is the same document, drawn smaller.** A collapsed branch is
+hidden, not deleted, and it disappears only when *every* way into it goes
+through something folded. Collapse one branch of a decision and the step both
+branches meet at stays, because the other branch still reaches it. Everything
+downstream, the routing, the export, the hit testing, works on the visible
+document, so a folded branch is not merely invisible: it is not there to be
+clicked either.
+
+**5. It goes out as text as well as pictures.** A flow chart is usually on its
 way somewhere else: a README, a wiki, a chat with a model. Mermaid out for that,
 and Mermaid in because that is where a diagram often already exists, and
 retyping one is why people give up on drawing them.

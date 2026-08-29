@@ -1,5 +1,12 @@
 import { arrowHead, midpoint, pathOf, route } from './geometry';
-import { bounds, wrapText, type FlowDoc, type FlowNode } from './model';
+import {
+	bounds,
+	nodeText,
+	visibleDoc,
+	type FlowDoc,
+	type FlowNode,
+	type FontKey
+} from './model';
 
 /**
  * The diagram as a standalone SVG.
@@ -18,8 +25,12 @@ const PAD = 24;
 const INK = '#221f1a';
 const LINE = '#6b6355';
 const FILL = '#ffffff';
-const FONT =
-	"system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+const FONTS: Record<FontKey, string> = {
+	sans: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+	serif: "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
+	mono: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
+};
+const FONT = FONTS.sans;
 
 function esc(text: string): string {
 	return text
@@ -34,7 +45,7 @@ export function shapeMarkup(node: FlowNode): string {
 	const { x, y, w, h } = node;
 	const left = x - w / 2;
 	const top = y - h / 2;
-	const common = `fill="${FILL}" stroke="${INK}" stroke-width="2"`;
+	const common = `fill="${node.colour || FILL}" stroke="${INK}" stroke-width="2"`;
 
 	switch (node.shape) {
 		case 'decision':
@@ -46,20 +57,32 @@ export function shapeMarkup(node: FlowNode): string {
 	}
 }
 
-/** The label inside a node, wrapped the same way the editor wraps it. */
-export function labelMarkup(node: FlowNode, klass = ''): string {
-	const lines = wrapText(node.text, node.shape);
-	const start = node.y - ((lines.length - 1) * 20) / 2 + 6;
-	const spans = lines
-		.map(
-			(line, i) =>
-				`<tspan x="${node.x}" y="${start + i * 20}">${esc(line) || '&#8203;'}</tspan>`
-		)
+/**
+ * The text inside a node, laid out by the model so the file and the screen
+ * agree line for line.
+ */
+export function labelMarkup(node: FlowNode): string {
+	const { lines, textHeight } = nodeText(node);
+	const top = node.y - textHeight / 2;
+	const weight = node.bold ? 700 : 400;
+	const style = node.italic ? ' font-style="italic"' : '';
+	return lines
+		.map((line) => {
+			const fill = line.kind === 'title' ? INK : LINE;
+			const opacity = line.kind === 'body' ? ' opacity="0.9"' : '';
+			return (
+				`<text x="${node.x}" y="${top + line.y}" text-anchor="middle" ` +
+				`font-family="${FONTS[node.font] ?? FONT}" font-size="${line.size}" ` +
+				`font-weight="${line.kind === 'title' ? weight : 400}"${style}${opacity} ` +
+				`fill="${fill}">${esc(line.text) || '&#8203;'}</text>`
+			);
+		})
 		.join('');
-	return `<text class="${klass}" text-anchor="middle" font-family="${FONT}" font-size="15" fill="${INK}">${spans}</text>`;
 }
 
-export function toSvg(doc: FlowDoc): string {
+export function toSvg(input: FlowDoc): string {
+	// Collapsed branches are not in the picture, so they are not in the file.
+	const doc = visibleDoc(input);
 	const box = bounds(doc);
 	const width = Math.max(1, Math.round(box.w + PAD * 2));
 	const height = Math.max(1, Math.round(box.h + PAD * 2));

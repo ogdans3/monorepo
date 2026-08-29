@@ -6,20 +6,26 @@
 		addNode,
 		connect,
 		parseDoc,
-		setShape,
-		setText,
-		SHAPE_LABELS,
+		setEdgeLabel,
+		updateNode,
+		visibleDoc,
+		withRecent,
+		type FlowNode,
 		type NodeShape
 	} from '$lib/flow/model';
-	import { Editor } from '$lib/flow/store.svelte';
+	import { Editor, recentColours } from '$lib/flow/store.svelte';
 	import Canvas from '$lib/ui/Canvas.svelte';
+	import Inspector from '$lib/ui/Inspector.svelte';
 
 	const editor = new Editor();
 	let selected = $state<string | null>(null);
 	let tool = $state<NodeShape | null>(null);
 	let canvas = $state<ReturnType<typeof Canvas>>();
 	let status = $state('');
-	let editing = $state<{ id: string; text: string; isEdge: boolean } | null>(null);
+	/** Only arrows use the little sheet now; a shape gets the panel at the side. */
+	let editing = $state<{ id: string; text: string } | null>(null);
+	let panel = $state<{ id: string; focusText: boolean } | null>(null);
+	let presenting = $state(false);
 	let showText = $state(false);
 	let textBuffer = $state('');
 	let textNote = $state('');
@@ -27,8 +33,11 @@
 	const doc = $derived(editor.doc);
 	const selectedNode = $derived(doc.nodes.find((n) => n.id === selected) ?? null);
 	const selectedEdge = $derived(doc.edges.find((e) => e.id === selected) ?? null);
-
-	const SHAPES: NodeShape[] = ['process', 'decision', 'terminator'];
+	const panelNode = $derived(panel ? (doc.nodes.find((n) => n.id === panel!.id) ?? null) : null);
+	/** Collapsed nodes still holding something back, for stepping a presentation. */
+	const foldedIds = $derived(
+		visibleDoc(doc).nodes.filter((node) => node.collapsed).map((node) => node.id)
+	);
 
 	$effect(() => {
 		editor.restore();
@@ -49,22 +58,56 @@
 	}
 
 	function openEditor(id: string) {
-		const node = doc.nodes.find((n) => n.id === id);
+		if (doc.nodes.some((node) => node.id === id)) {
+			selected = id;
+			panel = { id, focusText: true };
+			return;
+		}
 		const edge = doc.edges.find((e) => e.id === id);
-		if (node) editing = { id, text: node.text, isEdge: false };
-		else if (edge) editing = { id, text: edge.label, isEdge: true };
+		if (edge) editing = { id, text: edge.label };
 	}
 
 	function applyEdit(text: string) {
 		if (!editing) return;
-		editor.commit(setText(doc, editing.id, text));
+		editor.commit(setEdgeLabel(doc, editing.id, text));
 		editing = null;
 	}
+
+	/**
+	 * A change from the panel. Typing coalesces so a sentence is one step in the
+	 * history rather than forty, and everything else is a step of its own.
+	 */
+	function patch(node: FlowNode, change: Partial<FlowNode>, coalesce = false) {
+		editor.commit(updateNode(doc, node.id, change), coalesce);
+	}
+
+	$effect(() => {
+		// The panel follows the selection: picking a shape is asking about it.
+		if (selected && doc.nodes.some((node) => node.id === selected)) {
+			if (panel?.id !== selected) panel = { id: selected, focusText: false };
+		} else if (panel) {
+			panel = null;
+		}
+	});
 
 	function onKey(event: KeyboardEvent) {
 		const target = event.target as HTMLElement;
 		const typing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
 		const meta = event.metaKey || event.ctrlKey;
+
+		if (presenting) {
+			// A presentation is a few keys: forward, back, and out.
+			if (event.key === 'Escape') presenting = false;
+			if (event.key === ' ' || event.key === 'ArrowRight') {
+				event.preventDefault();
+				revealNext();
+			}
+			if (event.key === 'ArrowLeft') {
+				event.preventDefault();
+				foldLast();
+			}
+			return;
+		}
 
 		if (meta && event.key.toLowerCase() === 'z') {
 			if (typing) return;
@@ -87,6 +130,37 @@
 			editing = null;
 			showText = false;
 		}
+	}
+
+	/**
+	 * Presenting is the diagram without the editor: no toolbar, no panel, no
+	 * buds, fitted to the screen. Folded branches become the steps of the talk,
+	 * so a chart drawn with them collapsed is already a deck.
+	 */
+	let opened = $state<string[]>([]);
+
+	function present() {
+		presenting = true;
+		selected = null;
+		panel = null;
+		opened = [];
+		queueMicrotask(() => canvas?.fit());
+	}
+
+	function revealNext() {
+		const next = foldedIds[0];
+		if (!next) return;
+		editor.commit(updateNode(doc, next, { collapsed: false }));
+		opened = [...opened, next];
+		queueMicrotask(() => canvas?.fit());
+	}
+
+	function foldLast() {
+		const last = opened.at(-1);
+		if (!last) return;
+		editor.commit(updateNode(doc, last, { collapsed: true }));
+		opened = opened.slice(0, -1);
+		queueMicrotask(() => canvas?.fit());
 	}
 
 	function exportSvg() {
@@ -180,7 +254,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div class="app">
+<div class="app" class:presenting>
 	<header>
 		<h1>Flow chart</h1>
 
@@ -202,6 +276,9 @@
 				}}>Tidy up</button
 			>
 			<button class="btn" onclick={() => canvas?.fit()}>Fit</button>
+			<button class="btn" onclick={present} title="Hide the editor and step through the folds"
+				>Present</button
+			>
 		</div>
 
 		<div class="group right">
@@ -216,16 +293,33 @@
 	</header>
 
 	<main>
-		<Canvas bind:this={canvas} {doc} bind:selected bind:tool commit={(d, c) => editor.commit(d, c)} onedit={openEditor} />
+		<Canvas
+			bind:this={canvas}
+			{doc}
+			bind:selected
+			bind:tool
+			{presenting}
+			commit={(d, c) => editor.commit(d, c)}
+			onedit={openEditor}
+		/>
 
-		<p class="hint" role="status">
+		{#if presenting}
+			<div class="present-bar">
+				<span>{foldedIds.length} folded</span>
+				<button class="chip" onclick={foldLast} disabled={!opened.length}>Back</button>
+				<button class="chip" onclick={revealNext} disabled={!foldedIds.length}>Reveal</button>
+				<button class="chip" onclick={() => (presenting = false)}>Leave</button>
+			</div>
+		{/if}
+
+		<p class="hint" role="status" class:hidden={presenting} class:beside={panelNode !== null}>
 			{#if status}
 				{status}
 			{:else if tool}
 				Click anywhere on the paper to put it there.
 			{:else if selectedNode}
 				Press a <span class="key">+</span> for the next step, or drag one onto another shape to
-				join them. Double click to write in it, Delete to remove it.
+				join them. Everything about it is in the panel.
 			{:else if selectedEdge}
 				Double click the arrow to label the branch, Delete to remove it.
 			{:else}
@@ -234,40 +328,35 @@
 			{/if}
 		</p>
 
-		{#if selectedNode}
-			<div class="inspector">
-				<!-- A button for it, because double click is the fastest way in and
-				     the least discoverable: somebody who does not try it concludes
-				     the text cannot be changed at all. -->
-				<button class="chip write" onclick={() => openEditor(selectedNode.id)}>Write</button>
-				<span class="inspector-label">Shape</span>
-				{#each SHAPES as shape (shape)}
-					<button
-						class="chip"
-						class:active={selectedNode.shape === shape}
-						aria-pressed={selectedNode.shape === shape}
-						onclick={() => editor.commit(setShape(doc, selectedNode.id, shape))}
-					>
-						{SHAPE_LABELS[shape]}
-					</button>
-				{/each}
-				<button class="chip danger" onclick={() => canvas?.deleteSelected()}>Delete</button>
-			</div>
+		{#if panelNode && !presenting}
+			<Inspector
+				{doc}
+				node={panelNode}
+				recent={recentColours.list}
+				focusText={panel?.focusText ?? false}
+				update={(change, coalesce) => patch(panelNode, change, coalesce)}
+				oncolour={(colour) => recentColours.remember(colour)}
+				remove={() => canvas?.deleteSelected()}
+				close={() => {
+					panel = null;
+					selected = null;
+				}}
+			/>
 		{/if}
 	</main>
 
 	{#if editing}
-		<div class="sheet" role="dialog" aria-label="Write in this shape">
-			<label for="node-text">{editing.isEdge ? 'Arrow label' : 'What happens here'}</label>
+		<div class="sheet" role="dialog" aria-label="Label this arrow">
+			<label for="node-text">Arrow label</label>
 			<!--
-				A box rather than a line. A step is often a sentence, sometimes a
-				short paragraph, and a single-line field is what makes people
-				abbreviate their own diagram until it stops saying anything.
+				The one thing still edited in place: a branch label is a word, and
+				sending somebody to the side panel for "yes" would be worse than
+				typing it. Everything a shape holds lives in the panel instead.
 			-->
 			<textarea
 				id="node-text"
-				rows={editing.isEdge ? 1 : 4}
-				value={editing.text}
+				rows="1"
+				bind:value={editing.text}
 				{@attach (box: HTMLTextAreaElement) => {
 					box.focus();
 					box.select();
@@ -276,19 +365,17 @@
 					// Enter makes a new line, since that is what a box is for. The
 					// two ways out are the ones a text box always has.
 					if (e.key === 'Escape') editing = null;
-					if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) applyEdit(e.currentTarget.value);
-					if (e.key === 'Enter' && editing?.isEdge) {
+					if (e.key === 'Enter') {
 						e.preventDefault();
 						applyEdit(e.currentTarget.value);
 					}
 				}}
 				onblur={(e) => applyEdit(e.currentTarget.value)}
 			></textarea>
-			<span class="sheet-hint">
-				{editing.isEdge
-					? 'Enter to keep it, Escape to leave it'
-					: 'Enter makes a new line. Click away or press Cmd/Ctrl+Enter to keep it, Escape to leave it'}
-			</span>
+			<div class="sheet-actions">
+				<span class="sheet-hint">Enter to keep it, Escape to leave it</span>
+				<button class="btn primary" onclick={() => applyEdit(editing!.text)}>OK</button>
+			</div>
 		</div>
 	{/if}
 
@@ -315,6 +402,11 @@
 		display: flex;
 		flex-direction: column;
 		height: 100dvh;
+	}
+
+	/* Presenting: the diagram and nothing else. */
+	.app.presenting header {
+		display: none;
 	}
 
 	header {
@@ -374,35 +466,30 @@
 		pointer-events: none;
 	}
 
-	.inspector {
+	.present-bar {
 		position: absolute;
-		top: 0.9rem;
 		left: 50%;
+		bottom: 1rem;
 		transform: translateX(-50%);
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
+		gap: 0.4rem;
 		padding: 0.4rem 0.5rem;
 		border: 1px solid var(--line);
 		border-radius: 99px;
-		background: var(--surface);
-		box-shadow: 0 6px 20px oklch(0.24 0.014 70 / 0.08);
-	}
-
-	.inspector-label {
+		background: color-mix(in oklch, var(--surface) 94%, transparent);
 		font-size: 0.8125rem;
 		color: var(--muted);
-		padding: 0 0.25rem;
 	}
 
-	.chip.write {
-		background: var(--accent);
-		border-color: var(--accent);
-		color: #fff;
+	.hint.hidden {
+		display: none;
 	}
 
-	.chip.danger {
-		color: var(--danger);
+	/* Out from under the panel rather than beneath it. */
+	.hint.beside {
+		left: calc(50% - 11rem);
+		max-width: min(70vw, 34rem);
 	}
 
 	.key {

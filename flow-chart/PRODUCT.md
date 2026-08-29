@@ -48,7 +48,11 @@ marks, no celebration when a box is placed.
 5. **Nothing is uploaded.** The work stays in the tab and in this browser's
    storage. There is no server to send it to.
 6. **Every state drawn.** Empty, placing, dragging, connecting, selected,
-   imported with lines skipped. None of them an afterthought.
+   folded, presenting, imported with lines skipped. None of them an
+   afterthought.
+7. **A diagram is also a talk.** Fold the branches, press Present, and reveal
+   them one at a time. The same document, without a second tool and without
+   exporting anything.
 
 ## Accessibility & Inclusion
 

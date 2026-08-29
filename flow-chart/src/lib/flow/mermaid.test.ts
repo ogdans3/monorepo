@@ -24,7 +24,7 @@ describe('toMermaid', () => {
 		const { doc, skipped } = fromMermaid('flowchart TD\n A[/Fill the form/] --> B>Note]');
 		expect(skipped).toEqual([]);
 		expect(doc.nodes.map((n) => n.shape)).toEqual(['process', 'process']);
-		expect(doc.nodes.map((n) => n.text)).toEqual(['Fill the form', 'Note']);
+		expect(doc.nodes.map((n) => n.title)).toEqual(['Fill the form', 'Note']);
 	});
 
 	it('does not let a label break the syntax it sits in', () => {
@@ -42,7 +42,7 @@ describe('fromMermaid', () => {
 
 		const { doc: back, skipped } = fromMermaid(toMermaid(doc));
 		expect(skipped).toEqual([]);
-		expect(back.nodes.map((n) => [n.shape, n.text])).toEqual([
+		expect(back.nodes.map((n) => [n.shape, n.title])).toEqual([
 			['terminator', 'Start'],
 			['decision', 'Ready?']
 		]);
@@ -59,13 +59,13 @@ describe('fromMermaid', () => {
 		expect(doc.nodes).toHaveLength(4);
 		expect(doc.edges).toHaveLength(3);
 		expect(doc.edges.map((e) => e.label)).toEqual(['', 'yes', 'no']);
-		expect(doc.nodes.find((n) => n.text === 'Raining?')?.shape).toBe('decision');
+		expect(doc.nodes.find((n) => n.title === 'Raining?')?.shape).toBe('decision');
 	});
 
 	it('gives a bare name a box, and only shapes it once', () => {
 		const { doc } = fromMermaid('flowchart TD\n A --> B\n B[Named later] --> C');
 		expect(doc.nodes).toHaveLength(3);
-		expect(doc.nodes.find((n) => n.text === 'Named later')).toBeTruthy();
+		expect(doc.nodes.find((n) => n.title === 'Named later')).toBeTruthy();
 		expect(doc.edges).toHaveLength(2);
 	});
 

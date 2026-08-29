@@ -4,9 +4,13 @@
 		addConnected,
 		addNode,
 		connect,
+		hasChildren,
+		hiddenUnder,
 		moveNode,
+		nodeText,
 		remove,
-		wrapText,
+		updateNode,
+		visibleDoc,
 		type Direction,
 		type FlowDoc,
 		type FlowNode,
@@ -14,9 +18,10 @@
 	} from '$lib/flow/model';
 
 	let {
-		doc,
+		doc: full,
 		selected = $bindable(),
 		tool = $bindable(),
+		presenting = false,
 		commit,
 		onedit
 	}: {
@@ -25,6 +30,8 @@
 		selected: string | null;
 		/** The shape the next click on empty paper drops, or null to just select. */
 		tool: NodeShape | null;
+		/** Presenting hides everything that is about editing. */
+		presenting?: boolean;
 		commit: (next: FlowDoc, coalesce?: boolean) => void;
 		/** Asks the page to open the text editor for a node. */
 		onedit: (id: string) => void;
@@ -37,6 +44,12 @@
 	let linking = $state<{ from: string; to: Point } | null>(null);
 	let hovered = $state<string | null>(null);
 
+	/**
+	 * What is on screen: the document minus whatever the collapsed nodes are
+	 * holding back. Every hit test, route and drag works on this, so a folded
+	 * branch is not merely invisible, it is not there to be clicked either.
+	 */
+	const doc = $derived(visibleDoc(full));
 	const nodeById = $derived(new Map(doc.nodes.map((node) => [node.id, node])));
 	const selectedNode = $derived(doc.nodes.find((node) => node.id === selected) ?? null);
 
@@ -124,7 +137,7 @@
 	}
 
 	function place(event: PointerEvent, shape: NodeShape, point: { x: number; y: number }) {
-		const { doc: next, id } = addNode(doc, shape, round(point.x), round(point.y));
+		const { doc: next, id } = addNode(full, shape, round(point.x), round(point.y));
 		commit(next);
 		selected = id;
 		// On release, not now: the rest of this click ends with focus back on the
@@ -170,7 +183,7 @@
 				hovered = null;
 				if (!wasDragging) {
 					// A click: the next step, in the direction of the bud.
-					const added = addConnected(doc, node.id, dir);
+					const added = addConnected(full, node.id, dir);
 					if (!added) return;
 					commit(added.doc);
 					selected = added.id;
@@ -180,12 +193,12 @@
 				const point = at(end);
 				const target = nodeAt(point);
 				if (target && target.id !== node.id) {
-					commit(connect(doc, node.id, target.id));
+					commit(connect(full, node.id, target.id));
 					selected = target.id;
 					return;
 				}
 				// Dropped on empty paper: a new step, there, joined on.
-				const { doc: withNode, id } = addNode(doc, 'process', round(point.x), round(point.y));
+				const { doc: withNode, id } = addNode(full, 'process', round(point.x), round(point.y));
 				commit(connect(withNode, node.id, id));
 				selected = id;
 				queueMicrotask(() => onedit(id));
@@ -200,6 +213,12 @@
 		});
 	}
 
+	/**
+	 * Drawing and hit testing use the visible slice; every change below is made
+	 * against the whole document. The ids are the same in both, so an edit needs
+	 * no translation, and a folded branch cannot be quietly dropped by an
+	 * operation that never saw it.
+	 */
 	function startDrag(event: PointerEvent, node: FlowNode) {
 		const grab = at(event);
 		const offset = { x: node.x - grab.x, y: node.y - grab.y };
@@ -210,7 +229,7 @@
 				const point = at(move);
 				// Coalesced, so a drag is one step in the history rather than a
 				// hundred, and the step before it is where the node started.
-				commit(moveNode(doc, node.id, round(point.x + offset.x), round(point.y + offset.y)), moved);
+				commit(moveNode(full, node.id, round(point.x + offset.x), round(point.y + offset.y)), moved);
 				moved = true;
 			},
 			() => {
@@ -229,7 +248,7 @@
 			},
 			(end) => {
 				const target = nodeAt(at(end));
-				if (target && target.id !== node.id) commit(connect(doc, node.id, target.id));
+				if (target && target.id !== node.id) commit(connect(full, node.id, target.id));
 				linking = null;
 				hovered = null;
 			}
@@ -301,12 +320,28 @@
 
 	export function deleteSelected(): void {
 		if (!selected) return;
-		commit(remove(doc, [selected]));
+		commit(remove(full, [selected]));
 		selected = null;
 	}
 
-	function label(node: FlowNode): string[] {
-		return wrapText(node.text || '', node.shape);
+	const FONTS = {
+		sans: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+		serif: "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
+		mono: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
+	};
+
+	/** Folds a branch away, or brings it back. */
+	function toggleCollapse(node: FlowNode) {
+		commit(updateNode(full, node.id, { collapsed: !node.collapsed }));
+	}
+
+	/** The little handle that says how many are folded away under a node. */
+	function badge(node: FlowNode): { count: number; x: number; y: number } | null {
+		if (!hasChildren(full, node.id)) return null;
+		const count = node.collapsed ? hiddenUnder(full, node.id) : 0;
+		if (!node.collapsed && !presenting) return { count: 0, x: node.x, y: node.y + node.h / 2 };
+		if (!node.collapsed) return null;
+		return { count, x: node.x, y: node.y + node.h / 2 };
 	}
 
 	/** The diamond, as the only shape that is not a rounded rectangle. */
@@ -376,6 +411,7 @@
 
 		{#each doc.nodes as node (node.id)}
 			<!-- No ondblclick here: see onDoubleClick, which owns it for the canvas. -->
+			{@const text = nodeText(node)}
 			<g
 				class="node {node.shape}"
 				class:selected={selected === node.id}
@@ -383,9 +419,10 @@
 				role="presentation"
 			>
 				{#if node.shape === 'decision'}
-					<polygon points={outline(node)} />
+					<polygon points={outline(node)} style:fill={node.colour} />
 				{:else}
 					<rect
+						style:fill={node.colour}
 						x={node.x - node.w / 2}
 						y={node.y - node.h / 2}
 						width={node.w}
@@ -394,19 +431,49 @@
 					/>
 				{/if}
 
-				{#each label(node) as line, i}
+				{#each text.lines as line, i (i)}
 					<text
-						class="node-label"
+						class="node-label {line.kind}"
 						x={node.x}
-						y={node.y - ((label(node).length - 1) * 20) / 2 + i * 20 + 6}
-					>{line}</text>
+						y={node.y - text.textHeight / 2 + line.y}
+						font-family={FONTS[node.font]}
+						font-size={line.size}
+						font-weight={line.kind === 'title' && node.bold ? 700 : 400}
+						font-style={node.italic ? 'italic' : 'normal'}>{line.text}</text
+					>
 				{/each}
-				{#if !node.text}
-					<text class="node-label hint" x={node.x} y={node.y + 6}>double click to write</text>
+				{#if !node.title && !presenting}
+					<text class="node-label hint" x={node.x} y={node.y + 5}>double click to write</text>
 				{/if}
 			</g>
 		{/each}
-		{#if selectedNode}
+		{#each doc.nodes as node (node.id)}
+			{@const mark = badge(node)}
+			{#if mark && (node.collapsed || selected === node.id)}
+				<g
+					class="fold"
+					class:folded={node.collapsed}
+					role="button"
+					tabindex="-1"
+					aria-label={node.collapsed
+						? `Open the ${mark.count} steps under ${node.title || 'this'}`
+						: `Fold away what is under ${node.title || 'this'}`}
+					onpointerdown={(e) => {
+						e.stopPropagation();
+						toggleCollapse(node);
+					}}
+				>
+					<rect x={mark.x - (node.collapsed ? 18 : 11)} y={mark.y - 9} width={node.collapsed ? 36 : 22} height="18" rx="9" />
+					{#if node.collapsed}
+						<text x={mark.x} y={mark.y + 4}>+{mark.count}</text>
+					{:else}
+						<path d="M {mark.x - 5} {mark.y - 2} L {mark.x} {mark.y + 3} L {mark.x + 5} {mark.y - 2}" />
+					{/if}
+				</g>
+			{/if}
+		{/each}
+
+		{#if selectedNode && !presenting}
 			{#each buds(selectedNode) as bud (bud.dir)}
 				<g
 					class="bud"
@@ -462,10 +529,14 @@
 
 	.node-label {
 		text-anchor: middle;
-		font-size: 15px;
 		fill: var(--ink);
 		pointer-events: none;
 		user-select: none;
+	}
+
+	.node-label.subtitle,
+	.node-label.body {
+		fill: var(--muted);
 	}
 
 	.node-label.hint {
@@ -536,6 +607,48 @@
 
 	.bud:hover path {
 		stroke: #fff;
+	}
+
+	/*
+	 * The fold handle sits on the bottom edge. A chevron while the branch is
+	 * open, a count once it is closed, because "+3" is the only thing that says
+	 * there is something there to bring back.
+	 */
+	.fold rect {
+		fill: var(--surface);
+		stroke: var(--line);
+		stroke-width: 1;
+		cursor: pointer;
+	}
+
+	.fold text {
+		text-anchor: middle;
+		font: 600 11px var(--font-mono);
+		fill: var(--muted);
+		pointer-events: none;
+		user-select: none;
+	}
+
+	.fold path {
+		fill: none;
+		stroke: var(--muted);
+		stroke-width: 1.75;
+		stroke-linecap: round;
+		pointer-events: none;
+	}
+
+	.fold.folded rect {
+		fill: var(--accent-wash);
+		stroke: var(--accent);
+	}
+
+	.fold.folded text {
+		fill: var(--accent-deep);
+	}
+
+	.fold:hover rect {
+		border-color: var(--muted);
+		stroke: var(--muted);
 	}
 
 	.linking {

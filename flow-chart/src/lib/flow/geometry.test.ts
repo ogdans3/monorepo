@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { arrowHead, edgeAnchor, hits, midpoint, pathOf, route } from './geometry';
-import type { FlowNode } from './model';
+import { nodeDefaults, type FlowNode } from './model';
 
 const node = (over: Partial<FlowNode> = {}): FlowNode => ({
 	id: 'n1',
 	shape: 'process',
-	text: '',
 	x: 0,
 	y: 0,
 	w: 160,
 	h: 64,
+	...nodeDefaults(),
 	...over
 });
 

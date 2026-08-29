@@ -1,4 +1,12 @@
-import { EMPTY, fitSize, nextId, type FlowDoc, type FlowNode, type NodeShape } from './model';
+import {
+	EMPTY,
+	fitSize,
+	nextId,
+	nodeDefaults,
+	type FlowDoc,
+	type FlowNode,
+	type NodeShape
+} from './model';
 
 /**
  * Mermaid in and out.
@@ -37,6 +45,17 @@ function quote(text: string): string {
 	return `"${clean || ' '}"`;
 }
 
+/**
+ * What a node says in one string. Mermaid gives a node a single label, so a
+ * shown subtitle rides along after a line break rather than being dropped: the
+ * diagram means less without it, and `<br/>` is how Mermaid spells one.
+ */
+function labelOf(node: FlowNode): string {
+	const parts = [node.title];
+	if (node.showSubtitle && node.subtitle.trim()) parts.push(node.subtitle.trim());
+	return parts.filter(Boolean).join('<br/>');
+}
+
 export function toMermaid(doc: FlowDoc): string {
 	const taken = new Set<string>();
 	const ids = new Map<string, string>();
@@ -45,7 +64,7 @@ export function toMermaid(doc: FlowDoc): string {
 	const lines = ['flowchart TD'];
 	for (const node of doc.nodes) {
 		const [open, close] = SHAPE_SYNTAX[node.shape];
-		lines.push(`    ${ids.get(node.id)}${open}${quote(node.text)}${close}`);
+		lines.push(`    ${ids.get(node.id)}${open}${quote(labelOf(node))}${close}`);
 	}
 	for (const edge of doc.edges) {
 		const from = ids.get(edge.from);
@@ -98,15 +117,23 @@ export function fromMermaid(text: string): ParseResult {
 		if (existing) {
 			if (declared.explicit) {
 				const node = doc.nodes.find((n) => n.id === existing)!;
-				node.shape = declared.shape;
-				node.text = declared.text;
-				Object.assign(node, fitSize(declared.shape, declared.text));
+				Object.assign(node, { shape: declared.shape, ...split(declared.text) });
+				Object.assign(node, fitSize(node));
 			}
 			return existing;
 		}
 		const id = nextId();
-		const size = fitSize(declared.shape, declared.text);
-		doc.nodes.push({ id, shape: declared.shape, text: declared.text, x: 0, y: 0, ...size });
+		const made: FlowNode = {
+			id,
+			shape: declared.shape,
+			x: 0,
+			y: 0,
+			w: 0,
+			h: 0,
+			...nodeDefaults(),
+			...split(declared.text)
+		};
+		doc.nodes.push({ ...made, ...fitSize(made) });
 		byName.set(declared.name, id);
 		return id;
 	};
@@ -141,6 +168,15 @@ export function fromMermaid(text: string): ParseResult {
 	}
 
 	return { doc: doc.nodes.length ? doc : EMPTY, skipped };
+}
+
+/** A label with a line break in it comes back as a title and a subtitle. */
+function split(label: string): { title: string; subtitle: string } {
+	const parts = label
+		.split(/<br\s*\/?>|\\n/i)
+		.map((part) => part.trim())
+		.filter(Boolean);
+	return { title: parts[0] ?? '', subtitle: parts.slice(1).join(' ') };
 }
 
 function declare(

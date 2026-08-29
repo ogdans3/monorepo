@@ -49,6 +49,20 @@ The **+** buds on a selected shape are the accent's other job. They are drawn
 last so a neighbouring box can never bury one, and they are the only round
 things on the canvas, which is what tells them apart from the diagram.
 
+Fill colour belongs to the diagram, not to the chrome, so the swatches are
+pale: every one of them keeps black text over 4.5:1, because a palette that
+lets somebody make their own diagram unreadable is a palette with a bug in it.
+Plain white is drawn with a slash through it, since it is the absence of a
+colour rather than a choice of one.
+
+## The panel
+
+Everything about a shape lives in one column down the right. It was a strip
+floating over the middle, which was fine for three chips and hopeless for
+text, colour and type: the panel would have covered the thing being edited. At
+the side it can be as tall as it needs, the diagram stays visible beside it,
+and the body text can be read rather than guessed at.
+
 ## Motion
 
 Almost none. Selection and hover are instant state changes at 150ms, and the

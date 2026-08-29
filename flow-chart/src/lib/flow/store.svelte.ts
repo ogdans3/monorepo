@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { EMPTY, parseDoc, type FlowDoc } from './model';
+import { EMPTY, parseDoc, withRecent, type FlowDoc } from './model';
 
 /**
  * The document, its history, and the copy that survives a reload.
@@ -13,6 +13,38 @@ import { EMPTY, parseDoc, type FlowDoc } from './model';
 
 const KEY = 'flow-chart:doc';
 const LIMIT = 100;
+
+const COLOURS_KEY = 'flow-chart:colours';
+
+/**
+ * The colours picked lately. Kept in this browser like the diagram is, because
+ * a palette somebody assembled while drawing is part of the drawing.
+ */
+class RecentColours {
+	list = $state<string[]>([]);
+
+	constructor() {
+		if (!browser) return;
+		try {
+			const saved = JSON.parse(localStorage.getItem(COLOURS_KEY) ?? '[]');
+			if (Array.isArray(saved)) this.list = saved.filter((item) => typeof item === 'string');
+		} catch {
+			// A corrupt entry is not worth a broken palette.
+		}
+	}
+
+	remember(colour: string): void {
+		this.list = withRecent(this.list, colour);
+		if (!browser) return;
+		try {
+			localStorage.setItem(COLOURS_KEY, JSON.stringify(this.list));
+		} catch {
+			// Storage full or off, which costs a convenience and nothing else.
+		}
+	}
+}
+
+export const recentColours = new RecentColours();
 
 export class Editor {
 	#history = $state<FlowDoc[]>([EMPTY]);

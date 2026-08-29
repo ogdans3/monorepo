@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { labelMarkup, shapeMarkup, toSvg } from './export';
-import { addNode, connect, EMPTY, type FlowDoc } from './model';
+import { addNode, connect, EMPTY, updateNode, type FlowDoc } from './model';
 
 function sample(): FlowDoc {
 	const a = addNode(EMPTY, 'terminator', 100, 100, 'Start');
@@ -58,5 +58,48 @@ describe('shapes', () => {
 	it('keeps an empty label as a line, so the box does not collapse', () => {
 		const node = addNode(EMPTY, 'process', 0, 0, '').doc.nodes[0];
 		expect(labelMarkup(node)).toContain('&#8203;');
+	});
+});
+
+describe('what the file carries of the styling', () => {
+	it('paints the fill somebody chose, and writes the shown text', () => {
+		const { doc, id } = addNode(EMPTY, 'process', 0, 0, 'Refund it');
+		const styled = updateNode(doc, id, {
+			colour: '#fde8e8',
+			subtitle: 'within five days',
+			body: 'Finance signs it off first.',
+			showBody: true,
+			font: 'serif',
+			bold: true,
+			size: 22
+		});
+		const svg = toSvg(styled);
+		expect(svg).toContain('fill="#fde8e8"');
+		expect(svg).toContain('Refund it');
+		expect(svg).toContain('within five days');
+		expect(svg).toContain('Finance signs it off first.');
+		expect(svg).toContain('font-weight="700"');
+		expect(svg).toContain('Georgia');
+		expect(svg).toContain('font-size="22"');
+	});
+
+	it('leaves out text that is switched off, exactly as the screen does', () => {
+		const { doc, id } = addNode(EMPTY, 'process', 0, 0, 'Refund it');
+		const hidden = updateNode(doc, id, {
+			subtitle: 'within five days',
+			showSubtitle: false,
+			body: 'Not for the diagram.'
+		});
+		const svg = toSvg(hidden);
+		expect(svg).not.toContain('within five days');
+		expect(svg).not.toContain('Not for the diagram.');
+	});
+
+	it('leaves a folded branch out of the picture', () => {
+		const a = addNode(EMPTY, 'process', 0, 0, 'Ask');
+		const b = addNode(a.doc, 'process', 0, 200, 'Hidden away');
+		const doc = connect(b.doc, a.id, b.id);
+		expect(toSvg(doc)).toContain('Hidden away');
+		expect(toSvg(updateNode(doc, a.id, { collapsed: true }))).not.toContain('Hidden away');
 	});
 });
