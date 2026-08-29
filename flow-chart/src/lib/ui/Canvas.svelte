@@ -113,6 +113,9 @@
 
 	function onPointerDown(event: PointerEvent) {
 		if (event.button !== 0) return;
+		// Reached the paper, so the press was not on a control over it. The
+		// controls stop the press before it gets here.
+		onChrome = false;
 		const point = at(event);
 		const node = nodeAt(point);
 
@@ -142,6 +145,16 @@
 	 * in it silently did nothing.
 	 */
 	function onDoubleClick(event: MouseEvent) {
+		// Nothing on this canvas edits during a presentation, and a double click
+		// is the easiest one to leave in by accident: it lands on the paper and
+		// quietly adds a step to the diagram being presented.
+		if (presenting) return;
+		// A press the fold button or a bud already dealt with. It never reached
+		// the canvas as a pointerdown, but a double click arrives here anyway,
+		// either by bubbling or by the capture retarget, and it used to be read
+		// as a double click on empty paper: press a fold button twice and get a
+		// new step for it.
+		if (onChrome) return;
 		const point = at(event);
 		const node = nodeAt(point);
 		if (node) {
@@ -157,6 +170,13 @@
 		}
 		place(event as unknown as PointerEvent, 'process', point);
 	}
+
+	/**
+	 * Whether the last press landed on a control drawn over the paper rather
+	 * than on the paper. Set where those controls stop the press, cleared by
+	 * the canvas' own handler, which only runs when nothing stopped it.
+	 */
+	let onChrome = false;
 
 	function place(event: PointerEvent, shape: NodeShape, point: { x: number; y: number }) {
 		const { doc: next, id } = addNode(full, shape, round(point.x), round(point.y));
@@ -191,6 +211,7 @@
 
 	function onBud(event: PointerEvent, node: FlowNode, dir: Direction) {
 		event.stopPropagation();
+		onChrome = true;
 		let dragged = false;
 		track(
 			event,
@@ -305,11 +326,26 @@
 	/** Positions land on a 8px grid, which is what keeps a diagram tidy-ish. */
 	const round = (value: number) => Math.round(value / 8) * 8;
 
+	/**
+	 * How much of a zoom one pixel of scroll is worth.
+	 *
+	 * A step per event rather than per pixel is what makes a trackpad
+	 * unusable: it sends a stream of small deltas, and a fixed step turns each
+	 * one into a full notch, so a light two-finger push crosses the whole zoom
+	 * range. Going by the distance scrolled makes the trackpad proportional
+	 * and leaves a mouse wheel, which is around 100px a notch, at about 8% a
+	 * notch. Exponential so that in and out are exact opposites.
+	 */
+	const ZOOM_PER_PX = 0.0008;
+	/** Wheels that report lines or pages, turned into something like pixels. */
+	const DELTA_UNIT = [1, 16, 800];
+
 	function onWheel(event: WheelEvent) {
 		event.preventDefault();
 		const box = svg?.getBoundingClientRect();
 		if (!box) return;
-		const scale = Math.min(2.5, Math.max(0.3, view.scale * (event.deltaY < 0 ? 1.1 : 1 / 1.1)));
+		const delta = event.deltaY * (DELTA_UNIT[event.deltaMode] ?? 1);
+		const scale = Math.min(2.5, Math.max(0.3, view.scale * Math.exp(-delta * ZOOM_PER_PX)));
 		// Zoom towards the pointer rather than the corner, so the thing being
 		// looked at stays under it.
 		const px = event.clientX - box.left;
@@ -375,6 +411,7 @@
 
 	function startResize(event: PointerEvent, node: FlowNode, sx: number, sy: number) {
 		event.stopPropagation();
+		onChrome = true;
 		const start = at(event);
 		const from = { w: node.w, h: node.h, x: node.x, y: node.y };
 		let changed = false;
@@ -558,6 +595,7 @@
 						: `Fold away what is under ${node.title || 'this'}`}
 					onpointerdown={(e) => {
 						e.stopPropagation();
+						onChrome = true;
 						toggleCollapse(node);
 					}}
 				>

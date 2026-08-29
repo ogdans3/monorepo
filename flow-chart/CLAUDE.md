@@ -41,6 +41,14 @@ src/routes      +page.svelte, the toolbar and the sheets
   which is how double clicking a box to write in it silently did nothing.
   `onDoubleClick` in `Canvas.svelte` owns every double click and works out what
   was under it. Do not move it back onto the shapes.
+- **A control drawn over the paper must set `onChrome`.** Stopping the press
+  is not enough: the double click still reaches the canvas, which owns every
+  one of them, and reads it as a double click on empty paper. That is how
+  pressing a fold button twice added a step. The canvas' own `onPointerDown`
+  clears the flag, since it only runs when nothing stopped the press.
+- **Nothing edits while `presenting`.** Hiding the editing chrome is not the
+  same as turning editing off, and a double click on the paper is the one that
+  gets left in: it adds a step to the diagram in front of an audience.
 - **Text is laid out in one place.** `nodeText` in `model.ts` decides the
   lines, their sizes and where each one sits, and both the canvas and the
   export draw what it returns. Two layout rules means a label that fits on
