@@ -1,7 +1,7 @@
 # swapply-design
 
-Hosts the screen mockups for **Swapply**, the bartering app where you swipe on
-items you want and get a trade when the wishes close a loop. Three rounds of
+Hosts the screen mockups for **Swaply**, the bartering app where you swipe on
+items you want and get a trade when the wishes close a loop. Four rounds of
 drafts, each one a full pass over the flow.
 
 - `/` — the index: one card per round, newest first, with a live scaled preview,
@@ -23,9 +23,9 @@ No dependencies and no build step — a small node server (`server.js`) serving
 
 ## The docs
 
-`public/docs/round-{1,2,3}.html` are Claude design-doc exports (originally
-`Swapply Skjermer.dc.html`, `… v2.dc.html`, `… v3.dc.html`), served as-is next
-to their `support.js` runtime. Two deliberate additions:
+`public/docs/round-{1,2,3,4}.html` are Claude design-doc exports (originally
+`Swapply Skjermer.dc.html`, `… v2.dc.html`, `… v3.dc.html`, `… v4.dc.html`),
+served as-is next to their `support.js` runtime. Two deliberate additions:
 
 - `public/docs/vendor/` holds React 18.3.1 UMD, and `resources.js` points the
   runtime at it through `window.__resources`, its own documented override. Each

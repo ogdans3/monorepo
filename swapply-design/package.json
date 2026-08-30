@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "commonjs",
-  "description": "Hosts the Swapply screen mockups — one page per design round",
+  "description": "Hosts the Swaply screen mockups — one page per design round",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,6 +1,6 @@
 'use strict';
 
-// Static host for the Swapply screen mockups. No dependencies: the whole site
+// Static host for the Swaply screen mockups. No dependencies: the whole site
 // is files under public/, plus two rewrites (/r/<n> → viewer, / → index).
 
 const fs = require('fs');

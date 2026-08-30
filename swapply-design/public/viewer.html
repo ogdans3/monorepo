@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Swapply — skjermutkast</title>
+<title>Swaply — skjermutkast</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="/favicon.svg">
 <style>
@@ -124,7 +124,7 @@
 <body>
 
 <div class="bar">
-  <a class="home" href="/"><span class="mark">⇄</span><b>Swapply</b></a>
+  <a class="home" href="/"><span class="mark">⇄</span><b>Swaply</b></a>
   <button class="toggle" id="toggle" type="button">Skjermer</button>
   <nav class="tabs" id="tabs"></nav>
   <span class="spacer"></span>
@@ -201,7 +201,7 @@ fetch('/rounds.json')
   .then(({ rounds }) => {
     const round = rounds.find((r) => r.n === wanted) || rounds[0];
 
-    document.title = `${round.label} — Swapply skjermutkast`;
+    document.title = `${round.label} — Swaply skjermutkast`;
     tabs.innerHTML = [...rounds]
       .sort((a, b) => a.n - b.n)
       .map((r) => `<a class="tab${r.n === round.n ? ' on' : ''}" href="/r/${r.n}">${esc(r.label)}</a>`)

@@ -1,4 +1,4 @@
-name: "Swapply Design"
-description: "Skjermutkast for Swapply — tre runder med mockups, med skjermindeks per runde."
+name: "Swaply Design"
+description: "Skjermutkast for Swaply — fire runder med mockups, med skjermindeks per runde."
 http_port: 3000
 auto_rebuild: false

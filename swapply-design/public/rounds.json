@@ -1,12 +1,274 @@
 {
   "rounds": [
     {
+      "n": 4,
+      "label": "Runde 4",
+      "latest": true,
+      "file": "round-4.html",
+      "bytes": 198081,
+      "title": "Swaply, skjermutkast runde 4 (MVP)",
+      "subtitle": "MVP-kutt fra runde 3: onboarding-slidene og hele mangeveis-flyten er fjernet · Oppdag er nå en Tise-inspirert collage du scroller i, uten søkefelt, legg ut-knapp og like-knapper · ny bunn-nav med fem faner: Oppdag, Søk, Legg ut, Bytter, Profil · Søk er egen flyt med avansert søk (05b) · ny 08-flyt for å trekke seg etter godkjenning · Oppdag er minimal, sveipbar collage med kontekstmeny",
+      "states": 36,
+      "sections": [
+        {
+          "id": "g1",
+          "kicker": "FØRSTEGANG",
+          "note": "bevegelse: ordmerket toner mykt inn, ringene pulserer svakt",
+          "screens": [
+            {
+              "id": "s01",
+              "num": "01",
+              "name": "Splash"
+            }
+          ]
+        },
+        {
+          "id": "g2",
+          "kicker": "KJERNELØKKA",
+          "note": "hold nede åpner kontekstmenyen (vist på drillen) · trykk åpner 04",
+          "screens": [
+            {
+              "id": "s03",
+              "num": "03",
+              "name": "Oppdag (hjem), minimal collage"
+            },
+            {
+              "id": "s04",
+              "num": "04",
+              "name": "Gjenstand, detalj"
+            }
+          ]
+        },
+        {
+          "id": "gS",
+          "kicker": "SØK-FLYT",
+          "note": "samme kort som Oppdag · filterknappen åpner avansert søk (05b)",
+          "screens": [
+            {
+              "id": "s05",
+              "num": "05",
+              "name": "Søk"
+            },
+            {
+              "id": "s05b",
+              "num": "05b",
+              "name": "Avansert søk"
+            }
+          ]
+        },
+        {
+          "id": "g3",
+          "kicker": "BYTTEFLYT A — TOVEIS (FØRSTE BYTTE, MED BANKID OG VURDERING)",
+          "note": "Swap-forslag → godta (BankID promptes første gang) → alle har godtatt med overlevering → samtale → vurdering",
+          "screens": [
+            {
+              "id": "s06a",
+              "num": "06a",
+              "name": "Swap, toveis"
+            },
+            {
+              "id": "s06b",
+              "num": "06b",
+              "name": "Byttedetalj, din tur å godta"
+            },
+            {
+              "id": "s06c",
+              "num": "06c",
+              "name": "BankID-prompt ved første godta"
+            },
+            {
+              "id": "s06d",
+              "num": "06d",
+              "name": "Byttedetalj, venter på andre"
+            },
+            {
+              "id": "s06e",
+              "num": "06e",
+              "name": "Alle har godtatt, velg overlevering"
+            },
+            {
+              "id": "s06f",
+              "num": "06f",
+              "name": "Samtale med Ola (1:1)"
+            },
+            {
+              "id": "s06g",
+              "num": "06g",
+              "name": "Vurdering etter fullført bytte"
+            }
+          ]
+        },
+        {
+          "id": "g3-2",
+          "kicker": "BYTTEFLYT B — TREVEIS",
+          "note": "Du gir til Ola og får fra Kari. Kjedelengden nevnes aldri, brukeren ser bare sine to naboer.",
+          "screens": [
+            {
+              "id": "s07a",
+              "num": "07a",
+              "name": "Swap, treveis"
+            },
+            {
+              "id": "s07b",
+              "num": "07b",
+              "name": "Byttedetalj, din tur å godta"
+            },
+            {
+              "id": "s07c",
+              "num": "07c",
+              "name": "BankID-prompt ved første godta"
+            },
+            {
+              "id": "s07d",
+              "num": "07d",
+              "name": "Byttedetalj, venter på andre"
+            },
+            {
+              "id": "s07e",
+              "num": "07e",
+              "name": "Alle har godtatt, sending"
+            },
+            {
+              "id": "s07f",
+              "num": "07f",
+              "name": "Samtale, alle tre"
+            },
+            {
+              "id": "s07g",
+              "num": "07g",
+              "name": "Vurdering etter fullført bytte"
+            },
+            {
+              "id": "s07h",
+              "num": "07h",
+              "name": "Vurdering etter fullført bytte"
+            }
+          ]
+        },
+        {
+          "id": "g7alt",
+          "kicker": "BYTTEFLYT B2 — TREVEIS UTEN FASILITERING (ALTERNATIV)",
+          "note": "Swaply finner byttet, men fasiliterer det ikke. Appen tilbyr kun en felles chat, dere ordner resten selv.",
+          "screens": [
+            {
+              "id": "s07i",
+              "num": "07i",
+              "name": "Swap, treveis uten fasilitering"
+            },
+            {
+              "id": "s07k",
+              "num": "07k",
+              "name": "Chat for byttet"
+            },
+            {
+              "id": "s07j",
+              "num": "07j",
+              "name": "Ditt bytte, oversikt"
+            }
+          ]
+        },
+        {
+          "id": "g8t",
+          "kicker": "BYTTEFLYT C — TREKKE SEG ETTER GODKJENNING (08)",
+          "note": "Toveis bytte mellom deg og Ola. Starter fra «Trekk deg fra byttet» på 06e. Ingen kan trekke seg hvis en ting allerede er sendt.",
+          "screens": [
+            {
+              "id": "s08a",
+              "num": "08a",
+              "name": "Vil du trekke deg? (varsel)"
+            },
+            {
+              "id": "s08b",
+              "num": "08b",
+              "name": "Venter på svar fra Ola"
+            },
+            {
+              "id": "s08c",
+              "num": "08c",
+              "name": "Ikke mulig, en ting er sendt"
+            }
+          ]
+        },
+        {
+          "id": "g6",
+          "kicker": "LEGG UT-FLYT",
+          "note": "ting du",
+          "screens": [
+            {
+              "id": "s10a",
+              "num": "10a",
+              "name": "Prompt etter 10 likes"
+            },
+            {
+              "id": "s10b",
+              "num": "10b",
+              "name": "Legg ut en gjenstand · steg 1/2"
+            },
+            {
+              "id": "s10c",
+              "num": "10c",
+              "name": "Lag profil · steg 2/2"
+            }
+          ]
+        },
+        {
+          "id": "g7",
+          "kicker": "ADMINISTRER",
+          "note": "radene leses venstre mot høyre: det du får → deg → det du gir, med navn over gjenstandene",
+          "screens": [
+            {
+              "id": "s11",
+              "num": "11",
+              "name": "Mine handler, får/gir-rader"
+            },
+            {
+              "id": "s11a",
+              "num": "11a",
+              "name": "Chats (alternativ nav: Søk · Legg ut · Bytter · Chats · Profil)"
+            },
+            {
+              "id": "s12",
+              "num": "12",
+              "name": "Likt"
+            },
+            {
+              "id": "s13",
+              "num": "13",
+              "name": "Profil (egen)"
+            }
+          ]
+        },
+        {
+          "id": "g8",
+          "kicker": "STØTTE",
+          "note": "Fortell mer (valgfritt)…",
+          "screens": [
+            {
+              "id": "s16a",
+              "num": "16a",
+              "name": "Rapporter / blokkér (modal)"
+            },
+            {
+              "id": "s16b",
+              "num": "16b",
+              "name": "Innstillinger"
+            },
+            {
+              "id": "s16c",
+              "num": "16c",
+              "name": "Logg inn"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "n": 3,
       "label": "Runde 3",
-      "latest": true,
+      "latest": false,
       "file": "round-3.html",
-      "bytes": 155432,
-      "title": "Swapply, skjermutkast runde 3",
+      "bytes": 155423,
+      "title": "Swaply, skjermutkast runde 3",
       "subtitle": "Endringer: kjedelengden er skjult for brukeren, du ser bare hvem du gir til og hvem du får fra · tre komplette bytteflyter (toveis, treveis, mangeveis) · BankID promptes ved første godta · separate samtaler per person i større bytter · overlevering og frakt i godtatt-tilstanden · vurdering flyttet inn i bytteflyten · nye rader i Mine handler",
       "states": 31,
       "sections": [
@@ -228,8 +490,8 @@
       "label": "Runde 2",
       "latest": false,
       "file": "round-2.html",
-      "bytes": 115932,
-      "title": "Swapply — skjermutkast, runde 2",
+      "bytes": 115927,
+      "title": "Swaply — skjermutkast, runde 2",
       "subtitle": "Endringer: invitasjon og «første gjenstand» fjernet fra førstegang · kun fritekstsøk · bunn-nav på alle hovedskjermer · ingen ikoner med bakgrunnsfarge · BankID erstatter kontoskjermen · konto opprettes i legg-ut-flyten (promptes etter 10 likes) · chat sløyfet inn i byttedetaljen · norske navn (Ola, Kari, Per, Anne)",
       "states": 24,
       "sections": [
@@ -402,8 +664,8 @@
       "label": "Runde 1",
       "latest": false,
       "file": "round-1.html",
-      "bytes": 106783,
-      "title": "Swapply — skjermutkast, runde 1",
+      "bytes": 106777,
+      "title": "Swaply — skjermutkast, runde 1",
       "subtitle": "17 skjermer (22 stater) · norsk · én retning · rammeløse 390×844-skjermer",
       "states": 22,
       "sections": [

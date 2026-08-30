@@ -6,6 +6,11 @@
 // small uppercase kicker naming the group, and one <div id="sNN"> per screen
 // carrying a number badge and a caption. Nothing here rewrites the docs — run
 // this again after dropping in a new export.
+//
+// Group ids are not always plain numbers: round 4 introduced gS, g7alt and g8t
+// for the search flow and the alternative trade flows, so the split accepts any
+// id starting with "g". Matching only digits silently dropped those groups and
+// folded their screens into whichever numbered group came before them.
 
 'use strict';
 
@@ -17,7 +22,8 @@ const OUT = path.join(__dirname, '..', 'public', 'rounds.json');
 
 // Round order is newest first; `file` is the export as it landed in public/docs.
 const ROUNDS = [
-  { n: 3, file: 'round-3.html', label: 'Runde 3', latest: true },
+  { n: 4, file: 'round-4.html', label: 'Runde 4', latest: true },
+  { n: 3, file: 'round-3.html', label: 'Runde 3' },
   { n: 2, file: 'round-2.html', label: 'Runde 2' },
   { n: 1, file: 'round-1.html', label: 'Runde 1' },
 ];
@@ -33,7 +39,7 @@ const strip = (s) =>
     .trim();
 
 function parse(html) {
-  const parts = html.split(/<section id="(g\d+)"/).slice(1);
+  const parts = html.split(/<section id="(g[A-Za-z0-9_-]*)"/).slice(1);
   const sections = [];
   let title = '';
   let subtitle = '';
@@ -50,18 +56,33 @@ function parse(html) {
       continue;
     }
 
-    const kicker = body.match(/letter-spacing:\.14em[^>]*>([^<]+)</);
-    const note = body.match(/color:#98A29B[^>]*>([^<]+)</);
-    const screens = [...body.matchAll(
-      /<div id="(s[a-z0-9]+)"[\s\S]{0,400}?<a href="#\1"[^>]*>([^<]+)<\/a><span[^>]*>([^<]+)<\/span>/gi
-    )].map((m) => ({ id: m[1], num: strip(m[2]), name: strip(m[3]) }));
+    // A section normally holds one group, but an export can stack several
+    // kickers inside one <section> — round 4 keeps trade flows A and B in g3.
+    // Slice the body at each extra kicker so screens land under the heading
+    // they actually belong to instead of all under the first one.
+    const kickers = [...body.matchAll(/letter-spacing:\.14em[^>]*>([^<]+)</g)];
+    const slices =
+      kickers.length > 1
+        ? kickers.map((m, i) => ({
+            suffix: i === 0 ? '' : `-${i + 1}`,
+            body: body.slice(i === 0 ? 0 : m.index, kickers[i + 1] ? kickers[i + 1].index : body.length),
+          }))
+        : [{ suffix: '', body }];
 
-    sections.push({
-      id,
-      kicker: kicker ? strip(kicker[1]) : '',
-      note: note ? strip(note[1]) : '',
-      screens,
-    });
+    for (const slice of slices) {
+      const kicker = slice.body.match(/letter-spacing:\.14em[^>]*>([^<]+)</);
+      const note = slice.body.match(/color:#98A29B[^>]*>([^<]+)</);
+      const screens = [...slice.body.matchAll(
+        /<div id="(s[a-z0-9]+)"[\s\S]{0,400}?<a href="#\1"[^>]*>([^<]+)<\/a><span[^>]*>([^<]+)<\/span>/gi
+      )].map((m) => ({ id: m[1], num: strip(m[2]), name: strip(m[3]) }));
+
+      sections.push({
+        id: id + slice.suffix,
+        kicker: kicker ? strip(kicker[1]) : '',
+        note: note ? strip(note[1]) : '',
+        screens,
+      });
+    }
   }
 
   // Every screen still is one 390×844 frame wrapper plus its inner phone body,
