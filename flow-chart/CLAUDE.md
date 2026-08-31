@@ -8,7 +8,7 @@ Read `README.md` first. `PRODUCT.md` and `DESIGN.md` are the design contract.
 src/lib/flow    model, geometry, layout, mermaid, export, store — all but the
                 store is pure and tested
 src/lib/ui      Canvas.svelte, the one component that needs a browser
-src/routes      +page.svelte, the toolbar and the sheets
+src/routes      +page.svelte, the toolbar, the sheets and the library
 ```
 
 ## Rules
@@ -50,9 +50,31 @@ src/routes      +page.svelte, the toolbar and the sheets
   same as turning editing off, and a double click on the paper is the one that
   gets left in: it adds a step to the diagram in front of an audience.
 - **Text is laid out in one place.** `nodeText` in `model.ts` decides the
-  lines, their sizes and where each one sits, and both the canvas and the
-  export draw what it returns. Two layout rules means a label that fits on
-  screen and overflows in the file.
+  lines, their runs, their sizes, their alignment and where each one sits, and
+  both the canvas and the export draw what it returns. Two layout rules means a
+  label that fits on screen and overflows in the file. `wrapText` delegates to
+  `wrapRich` for that reason rather than wrapping again.
+- **Marks live in the text.** `richtext.ts` reads `**bold**`, `*italic*` and a
+  leading `-` out of the string a node already held, so a node's text stays a
+  plain string and save, load, Mermaid and the file format stay one problem.
+  A wrapped bullet carries its marker and its indent in the runs, so the canvas
+  and the export cannot each invent a hanging indent.
+- **`text-anchor` is an attribute, never CSS.** In SVG it is a CSS property, so
+  a rule on `.node-label` beats the per-line attribute and silently centres a
+  line the model said to left-align — which puts a left-aligned subtitle
+  outside its own box. Alignment is decided per line in `nodeText`.
+- **A nested chart is a document behind a node.** `chart` on a `FlowNode` is a
+  whole `FlowDoc`, and `docAt`/`setDocAt` read and write at a path of node ids.
+  The history holds whole *root* documents even while you are editing inside
+  one: drilling in, changing something and coming back out is one session's
+  work, and an undo stack per level would strand half of it behind a box.
+  `parseDoc` stops at `MAX_DEPTH` so a file that nests into itself cannot
+  recurse the reader to death.
+- **Mermaid carries nesting as a `subgraph`, and reads its own back.** The
+  export names one `<parent>_inside`; the reader nests those and flattens any
+  other subgraph, reporting it, because a hand-written subgraph is a visual
+  grouping rather than a diagram behind a box. An arrow that crosses the
+  boundary is dropped: it cannot be drawn at either level.
 - **Folding is a setting, and the button outlives the fold.** `foldable` is
   what puts the button on a shape; `collapsed` is only whether it is folded
   right now. The button is drawn for every foldable node regardless of the
@@ -73,9 +95,16 @@ src/routes      +page.svelte, the toolbar and the sheets
   tracked it re-runs after every change: `restore()` puts the saved copy back
   over the edit and resets the history so Undo has nothing to go back to, and
   the view refits while somebody is mid drag. Keep the body inside `untrack`.
-- **The diagram is in local storage on purpose.** It is the visitor's own work
-  on their own machine. Nothing is uploaded, and there is no server side beyond
-  serving the page, so do not add one.
+- **The diagrams are in local storage on purpose.** They are the visitor's own
+  work on their own machine. Nothing is uploaded, and there is no server side
+  beyond serving the page, so do not add one. `flow-chart:charts` holds the
+  list; `flow-chart:doc` is the single diagram an older version saved, migrated
+  on first load and then removed so a deleted diagram cannot come back.
+- **Dragging a box takes its branch.** `moveSubtree` moves everything that
+  hangs off the node *and nowhere else*, using the same rule as folding: a step
+  two branches both reach belongs to neither, so nudging the first box does not
+  drag the whole chart. Alt drags the one box, and which it is gets decided
+  when the drag starts.
 
 - **A new project here needs a symlink before the dashboard can see it.**
   `ln -s monorepo/flow-chart ~/git/flow-chart`, relative, made once on the

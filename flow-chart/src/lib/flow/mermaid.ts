@@ -1,3 +1,4 @@
+import { plainText } from './richtext';
 import {
 	EMPTY,
 	edgeDefaults,
@@ -52,28 +53,56 @@ function quote(text: string): string {
  * diagram means less without it, and `<br/>` is how Mermaid spells one.
  */
 function labelOf(node: FlowNode): string {
-	const parts = [node.title];
-	if (node.showSubtitle && node.subtitle.trim()) parts.push(node.subtitle.trim());
+	// Marks come off here. Mermaid has its own emphasis syntax and no agreement
+	// with ours about what survives inside a quoted label, so the text goes out
+	// as what it says rather than as markup that might render as literal stars.
+	const parts = [plainText(node.title)];
+	if (node.showSubtitle && node.subtitle.trim()) parts.push(plainText(node.subtitle).trim());
 	return parts.filter(Boolean).join('<br/>');
 }
 
-export function toMermaid(doc: FlowDoc): string {
-	const taken = new Set<string>();
-	const ids = new Map<string, string>();
+/**
+ * Writes one diagram's nodes and arrows, and any diagram nested behind a node
+ * as a `subgraph` under it.
+ *
+ * A subgraph is the closest thing Mermaid has to a box you can open, and it is
+ * the honest one: the detail is still in the file and still rendered, just laid
+ * out beside its parent rather than behind it. Flattening it away would lose
+ * work; leaving it out would lose it silently.
+ */
+function emit(
+	doc: FlowDoc,
+	lines: string[],
+	ids: Map<string, string>,
+	taken: Set<string>,
+	indent: string
+): void {
 	for (const node of doc.nodes) ids.set(node.id, safeId(node.id, taken));
 
-	const lines = ['flowchart TD'];
 	for (const node of doc.nodes) {
 		const [open, close] = SHAPE_SYNTAX[node.shape];
-		lines.push(`    ${ids.get(node.id)}${open}${quote(labelOf(node))}${close}`);
+		lines.push(`${indent}${ids.get(node.id)}${open}${quote(labelOf(node))}${close}`);
+
+		if (node.chart && node.chart.nodes.length) {
+			const group = safeId(`${ids.get(node.id)}_inside`, taken);
+			lines.push(`${indent}subgraph ${group}[${quote(plainText(node.title) || 'Inside')}]`);
+			emit(node.chart, lines, ids, taken, `${indent}    `);
+			lines.push(`${indent}end`);
+		}
 	}
+
 	for (const edge of doc.edges) {
 		const from = ids.get(edge.from);
 		const to = ids.get(edge.to);
 		if (!from || !to) continue;
-		const label = edge.label.trim();
-		lines.push(`    ${from} ${label ? `-- ${quote(label)} -->` : '-->'} ${to}`);
+		const label = plainText(edge.label).trim();
+		lines.push(`${indent}${from} ${label ? `-- ${quote(label)} -->` : '-->'} ${to}`);
 	}
+}
+
+export function toMermaid(doc: FlowDoc): string {
+	const lines = ['flowchart TD'];
+	emit(doc, lines, new Map(), new Set(), '    ');
 	return lines.join('\n');
 }
 
@@ -109,6 +138,13 @@ export function fromMermaid(text: string): ParseResult {
 	const doc: FlowDoc = { nodes: [], edges: [] };
 	const skipped: string[] = [];
 	const byName = new Map<string, string>();
+	/**
+	 * The subgraphs we are inside, innermost last. A `null` is one that does not
+	 * correspond to a box here, so its contents stay where they are.
+	 */
+	const groups: (string | null)[] = [];
+	/** Node id -> the node whose chart it belongs behind. */
+	const nestedIn = new Map<string, string>();
 
 	/** A name mentioned in an edge becomes a plain box if it has no shape yet. */
 	const ensure = (token: string): string | null => {
@@ -136,6 +172,8 @@ export function fromMermaid(text: string): ParseResult {
 		};
 		doc.nodes.push({ ...made, ...fitSize(made) });
 		byName.set(declared.name, id);
+		const owner = [...groups].reverse().find((group) => group);
+		if (owner) nestedIn.set(id, owner);
 		return id;
 	};
 
@@ -144,9 +182,24 @@ export function fromMermaid(text: string): ParseResult {
 		if (!line) continue;
 		if (/^(flowchart|graph)\b/i.test(line)) continue;
 		if (line.startsWith('%%')) continue;
-		// Styling and grouping are not modelled, and pretending otherwise would
-		// put boxes on the page that the file never asked for.
-		if (/^(subgraph|end|classDef|class|style|linkStyle|click)\b/.test(line)) {
+		// Our own nesting comes back as nesting: the export names a subgraph
+		// `<parent>_inside`, so a diagram that left as a box you could open
+		// arrives as one again rather than as a flat pile of steps.
+		const opened = /^subgraph\s+([A-Za-z0-9_]+)/.exec(line);
+		if (opened) {
+			const inside = /^(.*)_inside$/.exec(opened[1]);
+			groups.push(inside ? (byName.get(inside[1]) ?? null) : null);
+			// A subgraph somebody wrote by hand is a visual grouping, not a
+			// diagram behind a box. Its steps are kept and the grouping is not,
+			// which the page says rather than leaving it to be noticed.
+			if (!inside) skipped.push(line);
+			continue;
+		}
+		if (/^end\b/.test(line)) {
+			groups.pop();
+			continue;
+		}
+		if (/^(classDef|class|style|linkStyle|click)\b/.test(line)) {
 			skipped.push(line);
 			continue;
 		}
@@ -168,7 +221,39 @@ export function fromMermaid(text: string): ParseResult {
 		skipped.push(line);
 	}
 
+	if (nestedIn.size) nest(doc, nestedIn);
 	return { doc: doc.nodes.length ? doc : EMPTY, skipped };
+}
+
+/**
+ * Moves the nodes a subgraph held behind the box it belongs to, taking the
+ * arrows between them along.
+ *
+ * An arrow that crosses the boundary cannot be drawn at either level, so it is
+ * dropped rather than left pointing at a node that is no longer beside it.
+ * Mermaid lets you draw one; a box you open is a different diagram, and this is
+ * the one place the two models genuinely disagree.
+ */
+function nest(doc: FlowDoc, nestedIn: Map<string, string>): void {
+	const byId = new Map(doc.nodes.map((node) => [node.id, node]));
+
+	for (const [childId, parentId] of nestedIn) {
+		const parent = byId.get(parentId);
+		const child = byId.get(childId);
+		if (!parent || !child) continue;
+		parent.chart ??= { nodes: [], edges: [] };
+		parent.chart.nodes.push(child);
+	}
+
+	for (const edge of doc.edges) {
+		const from = nestedIn.get(edge.from);
+		const to = nestedIn.get(edge.to);
+		if (!from && !to) continue;
+		if (from && from === to) byId.get(from)!.chart!.edges.push(edge);
+	}
+
+	doc.nodes = doc.nodes.filter((node) => !nestedIn.has(node.id));
+	doc.edges = doc.edges.filter((edge) => !nestedIn.has(edge.from) && !nestedIn.has(edge.to));
 }
 
 /** A label with a line break in it comes back as a title and a subtitle. */

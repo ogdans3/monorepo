@@ -18,6 +18,12 @@ Draw a flow chart quickly, get it out in a form something else can use, and
 close the tab. Success is a diagram that took under a minute and came out as a
 file or a block of Mermaid that renders where it is going.
 
+Coming back is now part of that. The same person has an approval flow and a
+deployment and the thing that happens when an order arrives, so the tab holds
+all of them rather than the last one; and a step that needs explaining holds
+its own diagram rather than sending them to a second file. Neither changes what
+a session looks like — one diagram, on the paper, in front of you.
+
 ## Brand Personality
 
 Quiet and unfussy. The paper and the shapes are the interface; the chrome is a
@@ -41,16 +47,23 @@ marks, no celebration when a box is placed.
    just made, not a trip to a toolbar and back. No inspector panel of properties
    for a box that mostly needs words in it.
 3. **The box holds what you have to say.** A step is often a sentence and
-   sometimes a paragraph. A single-line field is what makes people abbreviate
-   their own diagram until it stops saying anything.
-4. **It leaves the way it came.** Mermaid in, Mermaid out, plus SVG, PNG and a
+   sometimes a paragraph, and sometimes a list of three things where one of
+   them matters more than the others. A single-line field is what makes people
+   abbreviate their own diagram until it stops saying anything; so is having no
+   way to emphasise a word. Bold, italic and bullets, typed the way everybody
+   already types them, and no more than that: a flow chart is not a document.
+4. **A box can be opened.** The detail that would ruin the picture goes behind
+   the step it belongs to — read while presenting, drawn as its own diagram
+   while editing. The alternative is a second file nobody opens, or a diagram
+   with everything on it that nobody reads.
+5. **It leaves the way it came.** Mermaid in, Mermaid out, plus SVG, PNG and a
    file. A diagram that cannot get out is a diagram you have to redraw.
-5. **Nothing is uploaded.** The work stays in the tab and in this browser's
+6. **Nothing is uploaded.** The work stays in the tab and in this browser's
    storage. There is no server to send it to.
-6. **Every state drawn.** Empty, placing, dragging, connecting, selected,
+7. **Every state drawn.** Empty, placing, dragging, connecting, selected,
    folded, presenting, imported with lines skipped. None of them an
    afterthought.
-7. **A diagram is also a talk.** Fold the branches, press Present, and reveal
+8. **A diagram is also a talk.** Fold the branches, press Present, and reveal
    them one at a time. The same document, without a second tool and without
    exporting anything.
 

@@ -7,6 +7,7 @@
  * of editing one, so the history is a list of documents and undo is an index
  * into it, with no journal of inverse operations to get wrong.
  */
+import { plainText, wrapRich, type TextRun } from './richtext';
 
 /**
  * Three shapes, which is what a flow chart is made of: something happens,
@@ -61,6 +62,14 @@ export interface FlowNode {
 	body: string;
 	showSubtitle: boolean;
 	showBody: boolean;
+	/**
+	 * How the subtitle and the body sit in the box. Centred is right for the
+	 * two or three words those fields usually hold, and wrong the moment
+	 * somebody writes a paragraph or a list: ragged-both-sides text is hard to
+	 * read and a centred bullet list has nothing to line up against. The title
+	 * is always centred, because it is a name.
+	 */
+	align: 'center' | 'left';
 	/** Fill. The outline and the text are derived from it, never set apart. */
 	colour: string;
 	font: FontKey;
@@ -88,6 +97,16 @@ export interface FlowNode {
 	 * having dragged it.
 	 */
 	sized: boolean;
+	/**
+	 * A diagram of its own, behind this box.
+	 *
+	 * The detail somebody has to leave out to keep the picture readable, kept
+	 * where it belongs instead of in a second file: the box says what happens,
+	 * and opening it says how. Null rather than an empty document so "has one"
+	 * is a question with an answer, and nesting is bounded by `MAX_DEPTH` so a
+	 * corrupt file cannot recurse the reader to death.
+	 */
+	chart: FlowDoc | null;
 	/** Centre of the node, in diagram coordinates. */
 	x: number;
 	y: number;
@@ -228,6 +247,8 @@ export function nodeDefaults(): Omit<FlowNode, 'id' | 'shape' | 'x' | 'y' | 'w' 
 		body: '',
 		showSubtitle: true,
 		showBody: false,
+		align: 'center',
+		chart: null,
 		colour: NO_COLOUR,
 		font: 'sans',
 		size: DEFAULT_SIZE,
@@ -276,6 +297,9 @@ export function seedIds(doc: FlowDoc): void {
 		const n = Number(String(item.id).replace(/^[a-z]+/i, ''));
 		if (Number.isFinite(n)) counter = Math.max(counter, n);
 	}
+	// Nested charts share the counter, so a load has to look inside them too or
+	// the next box added up here gets an id a box down there already has.
+	for (const node of doc.nodes) if (node.chart) seedIds(node.chart);
 }
 
 /**
@@ -289,17 +313,28 @@ export function seedIds(doc: FlowDoc): void {
  * abbreviating their own diagram to fit a box.
  */
 export interface TextLine {
+	/** The line with its marks removed. What gets measured, and what a test reads. */
 	text: string;
+	/** The same line in pieces, each with the marks that apply to it. */
+	runs: TextRun[];
 	kind: 'title' | 'subtitle' | 'body';
 	size: number;
 	/** Baseline, measured down from the top of the whole block of text. */
 	y: number;
+	/**
+	 * Where this line starts. Centred lines are drawn from the middle of the
+	 * node; left-aligned ones from the left edge of the text block, which is
+	 * why `textWidth` has to come back with them.
+	 */
+	align: 'center' | 'left';
 }
 
 export interface NodeText {
 	lines: TextLine[];
 	/** Height of the text itself, before the shape's padding. */
 	textHeight: number;
+	/** Width of the widest line, which is the block left-aligned text sits in. */
+	textWidth: number;
 	w: number;
 	h: number;
 }
@@ -320,6 +355,7 @@ type TextOf = Pick<
 	| 'body'
 	| 'showSubtitle'
 	| 'showBody'
+	| 'align'
 	| 'bodyClamp'
 	| 'font'
 	| 'size'
@@ -355,11 +391,27 @@ export function nodeText(node: TextOf): NodeText {
 	let widest = 0;
 	for (const [index, block] of blocks.entries()) {
 		if (index > 0) y += block.size * BLOCK_GAP;
-		for (const line of clamped(wrapText(block.text, node.shape), block.kind, node.bodyClamp)) {
+		// The title is a name and stays centred; only the two fields that hold
+		// sentences follow the node's alignment.
+		const align = block.kind === 'title' ? 'center' : node.align;
+		const wrapped = clampedRuns(
+			wrapRich(block.text, WRAP_AT[node.shape] ?? WRAP_AT.process),
+			block.kind,
+			node.bodyClamp
+		);
+		for (const runs of wrapped) {
 			const height = block.size * LINE_HEIGHT;
+			const text = runs.map((run) => run.text).join('');
 			y += height;
-			lines.push({ text: line, kind: block.kind, size: block.size, y: y - height * 0.28 });
-			widest = Math.max(widest, charWidth(block.size, node.bold) * line.length);
+			lines.push({
+				text,
+				runs,
+				kind: block.kind,
+				size: block.size,
+				y: y - height * 0.28,
+				align
+			});
+			widest = Math.max(widest, charWidth(block.size, node.bold) * text.length);
 		}
 	}
 
@@ -369,6 +421,7 @@ export function nodeText(node: TextOf): NodeText {
 	return {
 		lines,
 		textHeight: y,
+		textWidth: widest,
 		w: Math.max(base.w, Math.round(widest + padX)),
 		h: Math.max(base.h, Math.round(y + padY))
 	};
@@ -381,11 +434,16 @@ export function nodeText(node: TextOf): NodeText {
  * on a line of its own, because a box that ends "...\n..." looks broken, and
  * the point of clamping is that the shape stays the size of a shape.
  */
-function clamped(lines: string[], kind: TextLine['kind'], limit: number): string[] {
+function clampedRuns(lines: TextRun[][], kind: TextLine['kind'], limit: number): TextRun[][] {
 	if (kind !== 'body' || limit <= 0 || lines.length <= limit) return lines;
 	const kept = lines.slice(0, limit);
-	const last = kept[kept.length - 1].replace(/[\s.,;:]+$/, '');
-	kept[kept.length - 1] = `${last}…`;
+	const last = [...kept[kept.length - 1]];
+	// The ellipsis goes on the end of the final run so it keeps that run's
+	// marks, rather than arriving as a plain tail on a bold sentence.
+	const tail = last[last.length - 1];
+	if (tail) last[last.length - 1] = { ...tail, text: `${tail.text.replace(/[\s.,;:]+$/, '')}…` };
+	else last.push({ text: '…', bold: false, italic: false });
+	kept[kept.length - 1] = last;
 	return kept;
 }
 
@@ -420,30 +478,16 @@ export function resizeNode(doc: FlowDoc, id: string, w: number, h: number): Flow
 }
 
 /**
- * Greedy wrap, and line breaks the writer typed are kept. Someone who presses
- * Enter in the middle of a label means it, and reflowing it is the editor
- * arguing with them. A word longer than the line is left alone rather than
- * broken, since it is usually a name or a URL that is worse in two pieces.
+ * The plain text of each wrapped line, for callers that do not care about marks.
+ *
+ * Delegates to `wrapRich` rather than wrapping again: two wrapping rules is how
+ * a label fits on screen and overflows in the exported file. The rule itself —
+ * greedy, keeps the writer's own line breaks, never breaks a word — lives there.
  */
 export function wrapText(text: string, shape: NodeShape = 'process'): string[] {
-	const limit = WRAP_AT[shape] ?? WRAP_AT.process;
-	const lines: string[] = [];
-	for (const paragraph of text.split(/\r?\n/)) {
-		let line = '';
-		for (const word of paragraph.split(/\s+/).filter(Boolean)) {
-			if (!line) line = word;
-			else if (line.length + 1 + word.length <= limit) line += ` ${word}`;
-			else {
-				lines.push(line);
-				line = word;
-			}
-		}
-		lines.push(line);
-	}
-	// A trailing blank from a final newline is a line the writer is about to
-	// use, but one on its own is just an empty box.
-	while (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
-	return lines.length ? lines : [''];
+	return wrapRich(text, WRAP_AT[shape] ?? WRAP_AT.process).map((runs) =>
+		runs.map((run) => run.text).join('')
+	);
 }
 
 /** Where a node added off another one goes, and which way the arrow points. */
@@ -541,6 +585,173 @@ export function setEdgeLabel(doc: FlowDoc, id: string, label: string): FlowDoc {
 		...doc,
 		edges: doc.edges.map((edge) => (edge.id === id ? { ...edge, label } : edge))
 	};
+}
+
+/**
+ * Puts a step in the middle of an existing arrow.
+ *
+ * Diagrams are drawn forwards and then corrected, and the correction is nearly
+ * always "there is a step between these two". Doing that by hand is delete the
+ * arrow, add a box, draw two arrows, and line it up; here it is one action that
+ * keeps the line's own styling on both halves.
+ *
+ * The label stays on the first half, because a label on an arrow out of a
+ * decision names the branch, and the branch is chosen where it leaves.
+ */
+export function insertBetween(
+	doc: FlowDoc,
+	edgeId: string,
+	shape: NodeShape = 'process'
+): { doc: FlowDoc; id: string } | null {
+	const edge = doc.edges.find((item) => item.id === edgeId);
+	if (!edge) return null;
+	const from = doc.nodes.find((node) => node.id === edge.from);
+	const to = doc.nodes.find((node) => node.id === edge.to);
+	if (!from || !to) return null;
+
+	const added = addNode(
+		doc,
+		shape,
+		Math.round((from.x + to.x) / 2),
+		Math.round((from.y + to.y) / 2)
+	);
+
+	// Both halves inherit how the original line was drawn, so splitting a
+	// dashed branch does not leave one solid arrow next to one dashed one.
+	const { id: _id, from: _from, to: _to, ...style } = edge;
+
+	return {
+		doc: {
+			...added.doc,
+			edges: [
+				...added.doc.edges.filter((item) => item.id !== edgeId),
+				{ ...style, id: nextId('e'), from: edge.from, to: added.id },
+				{ ...style, id: nextId('e'), from: added.id, to: edge.to, label: '' }
+			]
+		},
+		id: added.id
+	};
+}
+
+/**
+ * Everything that hangs off a node and nowhere else.
+ *
+ * The same rule folding uses: a node belongs to this branch only when *every*
+ * way into it comes through the node being asked about. Where two branches meet
+ * again, the step they meet at belongs to neither, so dragging one branch does
+ * not drag the shared tail of the diagram along with it. A plain descendant
+ * walk gets that wrong, and gets it wrong in the direction that moves the whole
+ * chart when you nudge the first box.
+ */
+export function subtreeIds(doc: FlowDoc, id: string): Set<string> {
+	const node = doc.nodes.find((item) => item.id === id);
+	if (!node) return new Set();
+	const openIds = visibleIds({
+		...doc,
+		nodes: doc.nodes.map((item) =>
+			item.id === id ? { ...item, foldable: true, collapsed: true } : item
+		)
+	});
+	const out = new Set<string>();
+	for (const item of doc.nodes) if (!openIds.has(item.id)) out.add(item.id);
+	out.delete(id);
+	return out;
+}
+
+/**
+ * Moves a node, and the branch under it with it.
+ *
+ * Dragging a box is usually making room, not detaching it from what follows,
+ * so what follows comes along and the shape of the branch survives the drag.
+ * Alt is the way out for the times it really is just the one box, and that is
+ * `moveNode`.
+ */
+export function moveSubtree(doc: FlowDoc, id: string, x: number, y: number): FlowDoc {
+	const node = doc.nodes.find((item) => item.id === id);
+	if (!node) return doc;
+	const dx = x - node.x;
+	const dy = y - node.y;
+	if (dx === 0 && dy === 0) return doc;
+	const moving = subtreeIds(doc, id);
+	return {
+		...doc,
+		nodes: doc.nodes.map((item) => {
+			if (item.id === id) return { ...item, x, y };
+			if (!moving.has(item.id)) return item;
+			return { ...item, x: item.x + dx, y: item.y + dy };
+		})
+	};
+}
+
+/** How deep a nested chart is allowed to go, so a bad file cannot recurse forever. */
+export const MAX_DEPTH = 5;
+
+/** The document behind a node, or null when it has none. */
+export function chartOf(doc: FlowDoc, id: string): FlowDoc | null {
+	return doc.nodes.find((node) => node.id === id)?.chart ?? null;
+}
+
+/** True once a node has a diagram behind it with anything in it. */
+export function hasChart(node: Pick<FlowNode, 'chart'>): boolean {
+	return Boolean(node.chart && node.chart.nodes.length);
+}
+
+/**
+ * Replaces the document behind a node.
+ *
+ * Kept as its own operation rather than a `updateNode` patch because it does
+ * not touch the box: a nested chart changing size must not resize the shape
+ * that holds it, and `updateNode` refits every time it is called.
+ */
+export function setChart(doc: FlowDoc, id: string, chart: FlowDoc | null): FlowDoc {
+	return {
+		...doc,
+		nodes: doc.nodes.map((node) => (node.id === id ? { ...node, chart } : node))
+	};
+}
+
+/**
+ * Reads or writes the document at a path of node ids, so the editor can work
+ * inside a nested chart with the history still covering the whole thing.
+ *
+ * Undo has to span the levels: drilling in, editing, and coming back out is one
+ * session's work, and an undo stack per level would strand half of it behind a
+ * box the moment you left.
+ */
+export function docAt(doc: FlowDoc, path: string[]): FlowDoc {
+	let current = doc;
+	for (const id of path) {
+		const next = current.nodes.find((node) => node.id === id)?.chart;
+		if (!next) return EMPTY;
+		current = next;
+	}
+	return current;
+}
+
+export function setDocAt(doc: FlowDoc, path: string[], next: FlowDoc): FlowDoc {
+	if (path.length === 0) return next;
+	const [head, ...rest] = path;
+	return {
+		...doc,
+		nodes: doc.nodes.map((node) =>
+			node.id === head
+				? { ...node, chart: setDocAt(node.chart ?? EMPTY, rest, next) }
+				: node
+		)
+	};
+}
+
+/** The titles down a path, for the trail that says where you are. */
+export function titlesAlong(doc: FlowDoc, path: string[]): string[] {
+	const out: string[] = [];
+	let current = doc;
+	for (const id of path) {
+		const node = current.nodes.find((item) => item.id === id);
+		if (!node) break;
+		out.push(node.title.trim() || 'Untitled');
+		current = node.chart ?? EMPTY;
+	}
+	return out;
 }
 
 export function moveNode(doc: FlowDoc, id: string, x: number, y: number): FlowDoc {
@@ -673,7 +884,7 @@ export function bounds(doc: FlowDoc): { x: number; y: number; w: number; h: numb
  */
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 
-export function parseDoc(raw: unknown): FlowDoc {
+export function parseDoc(raw: unknown, depth = 0): FlowDoc {
 	const source = raw as Partial<FlowDoc> | null;
 	if (!source || typeof source !== 'object') return EMPTY;
 
@@ -703,6 +914,15 @@ export function parseDoc(raw: unknown): FlowDoc {
 			body: text(node.body),
 			showSubtitle: node.showSubtitle !== false,
 			showBody: node.showBody === true,
+			// A file from before alignment was a choice was centred, which is
+			// still the default and still what those files look like.
+			align: node.align === 'left' ? 'left' : 'center',
+			// Nesting stops at MAX_DEPTH: a file that points a chart at itself,
+			// by accident or otherwise, must not take the reader down with it.
+			chart:
+				depth < MAX_DEPTH && node.chart && typeof node.chart === 'object'
+					? parseDoc(node.chart, depth + 1)
+					: null,
 			colour: text(node.colour) || NO_COLOUR,
 			font: (typeof node.font === 'string' && node.font in FONTS ? node.font : 'sans') as FontKey,
 			size: Number.isFinite(node.size) ? Number(node.size) : DEFAULT_SIZE,

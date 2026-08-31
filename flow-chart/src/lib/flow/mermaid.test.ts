@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fromMermaid, looksLikeMermaid, toMermaid } from './mermaid';
-import { addNode, connect, EMPTY, type FlowDoc } from './model';
+import { addNode, connect, EMPTY, setChart, updateNode, type FlowDoc } from './model';
 
 describe('toMermaid', () => {
 	it('writes the shapes Mermaid uses for each of ours', () => {
@@ -74,7 +74,39 @@ describe('fromMermaid', () => {
 			'flowchart TD\n A --> B\n subgraph one\n end\n style A fill:#f00'
 		);
 		expect(doc.nodes).toHaveLength(2);
-		expect(skipped).toEqual(['subgraph one', 'end', 'style A fill:#f00']);
+		// `end` is understood now that subgraphs are read, so it is not reported.
+		// The grouping itself still is: its steps are kept and the grouping is not.
+		expect(skipped).toEqual(['subgraph one', 'style A fill:#f00']);
+	});
+
+	it('keeps the steps a hand-written subgraph held', () => {
+		const { doc } = fromMermaid('flowchart TD\n subgraph group\n A[One] --> B[Two]\n end');
+		expect(doc.nodes.map((n) => n.title).sort()).toEqual(['One', 'Two']);
+		expect(doc.nodes.every((n) => n.chart === null)).toBe(true);
+	});
+
+	it('brings a nested chart back through a round trip', () => {
+		const outer = addNode(EMPTY, 'process', 0, 0, 'Deploy');
+		const inner = addNode(EMPTY, 'process', 0, 0, 'Run tests');
+		const withInner = addNode(inner.doc, 'process', 0, 100, 'Ship');
+		const nested = connect(withInner.doc, inner.id, withInner.id);
+		const doc = setChart(outer.doc, outer.id, nested);
+
+		const text = toMermaid(doc);
+		expect(text).toContain('subgraph');
+
+		const back = fromMermaid(text).doc;
+		expect(back.nodes).toHaveLength(1);
+		expect(back.nodes[0].title).toBe('Deploy');
+		expect(back.nodes[0].chart?.nodes.map((n) => n.title)).toEqual(['Run tests', 'Ship']);
+		expect(back.nodes[0].chart?.edges).toHaveLength(1);
+	});
+
+	it('writes a label without its marks', () => {
+		const { doc, id } = addNode(EMPTY, 'process', 0, 0, '**Bold** step');
+		const text = toMermaid(updateNode(doc, id, { subtitle: '- *one*' }));
+		expect(text).toContain('Bold step');
+		expect(text).not.toContain('**');
 	});
 
 	it('comes back empty from something that is not a diagram', () => {

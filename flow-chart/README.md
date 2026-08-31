@@ -66,7 +66,10 @@ and runs perfectly by hand, and simply never appears in the dashboard.
 | Fold a branch | Turn **Folding** on for a shape with something under it. It keeps a button on its bottom edge from then on, which folds and unfolds as often as you like |
 | Present | **Present** hides the editor. Space reveals the next folded branch, ← puts it back, Escape leaves |
 | Change what it is | Select it and pick Step, Decision or Start/end |
-| Move | Drag it. Positions land on an 8px grid |
+| Put a step in the middle | Click the arrow and press the **+** on it. Both halves keep the line's styling |
+| Move | Drag it, and the branch under it comes too. Hold **Alt** to move the one box. Positions land on an 8px grid |
+| Open a box | Give it a diagram of its own in the panel, then press the two pages in its corner |
+| Switch diagrams | Press the name in the toolbar. New, rename, copy, delete |
 | Delete | Select and press Delete |
 | Move around | Drag the paper, scroll to zoom, **Fit** to see everything |
 | Undo | Ctrl or Cmd + Z, shift to redo |
@@ -94,6 +97,32 @@ Both are toggles rather than settings buried in a menu, because whether a
 subtitle belongs on the diagram is a decision that changes per shape and per
 audience. What is switched off is left out of the SVG and the PNG too: the
 picture is what you see, not what you have written.
+
+The subtitle and the text take a little markup, spelled the way people already
+type it: `**bold**`, `*italic*`, and a line starting `-` is a bullet. Both are
+centred by default and can be set left in the panel, which is what a paragraph
+or a list wants — centred bullets have nothing to line up against.
+
+## A box you can open
+
+A step that needs explaining can hold its own diagram. Give it one in the panel
+and it gets two small pages in its corner; press them to go inside, and the
+trail at the top left brings you back. Five levels deep at most.
+
+While presenting, clicking a box opens what it says — the title, the subtitle
+and the paragraph left off the picture on purpose — with a button through to the
+diagram inside if it has one.
+
+The nesting survives a round trip through Mermaid as a `subgraph`, which is the
+closest thing Mermaid has to a box you can open, and renders wherever the rest
+of it does.
+
+## More than one diagram
+
+The name in the toolbar opens the list of every diagram in this browser: open
+one, start a new one, rename, copy or delete. They are kept in local storage
+like the single diagram used to be, and a diagram saved by an older version is
+brought across the first time you open the page.
 
 ## Three shapes
 
@@ -151,7 +180,7 @@ says what it could not take.
 ## Where the drawing lives
 
 In the tab, and in this browser's local storage so a stray reload does not cost
-you the diagram. It is the visitor's own work on their own machine, which is
+you the diagrams. They are the visitor's own work on their own machine, which is
 what device storage is for. **Save** writes a JSON file, **Open** reads one back,
 and **Clear the canvas** forgets it. Nothing is sent anywhere: there is no
 server side to this beyond the one that hands you the page.
@@ -173,6 +202,9 @@ on the modules above.
 
 - Straight-through routing for long edges could use proper dummy nodes, so two
   arrows down the same lane do not overlap. One lane is enough for now.
-- Multi-select, and dragging a group.
+- Multi-select, and dragging a group. Dragging a branch is there; dragging an
+  arbitrary set of boxes is not.
+- Re-attaching a branch to a different parent by dropping it on another box.
+  Dragging moves a branch, it does not re-parent it.
 - Swimlanes. They would need a second kind of thing in the document, so not
   until the first kind is finished.

@@ -24,7 +24,8 @@
 		update,
 		remove,
 		close,
-		oncolour
+		oncolour,
+		onopen
 	}: {
 		doc: FlowDoc;
 		node: FlowNode;
@@ -36,7 +37,12 @@
 		remove: () => void;
 		close: () => void;
 		oncolour: (colour: string) => void;
+		/** Opens the diagram behind this node, making an empty one if there is none. */
+		onopen: (id: string) => void;
 	} = $props();
+
+	/** How many steps are already behind this box, for the button's own label. */
+	const inside = $derived(node.chart?.nodes.length ?? 0);
 
 	const SHAPES: NodeShape[] = ['process', 'decision', 'terminator'];
 	const ALL_FONTS = Object.keys(FONTS) as FontKey[];
@@ -133,6 +139,51 @@
 				<output class="mono">{node.bodyClamp === 0 ? 'all' : `${node.bodyClamp}…`}</output>
 			</div>
 		</label>
+
+		<!--
+			How the two fields that hold sentences sit in the box. Centred reads
+			well for the two or three words a subtitle usually is, and badly the
+			moment somebody writes a paragraph: ragged on both sides, with a
+			bullet list that has nothing to line up against.
+		-->
+		<div class="field">
+			<span>Subtitle and text</span>
+			<div class="row">
+				<button
+					class="chip"
+					class:on={node.align === 'center'}
+					aria-pressed={node.align === 'center'}
+					onclick={() => update({ align: 'center' })}>Centred</button
+				>
+				<button
+					class="chip"
+					class:on={node.align === 'left'}
+					aria-pressed={node.align === 'left'}
+					onclick={() => update({ align: 'left' })}>Left</button
+				>
+			</div>
+			<p class="hint">
+				<code>**bold**</code>, <code>*italic*</code>, and a line starting
+				<code>-</code> is a bullet.
+			</p>
+		</div>
+
+		<!--
+			The diagram behind this box. Offered on every shape rather than as a
+			setting to turn on first: the moment somebody wants one is the moment
+			they are looking at a step that needs explaining.
+		-->
+		<div class="field">
+			<span>Inside this step</span>
+			<div class="row">
+				<button class="chip wide" onclick={() => onopen(node.id)}>
+					{inside ? `Open the diagram (${inside} ${inside === 1 ? 'step' : 'steps'})` : 'Add a diagram inside'}
+				</button>
+			</div>
+			{#if inside}
+				<p class="hint">Shown as two pages in the corner of the box, and in the export.</p>
+			{/if}
+		</div>
 
 		<div class="field">
 			<span>Shape</span>
@@ -415,6 +466,15 @@
 
 	.small {
 		min-width: 4.4rem;
+	}
+
+	.hint code {
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		background: var(--surface-deep);
+		border: 1px solid var(--line);
+		border-radius: 3px;
+		padding: 0 0.2em;
 	}
 
 	.slider input {

@@ -15,8 +15,11 @@
 		addNode,
 		connect,
 		dashOf,
+		hasChart,
 		hiddenUnder,
+		insertBetween,
 		moveNode,
+		moveSubtree,
 		nodeText,
 		remove,
 		resizeNode,
@@ -34,7 +37,8 @@
 		tool = $bindable(),
 		presenting = false,
 		commit,
-		onedit
+		onedit,
+		onopen
 	}: {
 		doc: FlowDoc;
 		/** Ids of the selected node or edge. One at a time is enough here. */
@@ -46,6 +50,11 @@
 		commit: (next: FlowDoc, coalesce?: boolean) => void;
 		/** Asks the page to open the text editor for a node. */
 		onedit: (id: string) => void;
+		/**
+		 * Asks the page to open what is behind a node: the panel of everything it
+		 * says while presenting, and the diagram nested in it if it has one.
+		 */
+		onopen: (id: string) => void;
 	} = $props();
 
 	let svg = $state<SVGSVGElement>();
@@ -131,6 +140,13 @@
 		}
 
 		selected = node.id;
+		// While presenting, a box is something to open rather than something to
+		// move: the audience is looking at it, and the paragraph nobody wanted on
+		// the picture is exactly what you want to read out at that moment.
+		if (presenting) {
+			onopen(node.id);
+			return;
+		}
 		if (event.shiftKey || event.metaKey || event.ctrlKey) startLink(event, node);
 		else startDrag(event, node);
 	}
@@ -266,13 +282,20 @@
 		const grab = at(event);
 		const offset = { x: node.x - grab.x, y: node.y - grab.y };
 		let moved = false;
+		// Dragging a box is usually making room, not detaching it from what comes
+		// after, so the branch under it comes along and keeps its shape. Alt is
+		// the way to move the one box, decided when the drag starts so that
+		// letting go of the key halfway through does not change what is moving.
+		const alone = event.altKey;
 		track(
 			event,
 			(move) => {
 				const point = at(move);
+				const x = round(point.x + offset.x);
+				const y = round(point.y + offset.y);
 				// Coalesced, so a drag is one step in the history rather than a
 				// hundred, and the step before it is where the node started.
-				commit(moveNode(full, node.id, round(point.x + offset.x), round(point.y + offset.y)), moved);
+				commit(alone ? moveNode(full, node.id, x, y) : moveSubtree(full, node.id, x, y), moved);
 				moved = true;
 			},
 			() => {
@@ -436,6 +459,21 @@
 		});
 	}
 
+	/**
+	 * Puts a step in the middle of the selected arrow.
+	 *
+	 * On the arrow rather than in a menu because that is where the answer to
+	 * "between which two?" already is, and because correcting a diagram by
+	 * adding a step in the middle is the commonest correction there is.
+	 */
+	function insertStep(edgeId: string) {
+		const result = insertBetween(full, edgeId);
+		if (!result) return;
+		commit(result.doc);
+		selected = result.id;
+		onedit(result.id);
+	}
+
 	/** The diamond, as the only shape that is not a rounded rectangle. */
 	function outline(node: FlowNode): string {
 		const { x, y, w, h } = node;
@@ -517,7 +555,28 @@
 							.x},{wire.tail[1].y}"
 					/>
 				{/if}
-				{#if wire.edge.label.trim()}
+				<!-- Only on the selected arrow: a target on every line would put a
+				     button between the writer and the diagram they are reading. -->
+				{#if selected === wire.edge.id && !presenting}
+					<g
+						class="insert"
+						role="button"
+						tabindex="-1"
+						aria-label="Add a step here"
+						onpointerdown={(e) => {
+							e.stopPropagation();
+							onChrome = true;
+							insertStep(wire.edge.id);
+						}}
+					>
+						<circle cx={wire.mid.x} cy={wire.mid.y} r="11" />
+						<path
+							d="M {wire.mid.x - 5} {wire.mid.y} L {wire.mid.x + 5} {wire.mid.y}
+							   M {wire.mid.x} {wire.mid.y - 5} L {wire.mid.x} {wire.mid.y + 5}"
+						/>
+					</g>
+				{/if}
+				{#if wire.edge.label.trim() && !(selected === wire.edge.id && !presenting)}
 					<rect
 						class="label-plate"
 						x={wire.mid.x - (wire.edge.label.length * 7 + 12) / 2}
@@ -563,19 +622,49 @@
 					/>
 				{/if}
 
+				<!-- Runs rather than a string, and xml:space so the indent under a
+				     wrapped bullet survives. Both match the exported SVG line for
+				     line, because the model laid them out once for both. -->
 				{#each text.lines as line, i (i)}
 					<text
 						class="node-label {line.kind}"
-						x={node.x}
+						xml:space="preserve"
+						x={line.align === 'center' ? node.x : node.x - text.textWidth / 2}
 						y={node.y - text.textHeight / 2 + line.y}
+						text-anchor={line.align === 'center' ? 'middle' : 'start'}
 						font-family={FONTS[node.font].stack}
 						font-size={line.size}
 						font-weight={line.kind === 'title' && node.bold ? 700 : 400}
-						font-style={node.italic ? 'italic' : 'normal'}>{line.text}</text
+						font-style={node.italic ? 'italic' : 'normal'}
+						>{#each line.runs as run, r (r)}<tspan
+								font-weight={run.bold ? 700 : null}
+								font-style={run.italic ? 'italic' : null}>{run.text}</tspan
+							>{/each}</text
 					>
 				{/each}
 				{#if !node.title && !presenting}
-					<text class="node-label hint" x={node.x} y={node.y + 5}>double click to write</text>
+					<text class="node-label hint" text-anchor="middle" x={node.x} y={node.y + 5}
+						>double click to write</text
+					>
+				{/if}
+				<!-- A box with a diagram behind it says so on the box. Without a
+				     mark the nesting is invisible, and detail nobody can see they
+				     can open is detail nobody opens. -->
+				{#if hasChart(node)}
+					<g
+						class="has-chart"
+						role="button"
+						tabindex="-1"
+						aria-label={`Open the diagram inside ${node.title || 'this step'}`}
+						onpointerdown={(e) => {
+							e.stopPropagation();
+							onChrome = true;
+							onopen(node.id);
+						}}
+					>
+						<rect x={node.x + node.w / 2 - 26} y={node.y + node.h / 2 - 20} width="20" height="15" rx="3" />
+						<rect x={node.x + node.w / 2 - 22} y={node.y + node.h / 2 - 24} width="20" height="15" rx="3" />
+					</g>
 				{/if}
 			</g>
 		{/each}
@@ -684,8 +773,13 @@
 		stroke: var(--accent);
 	}
 
+	/*
+	 * No text-anchor here. It used to be `middle`, which is a CSS property in
+	 * SVG and therefore beats the attribute the markup sets per line — so a
+	 * left-aligned subtitle stayed centred and hung out of its own box. The
+	 * anchor is decided per line by the model, and set as an attribute.
+	 */
 	.node-label {
-		text-anchor: middle;
 		fill: var(--ink);
 		pointer-events: none;
 		user-select: none;
@@ -806,6 +900,45 @@
 	.fold:hover rect {
 		border-color: var(--muted);
 		stroke: var(--muted);
+	}
+
+	/*
+	 * The + that puts a step in the middle of an arrow. Round and accent, like
+	 * the buds on a shape, because it is the same idea in the same visual
+	 * language: the only round things on the canvas are the ones that add.
+	 */
+	.insert circle {
+		fill: var(--accent);
+		stroke: var(--paper);
+		stroke-width: 2;
+		cursor: pointer;
+	}
+
+	.insert path {
+		stroke: var(--paper);
+		stroke-width: 2;
+		stroke-linecap: round;
+		pointer-events: none;
+	}
+
+	.insert:hover circle {
+		fill: var(--accent-deep);
+	}
+
+	/*
+	 * Two offset pages in the corner of a box that has a diagram behind it.
+	 * Drawn in the muted ink rather than the accent: it is part of the drawing,
+	 * not part of the editor, and it has to survive into the exported picture.
+	 */
+	.has-chart rect {
+		fill: var(--surface);
+		stroke: var(--muted);
+		stroke-width: 1.5;
+		cursor: pointer;
+	}
+
+	.has-chart:hover rect {
+		stroke: var(--accent);
 	}
 
 	.cap.hollow {

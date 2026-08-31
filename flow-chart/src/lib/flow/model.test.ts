@@ -20,6 +20,16 @@ import {
 	updateNode,
 	visibleDoc,
 	visibleIds,
+	chartOf,
+	docAt,
+	hasChart,
+	insertBetween,
+	MAX_DEPTH,
+	moveSubtree,
+	setChart,
+	setDocAt,
+	subtreeIds,
+	titlesAlong,
 	wrapText
 } from './model';
 
@@ -32,6 +42,7 @@ const sizeOf = (title: string, over: Partial<Parameters<typeof fitSize>[0]> = {}
 		body: '',
 		showSubtitle: true,
 		showBody: false,
+		align: 'center' as const,
 		bodyClamp: 0,
 		font: 'sans',
 		size: 15,
@@ -174,6 +185,7 @@ describe('the three pieces of text', () => {
 		body: 'Finance needs the reference from the order, which is on the packing slip.',
 		showSubtitle: true,
 		showBody: false,
+		align: 'center' as const,
 		bodyClamp: 0,
 		font: 'sans' as const,
 		size: 15,
@@ -357,6 +369,7 @@ describe('shortening the body on the shape', () => {
 		body: 'One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen',
 		showSubtitle: false,
 		showBody: true,
+		align: 'center' as const,
 		bodyClamp: 0,
 		font: 'sans' as const,
 		size: 15,
@@ -499,5 +512,170 @@ describe('arrows have a look of their own', () => {
 			edges: [{ id: 'e1', from: 'a', to: 'b', style: 'zigzag', head: 'spiral' }]
 		};
 		expect(parseDoc(file).edges[0]).toMatchObject({ style: 'solid', head: 'arrow' });
+	});
+});
+
+describe('insertBetween', () => {
+	const chain = () => {
+		const a = addNode(EMPTY, 'process', 0, 0, 'A');
+		const b = addNode(a.doc, 'process', 0, 200, 'B');
+		return { doc: connect(b.doc, a.id, b.id, 'yes'), a: a.id, b: b.id };
+	};
+
+	it('splits an arrow into two with a step in the middle', () => {
+		const { doc, a, b } = chain();
+		const result = insertBetween(doc, doc.edges[0].id);
+		expect(result).not.toBeNull();
+		const next = result!.doc;
+		expect(next.nodes).toHaveLength(3);
+		expect(next.edges).toHaveLength(2);
+		expect(next.edges.some((e) => e.from === a && e.to === result!.id)).toBe(true);
+		expect(next.edges.some((e) => e.from === result!.id && e.to === b)).toBe(true);
+		expect(next.edges.some((e) => e.from === a && e.to === b)).toBe(false);
+	});
+
+	it('lands the new step between the two it joins', () => {
+		const { doc } = chain();
+		const result = insertBetween(doc, doc.edges[0].id)!;
+		const added = result.doc.nodes.find((n) => n.id === result.id)!;
+		expect(added.y).toBe(100);
+		expect(added.x).toBe(0);
+	});
+
+	it('keeps the label on the first half only', () => {
+		const { doc, a } = chain();
+		const result = insertBetween(doc, doc.edges[0].id)!;
+		const first = result.doc.edges.find((e) => e.from === a)!;
+		const second = result.doc.edges.find((e) => e.from === result.id)!;
+		expect(first.label).toBe('yes');
+		expect(second.label).toBe('');
+	});
+
+	it('carries the line style onto both halves', () => {
+		const { doc } = chain();
+		const dashed = updateEdge(doc, doc.edges[0].id, { style: 'dashed', width: 4 });
+		const result = insertBetween(dashed, dashed.edges[0].id)!;
+		expect(result.doc.edges.every((e) => e.style === 'dashed' && e.width === 4)).toBe(true);
+	});
+
+	it('returns null for an arrow that is not there', () => {
+		expect(insertBetween(EMPTY, 'nope')).toBeNull();
+	});
+});
+
+describe('subtreeIds and moveSubtree', () => {
+	// A -> B -> C, and A -> D
+	const tree = () => {
+		const a = addNode(EMPTY, 'process', 0, 0, 'A');
+		const b = addNode(a.doc, 'process', 0, 100, 'B');
+		const c = addNode(b.doc, 'process', 0, 200, 'C');
+		const d = addNode(c.doc, 'process', 200, 100, 'D');
+		let doc = connect(d.doc, a.id, b.id);
+		doc = connect(doc, b.id, c.id);
+		doc = connect(doc, a.id, d.id);
+		return { doc, a: a.id, b: b.id, c: c.id, d: d.id };
+	};
+
+	it('finds everything under a node', () => {
+		const { doc, a, b, c, d } = tree();
+		expect([...subtreeIds(doc, a)].sort()).toEqual([b, c, d].sort());
+		expect([...subtreeIds(doc, b)]).toEqual([c]);
+		expect([...subtreeIds(doc, c)]).toEqual([]);
+	});
+
+	it('leaves out a node two branches both reach', () => {
+		// A -> B -> D, A -> C -> D. D belongs to neither branch alone.
+		const a = addNode(EMPTY, 'process', 0, 0, 'A');
+		const b = addNode(a.doc, 'process', -100, 100, 'B');
+		const c = addNode(b.doc, 'process', 100, 100, 'C');
+		const d = addNode(c.doc, 'process', 0, 200, 'D');
+		let doc = connect(d.doc, a.id, b.id);
+		doc = connect(doc, a.id, c.id);
+		doc = connect(doc, b.id, d.id);
+		doc = connect(doc, c.id, d.id);
+		expect([...subtreeIds(doc, b.id)]).toEqual([]);
+		expect([...subtreeIds(doc, a.id)].sort()).toEqual([b.id, c.id, d.id].sort());
+	});
+
+	it('moves the branch with the node, keeping its shape', () => {
+		const { doc, b, c } = tree();
+		const next = moveSubtree(doc, b, 50, 150);
+		const movedB = next.nodes.find((n) => n.id === b)!;
+		const movedC = next.nodes.find((n) => n.id === c)!;
+		expect([movedB.x, movedB.y]).toEqual([50, 150]);
+		expect([movedC.x, movedC.y]).toEqual([50, 250]);
+	});
+
+	it('leaves the rest of the diagram where it was', () => {
+		const { doc, b, a, d } = tree();
+		const next = moveSubtree(doc, b, 500, 500);
+		expect(next.nodes.find((n) => n.id === a)!.x).toBe(0);
+		expect(next.nodes.find((n) => n.id === d)!.x).toBe(200);
+	});
+
+	it('survives a loop back to the node being dragged', () => {
+		const { doc, a, b, c } = tree();
+		const looped = connect(doc, c, a);
+		expect(() => moveSubtree(looped, b, 10, 10)).not.toThrow();
+		expect(looped.nodes).toHaveLength(4);
+	});
+});
+
+describe('nested charts', () => {
+	it('stores and reads a document behind a node', () => {
+		const { doc, id } = addNode(EMPTY, 'process', 0, 0, 'Deploy');
+		const inner = addNode(EMPTY, 'process', 0, 0, 'Run tests').doc;
+		const next = setChart(doc, id, inner);
+		expect(hasChart(next.nodes[0])).toBe(true);
+		expect(chartOf(next, id)?.nodes[0].title).toBe('Run tests');
+	});
+
+	it('does not resize the box that holds one', () => {
+		const { doc, id } = addNode(EMPTY, 'process', 0, 0, 'Deploy');
+		const before = doc.nodes[0].h;
+		const inner = { nodes: Array.from({ length: 8 }, (_, i) => ({ ...doc.nodes[0], id: `x${i}` })), edges: [] };
+		expect(setChart(doc, id, inner).nodes[0].h).toBe(before);
+	});
+
+	it('reads and writes at a path', () => {
+		const outer = addNode(EMPTY, 'process', 0, 0, 'Deploy');
+		const inner = addNode(EMPTY, 'process', 0, 0, 'Run tests');
+		const withChart = setChart(outer.doc, outer.id, inner.doc);
+		expect(docAt(withChart, [outer.id]).nodes[0].title).toBe('Run tests');
+		expect(docAt(withChart, []).nodes[0].title).toBe('Deploy');
+
+		const edited = setDocAt(withChart, [outer.id], addNode(inner.doc, 'process', 0, 100, 'Ship').doc);
+		expect(docAt(edited, [outer.id]).nodes).toHaveLength(2);
+		expect(edited.nodes[0].title).toBe('Deploy');
+	});
+
+	it('names the trail down a path', () => {
+		const outer = addNode(EMPTY, 'process', 0, 0, 'Deploy');
+		const inner = addNode(EMPTY, 'process', 0, 0, 'Run tests');
+		const deepest = setChart(inner.doc, inner.id, addNode(EMPTY, 'process', 0, 0, '').doc);
+		const doc = setChart(outer.doc, outer.id, deepest);
+		expect(titlesAlong(doc, [outer.id, inner.id])).toEqual(['Deploy', 'Run tests']);
+	});
+
+	it('survives a round trip through parseDoc', () => {
+		const outer = addNode(EMPTY, 'process', 0, 0, 'Deploy');
+		const inner = addNode(EMPTY, 'process', 0, 0, 'Run tests');
+		const doc = setChart(outer.doc, outer.id, inner.doc);
+		const back = parseDoc(JSON.parse(JSON.stringify(doc)));
+		expect(back.nodes[0].chart?.nodes[0].title).toBe('Run tests');
+	});
+
+	it('stops nesting at the depth limit', () => {
+		let raw: Record<string, unknown> = { nodes: [{ id: 'deep', shape: 'process' }], edges: [] };
+		for (let i = 0; i < MAX_DEPTH + 3; i++) {
+			raw = { nodes: [{ id: `n${i}`, shape: 'process', chart: raw }], edges: [] };
+		}
+		let depth = 0;
+		let node = parseDoc(raw).nodes[0];
+		while (node.chart?.nodes.length) {
+			depth += 1;
+			node = node.chart.nodes[0];
+		}
+		expect(depth).toBeLessThanOrEqual(MAX_DEPTH);
 	});
 });
