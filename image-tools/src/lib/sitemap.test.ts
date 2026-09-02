@@ -5,6 +5,7 @@ import { PRESETS } from './tools/presets';
 import { allPairs, allPairSlugs, parsePairSlug } from './engine';
 import { SAME_NAME_PAGES } from './tools/samename';
 import { allVideoPairs } from './video/formats';
+import { VIDEO_TOOLS, videoToolPath } from './video/tools';
 
 describe('sitemapPaths', () => {
 	const paths = sitemapPaths();
@@ -16,10 +17,12 @@ describe('sitemapPaths', () => {
 				PRESETS.length +
 				allPairs().length +
 				SAME_NAME_PAGES.length +
-				allVideoPairs().length
+				allVideoPairs().length +
+				VIDEO_TOOLS.length
 		);
 		for (const tool of TOOLS) expect(paths).toContain(toolPath(tool));
 		for (const preset of PRESETS) expect(paths).toContain(`/make/${preset.slug}`);
+		for (const tool of VIDEO_TOOLS) expect(paths).toContain(videoToolPath(tool));
 		expect(paths).toContain('/convert/heic-to-jpg');
 		for (const fixed of [
 			'/',

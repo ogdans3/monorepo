@@ -1,5 +1,6 @@
 import type { FFmpeg } from '@ffmpeg/ffmpeg';
 import type { VideoFormat } from './formats';
+import { FONT_FILE, needsFont, planEdit, type EditOp, type EditOptions } from './edit';
 import { fallbackPlan, planConversion, type PlanOptions, type ProbeResult } from './plan';
 import { looksReadable, parseProbe } from './probe';
 
@@ -35,6 +36,18 @@ export interface LoadProgress {
 let instance: FFmpeg | null = null;
 let loading: Promise<FFmpeg> | null = null;
 let logLines: string[] = [];
+
+/**
+ * The tail of what ffmpeg last said.
+ *
+ * ffmpeg reports a refused filter or an unreadable font on its log and then
+ * exits, so "ffmpeg could not apply that edit" throws away the only sentence
+ * that would tell anybody what went wrong. This is what puts it back, both in
+ * the message a visitor sees and in a browser test.
+ */
+export function lastFfmpegLines(count = 6): string[] {
+	return logLines.slice(-count);
+}
 
 /** True once the core is in memory, so the UI can stop warning about the wait. */
 export function isLoaded(): boolean {
@@ -188,10 +201,87 @@ export async function convertVideo(
 	}
 }
 
+/**
+ * The face `drawtext` writes with.
+ *
+ * There is no system font inside the wasm filesystem, so one has to be put
+ * there before a caption can be drawn. Roboto Bold, because a caption sits over
+ * a moving picture and a regular weight disappears into it. Fetched only when
+ * somebody actually adds text, and kept once fetched: 167KB is nothing beside
+ * the 7MB core, but it is not worth downloading on a page that will not use it.
+ */
+const FONT_URL = '/fonts/caption.ttf';
+let fontWritten = false;
+
+async function ensureFont(ff: FFmpeg): Promise<void> {
+	if (fontWritten) return;
+	const response = await fetch(FONT_URL);
+	if (!response.ok) throw new Error('Could not load the font for captions');
+	await ff.writeFile(FONT_FILE, new Uint8Array(await response.arrayBuffer()));
+	fontWritten = true;
+}
+
+/**
+ * One edit, keeping the file in the container it arrived in.
+ *
+ * The shape is deliberately the same as `convertVideo`: probe, plan, run,
+ * read back. What differs is that there is no fallback to try, because an edit
+ * either has a filter or it does not, and a filter cannot be copied around.
+ * The two operations that do copy (a keyframe trim, and dropping the sound)
+ * fail loudly rather than silently re-encoding, since a visitor who was
+ * promised "instant, every frame untouched" should not quietly get the other
+ * thing.
+ */
+export async function editVideo(
+	ff: FFmpeg,
+	file: File,
+	op: EditOp,
+	target: VideoFormat,
+	opts: EditOptions & { onProgress?: (ratio: number) => void } = {}
+): Promise<ConvertResult> {
+	const info = await probe(ff, file);
+	const outName = `output${target.extensions[0]}`;
+
+	if (needsFont(op)) await ensureFont(ff);
+
+	const report = ({ progress }: { progress: number }) => {
+		opts.onProgress?.(Math.max(0, Math.min(1, progress)));
+	};
+	ff.on('progress', report);
+
+	try {
+		const plan = planEdit(op, target, info, outName, opts);
+		logLines = [];
+		const code = await ff.exec(plan.args);
+		if (code !== 0) {
+			const said = lastFfmpegLines(3)
+				.filter((line) => /error|invalid|no such|could not|unable/i.test(line))
+				.join(' ');
+			throw new Error(said || 'ffmpeg could not apply that edit');
+		}
+
+		const data = await ff.readFile(outName);
+		if (typeof data === 'string' || data.length === 0) {
+			throw new Error('The edit produced an empty file');
+		}
+		const bytes = new Uint8Array(data);
+		return {
+			blob: new Blob([bytes as unknown as ArrayBuffer], { type: target.mime }),
+			framesIntact: plan.framesIntact,
+			fullCopy: plan.copy === 'full',
+			probe: info
+		};
+	} finally {
+		ff.off('progress', report);
+		await ff.deleteFile(outName).catch(() => {});
+	}
+}
+
 /** For tests and for freeing 32MB when a page is done with it. */
 export function resetFfmpeg(): void {
 	instance?.terminate();
 	instance = null;
 	loading = null;
 	logLines = [];
+	fontWritten = false;
 }

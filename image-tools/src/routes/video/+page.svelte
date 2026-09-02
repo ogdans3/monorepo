@@ -2,6 +2,7 @@
 	import { SITE_URL } from '$lib/site';
 	import { VIDEO_SOURCES, VIDEO_TARGETS, allVideoPairs, videoPath } from '$lib/video/formats';
 	import { usuallyInstant } from '$lib/video/copy';
+	import { VIDEO_CATEGORIES, videoToolPath, videoToolsInCategory } from '$lib/video/tools';
 	import { parseVideoSlug } from '$lib/video/formats';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
@@ -36,10 +37,10 @@
 </script>
 
 <svelte:head>
-	<title>Free Online Video Converter - No Upload, No Limit</title>
+	<title>Free Online Video Tools and Converter - No Upload</title>
 	<meta
 		name="description"
-		content="Convert video in your browser for free. MP4, MOV, MKV, AVI and WebM, plus video to GIF and video to MP3. Nothing is uploaded, there is no size limit and no signup."
+		content="Trim, crop, resize, caption and convert video in your browser for free. MP4, MOV, MKV, AVI and WebM. Nothing is uploaded and there is no size limit."
 	/>
 	<link rel="canonical" href="{SITE_URL}/video" />
 	<meta property="og:title" content="Free Online Video Converter" />
@@ -52,10 +53,10 @@
 </svelte:head>
 
 <section class="hero">
-	<h1>Free online video converter</h1>
+	<h1>Free online video tools and converter</h1>
 	<p class="lede">
-		Convert video without uploading it anywhere. The whole thing runs on your own machine, so
-		there's no queue, no size cap and no waiting for a file to travel twice.
+		Trim, crop, caption and convert video without uploading it anywhere. The whole thing runs on
+		your own machine, so there's no queue, no size cap and no waiting for a file to travel twice.
 	</p>
 	<TrustLine />
 </section>
@@ -71,6 +72,27 @@
 			<li><a href={videoPath(pair.slug)}>{pair.sourceName} to {pair.targetName}</a></li>
 		{/each}
 	</ul>
+</section>
+
+<section aria-labelledby="tools-heading">
+	<h2 id="tools-heading">Edit a video</h2>
+	<p>
+		Trim it, crop it, caption it or shrink it, all on your own machine. Trimming and removing the
+		sound copy the picture rather than rebuilding it, so those two finish in about a second. The
+		rest re-encode every frame, which takes as long as it takes.
+	</p>
+	<div class="matrix">
+		{#each VIDEO_CATEGORIES as group (group.id)}
+			<div class="matrix-group">
+				<h3>{group.label}</h3>
+				<ul class="pair-links">
+					{#each videoToolsInCategory(group.id) as tool (tool.slug)}
+						<li><a href={videoToolPath(tool)}>{tool.name}</a>. {tool.blurb}</li>
+					{/each}
+				</ul>
+			</div>
+		{/each}
+	</div>
 </section>
 
 <section aria-labelledby="matrix-heading">

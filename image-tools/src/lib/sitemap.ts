@@ -3,6 +3,7 @@ import { TOOLS, toolPath } from './tools/registry';
 import { PRESETS, presetPath } from './tools/presets';
 import { SAME_NAME_PAGES } from './tools/samename';
 import { allVideoPairs, videoPath } from './video/formats';
+import { VIDEO_TOOLS, videoToolPath } from './video/tools';
 import { convertPath } from './site';
 
 /**
@@ -30,6 +31,7 @@ export function sitemapPaths(): string[] {
 		...PRESETS.map((preset) => presetPath(preset)),
 		...allPairs().map((pair) => convertPath(pair.slug)),
 		...SAME_NAME_PAGES.map((page) => convertPath(page.slug)),
+		...VIDEO_TOOLS.map((tool) => videoToolPath(tool)),
 		...allVideoPairs().map((pair) => videoPath(pair.slug))
 	];
 }

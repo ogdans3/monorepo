@@ -128,6 +128,31 @@ decisions. This file is the short version of what matters when editing.
   ETag changes and everyone downloads it again.
 - **WASM codecs are lazy.** Keep them behind dynamic imports, and keep
   `optimizeDeps.exclude` in `vite.config.ts` in sync when adding one.
+- **Video tools are a second registry, and re-encode by definition.**
+  `src/lib/video/tools.ts` mirrors `src/lib/tools/registry.ts` for the ten
+  editing pages under `/video/<slug>`. A parallel table rather than a
+  `takes: 'video'` column, because the two sections share nothing past the
+  words: different input, ffmpeg instead of a canvas, and a warning about the
+  wait that no image tool needs. `edit.ts` builds the arguments and is pure and
+  tested. Only two edits escape the re-encode, and they are the two worth
+  advertising: a trim on a keyframe copies both streams, and dropping the sound
+  copies the picture. `keepsFrames` in the registry is what says so, and a test
+  pins it to exactly those two.
+- **drawtext: escape the colon, never the percent.** Verified one character at
+  a time in a real browser, because the failure modes are opposite and both are
+  silent. An unescaped `:` ends the option list and ffmpeg fails with "Error
+  while processing the decoded data". An escaped `%` makes the value
+  unparseable and drawtext then draws **nothing at all and reports nothing**,
+  which is how the first version shipped looking fine: the test caption had no
+  punctuation in it. `expansion=none` covers the percent instead. The font is
+  `static/fonts/caption.ttf` (Roboto Bold, Apache 2.0, licence beside it),
+  written into ffmpeg's filesystem on demand, because there is no system font
+  inside the wasm sandbox.
+- **`text-anchor`-style silent overrides have a video cousin: the quality
+  slider.** `quality` belongs to the compress tool alone. Passing the panel's
+  `quality` state to `editVideo` unconditionally handed the compressor's
+  setting to every other tool, so a crop encoded at the compressor's CRF. Pass
+  it only when `tool.op === 'compress'`.
 - **Video is ffmpeg.wasm, and three things about it are load bearing.**
   (1) The core is the **ESM** build, copied out of node_modules into
   `static/ffmpeg/<version>/` by a plugin in `vite.config.ts` and gitignored. ffmpeg

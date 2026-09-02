@@ -42,6 +42,17 @@ every frame and take roughly as long as the video runs. Each page says which
 kind it is. The 32MB core is fetched only when a file is dropped, is about
 7MB over the wire once brotli has it, and is then cached by the browser.
 
+Ten video editing pages sit beside the conversions, driven by their own
+registry in `src/lib/video/tools.ts`: trim, crop, resize, speed, frame rate,
+rotate, blur, add text, remove sound and compress. The arguments are built by
+`src/lib/video/edit.ts`, which is pure and tested like the conversion planner
+beside it. Every one of them re-encodes except two, and those two are the ones
+worth knowing about: trimming on a keyframe copies both streams, and removing
+the sound copies the picture, so both finish in about a second with every
+frame identical to the original. Adding text needs a font written into
+ffmpeg's filesystem, since a browser sandbox has none, so
+`static/fonts/caption.ttf` ships with the site.
+
 Everything runs client-side. The image tools cover crop, combine, split,
 trim, extend canvas, resize, bulk resize, rotate, flip, adjust, black and
 white, sepia, invert, replace colour, sharpen, border, round corners, drop
