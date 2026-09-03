@@ -129,7 +129,7 @@ decisions. This file is the short version of what matters when editing.
 - **WASM codecs are lazy.** Keep them behind dynamic imports, and keep
   `optimizeDeps.exclude` in `vite.config.ts` in sync when adding one.
 - **Video tools are a second registry, and re-encode by definition.**
-  `src/lib/video/tools.ts` mirrors `src/lib/tools/registry.ts` for the ten
+  `src/lib/video/tools.ts` mirrors `src/lib/tools/registry.ts` for the eleven
   editing pages under `/video/<slug>`. A parallel table rather than a
   `takes: 'video'` column, because the two sections share nothing past the
   words: different input, ffmpeg instead of a canvas, and a warning about the
@@ -138,6 +138,18 @@ decisions. This file is the short version of what matters when editing.
   advertising: a trim on a keyframe copies both streams, and dropping the sound
   copies the picture. `keepsFrames` in the registry is what says so, and a test
   pins it to exactly those two.
+- **Slowing one section down is a concat of three, and the frames are not
+  repeated.** `slow-motion-video` is the only edit that builds a
+  `-filter_complex` rather than a `-vf`: `stretchFilter` in `edit.ts` trims the
+  clip into head, section and tail, retimes the middle with `setpts` and joins
+  them with `concat`, so everything outside the marks keeps its own pace.
+  `-fps_mode vfr` beside it is load bearing. Left to itself ffmpeg makes the
+  output constant rate, which for a fourteen times stretch means encoding
+  fourteen times as many frames for a picture that steps at exactly the same
+  moments. There is no `fps` filter in the graph for the same reason, and the
+  about copy says so rather than pretending the result glides. A section that
+  turns out to be the whole clip has no head and no tail, so `planEdit` hands
+  it to the ordinary `speed` path instead of building a concat of one.
 - **drawtext: escape the colon, never the percent.** Verified one character at
   a time in a real browser, because the failure modes are opposite and both are
   silent. An unescaped `:` ends the option list and ffmpeg fails with "Error

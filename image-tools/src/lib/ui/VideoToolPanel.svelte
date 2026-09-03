@@ -2,7 +2,18 @@
 	import { editedFileName, formatBytes, resolveFormat } from '$lib/engine';
 	import { resolveVideoFormat, videoAcceptAttribute, VIDEO_FORMATS } from '$lib/video/formats';
 	import { editVideo, isLoaded, lastFfmpegLines, loadFfmpeg, type LoadProgress } from '$lib/video/ffmpeg';
-	import { BLUR_MAX, BLUR_MIN, evenSize, type EditOp, type TextPosition } from '$lib/video/edit';
+	import {
+		BLUR_MAX,
+		BLUR_MIN,
+		evenSize,
+		STRETCH_MAX_SECONDS,
+		STRETCH_MIN_SECONDS,
+		stretchLayout,
+		stretchedTotal,
+		type EditOp,
+		type TextPosition
+	} from '$lib/video/edit';
+	import { formatTimecode, parseTimecode } from '$lib/video/timecode';
 	import type { VideoTool } from '$lib/video/tools';
 	import { downloadBlob } from './download';
 	import Dropzone from './Dropzone.svelte';
@@ -31,6 +42,19 @@
 	let startSeconds = $state(0);
 	let endSeconds = $state(0);
 	let exactTrim = $state(false);
+
+	/**
+	 * The slow motion page works in timecodes as well as sliders, because
+	 * somebody who already knows the interesting part starts at 2:32 knows it
+	 * as 2:32. The boxes hold text so a half typed value doesn't jump the mark
+	 * about, and only a value that parses is committed.
+	 */
+	let stretchStart = $state(0);
+	let stretchEnd = $state(0);
+	let stretchTarget = $state(0);
+	let stretchStartText = $state('0:00.0');
+	let stretchEndText = $state('0:00.0');
+	let stretchTargetText = $state('0:00.0');
 
 	let cropBox = $state({ x: 0, y: 0, w: 1, h: 1 });
 	/** Where the crop preview is paused, since it has no controls of its own. */
@@ -96,6 +120,13 @@
 				return { kind: 'resize', width: resizeWidth, height: null };
 			case 'speed':
 				return { kind: 'speed', factor: speedFactor };
+			case 'stretch':
+				return {
+					kind: 'stretch',
+					startSeconds: stretchStart,
+					endSeconds: stretchEnd,
+					targetSeconds: stretchTarget
+				};
 			case 'fps':
 				return { kind: 'fps', fps };
 			case 'rotate':
@@ -116,6 +147,9 @@
 		if (!file) return false;
 		if (tool.op === 'text') return text.trim().length > 0;
 		if (tool.op === 'trim') return startSeconds > 0 || (endSeconds > 0 && endSeconds < media.duration);
+		if (tool.op === 'stretch') {
+			return stretchEnd > stretchStart && stretchTarget > 0 && stretchTarget !== stretchEnd - stretchStart;
+		}
 		if (tool.op === 'rotate') return quarterTurns % 4 !== 0 || flipHorizontal || flipVertical;
 		if (tool.op === 'crop') return cropBox.w < 0.999 || cropBox.h < 0.999;
 		return true;
@@ -169,9 +203,63 @@
 		scrubAt = 0;
 		startSeconds = 0;
 		endSeconds = media.duration;
+		// A section in the middle, at half pace, so the page opens on something
+		// that already means something rather than on a no-op.
+		setStretch(media.duration * 0.25, media.duration * 0.75, media.duration);
 		resizeWidth = Math.min(1280, media.width || 1280);
 		textSize = Math.max(16, Math.round((media.height || 720) * 0.06));
 	}
+
+	/** Move the marks and the boxes together, so neither can drift. */
+	function setStretch(start: number, end: number, targetSeconds: number) {
+		stretchStart = Math.max(0, start);
+		stretchEnd = Math.max(stretchStart, end);
+		stretchTarget = Math.max(0, targetSeconds);
+		stretchStartText = formatTimecode(stretchStart);
+		stretchEndText = formatTimecode(stretchEnd);
+		stretchTargetText = formatTimecode(stretchTarget);
+	}
+
+	function setStretchStart(value: number) {
+		const limit = Math.max(0, media.duration - STRETCH_MIN_SECONDS);
+		const start = Math.min(Math.max(0, value), limit);
+		setStretch(start, Math.max(stretchEnd, start + STRETCH_MIN_SECONDS), stretchTarget);
+	}
+
+	function setStretchEnd(value: number) {
+		const end = Math.min(Math.max(value, stretchStart + STRETCH_MIN_SECONDS), media.duration);
+		setStretch(stretchStart, end, stretchTarget);
+	}
+
+	function setStretchTarget(value: number) {
+		const target = Math.min(STRETCH_MAX_SECONDS, Math.max(STRETCH_MIN_SECONDS, value));
+		setStretch(stretchStart, stretchEnd, target);
+	}
+
+	/**
+	 * A box that was typed into. Anything that isn't a time puts the mark back
+	 * where it was rather than silently reading as zero, which would move the
+	 * section to the front of the clip on a stray keystroke.
+	 */
+	function commitTimecode(typed: string, apply: (value: number) => void, current: number) {
+		const parsed = parseTimecode(typed);
+		apply(parsed === null ? current : parsed);
+	}
+
+	/** What the finished file will look like, for the line under the controls. */
+	const stretchInfo = $derived.by(() => {
+		if (tool.op !== 'stretch' || !media.duration || stretchEnd <= stretchStart) return null;
+		const layout = stretchLayout(
+			{ kind: 'stretch', startSeconds: stretchStart, endSeconds: stretchEnd, targetSeconds: stretchTarget },
+			media.duration
+		);
+		return {
+			section: layout.endSeconds - layout.startSeconds,
+			target: layout.targetSeconds,
+			stretch: layout.stretch,
+			total: stretchedTotal(layout, media.duration)
+		};
+	});
 
 	async function run() {
 		if (!file || !ready) return;
@@ -418,6 +506,83 @@
 					<p class="hint">
 						{#if media.duration}
 							{media.duration.toFixed(1)}s becomes about {(media.duration / speedFactor).toFixed(1)}s.
+						{/if}
+					</p>
+				{/if}
+
+				{#if tool.op === 'stretch'}
+					<div class="field">
+						<span>
+							Slow part starts
+							<input
+								class="tc mono"
+								type="text"
+								inputmode="decimal"
+								aria-label="Where the slow part starts"
+								bind:value={stretchStartText}
+								onchange={() => commitTimecode(stretchStartText, setStretchStart, stretchStart)}
+							/>
+						</span>
+						<input
+							type="range"
+							min="0"
+							max={media.duration}
+							step="0.1"
+							value={stretchStart}
+							aria-label="Where the slow part starts, as a slider"
+							oninput={(e) => setStretchStart(Number(e.currentTarget.value))}
+						/>
+					</div>
+					<div class="field">
+						<span>
+							and stops
+							<input
+								class="tc mono"
+								type="text"
+								inputmode="decimal"
+								aria-label="Where the slow part stops"
+								bind:value={stretchEndText}
+								onchange={() => commitTimecode(stretchEndText, setStretchEnd, stretchEnd)}
+							/>
+						</span>
+						<input
+							type="range"
+							min="0"
+							max={media.duration}
+							step="0.1"
+							value={stretchEnd}
+							aria-label="Where the slow part stops, as a slider"
+							oninput={(e) => setStretchEnd(Number(e.currentTarget.value))}
+						/>
+					</div>
+					<div class="field">
+						<span>
+							and should run for
+							<input
+								class="tc mono"
+								type="text"
+								inputmode="decimal"
+								aria-label="How long the slow part should run"
+								bind:value={stretchTargetText}
+								onchange={() => commitTimecode(stretchTargetText, setStretchTarget, stretchTarget)}
+							/>
+						</span>
+					</div>
+					<div class="row">
+						{#each [2, 4, 10, 20] as times (times)}
+							<button class="chip" onclick={() => setStretchTarget((stretchEnd - stretchStart) * times)}>
+								{times}× slower
+							</button>
+						{/each}
+					</div>
+					<p class="hint">
+						Type a timecode like 2:32, or plain seconds. Every part of the clip outside the
+						section keeps its own pace.
+						{#if stretchInfo}
+							<br />
+							{stretchInfo.section.toFixed(1)}s becomes {stretchInfo.target.toFixed(1)}s, which is
+							{stretchInfo.stretch.toFixed(1)}× slower, and the whole clip runs
+							{formatTimecode(stretchInfo.total)} instead of {formatTimecode(media.duration)}.
 						{/if}
 					</p>
 				{/if}
@@ -771,6 +936,19 @@
 		border: 1px solid var(--line);
 		border-radius: var(--r-s);
 		background: var(--surface);
+	}
+
+	/* Narrow enough that three of them read as marks rather than as a form. */
+	.tc {
+		font: inherit;
+		font-size: 0.8125rem;
+		width: 6.5rem;
+		text-align: right;
+		padding: 0.15rem 0.35rem;
+		border: 1px solid var(--line);
+		border-radius: var(--r-s);
+		background: var(--surface);
+		color: inherit;
 	}
 
 	.check {

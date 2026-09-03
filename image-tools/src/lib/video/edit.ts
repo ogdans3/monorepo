@@ -31,6 +31,7 @@ export type EditOp =
 	| { kind: 'crop'; x: number; y: number; width: number; height: number }
 	| { kind: 'resize'; width: number; height: number | null }
 	| { kind: 'speed'; factor: number }
+	| { kind: 'stretch'; startSeconds: number; endSeconds: number; targetSeconds: number }
 	| { kind: 'fps'; fps: number }
 	| { kind: 'rotate'; quarterTurns: number; flipHorizontal: boolean; flipVertical: boolean }
 	| { kind: 'blur'; strength: number }
@@ -58,6 +59,11 @@ const ATEMPO_MAX = 2;
 
 export const BLUR_MIN = 1;
 export const BLUR_MAX = 20;
+
+/** A section shorter than this is a mark, not a stretch of footage. */
+export const STRETCH_MIN_SECONDS = 0.1;
+/** An hour of output from one section is already well past useful. */
+export const STRETCH_MAX_SECONDS = 3600;
 
 /**
  * atempo as many times as it takes.
@@ -159,6 +165,105 @@ export function filterFor(op: EditOp): string | null {
 	}
 }
 
+/**
+ * A stretch, worked out and clamped, before it becomes a filter graph.
+ *
+ * Kept apart from the graph itself so the panel can show what is about to
+ * happen without building ffmpeg arguments to read them back, and so a test
+ * can check the arithmetic without matching a string full of semicolons.
+ */
+export interface StretchLayout {
+	startSeconds: number;
+	endSeconds: number;
+	targetSeconds: number;
+	/** How many times longer the section becomes. 14.29 for 70s into 1000s. */
+	stretch: number;
+	/** Whether there is any clip before the section, and any after it. */
+	head: boolean;
+	tail: boolean;
+}
+
+export function stretchLayout(
+	op: Extract<EditOp, { kind: 'stretch' }>,
+	sourceSeconds: number | null
+): StretchLayout {
+	const startSeconds = Math.max(0, op.startSeconds);
+	const endSeconds = Math.max(startSeconds + STRETCH_MIN_SECONDS, op.endSeconds);
+	const targetSeconds = Math.min(
+		STRETCH_MAX_SECONDS,
+		Math.max(STRETCH_MIN_SECONDS, op.targetSeconds)
+	);
+	return {
+		startSeconds,
+		endSeconds,
+		targetSeconds,
+		stretch: targetSeconds / (endSeconds - startSeconds),
+		// A duration we could not read is treated as having something after the
+		// section. An empty segment fed to concat is the worse guess: it ends
+		// the graph with nothing to join rather than joining nothing.
+		head: startSeconds > 0.01,
+		tail: sourceSeconds === null || endSeconds < sourceSeconds - 0.01
+	};
+}
+
+/** How long the whole clip runs once the section has been stretched. */
+export function stretchedTotal(layout: StretchLayout, sourceSeconds: number): number {
+	const section = layout.endSeconds - layout.startSeconds;
+	return Math.max(0, sourceSeconds - section) + layout.targetSeconds;
+}
+
+/**
+ * The filter graph that slows one section and leaves the rest alone.
+ *
+ * Three segments cut out of the same input, the middle one retimed, then
+ * concatenated back into one stream. `setpts` multiplies the timestamps, which
+ * is what spreads the section over its new length, and every segment needs
+ * `-STARTPTS` because a trimmed piece still carries the timestamps it had
+ * where it came from and concat would leave the gap in.
+ *
+ * The sound follows the picture through `atempo`, chained by `tempoChain`
+ * because one instance refuses anything outside half to double speed. A big
+ * stretch is several instances and it sounds like it, which is honest: the
+ * alternative is a clip whose sound is silently out of step with its picture.
+ *
+ * No `fps` filter anywhere in here, and that is the expensive decision on this
+ * page. Repeating frames to keep a constant rate would mean encoding 14 times
+ * as many of them for a 14 times stretch, for a picture that steps at exactly
+ * the same moments either way. So the frames that exist are spread out and
+ * `-fps_mode vfr` keeps ffmpeg from filling the gaps back in.
+ */
+export function stretchFilter(layout: StretchLayout, hasAudio: boolean): string {
+	const parts: string[] = [];
+	const labels: string[] = [];
+	let n = 0;
+
+	const segment = (from: number, to: number | null, scale: number) => {
+		const i = n++;
+		const span = `start=${from.toFixed(3)}${to === null ? '' : `:end=${to.toFixed(3)}`}`;
+		const setpts = scale === 1 ? 'PTS-STARTPTS' : `${scale.toFixed(6)}*(PTS-STARTPTS)`;
+		parts.push(`[0:v]trim=${span},setpts=${setpts}[v${i}]`);
+		if (hasAudio) {
+			const tempo =
+				scale === 1
+					? ''
+					: `,${tempoChain(1 / scale)
+							.map((step) => `atempo=${step}`)
+							.join(',')}`;
+			parts.push(`[0:a]atrim=${span},asetpts=PTS-STARTPTS${tempo}[a${i}]`);
+		}
+		labels.push(`[v${i}]${hasAudio ? `[a${i}]` : ''}`);
+	};
+
+	if (layout.head) segment(0, layout.startSeconds, 1);
+	segment(layout.startSeconds, layout.endSeconds, layout.stretch);
+	if (layout.tail) segment(layout.endSeconds, null, 1);
+
+	parts.push(
+		`${labels.join('')}concat=n=${n}:v=1:a=${hasAudio ? 1 : 0}[v]${hasAudio ? '[a]' : ''}`
+	);
+	return parts.join(';');
+}
+
 /** True when the sound has to be re-encoded because its timing changed. */
 function touchesAudio(op: EditOp): boolean {
 	return op.kind === 'speed';
@@ -222,6 +327,39 @@ export function planEdit(
 			'none',
 			'slow'
 		);
+	}
+
+	// Slowing one section down, with the rest of the clip left at its own pace.
+	if (op.kind === 'stretch') {
+		const layout = stretchLayout(op, probe.durationSeconds);
+		// Nothing either side of the section means this is not a section at all,
+		// it is the whole clip, and the plain speed path already does that with
+		// one filter instead of a concat of one.
+		if (!layout.head && !layout.tail) {
+			return planEdit({ kind: 'speed', factor: 1 / layout.stretch }, target, probe, outName, opts);
+		}
+		const hasAudio = Boolean(probe.audioCodec);
+		const args = [
+			'-i',
+			IN,
+			'-filter_complex',
+			stretchFilter(layout, hasAudio),
+			'-map',
+			'[v]',
+			...(hasAudio ? ['-map', '[a]'] : []),
+			// Pass the frames through with the timestamps the filter gave them.
+			// Left to itself ffmpeg makes the output constant rate, which means
+			// repeating every frame of the slowed section until it fills the new
+			// running time: the same picture, many times the encode.
+			'-fps_mode',
+			'vfr',
+			...encodeVideoArgs(target, quality),
+			// Filtered sound cannot be copied, so it is always re-encoded here.
+			...(hasAudio ? ['-c:a', target.audioCodec ?? 'aac'] : ['-an']),
+			'-y',
+			outName
+		];
+		return makePlan(args, 'none', 'slow');
 	}
 
 	// Dropping the sound leaves every frame of the picture untouched.

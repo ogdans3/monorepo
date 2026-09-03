@@ -182,8 +182,8 @@ export const VIDEO_TOOLS: VideoTool[] = [
 			"The picture and the sound are moved together, so a clip at double speed is half as long and still in sync. The sound is stretched rather than resampled, which keeps voices recognisable instead of turning them into chipmunks, though a large change is always going to be audible.",
 			"The filter that stretches audio only accepts a change between half and double, so anything beyond that is applied more than once. Quarter speed is two halvings and quadruple is two doublings. Without that the sound silently comes out wrong, which is the kind of bug that gets shipped because the picture looked fine."
 		],
-		next: ['trim-video', 'mute-video', 'change-video-frame-rate'],
-		keywords: ['slow motion', 'fast forward', 'timelapse', 'speed up', 'slow down'],
+		next: ['slow-motion-video', 'trim-video', 'change-video-frame-rate'],
+		keywords: ['fast forward', 'timelapse', 'speed up', 'slow down'],
 		faq: [
 			{
 				q: 'Does changing the speed make the audio sound wrong?',
@@ -195,6 +195,42 @@ export const VIDEO_TOOLS: VideoTool[] = [
 			}
 		],
 		suffix: '-speed'
+	},
+	{
+		slug: 'slow-motion-video',
+		category: 'time',
+		op: 'stretch',
+		name: 'Slow motion',
+		h1: 'Slow down part of a video',
+		title: 'Slow Motion Video Online - Free, No Upload',
+		description:
+			'Slow one section of a video down to an exact length online free, in your browser. The rest of the clip keeps its own pace, and nothing is uploaded.',
+		lede: 'Mark the part that matters, say how long it should take, and everything either side of it plays at normal speed.',
+		blurb: 'Stretch one section to an exact length.',
+		steps: [
+			'Drop a video in the box above. MP4, MOV, WebM, MKV and AVI all work.',
+			'Set where the slow part starts and stops, by typing a timecode like 2:32 or dragging the sliders.',
+			'Say how long that section should run, then download. The file keeps its name, with -slowed added.'
+		],
+		aboutHeading: 'About slowing part of a video down here',
+		about: [
+			"The other speed page changes the pace of the whole clip. This one changes a section of it and leaves the rest alone, which is what you want when the thing worth looking at is four seconds in the middle of a two minute recording. Say how long the section should take rather than how many times slower it should go, since a length is usually what you actually know.",
+			"The frames aren't repeated to fill the new running time. A section stretched fourteen times over holds exactly the frames it always did, spread out, so it steps rather than glides. That's what slowing footage down looks like unless it was shot at a high frame rate to begin with, and inventing the frames in between would mean encoding fourteen times as many of them for a picture that changes at the same moments anyway.",
+			"The sound is stretched along with the picture so it stays in step. A gentle slowdown still sounds like a voice, and a large one sounds like a large one. If the result is unusable, the mute page drops the track entirely and copies the picture untouched."
+		],
+		next: ['change-video-speed', 'trim-video', 'compress-video'],
+		keywords: ['slow motion', 'slowmo', 'slow down', 'stretch', 'section', 'ramp'],
+		faq: [
+			{
+				q: 'How do I slow down only one part of a video?',
+				a: "Mark where the section starts and stops, then say how long it should take. Everything before and after it is kept at its original pace and joined back on, so you get one file rather than three pieces to stitch together yourself. A two minute clip with ten seconds stretched to sixty comes out two minutes and fifty seconds long."
+			},
+			{
+				q: 'Why does heavily slowed footage look jerky?',
+				a: "Because the camera only recorded so many pictures a second, and slowing the clip down spreads those same pictures over more time rather than finding new ones. At fourteen times slower each frame is held for about half a second. Footage shot at 120 or 240 frames a second has the extra pictures already and slows down smoothly, which is what a phone's slow motion mode is doing."
+			}
+		],
+		suffix: '-slowed'
 	},
 	{
 		slug: 'change-video-frame-rate',

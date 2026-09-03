@@ -6,6 +6,8 @@ import {
 	filterFor,
 	needsFont,
 	planEdit,
+	stretchLayout,
+	stretchedTotal,
 	tempoChain,
 	type EditOp
 } from './edit';
@@ -224,5 +226,122 @@ describe('planEdit', () => {
 	it('only wants the font for text', () => {
 		expect(needsFont({ kind: 'text', text: 'a', size: 40, colour: '#fff', position: 'top', box: false })).toBe(true);
 		expect(needsFont({ kind: 'blur', strength: 4 })).toBe(false);
+	});
+});
+
+describe('stretchLayout', () => {
+	const op = (over: Partial<Extract<EditOp, { kind: 'stretch' }>> = {}) =>
+		({ kind: 'stretch', startSeconds: 2, endSeconds: 6, targetSeconds: 20, ...over }) as const;
+
+	it('works out how much longer the section becomes', () => {
+		expect(stretchLayout(op(), 10).stretch).toBe(5);
+		// the case this page was built for: 2:32 to 3:42 stretched to 1000s
+		const long = stretchLayout(op({ startSeconds: 152, endSeconds: 222, targetSeconds: 1000 }), 300);
+		expect(long.stretch).toBeCloseTo(1000 / 70, 6);
+	});
+
+	it('knows when there is nothing either side of the section', () => {
+		expect(stretchLayout(op({ startSeconds: 0 }), 10).head).toBe(false);
+		expect(stretchLayout(op({ endSeconds: 10 }), 10).tail).toBe(false);
+		expect(stretchLayout(op(), 10)).toMatchObject({ head: true, tail: true });
+	});
+
+	it('assumes there is a tail when the duration could not be read', () => {
+		expect(stretchLayout(op({ endSeconds: 10 }), null).tail).toBe(true);
+	});
+
+	it('clamps a section and a target that would divide by nothing', () => {
+		const layout = stretchLayout(op({ startSeconds: 4, endSeconds: 4, targetSeconds: 0 }), 10);
+		expect(layout.endSeconds).toBeGreaterThan(layout.startSeconds);
+		expect(layout.targetSeconds).toBeGreaterThan(0);
+		expect(Number.isFinite(layout.stretch)).toBe(true);
+	});
+
+	it('refuses to produce more than an hour from one section', () => {
+		expect(stretchLayout(op({ targetSeconds: 99999 }), 10).targetSeconds).toBe(3600);
+	});
+
+	it('adds up what the whole clip will run to', () => {
+		expect(stretchedTotal(stretchLayout(op(), 10), 10)).toBe(26);
+		const long = stretchLayout(op({ startSeconds: 152, endSeconds: 222, targetSeconds: 1000 }), 300);
+		expect(stretchedTotal(long, 300)).toBeCloseTo(1230, 6);
+	});
+});
+
+describe('planEdit for a slowed section', () => {
+	const stretch = (over: Partial<Extract<EditOp, { kind: 'stretch' }>> = {}): EditOp => ({
+		kind: 'stretch',
+		startSeconds: 2,
+		endSeconds: 6,
+		targetSeconds: 20,
+		...over
+	});
+
+	const graphOf = (op: EditOp, p = probe()) => {
+		const args = argsOf(op, mp4, p);
+		return args[args.indexOf('-filter_complex') + 1];
+	};
+
+	it('cuts the clip into three, retimes the middle and joins it back up', () => {
+		const graph = graphOf(stretch());
+		expect(graph).toContain('[0:v]trim=start=0.000:end=2.000,setpts=PTS-STARTPTS[v0]');
+		expect(graph).toContain('[0:v]trim=start=2.000:end=6.000,setpts=5.000000*(PTS-STARTPTS)[v1]');
+		// no end on the last one, so it runs to whatever the file has left
+		expect(graph).toContain('[0:v]trim=start=6.000,setpts=PTS-STARTPTS[v2]');
+		expect(graph).toContain('concat=n=3:v=1:a=1[v][a]');
+	});
+
+	it('leaves out a segment there is no footage for', () => {
+		expect(graphOf(stretch({ startSeconds: 0 }))).toContain('concat=n=2');
+		expect(graphOf(stretch({ endSeconds: 10 }))).toContain('concat=n=2');
+	});
+
+	it('takes the sound with it, chaining atempo the way the speed tool does', () => {
+		const graph = graphOf(stretch());
+		expect(graph).toContain('[0:a]atrim=start=2.000:end=6.000,asetpts=PTS-STARTPTS,');
+		const chain = /atrim=start=2\.000:end=6\.000,asetpts=PTS-STARTPTS,([^[]+)\[a1\]/.exec(graph);
+		const steps = chain![1].split(',').map((step) => Number(step.replace('atempo=', '')));
+		expect(steps.reduce((a, b) => a * b, 1)).toBeCloseTo(0.2, 5);
+		for (const step of steps) expect(step).toBeGreaterThanOrEqual(0.5);
+	});
+
+	it('never mentions audio for a file that has none', () => {
+		const silent = probe({ audioCodec: null });
+		const graph = graphOf(stretch(), silent);
+		expect(graph).not.toContain('atrim');
+		expect(graph).toContain('concat=n=3:v=1:a=0[v]');
+		expect(argsOf(stretch(), mp4, silent)).toContain('-an');
+	});
+
+	it('maps the joined streams and re-encodes both, since a filter cannot be copied', () => {
+		const args = argsOf(stretch());
+		expect(args.join(' ')).toContain('-map [v] -map [a]');
+		expect(args).toContain('libx264');
+		expect(args).toContain('aac');
+		expect(planEdit(stretch(), mp4, probe(), 'out.mp4').framesIntact).toBe(false);
+	});
+
+	it('passes the frames through rather than repeating them to fill the time', () => {
+		// Without this ffmpeg makes the output constant rate, which for a five
+		// times stretch is five times as many frames to encode for the same
+		// picture. No fps filter in the graph for the same reason.
+		expect(argsOf(stretch()).join(' ')).toContain('-fps_mode vfr');
+		expect(graphOf(stretch())).not.toContain('fps=');
+	});
+
+	it('falls back to the plain speed filter when the section is the whole clip', () => {
+		const args = argsOf(stretch({ startSeconds: 0, endSeconds: 10, targetSeconds: 20 }));
+		expect(args).not.toContain('-filter_complex');
+		expect(args).toContain('-vf');
+		expect(args[args.indexOf('-vf') + 1]).toBe('setpts=2.000000*PTS');
+	});
+
+	it('builds the graph the page was asked for, 2:32 to 3:42 over 1000 seconds', () => {
+		const graph = graphOf(
+			stretch({ startSeconds: 152, endSeconds: 222, targetSeconds: 1000 }),
+			probe({ durationSeconds: 300 })
+		);
+		expect(graph).toContain('[0:v]trim=start=152.000:end=222.000,setpts=14.285714*(PTS-STARTPTS)[v1]');
+		expect(graph).toContain('concat=n=3:v=1:a=1[v][a]');
 	});
 });
