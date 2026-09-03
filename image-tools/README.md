@@ -42,9 +42,12 @@ every frame and take roughly as long as the video runs. Each page says which
 kind it is. The 32MB core is fetched only when a file is dropped, is about
 7MB over the wire once brotli has it, and is then cached by the browser.
 
-Ten video editing pages sit beside the conversions, driven by their own
-registry in `src/lib/video/tools.ts`: trim, crop, resize, speed, frame rate,
-rotate, blur, add text, remove sound and compress. The arguments are built by
+Eleven video editing pages sit beside the conversions, driven by their own
+registry in `src/lib/video/tools.ts`: trim, crop, resize, speed, slow motion,
+frame rate, rotate, blur, add text, remove sound and compress. Slow motion is
+the odd one out: it stretches one marked section to an exact length and leaves
+the rest of the clip at its own pace, which is a concat of three segments
+rather than a single filter. The arguments are built by
 `src/lib/video/edit.ts`, which is pure and tested like the conversion planner
 beside it. Every one of them re-encodes except two, and those two are the ones
 worth knowing about: trimming on a keyframe copies both streams, and removing
