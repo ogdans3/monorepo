@@ -12,7 +12,7 @@ describe('sitemapPaths', () => {
 
 	it('lists every tool, preset and conversion, plus the fixed pages', () => {
 		expect(paths.length).toBe(
-			9 +
+			10 +
 				TOOLS.length +
 				PRESETS.length +
 				allPairs().length +
@@ -30,6 +30,7 @@ describe('sitemapPaths', () => {
 			'/tools',
 			'/pdf',
 			'/video',
+			'/video/tools',
 			'/make',
 			'/feedback',
 			'/privacy',

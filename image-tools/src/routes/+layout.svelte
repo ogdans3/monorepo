@@ -96,7 +96,8 @@
 			<a href="/convert">Convert</a>
 			<a href="/tools">Tools</a>
 			<a href="/pdf">PDF</a>
-				<a href="/video">Video</a>
+			<a href="/video">Video</a>
+			<a href="/video/tools">Video tools</a>
 			<a href="/make">Sizes</a>
 		</nav>
 	</header>

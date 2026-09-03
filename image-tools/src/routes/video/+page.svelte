@@ -2,7 +2,7 @@
 	import { SITE_URL } from '$lib/site';
 	import { VIDEO_SOURCES, VIDEO_TARGETS, allVideoPairs, videoPath } from '$lib/video/formats';
 	import { usuallyInstant } from '$lib/video/copy';
-	import { VIDEO_CATEGORIES, videoToolPath, videoToolsInCategory } from '$lib/video/tools';
+	import { VIDEO_TOOLS } from '$lib/video/tools';
 	import { parseVideoSlug } from '$lib/video/formats';
 	import TrustLine from '$lib/ui/TrustLine.svelte';
 	import Faq from '$lib/ui/Faq.svelte';
@@ -77,22 +77,11 @@
 <section aria-labelledby="tools-heading">
 	<h2 id="tools-heading">Edit a video</h2>
 	<p>
-		Trim it, crop it, caption it or shrink it, all on your own machine. Trimming and removing the
-		sound copy the picture rather than rebuilding it, so those two finish in about a second. The
-		rest re-encode every frame, which takes as long as it takes.
+		There are <a href="/video/tools">{VIDEO_TOOLS.length} video tools</a> as well as the
+		conversions, for trimming, cropping, resizing, captioning and shrinking a clip. Trimming and
+		removing the sound copy the picture rather than rebuilding it, so those two finish in about a
+		second. The rest re-encode every frame, which takes as long as it takes.
 	</p>
-	<div class="matrix">
-		{#each VIDEO_CATEGORIES as group (group.id)}
-			<div class="matrix-group">
-				<h3>{group.label}</h3>
-				<ul class="pair-links">
-					{#each videoToolsInCategory(group.id) as tool (tool.slug)}
-						<li><a href={videoToolPath(tool)}>{tool.name}</a>. {tool.blurb}</li>
-					{/each}
-				</ul>
-			</div>
-		{/each}
-	</div>
 </section>
 
 <section aria-labelledby="matrix-heading">

@@ -23,6 +23,7 @@ export function sitemapPaths(): string[] {
 		'/tools',
 		'/pdf',
 		'/video',
+		'/video/tools',
 		'/make',
 		'/feedback',
 		'/privacy',
