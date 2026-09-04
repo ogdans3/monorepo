@@ -2,6 +2,14 @@ import type { FFmpeg } from '@ffmpeg/ffmpeg';
 import type { VideoFormat } from './formats';
 import { FONT_FILE, needsFont, planEdit, type EditOp, type EditOptions } from './edit';
 import { fallbackPlan, planConversion, type PlanOptions, type ProbeResult } from './plan';
+import {
+	copyPlan,
+	encodeArgs,
+	inputName,
+	joinLooksComplete,
+	LIST_FILE,
+	listFileContents
+} from './merge';
 import { looksReadable, parseProbe } from './probe';
 
 /**
@@ -274,6 +282,110 @@ export async function editVideo(
 	} finally {
 		ff.off('progress', report);
 		await ff.deleteFile(outName).catch(() => {});
+	}
+}
+
+/** Ask ffmpeg what is in a file already written under a name of our choosing. */
+async function probeNamed(ff: FFmpeg, name: string): Promise<ProbeResult> {
+	logLines = [];
+	await ff.exec(['-i', name]);
+	const result = parseProbe(logLines);
+	if (!looksReadable(result)) {
+		throw new Error(`${name} does not look like a video this tool can read`);
+	}
+	return result;
+}
+
+export interface MergeResult extends ConvertResult {
+	/** True when a silent clip was given a generated track to line up. */
+	silenceAdded: boolean;
+	/** What each input turned out to contain, in the order they were joined. */
+	probes: ProbeResult[];
+}
+
+/**
+ * Several clips into one file, copying the streams when the clips allow it.
+ *
+ * The copy is tried first and the re-encode runs only if it fails, which is
+ * the same shape `convertVideo` uses and is here for the same reason: whether
+ * a set of clips can be concatenated without decoding depends on more than a
+ * probe can see, and the only way to settle it is to try. When it works the
+ * difference is a second against several minutes, so it is worth the failed
+ * attempt, which costs almost nothing because ffmpeg gives up immediately.
+ */
+export async function mergeVideos(
+	ff: FFmpeg,
+	files: File[],
+	target: VideoFormat,
+	opts: { quality?: number; onProgress?: (ratio: number) => void } = {}
+): Promise<MergeResult> {
+	if (files.length < 2) throw new Error('Two or more videos are needed to join anything');
+
+	const names = files.map((_, i) => inputName(i));
+	const outName = `output${target.extensions[0]}`;
+
+	for (const [i, file] of files.entries()) {
+		await ff.writeFile(names[i], new Uint8Array(await file.arrayBuffer()));
+	}
+	const probes: ProbeResult[] = [];
+	for (const name of names) probes.push(await probeNamed(ff, name));
+
+	await ff.writeFile(LIST_FILE, new TextEncoder().encode(listFileContents(files.length)));
+
+	const report = ({ progress }: { progress: number }) => {
+		opts.onProgress?.(Math.max(0, Math.min(1, progress)));
+	};
+	ff.on('progress', report);
+
+	try {
+		let plan = copyPlan(outName);
+		logLines = [];
+		let code = await ff.exec(plan.args);
+
+		// Exiting zero is not the same as having joined anything. The concat
+		// demuxer given an MP4 and a WebM writes only the first clip, and given
+		// a silent clip first it drops the sound from all the others while
+		// getting the length right. Both exit successfully, so the copy is
+		// measured before it is believed. See `joinLooksComplete`.
+		if (code === 0) {
+			const joined = await probeNamed(ff, outName).catch(() => null);
+			if (!joinLooksComplete(joined, probes)) code = -1;
+		}
+
+		if (code !== 0) {
+			// The clips disagreed about something, which is the common case for
+			// files from different sources. Pay for the decode.
+			plan = encodeArgs(probes, target, outName, opts.quality);
+			logLines = [];
+			code = await ff.exec(plan.args);
+		}
+		if (code !== 0) {
+			const said = lastFfmpegLines(3)
+				.filter((line) => /error|invalid|no such|could not|unable/i.test(line))
+				.join(' ');
+			throw new Error(said || 'ffmpeg could not join those videos');
+		}
+
+		const data = await ff.readFile(outName);
+		if (typeof data === 'string' || data.length === 0) {
+			throw new Error('The join produced an empty file');
+		}
+		const bytes = new Uint8Array(data);
+		return {
+			blob: new Blob([bytes as unknown as ArrayBuffer], { type: target.mime }),
+			framesIntact: plan.framesIntact,
+			fullCopy: plan.framesIntact,
+			silenceAdded: plan.silenceAdded,
+			probe: probes[0],
+			probes
+		};
+	} finally {
+		ff.off('progress', report);
+		await ff.deleteFile(outName).catch(() => {});
+		await ff.deleteFile(LIST_FILE).catch(() => {});
+		// 32MB of core is one thing, but several videos held in the wasm heap
+		// is what actually runs a tab out of memory.
+		for (const name of names) await ff.deleteFile(name).catch(() => {});
 	}
 }
 

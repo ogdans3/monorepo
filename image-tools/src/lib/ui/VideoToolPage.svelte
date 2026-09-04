@@ -3,6 +3,7 @@
 	import { pageFaq } from '$lib/faq';
 	import { nextVideoTools, videoToolPath, type VideoTool } from '$lib/video/tools';
 	import VideoToolPanel from './VideoToolPanel.svelte';
+	import VideoMergePanel from './VideoMergePanel.svelte';
 	import TrustLine from './TrustLine.svelte';
 	import Breadcrumbs from './Breadcrumbs.svelte';
 	import Faq from './Faq.svelte';
@@ -37,7 +38,12 @@
 	<TrustLine />
 </section>
 
-<VideoToolPanel {tool} />
+{#if tool.op === 'merge'}
+	<!-- The join takes a list of files, so it has a panel of its own. -->
+	<VideoMergePanel {tool} />
+{:else}
+	<VideoToolPanel {tool} />
+{/if}
 
 <section aria-labelledby="howto-heading">
 	<h2 id="howto-heading">How to {tool.h1.toLowerCase()}</h2>

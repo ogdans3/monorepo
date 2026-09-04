@@ -150,6 +150,33 @@ decisions. This file is the short version of what matters when editing.
   about copy says so rather than pretending the result glides. A section that
   turns out to be the whole clip has no head and no tail, so `planEdit` hands
   it to the ordinary `speed` path instead of building a concat of one.
+- **Joining videos: exit code 0 proves nothing, and that is the whole story
+  of `merge.ts`.** The concat demuxer fails silently in two different ways and
+  both were caught only in a browser with real files. An MP4 followed by a
+  WebM writes **only the first clip**, logs "Non-monotonous DTS in output
+  stream" and exits successfully: three seconds out of six, presented as
+  "every frame is identical to the original". A **silent clip in front** is
+  worse, because the length comes out right: the demuxer takes its stream
+  layout from the first file, so the output has no audio track and every other
+  clip's sound is dropped. The joined file decoded zero audio bytes and the
+  page said nothing.
+  So `joinLooksComplete` probes the **output** and checks it against the
+  inputs, on length and on which streams are present, and anything short or
+  missing a stream is thrown away and re-encoded. Do not "simplify" this into
+  trusting the exit code, and do not weaken it to a duration check alone,
+  which is what it was first and which passed while the audio was being lost.
+  Unverifiable counts as failed: a join we could not measure is re-encoded.
+- **The merge panel is separate on purpose.** `VideoToolPanel` is singular
+  everywhere: one file, one preview, one probe, one set of controls bound to
+  it. `VideoMergePanel` takes a list, and `VideoToolPage` branches on
+  `op === 'merge'`. Threading a list through the shared panel would leave ten
+  tools carrying a shape only the eleventh uses. Same split the image side
+  already makes with `PdfMergeEditor`.
+- **`merge` is in the `EditOp` union but throws in `planEdit`.** It is there
+  only so the tools registry can name it like every other page, since `op` is
+  typed as `EditOp['kind']`. Every function in `edit.ts` takes one probe and
+  one input. A join routed through there would fall past every branch and come
+  out as a plain re-encode of one file, which looks like it worked.
 - **drawtext: escape the colon, never the percent.** Verified one character at
   a time in a real browser, because the failure modes are opposite and both are
   silent. An unescaped `:` ends the option list and ffmpeg fails with "Error

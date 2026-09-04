@@ -42,9 +42,16 @@ every frame and take roughly as long as the video runs. Each page says which
 kind it is. The 32MB core is fetched only when a file is dropped, is about
 7MB over the wire once brotli has it, and is then cached by the browser.
 
-Eleven video editing pages sit beside the conversions, driven by their own
+Twelve video editing pages sit beside the conversions, driven by their own
 registry in `src/lib/video/tools.ts`: trim, crop, resize, speed, slow motion,
-frame rate, rotate, blur, add text, remove sound and compress. Slow motion is
+frame rate, rotate, blur, add text, remove sound, compress and merge.
+Merging is the one that takes several files rather than one, so it has a
+panel of its own and a third planner in `src/lib/video/merge.ts`. Clips that
+already agree are joined without being decoded at all, and clips that do not
+are fitted to the first clip's frame and encoded once. The copy is attempted
+first and the result is then measured against the inputs, because the concat
+demuxer exits zero both when it writes only the first clip and when it drops
+everyone's audio. Slow motion is
 the odd one out: it stretches one marked section to an exact length and leaves
 the rest of the clip at its own pace, which is a concat of three segments
 rather than a single filter. The arguments are built by

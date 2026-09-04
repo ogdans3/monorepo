@@ -92,6 +92,42 @@ export const VIDEO_TOOLS: VideoTool[] = [
 		keepsFrames: true
 	},
 	{
+		slug: 'merge-videos',
+		category: 'time',
+		op: 'merge',
+		name: 'Merge',
+		h1: 'Merge videos into one',
+		title: 'Merge Videos Online - Free, No Upload Needed',
+		description:
+			'Join two or more videos into one file online free, in your browser. Set the order, and clips that already match are joined in about a second.',
+		lede: 'Put several clips end to end in one file. Drag them into the order you want and download the result.',
+		blurb: 'Join clips end to end, sometimes in a second.',
+		steps: [
+			'Drop two or more videos in the box above. MP4, MOV, WebM, MKV and AVI all work.',
+			'Put them in the order you want them played. The first clip decides the size and shape of the result.',
+			'Download. The file is named after the first clip, with -merged added.'
+		],
+		aboutHeading: 'About merging video here',
+		about: [
+			"Clips that already agree about everything are joined without being decoded at all. Two exports from the same phone, or two halves of one recording, are copied straight into a new file, so a join of any length is over in about a second and every frame is bit for bit the one you started with.",
+			"Clips from different sources rarely agree, and then there's no way round rebuilding them. Each one is fitted to the frame of the first clip, letterboxed rather than stretched so nothing comes back squashed, and the whole thing is encoded once. That takes roughly as long as the videos run. Both paths are tried in that order, so you get the fast one whenever it's available without having to know which case you're in.",
+			"Sound is handled the way you'd want rather than the way that's easiest. If one clip is silent and the others aren't, the silent one gets a silent track of its own length instead of the sound being dropped from all of them. A quiet title card in front of a clip you want to hear is the usual version of this, and losing the audio would lose the point."
+		],
+		next: ['trim-video', 'compress-video', 'resize-video'],
+		keywords: ['join', 'combine', 'concatenate', 'stitch', 'append', 'multiple videos'],
+		faq: [
+			{
+				q: 'Can I merge videos with different sizes or formats?',
+				a: "Yes. Anything that doesn't match the first clip is scaled to fit its frame and padded with black rather than stretched, so a vertical phone clip dropped in beside a widescreen one keeps its proportions instead of being squashed across. Mixing formats means the result has to be rebuilt rather than copied, so it takes longer than joining two clips that already match."
+			},
+			{
+				q: 'Why is merging sometimes instant and sometimes slow?',
+				a: "Because two clips that already share a codec, a resolution and a frame rate can be written into one file without being decoded, which takes about as long as copying the file. Clips that disagree about any of that have to be decoded, fitted to one frame and encoded again. This page tries the fast way first every time, so you never have to work out which case you have."
+			}
+		],
+		suffix: '-merged'
+	},
+	{
 		slug: 'crop-video',
 		category: 'frame',
 		op: 'crop',

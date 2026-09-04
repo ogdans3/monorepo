@@ -37,7 +37,15 @@ export type EditOp =
 	| { kind: 'blur'; strength: number }
 	| { kind: 'text'; text: string; size: number; colour: string; position: TextPosition; box: boolean }
 	| { kind: 'mute' }
-	| { kind: 'compress'; quality: number };
+	| { kind: 'compress'; quality: number }
+	/**
+	 * Joining several clips. Listed here only so the tools registry can name it
+	 * like every other page, since `op` is typed as `EditOp['kind']`. It never
+	 * reaches `planEdit`: every function in this file takes one probe and one
+	 * input, and a join is the one operation that is about several. `merge.ts`
+	 * plans it and `mergeVideos` runs it.
+	 */
+	| { kind: 'merge' };
 
 export type TextPosition = 'top' | 'centre' | 'bottom';
 
@@ -312,6 +320,13 @@ export function planEdit(
 	opts: EditOptions = {}
 ): ConvertPlan {
 	const quality = opts.quality ?? 23;
+
+	// Loud rather than quiet. A join routed through here would otherwise fall
+	// past every branch and come out as a plain re-encode of one file, which
+	// looks like it worked.
+	if (op.kind === 'merge') {
+		throw new Error('A merge has several inputs and is planned by merge.ts, not planEdit');
+	}
 
 	// Trimming on a keyframe copies both streams, which is the difference
 	// between instant and a full re-encode. `-ss` before `-i` seeks rather than
