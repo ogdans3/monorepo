@@ -1,0 +1,167 @@
+/*
+ * Tokens and base. `DESIGN.md` is the authority for every value in here, and
+ * the contrast ratios in its comments were computed rather than estimated.
+ * If you change a colour, recompute both of the pairs it takes part in.
+ */
+
+@font-face {
+	font-family: 'Schibsted Grotesk';
+	font-style: normal;
+	/* One variable file covers the whole range, so weight contrast is free. */
+	font-weight: 400 900;
+	font-display: swap;
+	src: url('/fonts/schibsted-grotesk-latin.woff2') format('woff2');
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+		U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+		U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Schibsted Grotesk';
+	font-style: normal;
+	font-weight: 400 900;
+	font-display: swap;
+	src: url('/fonts/schibsted-grotesk-latin-ext.woff2') format('woff2');
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+		U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+		U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+	--bg: oklch(1 0 0);
+	--surface: oklch(0.968 0.006 160);
+	--ink: oklch(0.185 0.018 160);
+	--muted: oklch(0.52 0.02 160);
+	--line: oklch(0.9 0.008 160);
+
+	--primary: oklch(0.43 0.098 160);
+	--accent: oklch(0.58 0.15 52);
+
+	--font: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
+
+	/* 1.28 between steps. A flatter scale reads as uncommitted. */
+	--t-xs: 0.8125rem;
+	--t-s: 0.9375rem;
+	--t-m: 1.0625rem;
+	--t-l: 1.36rem;
+	--t-xl: 1.74rem;
+	--t-2xl: 2.23rem;
+
+	--space-1: 0.35rem;
+	--space-2: 0.7rem;
+	--space-3: 1.15rem;
+	--space-4: 1.9rem;
+	--space-5: clamp(2.6rem, 7vw, 4rem);
+	--space-6: clamp(4rem, 12vw, 7rem);
+
+	--r-s: 3px;
+	--r-m: 7px;
+
+	/* Semantic, so nobody ever writes 9999 again. */
+	--z-base: 0;
+	--z-sticky: 10;
+	--z-overlay: 20;
+	--z-modal: 30;
+
+	--ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+	--measure: 34rem;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font-family: var(--font);
+	font-size: var(--t-m);
+	line-height: 1.6;
+	font-synthesis-weight: none;
+	-webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+	line-height: 1.08;
+	letter-spacing: -0.035em;
+	text-wrap: balance;
+	margin: 0;
+}
+
+h1 {
+	font-size: clamp(2.4rem, 9vw, 5.2rem);
+	font-weight: 800;
+}
+
+h2 {
+	font-size: var(--t-2xl);
+	font-weight: 700;
+}
+
+h3 {
+	font-size: var(--t-l);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+
+p {
+	margin: 0;
+	text-wrap: pretty;
+	max-width: 68ch;
+}
+
+/*
+ * Every number on this site sits in a column or changes while you watch it,
+ * and proportional figures make the digits jump when either happens.
+ */
+.num {
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: 'tnum' 1;
+}
+
+a {
+	color: var(--primary);
+	text-underline-offset: 0.18em;
+	text-decoration-thickness: 1px;
+}
+
+a:hover {
+	text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
+	border-radius: var(--r-s);
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

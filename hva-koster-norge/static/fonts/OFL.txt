@@ -1,0 +1,4 @@
+Schibsted Grotesk is licensed under the SIL Open Font License 1.1.
+https://openfontlicense.org
+Copyright Schibsted Media Group. Retrieved from Google Fonts, self-hosted
+here so the site makes no third-party request per visit.
