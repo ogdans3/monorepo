@@ -69,6 +69,34 @@ export function iLønninger(kroner: number, årslønn: number): number {
 }
 
 /**
+ * What a budget line works out to per full annual salary in Norway.
+ *
+ * This is the framing the site leads with, and it is a division, not a claim
+ * about who pays. The state is funded by wage tax, but also by company tax,
+ * VAT, and a large transfer from the oil fund, so "this costs you X" would be
+ * false. "Spread across every full salary in Norway it comes to X" is true,
+ * and the page says it that way.
+ */
+export function perÅrslønn(beløp: number, antallÅrslønner: number): number {
+	if (antallÅrslønner <= 0) throw new Error('Antall årslønner må være positivt');
+	return beløp / antallÅrslønner;
+}
+
+/**
+ * A per-salary figure, rounded to something a person can repeat.
+ *
+ * Kroner to the last digit is false precision on a number derived from a
+ * rounded budget line and a survey average, and it is also unrepeatable: a
+ * reader remembers "omtrent 145 000", never "144 731".
+ */
+export function rundtBeløp(value: number): string {
+	const abs = Math.abs(value);
+	if (abs >= 10_000) return kroner(Math.round(value / 1000) * 1000);
+	if (abs >= 1000) return kroner(Math.round(value / 100) * 100);
+	return kroner(Math.round(value / 10) * 10);
+}
+
+/**
  * The same division, said out loud.
  *
  * Above a thousand the exact count stops meaning anything, so it rounds hard

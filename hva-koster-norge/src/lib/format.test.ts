@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { andel, iLønninger, kroner, lønningerTekst, merkeskala, storBeløp } from './format';
+import {
+	andel,
+	iLønninger,
+	kroner,
+	lønningerTekst,
+	merkeskala,
+	perÅrslønn,
+	rundtBeløp,
+	storBeløp
+} from './format';
 
 /** Norwegian grouping is a non-breaking space, not a comma and not a period. */
 const NBSP = '\u00A0';
@@ -103,5 +112,37 @@ describe('andel', () => {
 
 	it('does not divide by zero', () => {
 		expect(andel(5, 0)).toBe('–');
+	});
+});
+
+describe('perÅrslønn', () => {
+	it('spreads a budget line across every full salary', () => {
+		expect(perÅrslønn(1e9, 1e6)).toBe(1000);
+	});
+
+	it('worked by hand: 350 milliarder over 2 418 216 årslønner', () => {
+		expect(perÅrslønn(350e9, 2_418_216)).toBeCloseTo(144_734.8, 1);
+	});
+
+	it('refuses a denominator that would give Infinity', () => {
+		expect(() => perÅrslønn(1e9, 0)).toThrow();
+	});
+});
+
+describe('rundtBeløp', () => {
+	it('rounds to the nearest thousand once the figure is large', () => {
+		expect(plain(rundtBeløp(144_733))).toBe('145 000');
+		expect(plain(rundtBeløp(18_612))).toBe('19 000');
+	});
+
+	it('keeps more resolution on a small figure, where it still matters', () => {
+		expect(plain(rundtBeløp(1861))).toBe('1 900');
+		expect(plain(rundtBeløp(186))).toBe('190');
+	});
+
+	it('never claims a precision the source does not have', () => {
+		// a budget line is rounded to the nearest hundred million at best, so
+		// the last three digits of a per-salary figure are noise
+		expect(plain(rundtBeløp(144_733))).not.toContain('733');
 	});
 });

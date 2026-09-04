@@ -39,6 +39,23 @@ endrer noe.
 - **Kontrast regnes ut, ikke anslås.** Aksenten sto først på L 0.62 og ga
   3,8:1 med hvit tekst, altså under AA. Både den og primæren ligger nå tett
   på gulvet, så flytter du én må du regne om den andre samtidig.
+- **`.num` (tabulære sifre) hører til i kolonner, ikke i setninger.** Tabulær
+  spalting gir også desimalkomma full siffer-bredde, så «71,3 %» inne i en
+  setning rendres som «71 , 3 %» og leses som en skrivefeil. Bruk klassen på
+  displaytall og kolonner, aldri i brødtekst.
+- **Kvalitative påstander utledes fra tallet de står ved.** «Staten bruker
+  nesten like mye som...» var hardkodet ved siden av et regnet forhold som var
+  71 %. En slik setning er en feil som venter på året tallet flytter seg. Og
+  utled hele setningen, ikke to ord: «mer enn» og «omtrent like mye som» tar
+  ulike setningsrammer.
+- **Bevegelse skal aldri skjule formen.** Figurene tegnet seg først selv med
+  `stroke-dashoffset`, så formen var delvis borte en tredel av hver loop, og et
+  skjermbilde fanget pulslinja halvtegnet. Animer skala eller opasitet på noe
+  som allerede er fullt synlig.
+- **Se figurene store før du tror de er ferdige.** Tre av åtte var feil ved
+  første forsøk: skjoldet med kors leste som medisinsk, ikke forsvar. De er
+  uleselige å vurdere på 48px, og `/tmp/e2e/figurer.mjs` rendrer alle sammen
+  på 120px ved siden av hverandre.
 - **Mobil er flaten.** 360px først. Alt som krever bred skjerm for å gi
   mening er feil løsning, ikke et responsivt problem å fikse etterpå.
 - **Ingen kort, ingen rutenett av like kort, ingen liten sperret versal

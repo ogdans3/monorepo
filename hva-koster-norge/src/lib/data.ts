@@ -29,7 +29,19 @@ export interface Post {
 	beløp: number;
 	/** One plain sentence a reader without any background can follow. */
 	forklaring: string;
+	/** Which drawing stands beside it. See `Figur.svelte`. */
+	figur: FigurNavn;
 }
+
+export type FigurNavn =
+	| 'pensjonist'
+	| 'sykehus'
+	| 'kommune'
+	| 'trygd'
+	| 'forsvar'
+	| 'vei'
+	| 'utdanning'
+	| 'bistand';
 
 export interface Budsjett {
 	id: string;
@@ -68,6 +80,30 @@ export const ÅRSLØNN = {
 };
 
 /**
+ * How many full annual salaries there are in Norway.
+ *
+ * Full-time equivalents rather than the number of jobs, because SSB's monthly
+ * wage is already expressed per full-time equivalent. Dividing a budget by the
+ * 3.08 million jobs instead would mix a full-time wage with a headcount that
+ * includes every part-time position, and understate the per-salary figure by
+ * about a quarter.
+ *
+ * Worth knowing: this count times the annual wage is roughly 1 800 milliarder,
+ * which is to say the entire wage bill of Norway is about the size of the
+ * state budget. That is a real and slightly startling fact, not a rounding.
+ */
+export const LØNNSTAKERE = {
+	heltidsekvivalenter: 2_418_216,
+	arbeidsforhold: 3_080_913,
+	år: 2025,
+	kilde: {
+		navn: 'SSB tabell 11418',
+		url: 'https://www.ssb.no/statbank/table/11418',
+		hentet: '2026-09-04'
+	} satisfies Kilde
+};
+
+/**
  * Stand-in figures, deliberately round and deliberately flagged.
  *
  * These exist so the interface can be built and judged before the real
@@ -90,49 +126,57 @@ export const VEDTATT: Budsjett = {
 			id: 'alderspensjon',
 			navn: 'Alderspensjon',
 			beløp: 350e9,
-			forklaring: 'Utbetalinger fra folketrygden til alle som har gått av med pensjon.'
+			forklaring: 'Utbetalinger fra folketrygden til alle som har gått av med pensjon.',
+			figur: 'pensjonist'
 		},
 		{
 			id: 'helse',
 			navn: 'Sykehus og helse',
 			beløp: 250e9,
-			forklaring: 'Driften av sykehusene, og staten sin del av helsetjenesten ellers.'
+			forklaring: 'Driften av sykehusene, og staten sin del av helsetjenesten ellers.',
+			figur: 'sykehus'
 		},
 		{
 			id: 'kommuner',
 			navn: 'Overføringer til kommunene',
 			beløp: 200e9,
-			forklaring: 'Pengene kommunene får av staten for å drive skole, barnehage og omsorg.'
+			forklaring: 'Pengene kommunene får av staten for å drive skole, barnehage og omsorg.',
+			figur: 'kommune'
 		},
 		{
 			id: 'trygd',
 			navn: 'Sykepenger og uføretrygd',
 			beløp: 180e9,
-			forklaring: 'Til folk som ikke kan jobbe, midlertidig eller varig.'
+			forklaring: 'Til folk som ikke kan jobbe, midlertidig eller varig.',
+			figur: 'trygd'
 		},
 		{
 			id: 'forsvar',
 			navn: 'Forsvar',
 			beløp: 110e9,
-			forklaring: 'Forsvaret, materiell og Norges bidrag til NATO.'
+			forklaring: 'Forsvaret, materiell og Norges bidrag til NATO.',
+			figur: 'forsvar'
 		},
 		{
 			id: 'samferdsel',
 			navn: 'Vei og jernbane',
 			beløp: 90e9,
-			forklaring: 'Bygging og vedlikehold av veier, jernbane og kollektivtransport.'
+			forklaring: 'Bygging og vedlikehold av veier, jernbane og kollektivtransport.',
+			figur: 'vei'
 		},
 		{
 			id: 'utdanning',
 			navn: 'Høyere utdanning og forskning',
 			beløp: 60e9,
-			forklaring: 'Universiteter, høyskoler, studiestøtte og forskning.'
+			forklaring: 'Universiteter, høyskoler, studiestøtte og forskning.',
+			figur: 'utdanning'
 		},
 		{
 			id: 'bistand',
 			navn: 'Bistand',
 			beløp: 45e9,
-			forklaring: 'Norsk utviklingshjelp og humanitær bistand i andre land.'
+			forklaring: 'Norsk utviklingshjelp og humanitær bistand i andre land.',
+			figur: 'bistand'
 		}
 	]
 };

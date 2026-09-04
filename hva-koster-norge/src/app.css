@@ -121,8 +121,12 @@ p {
 }
 
 /*
- * Every number on this site sits in a column or changes while you watch it,
- * and proportional figures make the digits jump when either happens.
+ * Tabular figures, for numbers that sit in a column or change while you watch
+ * them. Proportional digits make those jump.
+ *
+ * Not for numbers inside a sentence. Tabular spacing gives the decimal comma a
+ * full digit width too, so "71,3 %" set inline renders as "71 , 3 %" and reads
+ * as a typo. Columns and display figures only.
  */
 .num {
 	font-variant-numeric: tabular-nums;
