@@ -1,0 +1,15 @@
+node_modules
+.svelte-kit
+build
+.git
+.gitignore
+
+# Source PDFs and spreadsheets for the budget figures. They belong in the
+# repository but never in the image: the site ships the parsed numbers, not
+# the documents, and a folder of ministry PDFs is a slow build for nothing.
+data
+
+*.md
+!README.md
+.vscode
+.DS_Store

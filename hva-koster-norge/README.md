@@ -61,6 +61,20 @@ det eneste en leser kommer til å gjøre.
 Konsekvensen er at små poster blir tynne striper. Det er ikke et
 layoutproblem som skal løses, det er funnet.
 
+## Deploy
+
+Enkeltcontainer via master-dashboard, som beskrevet i `/home/ai_user/git/README.md`.
+`Dockerfile` og `.dashboard.yaml` er alt som trengs, og dashbordet håndterer
+TLS og ingress selv.
+
+Én ting er lett å glemme: dashbordet oppdager bare mapper som ligger rett i
+`/home/ai_user/git/`. Dette prosjektet bor i monorepoet, så det finnes en
+symlink `git/hva-koster-norge -> monorepo/hva-koster-norge`, samme mønster
+som checkpost og image-tools. Uten den dukker prosjektet aldri opp.
+
+Verifisert lokalt med `docker build` og `docker run`: containeren svarer 200
+og logger `Listening on http://0.0.0.0:3000`.
+
 ## Design
 
 `PRODUCT.md` (register, brukere, prinsipper) og `DESIGN.md` (farger,

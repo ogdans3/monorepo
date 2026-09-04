@@ -45,6 +45,18 @@ endrer noe.
   over hver seksjon.** Alle tre er utpekt som mettet AI-grammatikk i
   impeccable-ferdigheten, og seksjonene skilles med luft og hierarki.
 
+- **Dashbordet oppdager bare mapper direkte i `/home/ai_user/git/`.** Dette
+  prosjektet ligger i monorepoet, så det finnes en symlink
+  `git/hva-koster-norge -> monorepo/hva-koster-norge`. Uten den er prosjektet
+  usynlig for dashbordet uansett hvor riktig Dockerfile og `.dashboard.yaml`
+  er. Samme mønster som checkpost og image-tools.
+- **`HOST=0.0.0.0` i Dockerfile er ikke pynt.** Dashbordet når containeren
+  over `aicentral`-broen, ikke over loopback, så en server bundet til
+  127.0.0.1 er uåpnelig derfra. Feilen ser ut som et bygg som gikk fint og en
+  side som ikke laster.
+- **`data/` er i `.dockerignore`.** Kildedokumentene hører hjemme i repoet,
+  men aldri i imaget: siden leverer de tolkede tallene, ikke PDF-ene.
+
 ## Verify
 
 ```sh
