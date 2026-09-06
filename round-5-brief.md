@@ -78,7 +78,12 @@ Søkesidens oppførsel under Oppdags navn.
 
 ### 04 Gjenstand, detalj
 
-- Uendret over folden.
+- Uendret over folden, men **delingsknapp** i toppen ved siden av `⋯`.
+  Standard delingsikon, ikke et ord. Trykk åpner systemets delingsark, tegnet
+  som et ark fra bunnen med de vanlige valgene og en «Kopier lenke» øverst.
+- Delingsteksten som følger med lenka: «Se denne på Swaply: Bosch drill 18V,
+  verdi 600 kr.»
+- Tegn to tilstander: detaljsiden med knappen, og delingsarket åpent.
 - **Ny samtaleboks nederst på siden**, med tekstfelt rett i produktsiden, så
   man kan snakke med eier før det finnes noe bytte. Overskrift: «Snakk med
   Ola». Tomt felt med plassholder «Skriv en melding».
@@ -254,3 +259,12 @@ Disse følger av lista og hører hjemme i `DESIGN.md` og datamodellen.
 - **Uleste meldinger** krever at `messages` får lest-status per deltaker.
 - **Chat før bytte** betyr at en samtale ikke lenger alltid henger på en
   `match`. Tråder må kunne eksistere mellom to brukere om én gjenstand.
+- **Delingsknappen er i praksis en invitasjon.** Appen er invitasjonsbasert,
+  så en lenke til en gjenstand havner nesten alltid hos noen uten appen.
+  Enten bærer lenka en `invites`-token og blir vår beste vekstkanal, eller så
+  møter mottakeren en vegg og knappen er verdiløs. Det finnes allerede en
+  `invites`-tabell med dyplenke-token, så det er samme mekanisme.
+  Det krever også en **webside for gjenstanden**: tittel, bilde, verdi og en
+  åpne-i-appen-knapp, med Open Graph-felt så lenka ser ut som noe i en chat.
+  `DESIGN.md` sier i dag at web bare er en landingsside, og det slutter å
+  stemme her.
