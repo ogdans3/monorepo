@@ -57,7 +57,8 @@ begge steder? Hvis den skal ligge i collagen, må den være synlig.
 kontekstmenyen beholdes for det sjeldne (skjul, rapporter). Vi trenger
 volum av signaler mer enn vi trenger et rent rutenett.
 
-**Besluttet:**
+**Besluttet:** synlig hjerte på hvert kort, kontekstmeny beholdes for skjul,
+profil og rapporter. Collagen erstattes dessuten av søkesiden, se punkt 7.
 
 ---
 
@@ -83,7 +84,10 @@ Konsekvensene henger sammen:
 ansvarsspørsmål vi ikke har avklart juridisk, og runde 3 sin
 mangeveis-flyt — der Vipps og mellomlegg lå — er allerede kuttet.
 
-**Besluttet:**
+**Besluttet:** ikke fasilitert. 07a–07h utgår i sin helhet, den ikke-
+fasiliterte flyten overtar. Chatten for byttet får et fast banner som sier
+at Swaply ikke fasiliterer, og avtaleskjermen (ny 06b-2) sier det samme i
+vilkårene. Mellomlegg noteres, men gjøres ikke opp av oss.
 
 ---
 
@@ -149,7 +153,9 @@ større bytter, runde 4 viser «07f Samtale, alle tre» (felles) og i tillegg
 
 **Å avgjøre:** bekreft felles tråd, så er den ute av spill.
 
-**Besluttet:**
+**Besluttet:** felles tråd, og samtalen er tilgjengelig langt tidligere enn
+før: i gjenstandsdetaljen før noe bytte finnes, i byttedetaljen, og mens man
+venter på de andre.
 
 ---
 
@@ -173,9 +179,24 @@ verdt å si høyt om neste steg er runde 5 eller første linje kode.
 
 ---
 
+---
+
+## 7. Oppdag og Søk slås sammen
+
+Besluttet i møtet, og verdt å notere fordi det svarer på to punkter
+samtidig: collagen uten søkefelt utgår, søkesidens oppførsel overlever, og
+den heter Oppdag. Det frigjør en plass i bunn-nav, som går til en
+chat-fane med uleste-teller.
+
+---
+
 ## Aksjonspunkter
 
-- [ ] Fyll inn beslutningene over i dette notatet under møtet.
+- [x] Fyll inn beslutningene over i dette notatet under møtet.
+- [x] Skriv bestillingen til runde 5 → `round-5-brief.md`.
 - [ ] Rekonstruér hva som ble bestemt 19.08, eller stryk notatet.
-- [ ] Oppdater `DESIGN.md` til å stemme med den runden vi lander på.
-- [ ] Bestem: runde 5, eller monorepo-scaffold og skjema.
+- [ ] Oppdater `DESIGN.md`: fasilitering ute, flere ting per bytte,
+      mellomlegg, motbytte som ny tilstand, interesser på `users`, chat uten
+      match, lest-status på meldinger.
+- [ ] Avklar navnet. Fortsatt ubesluttet.
+- [ ] Inntektsmodell: fortsatt ingen av de fire ideene i noen skjerm.
