@@ -159,6 +159,15 @@ venter på de andre.
 
 ---
 
+## 7. Oppdag og Søk slås sammen
+
+Besluttet i møtet, og verdt å notere fordi det svarer på to punkter
+samtidig: collagen uten søkefelt utgår, søkesidens oppførsel overlever, og
+den heter Oppdag. Det frigjør en plass i bunn-nav, som går til en
+chat-fane med uleste-teller.
+
+---
+
 ## Dokumentasjonen henger etter
 
 `DESIGN.md` er nå bak utkastene på minst fem punkter. Den beskriver
@@ -172,21 +181,15 @@ fortsatt:
    og 4 promptar BankID ved første godta.
 5. **Av-godkjenning ruller alltid tilbake.** Runde 4 har et punkt uten retur.
 
+Runde 5 lukker punkt 1 og 2 av disse, og åpner samtidig fire nye ting
+`DESIGN.md` ikke har i det hele tatt: flere ting per bytte, mellomlegg,
+motbytte som tilstand, og samtaler som ikke henger på en match. Listen står
+i `round-5-brief.md` under «Konsekvenser utenfor skjermene».
+
 Så lenge den er utdatert er den ikke til å bygge etter, og «Next
 steps»-listen nederst i den har ikke startet: `git/swappify` inneholder fire
 markdown-filer og ingen kode. Etter fem uker og fire designrunder er det
 verdt å si høyt om neste steg er runde 5 eller første linje kode.
-
----
-
----
-
-## 7. Oppdag og Søk slås sammen
-
-Besluttet i møtet, og verdt å notere fordi det svarer på to punkter
-samtidig: collagen uten søkefelt utgår, søkesidens oppførsel overlever, og
-den heter Oppdag. Det frigjør en plass i bunn-nav, som går til en
-chat-fane med uleste-teller.
 
 ---
 
