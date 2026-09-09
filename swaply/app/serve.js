@@ -7,6 +7,32 @@ const path = require('node:path');
 const root = path.join(__dirname, 'public');
 const port = Number(process.env.PORT || 3000);
 
+// Flutter names three things without a content hash: index.html points at
+// flutter_bootstrap.js, which points at main.dart.js, and all three keep their
+// names across builds. Behind a CDN that was told to cache them for a year, a
+// deploy is then invisible — which is exactly what happened the first time this
+// was deployed behind Cloudflare: the origin had the new app and the edge kept
+// serving the old one.
+//
+// So the build's own id rides along as a query string, and every deploy asks
+// for URLs no cache has seen. The id is the entrypoint's modification time,
+// which COPY preserves, so it is the same for every container from an image and
+// different for every build.
+const UNHASHED = new Set([
+  '/flutter_bootstrap.js',
+  '/main.dart.js',
+  '/flutter_service_worker.js',
+  '/version.json',
+  '/manifest.json',
+]);
+
+let buildId;
+try {
+  buildId = Math.round(fs.statSync(path.join(root, 'main.dart.js')).mtimeMs).toString(36);
+} catch {
+  buildId = Date.now().toString(36);
+}
+
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -48,15 +74,38 @@ http
           return;
         }
         const ext = path.extname(file);
+        const name = '/' + path.relative(root, file);
+        let out = body;
+
+        // Stamp the build id onto the two references that would otherwise point
+        // at a name a cache already holds. The shell itself is never cached, so
+        // this is what makes a deploy visible.
+        if (ext === '.html') {
+          out = Buffer.from(
+            body.toString('utf8').replaceAll('flutter_bootstrap.js', `flutter_bootstrap.js?v=${buildId}`),
+          );
+        } else if (name === '/flutter_bootstrap.js') {
+          out = Buffer.from(
+            body.toString('utf8').replaceAll('"main.dart.js"', `"main.dart.js?v=${buildId}"`),
+          );
+        }
+
         res.writeHead(200, {
           'content-type': types[ext] || 'application/octet-stream',
           // The shell must never be cached or a deploy takes hours to reach
-          // people; everything else is content-hashed by the build.
-          'cache-control': ext === '.html' ? 'no-store' : 'public, max-age=31536000, immutable',
+          // people. Anything the build gives a content hash may be kept for
+          // ever; the handful of files Flutter names without one must be
+          // revalidated, whatever query they were asked for.
+          'cache-control':
+            ext === '.html'
+              ? 'no-store'
+              : UNHASHED.has(name)
+                ? 'no-cache'
+                : 'public, max-age=31536000, immutable',
           'x-content-type-options': 'nosniff',
           'referrer-policy': 'strict-origin-when-cross-origin',
         });
-        res.end(body);
+        res.end(out);
       });
     });
   })
