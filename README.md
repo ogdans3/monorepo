@@ -44,4 +44,7 @@ debt, because it is what keeps them separable.
 | [`checkpost/`](checkpost/) | A shared checklist that lives at a link. Node API, Flutter app, SvelteKit landing page. |
 | [`flow-chart/`](flow-chart/) | Draw a flow chart in the browser. Boxes, decisions and arrows, in and out as Mermaid, SVG or PNG. SvelteKit, no server side. |
 | [`image-tools/`](image-tools/) | Client-side image converter — every format pair gets its own page, files never leave the browser. SvelteKit + WASM codecs. |
-| [`swapply-design/`](swapply-design/) | Screen mockups for the Swapply bartering app — three rounds of drafts with a per-screen index. Static, dependency-free node server. |
+| [`hva-koster-norge/`](hva-koster-norge/) | The Norwegian state budget priced in ordinary annual salaries, one drawing per line item. |
+| [`pain-map/`](pain-map/) | Mark where it hurts on a body and get matching conditions, with a features fraction rather than a made-up probability. |
+| [`swappify/`](swappify/) | The written product work for the Swaply bartering app — design doc, briefs and meeting notes. Documents only, nothing to build. |
+| [`swapply-design/`](swapply-design/) | Screen mockups for the Swaply bartering app — five rounds of drafts with a per-screen index. Static, dependency-free node server. |

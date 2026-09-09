@@ -147,7 +147,9 @@ Two separate things after a completed trade, and they are not the same screen:
 
 ## Screens
 
-The screen-by-screen specification lives in `round-5-brief.md`; the exports are hosted separately (four rounds so far, round 5 not yet exported). Screen copy is Norwegian. This file describes the product, not the layouts.
+The screen-by-screen specification lives in `round-5-brief.md`; the exports are hosted separately (five rounds so far). Screen copy is Norwegian. This file describes the product, not the layouts.
+
+Round 5 came back with 45 screens and departs from the brief in two places worth knowing: the three-way flow kept its old numbering (07i–07l) rather than moving up to 07a–07c, and the counter-offer grew from a button into a nine-screen flow (09a–09i), which is the clearest confirmation that it is a state and not an action.
 
 ## Open questions
 
