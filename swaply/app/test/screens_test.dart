@@ -23,6 +23,7 @@ import 'package:swaply_app/screens/review.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/widgets/common.dart';
 
 import 'fake_server.dart';
 
@@ -884,6 +885,57 @@ void main() {
       expect(
           find.textContaining('kontoen du allerede ser deg rundt med'), findsOneWidget);
       expect(server.requests, isNot(contains('POST /items')));
+    });
+  });
+
+  group('10b photographs', () {
+    testWidgets('a picked photo is uploaded and shown in the strip', (tester) async {
+      await mount(
+        tester,
+        PostItemScreen(pickImage: () async => const PickedPhoto([1, 2, 3], 'drill.jpg')),
+      );
+
+      expect(find.text('Legg til bilder'), findsOneWidget);
+      await tester.tap(find.text('Legg til bilder'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('POST /media'));
+      // The strip draws the URL the server handed back, and the first one is
+      // the cover.
+      final image = tester.widget<Image>(find.byType(Image).first).image as NetworkImage;
+      expect(image.url, 'http://test/media/${FakeServer.storedPhoto}');
+      expect(find.text('Forside'), findsOneWidget);
+    });
+
+    testWidgets('the listing is created with the path, not the URL', (tester) async {
+      await mount(
+        tester,
+        PostItemScreen(pickImage: () async => const PickedPhoto([1, 2, 3], 'drill.jpg')),
+      );
+
+      await tester.tap(find.text('Legg til bilder'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Bosch drill 18V');
+      await tester.pump();
+      // «Legg ut» is also a tab in the bottom bar, so aim at the button.
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Legg ut'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /items']!['media'], ['/media/${FakeServer.storedPhoto}']);
+    });
+
+    testWidgets('a refused upload says why and adds nothing', (tester) async {
+      server.overrides['POST /media'] = 413;
+      await mount(
+        tester,
+        PostItemScreen(pickImage: () async => const PickedPhoto([1, 2, 3], 'huge.jpg')),
+      );
+
+      await tester.tap(find.text('Legg til bilder'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Forside'), findsNothing);
+      expect(find.text('Bildet er for stort. Grensen er 10 MB.'), findsOneWidget);
     });
   });
 }

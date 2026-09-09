@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
+import { mediaUrl } from '../lib/media.js'
 import { coverSql, iso, many, num, one } from '../lib/rows.js'
 import { publicItem, publicUser } from '../routes/serialize.js'
 
@@ -184,7 +185,7 @@ export async function tradeView(db: Database, tradeId: string, viewerId: string)
       title: s['title'],
       giverPosition: Number(s['giver_position']),
       estimatedValueNok: num(s['estimated_value_nok']),
-      cover: s['cover_url'],
+      cover: mediaUrl(s['cover_url']),
     })),
 
     yourReview: myReview

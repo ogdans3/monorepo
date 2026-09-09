@@ -33,6 +33,12 @@ COPY --from=build /app/backend/dist backend/dist
 # Migrations run at boot, so the image carries the SQL that matches it.
 COPY backend/drizzle backend/drizzle
 
+# Where the media volume mounts. Creating it here with the right owner is what
+# makes a fresh named volume writable by an unprivileged process: Docker seeds a
+# new volume from the image, ownership included, and root-owned photographs
+# would fail on the first upload after a deploy.
+RUN mkdir -p /data/media && chown -R node:node /data
+
 USER node
 EXPOSE 3000
 WORKDIR /app/backend

@@ -30,6 +30,17 @@ const schema = z.object({
     .enum(['0', '1'])
     .default('0')
     .transform((v) => v === '1'),
+  // Where item photos are written. A Docker volume in a deployment, a folder in
+  // the working tree otherwise — and .gitignore keeps that folder out of the
+  // repository, because other people's things do not belong in git.
+  MEDIA_DIR: z.string().default('./data/media'),
+  // The origin a client is told to fetch a photo from. Not the one the web
+  // server reaches the API on: that is a container name, and a phone cannot
+  // resolve it.
+  MEDIA_ORIGIN: z.string().url().default('http://localhost:3001'),
+  // A phone photograph is three to five megabytes before the client shrinks it;
+  // this is the ceiling for one that has not been shrunk at all.
+  MEDIA_MAX_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
 })
 
 const parsed = schema.safeParse(process.env)

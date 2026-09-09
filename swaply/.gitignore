@@ -5,6 +5,10 @@ build/
 .env
 *.log
 
+# Uploaded photographs. Other people's things, on a developer's disk.
+data/
+backend/data/
+
 # Flutter
 app/.dart_tool/
 app/build/

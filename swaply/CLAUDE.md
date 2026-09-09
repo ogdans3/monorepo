@@ -36,6 +36,12 @@ front of another person. Making that profile *claims the device's account* rathe
 than making a second one, so every like survives. A device that has been claimed
 is never let in by device id again.
 
+**A photo row holds a path, never a URL.** `item_media.url` is `/media/<name>`
+and the origin is put in front of it on the way out, which is what makes the
+move from our disk to the OVH bucket a migration instead of a rewrite. The bytes
+are in a volume, the name is sixteen random bytes, and the format is sniffed
+rather than believed.
+
 **Two reds, and they must never collapse into one value.** Coral `#FF6B5E` is the
 "no" colour. `#E5484D` is reserved for report and block.
 
@@ -110,9 +116,9 @@ as by people, and they do not run our JavaScript. The web talks to the API over
 the container network and never from the browser, so these pages are outside CORS
 entirely.
 
-Until the OVH bucket exists **no listing has a photo**, so the empty state on a
-shared listing is the ordinary case rather than the exception. It says so instead
-of drawing a hole.
+A listing may still have no photograph — a service usually has none, and nobody
+is made to add one — so the caption panel on a shared listing is a real state and
+not a placeholder. It says «Uten bilde» rather than drawing a hole.
 
 There is no screen export for the web — round 5 drew the app — so `docs/PRODUCT.md`
 carries what a drawing would have: who these pages are for, the voice, and the

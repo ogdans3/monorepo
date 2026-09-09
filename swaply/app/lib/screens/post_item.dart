@@ -1,17 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../api/client.dart';
+import '../api/models.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
 import 'onboarding.dart';
 
+/// What a picker gives back: the bytes and a name to send them under. Named so
+/// the screen does not have to know whether they came from a camera roll, a
+/// file input in a browser, or a test.
+class PickedPhoto {
+  const PickedPhoto(this.bytes, this.name);
+  final List<int> bytes;
+  final String name;
+}
+
 /// 10b Legg ut gjenstand. Step one of two: if there is no profile yet, step two
 /// is screen 10c, which is why the header counts.
 class PostItemScreen extends StatefulWidget {
-  const PostItemScreen({super.key});
+  const PostItemScreen({super.key, this.pickImage});
+
+  /// Injected by the widget tests, which have no camera roll. Null everywhere
+  /// else, and then the system picker is used.
+  final Future<PickedPhoto?> Function()? pickImage;
 
   @override
   State<PostItemScreen> createState() => _PostItemScreenState();
@@ -23,7 +38,8 @@ class _PostItemScreenState extends State<PostItemScreen> {
   final _value = TextEditingController();
   final _postal = TextEditingController();
   final _subcategory = TextEditingController();
-  final _photoUrls = <String>[];
+  final _photos = <UploadedImage>[];
+  bool _uploading = false;
 
   String _kind = 'item';
   String _category = 'verktoy';
@@ -67,7 +83,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
         if (_kind == 'item') 'condition': _condition,
         if (_value.text.trim().isNotEmpty) 'estimatedValueNok': int.tryParse(_value.text.trim()),
         if (_postal.text.trim().isNotEmpty) 'postalCode': _postal.text.trim(),
-        'media': _photoUrls,
+        'media': [for (final photo in _photos) photo.path],
       });
       if (!mounted) return;
       await context.read<Session>().refresh();
@@ -83,40 +99,36 @@ class _PostItemScreenState extends State<PostItemScreen> {
     }
   }
 
+  /// 10b «Legg til bilder». The picture is shrunk on the phone before it is
+  /// sent: a camera makes five megabytes and a listing needs a few hundred
+  /// kilobytes, and the smaller of the two is also the one that loads on a bus.
+  ///
+  /// The picker is injectable because a widget test has no camera roll, and the
+  /// half worth testing is everything after it.
   Future<void> _addPhoto() async {
-    // Uploads land in OVH Object Storage, which is not wired up yet, so the app
-    // takes a URL rather than pretending to have a camera roll behind it.
-    // Owned by the dialog's own scope and disposed after it is fully gone.
-    final controller = TextEditingController();
-    final url = await showDialog<String>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: const Text('Legg til bilde', style: Type.heading),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Bildeopplasting til vår egen lagring er ikke koblet på ennå. '
-              'Lim inn en bildeadresse så lenge.',
-              style: Type.secondary,
-            ),
-            const SizedBox(height: Insets.md),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(hintText: 'https://…'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('Avbryt')),
-          TextButton(
-              onPressed: () => Navigator.of(dialog).pop(controller.text.trim()),
-              child: const Text('Legg til')),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (url != null && url.isNotEmpty) setState(() => _photoUrls.add(url));
+    if (_uploading) return;
+
+    final picked = widget.pickImage != null
+        ? await widget.pickImage!()
+        : await ImagePicker()
+            .pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 82)
+            .then((file) async =>
+                file == null ? null : PickedPhoto(await file.readAsBytes(), file.name));
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      _uploading = true;
+      _error = null;
+    });
+    try {
+      final image =
+          await context.read<SwaplyApi>().uploadImage(picked.bytes, filename: picked.name);
+      if (mounted) setState(() => _photos.add(image));
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   @override
@@ -262,7 +274,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
           scrollDirection: Axis.horizontal,
           children: [
             GestureDetector(
-              onTap: _addPhoto,
+              onTap: _photos.length >= 10 ? null : _addPhoto,
               child: Container(
                 width: 104,
                 decoration: BoxDecoration(
@@ -270,24 +282,32 @@ class _PostItemScreenState extends State<PostItemScreen> {
                   borderRadius: BorderRadius.circular(Radii.card),
                   border: Border.all(color: SwaplyColors.line),
                 ),
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add, color: SwaplyColors.greenPressed),
-                    SizedBox(height: 4),
-                    Text('Legg til bilder', style: Type.small),
-                    Text('opptil 10', style: Type.small),
-                  ],
-                ),
+                child: _uploading
+                    ? const Center(
+                        child: SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        ),
+                      )
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, color: SwaplyColors.greenPressed),
+                          SizedBox(height: 4),
+                          Text('Legg til bilder', style: Type.small),
+                          Text('opptil 10', style: Type.small),
+                        ],
+                      ),
               ),
             ),
-            ..._photoUrls.asMap().entries.map((entry) => Padding(
+            ..._photos.asMap().entries.map((entry) => Padding(
                   padding: const EdgeInsets.only(left: Insets.sm),
                   child: Stack(
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(Radii.card),
-                        child: Image.network(entry.value,
+                        child: Image.network(entry.value.url,
                             height: 104,
                             width: 104,
                             fit: BoxFit.cover,
@@ -312,7 +332,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                         right: 2,
                         top: 2,
                         child: GestureDetector(
-                          onTap: () => setState(() => _photoUrls.removeAt(entry.key)),
+                          onTap: () => setState(() => _photos.removeAt(entry.key)),
                           child: const CircleAvatar(
                             radius: 11,
                             backgroundColor: Colors.white,

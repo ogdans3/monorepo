@@ -23,3 +23,12 @@ if (!name.includes('test')) {
 if (!['localhost', '127.0.0.1', 'db'].includes(hostname)) {
   throw new Error(`Refusing to run the suite against ${hostname}: it is not a local host.`)
 }
+
+// The photo flow empties its folder before and after itself. Same rule as the
+// database: it has to be a folder whose name says what it is for.
+if (!env.MEDIA_DIR.includes('test')) {
+  throw new Error(
+    `Refusing to run the suite with MEDIA_DIR "${env.MEDIA_DIR}": it deletes every file there, ` +
+      'and this folder is not named as a test one.',
+  )
+}

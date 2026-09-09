@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
+import { removeStored } from '../lib/media.js'
 
 type Row = Record<string, string | null>
 
@@ -17,6 +18,10 @@ type Row = Record<string, string | null>
  * purpose is spent and the purge job takes the row.
  */
 export async function anonymiseUser(db: Database, userId: string) {
+  // Filled inside the transaction, spent after it: unlinking a file cannot be
+  // rolled back, so it does not happen until the rows are certainly gone.
+  let orphaned: string[] = []
+
   await db.transaction(async (tx) => {
     // You cannot anonymise someone the counterparty is still waiting on, so the
     // live trades end first, with a reason the other side can read.
@@ -64,6 +69,19 @@ export async function anonymiseUser(db: Database, userId: string) {
       on conflict (subject_hash) do nothing
     `)
 
+    // A photograph of somebody's living room is personal data, so the bytes go
+    // too — except the one a completed trade snapshotted, which is the
+    // counterparty's record of what they got and lives to the retention
+    // horizon. `docs/ARCHITECTURE.md`: the image goes when the claim window
+    // closes, and the text stays.
+    const files = await tx.execute<Row>(sql`
+      select distinct m.url from item_media m
+      join items i on i.id = m.item_id
+      where i.owner_id = ${userId} and m.url like '/media/%'
+        and not exists (select 1 from trade_item_snapshots s where s.cover_url = m.url)
+    `)
+    orphaned = files.map((row) => row['url']!).filter(Boolean)
+
     // Anything that is only ever about this person goes.
     await tx.execute(sql`delete from devices where user_id = ${userId}`)
     await tx.execute(sql`delete from sessions where user_id = ${userId}`)
@@ -86,4 +104,6 @@ export async function anonymiseUser(db: Database, userId: string) {
       where id = ${userId}
     `)
   })
+
+  for (const path of orphaned) await removeStored(path)
 }

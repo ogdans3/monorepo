@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
+import multipart from '@fastify/multipart'
 import { ZodError } from 'zod'
 
 import type { Database } from './db/index.js'
@@ -11,6 +12,7 @@ import chatRoutes from './routes/chat.js'
 import discoveryRoutes from './routes/discovery.js'
 import inviteRoutes from './routes/invites.js'
 import itemRoutes from './routes/items.js'
+import mediaRoutes from './routes/media.js'
 import likeRoutes from './routes/likes.js'
 import miscRoutes from './routes/misc.js'
 import profileRoutes from './routes/profile.js'
@@ -42,6 +44,11 @@ export async function buildApp(
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['content-type', 'authorization'],
   })
+  // One file per request, cut off at the ceiling rather than read into memory
+  // and rejected afterwards.
+  await app.register(multipart, {
+    limits: { files: 1, fileSize: env.MEDIA_MAX_BYTES },
+  })
   await app.register(authPlugin, { db, inviteOnly: opts.inviteOnly ?? env.INVITE_ONLY })
 
   app.setErrorHandler((error, request, reply) => {
@@ -67,6 +74,7 @@ export async function buildApp(
   await app.register(profileRoutes)
   await app.register(itemRoutes)
   await app.register(inviteRoutes)
+  await app.register(mediaRoutes)
   await app.register(discoveryRoutes)
   await app.register(likeRoutes)
   await app.register(tradeRoutes)

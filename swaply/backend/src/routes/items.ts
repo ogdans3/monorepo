@@ -19,7 +19,21 @@ const itemBody = z.object({
   town: z.string().max(60).optional(),
   // Up to ten, first is the cover. A listing with none is allowed: services
   // usually have none, and discovery draws a generated card instead.
-  media: z.array(z.string().url()).max(10).default([]),
+  //
+  // A photograph is uploaded first and named here by the path `POST /media`
+  // gave back. An absolute URL is still accepted: the seed uses made-up ones,
+  // and a picture that already lives somewhere is not our business to refuse.
+  media: z
+    .array(
+      z
+        .string()
+        .refine(
+          (v) => /^\/media\/[0-9a-f]{32}\.(jpg|png|webp)$/.test(v) || /^https?:\/\//.test(v),
+          'Ukjent bilde.',
+        ),
+    )
+    .max(10)
+    .default([]),
 })
 
 export default async function itemRoutes(app: FastifyInstance) {
@@ -125,7 +139,19 @@ export default async function itemRoutes(app: FastifyInstance) {
         )
       }
     }
-    return publicItem(item!)
+
+    // Read the photos back rather than echoing the row: the row does not carry
+    // them, and a client that has just added one should not be told there is
+    // none.
+    const media = await many(
+      app.db,
+      sql`select url from item_media where item_id = ${id} order by position`,
+    )
+    return publicItem({
+      ...item!,
+      cover: media[0]?.['url'] ?? null,
+      media: media.map((m) => m['url']),
+    })
   })
 
   // Retired, never removed: a listing that has been in an offer is part of a

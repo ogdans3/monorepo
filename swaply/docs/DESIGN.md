@@ -31,7 +31,7 @@ The consequence for revenue is real: a per-trade admin fee is off the table as l
 - **Backend**: Node + TypeScript
 - **Web**: SvelteKit (landing, invite handling, public item pages)
 - **DB**: Postgres
-- **Media**: OVH Object Storage. Item photos are personal data, so they stay inside the EEA along with everything else
+- **Media**: OVH Object Storage — item photos are personal data, so they stay inside the EEA along with everything else. **Until that bucket exists they are on our own disk**, in a volume next to the database; see *Photos* under Architecture
 - **Hosting**: our own boxes at OVH, EEA-owned, with the API on its own authenticated entrance
 - **Push**: FCM + APNs
 - **Repo**: monorepo — `app/`, `backend/`, `web/`, `shared/`
@@ -230,7 +230,7 @@ What is left is held up either by an account we do not have, or — for erasure 
 by a screen nobody has drawn.
 
 1. ~~Scaffold + Postgres schema~~ — done 09.09.2026
-2. **Media upload to OVH Object Storage** — waiting on the bucket. Until it exists no listing has a photo, which is why the web page draws a caption panel instead of pretending.
+2. ~~Photo upload~~ — done 09.09.2026, on our own disk. `POST /media` takes one picture, the row holds a path and never a URL, and moving to the OVH bucket is then this one file plus a migration that rewrites the paths. **The bucket is still the destination**: a volume does not survive the machine.
 3. ~~Item CRUD + discovery search~~
 4. ~~Like endpoint + 2-cycle match, with the reservation lock and the loser path~~
 5. ~~Trade composition, counter-offer and accept flow (incl. the agreement screen)~~

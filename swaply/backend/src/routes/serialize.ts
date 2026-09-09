@@ -1,3 +1,4 @@
+import { mediaUrl } from '../lib/media.js'
 import { iso, num, type Row } from '../lib/rows.js'
 
 /** Your own profile: everything, including what only you may see. */
@@ -44,8 +45,8 @@ export const publicItem = (i: Row) => ({
   town: i['town'],
   status: i['status'],
   reserved: Boolean(i['active_trade_id']),
-  cover: i['cover'] ?? null,
-  media: i['media'] ?? undefined,
+  cover: mediaUrl(i['cover']),
+  media: (i['media'] as string[] | undefined)?.map(mediaUrl),
   likedByMe: i['liked_by_me'] === undefined ? undefined : Boolean(i['liked_by_me']),
   likeCount: num(i['like_count']) ?? undefined,
   createdAt: iso(i['created_at']),
@@ -75,6 +76,6 @@ export const sharedItem = (i: Row) => ({
   condition: i['condition'],
   estimatedValueNok: num(i['estimated_value_nok']),
   town: i['town'],
-  media: (i['media'] ?? []) as string[],
+  media: ((i['media'] ?? []) as string[]).map(mediaUrl),
   ownerName: i['owner_name'] ?? null,
 })

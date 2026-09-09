@@ -75,10 +75,9 @@
             </div>
           {/if}
         {:else}
-          <!-- A listing may have no photo, a service usually has none, and until
-               the object storage exists no listing has one at all. So this is
-               the ordinary case, not the exception: a caption panel that says
-               what the thing is and admits what is missing. -->
+          <!-- A listing may have no photo and a service usually has none, so
+               this is a real state rather than a placeholder: a caption panel
+               that says what the thing is and admits what is missing. -->
           <figure class="cover empty">
             <p class="empty-what">{categoryLine(item.category, item.subcategory)}</p>
             <p class="empty-note">Uten bilde</p>

@@ -37,6 +37,19 @@ class Me {
   final bool anonymous;
 }
 
+/// A photograph the server has taken in. The listing is created with [path];
+/// the strip on 10b draws [url]. The two are different on purpose — a row holds
+/// where the bytes are, never which hostname is in front of them.
+class UploadedImage {
+  UploadedImage.fromJson(Map<String, dynamic> j)
+      : path = j['path'] as String,
+        url = j['url'] as String,
+        bytes = _int(j['bytes']) ?? 0;
+
+  final String path, url;
+  final int bytes;
+}
+
 /// A link to hand somebody, and the line that travels with it. The server
 /// writes the text: it is the same sentence on every client, and it has a
 /// «verdi 600 kr» in it that has to be formatted exactly once.

@@ -10,11 +10,18 @@ class FakeServer {
   FakeServer();
 
   final requests = <String>[];
+
+  /// What was sent, by request. JSON only — a multipart upload is bytes, and
+  /// nothing here needs to read them back.
+  final bodies = <String, Map<String, dynamic>>{};
   final Map<String, Object?> overrides = {};
 
   http.Client get client => MockClient((request) async {
         final key = '${request.method} ${request.url.path}';
         requests.add(key);
+        if (request.body.startsWith('{')) {
+          bodies[key] = jsonDecode(request.body) as Map<String, dynamic>;
+        }
 
         final body = overrides.containsKey(key) ? overrides[key] : _canned(key, request);
         if (body == null) {
@@ -23,8 +30,14 @@ class FakeServer {
               headers: {'content-type': 'application/json'});
         }
         if (body is int) {
-          return http.Response(
-              jsonEncode({'code': 'unauthorized', 'message': 'Feil e-post eller passord.'}), body,
+          // The shapes the real API answers with, so a screen's error handling
+          // is tested against the message a person would actually read.
+          final error = switch (body) {
+            401 => {'code': 'unauthorized', 'message': 'Feil e-post eller passord.'},
+            413 => {'code': 'file_too_large', 'message': 'Bildet er for stort. Grensen er 10 MB.'},
+            _ => {'code': 'error', 'message': 'Noe gikk galt hos oss.'},
+          };
+          return http.Response(jsonEncode(error), body,
               headers: {'content-type': 'application/json'});
         }
         return http.Response(jsonEncode(body), 200,
@@ -36,6 +49,11 @@ class FakeServer {
         'POST /auth/register' => {'token': 'tok', 'user': me},
         'POST /auth/logout' => {},
         'POST /auth/anonymous' => {'token': 'tok', 'user': lookingAround},
+        'POST /media' => {
+            'path': '/media/$storedPhoto',
+            'url': 'http://test/media/$storedPhoto',
+            'bytes': 3,
+          },
         'POST /items/item-drill/share' => {
             'token': shareToken,
             'url': 'http://web/i/$shareToken',
@@ -173,6 +191,9 @@ class FakeServer {
 
   /// Long enough to pass the client's own idea of a token.
   static const shareToken = 'inv-token-0123456789';
+
+  /// What the server names a stored photograph: sixteen random bytes in hex.
+  static const storedPhoto = '0123456789abcdef0123456789abcdef.jpg';
 
   /// A device that has been let in and has made nothing: no name, no address,
   /// and the wishes it has expressed are still its own.

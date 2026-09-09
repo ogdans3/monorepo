@@ -111,6 +111,12 @@ PUBLIC_WEB_ORIGIN=https://swaply-web.<host>   # what an invitation link says
 PUBLIC_APP_ORIGIN=https://swaply.<host>       # where «Åpne i Swaply» goes
 ```
 
+`MEDIA_ORIGIN` is the API's own public hostname, because it is what a phone and
+a chat client's preview fetch a photograph from. The photographs themselves live
+in the `swaply-media` volume, which is the one thing here that cannot be rebuilt
+from the repository — `docker compose down -v` would take other people's things
+with it.
+
 `PUBLIC_WEB_ORIGIN` is read by the **API**, not the web: the server writes the
 whole link and the sentence around it, so no client has to assemble one and get
 the path slightly wrong. The web service reaches the API over the container
@@ -144,20 +150,25 @@ not say test. It learned that the hard way.
 - `backend/` — 22 tables including the `retained` schema for the sealed record,
   the trade engine (cycle search, the reservation lock, offer versions,
   completion snapshots, erasure) and the endpoints all forty-five screens need.
-  103 tests against real Postgres, 43 of them walking a whole journey over HTTP.
+  110 tests against real Postgres, 50 of them walking a whole journey over HTTP.
 - `app/` — every screen from `docs/round-5-screens.md`, plus the share sheet, the
-  invitation screen and looking around without an account. 62 widget tests
+  invitation screen, the photo picker and looking around without an account. 65
+  widget tests
   driving the real API client against a fake server.
 - `web/` — the landing page and the page behind every invitation link, server
   rendered with Open Graph tags so a shared listing looks like something in a
   chat. The font is served from our own origin rather than a CDN, for the same
   reason the hosting is in the EEA.
 
-Three things say plainly what is missing rather than pretending: sign-in with
-Google, Facebook or Apple needs provider agreements, photo upload needs the OVH
-bucket, and a link opens the app in a browser because universal links need a
-registered domain and bundle id. All three are one screen away when the accounts
-exist.
+- Photographs are uploaded from the phone and kept in a volume next to the
+  database. The OVH bucket is still where they belong — a volume does not survive
+  the machine — but a listing has a picture today, and the move is one file and a
+  migration.
+
+Two things say plainly what is missing rather than pretending: sign-in with
+Google, Facebook or Apple needs provider agreements, and a link opens the app in
+a browser because universal links need a registered domain and a bundle id. Both
+are one screen away when the accounts exist.
 
 The one gap that is nobody's account but ours: **erasure has an engine and no
 door**. `anonymiseUser` is written and tested, and nothing calls it — settings

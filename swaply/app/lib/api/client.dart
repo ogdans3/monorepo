@@ -117,6 +117,31 @@ class SwaplyApi {
 
   Future<UserRef> user(String id) async => UserRef.fromJson(await _get('/users/$id'));
 
+  // --- photographs ----------------------------------------------------------
+
+  /// 10b — one picture, from the phone to our own disk.
+  ///
+  /// Multipart, so the bytes are not base64'd into a third more of them, and
+  /// without the JSON content type the rest of the client sends by default.
+  Future<UploadedImage> uploadImage(List<int> bytes, {required String filename}) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/media'))
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    if (token != null) request.headers['authorization'] = 'Bearer $token';
+
+    final response = await http.Response.fromStream(await _client.send(request));
+    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+
+    if (response.statusCode >= 400) {
+      final map = decoded is Map ? decoded : const {};
+      throw ApiException(
+        response.statusCode,
+        map['code'] as String? ?? 'error',
+        map['message'] as String? ?? 'Bildet ble ikke lastet opp.',
+      );
+    }
+    return UploadedImage.fromJson(decoded as Map<String, dynamic>);
+  }
+
   // --- invitations ----------------------------------------------------------
 
   /// 04 — the share button. The link is an invitation, because a listing sent

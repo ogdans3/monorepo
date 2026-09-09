@@ -42,17 +42,26 @@ them: the sheet behind the share button on 04 and the invitation row on 16b
 `screens/onboarding.dart`, which is also where looking around without an account
 starts.
 
-## Three things that are honest about being unfinished
+## Photographs
+
+10b opens the system picker and shrinks the picture on the phone — 1600px,
+quality 82 — before uploading it, because a camera makes five megabytes and a
+listing needs a few hundred kilobytes. `PostItemScreen` takes an injectable
+`pickImage`, which is how the widget tests drive everything after the picker
+without a camera roll.
+
+The upload returns a path and a URL: the listing is created with the **path**,
+the strip draws the **URL**. iOS asks for permission with the sentence in
+`ios/Runner/Info.plist`; the browser build uses a file input and cannot resize,
+which is what the server's ceiling is for.
+
+## Two things that are honest about being unfinished
 
 **Sign-in with Google, Facebook and Apple** is drawn, and says so when tapped:
 each needs an agreement with the provider and a registered bundle id.
-
-**Photo upload** takes a URL rather than opening the camera roll, because the
-OVH bucket it should upload to does not exist yet.
 
 **An invitation link opens the app in a browser**, not on the phone. A universal
 link needs a registered domain and a bundle id, and there is neither; on the web
 build the token is read straight out of the address.
 
-All three are one screen away once the accounts exist. None of them pretends to
-work.
+Both are one screen away once the accounts exist. Neither pretends to work.

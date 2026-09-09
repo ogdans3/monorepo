@@ -54,6 +54,15 @@ services:
       # the demo, where the point is that anyone can open all forty-five
       # screens; a launch sets it to 1. See backend/src/env.ts.
       INVITE_ONLY: ${INVITE_ONLY:-0}
+      # Item photographs, on a volume rather than in the image: a container is
+      # replaced on every deploy and the pictures are not.
+      MEDIA_DIR: /data/media
+      # What a client is told to fetch a photograph from. The API's own public
+      # hostname, because the picture has to render for a stranger holding a
+      # shared link and in the chat client that drew the preview.
+      MEDIA_ORIGIN: ${PUBLIC_API_ORIGIN:-http://localhost:4001}
+    volumes:
+      - swaply-media:/data/media
     ports:
       # Published so Caddy can reach it at host.docker.internal:<port>. The bind
       # address is a variable so a deployment can keep it off the public
@@ -118,3 +127,7 @@ services:
 # it orphans it.
 volumes:
   swaply-db:
+  # The photographs. Until the OVH bucket exists this volume is the whole of
+  # the object storage, and it is the one thing here a `docker compose down -v`
+  # would take with it that nobody can regenerate.
+  swaply-media:

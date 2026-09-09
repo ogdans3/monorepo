@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Shown by iOS the first time 10b opens the picker. It is the sentence a
+	     person reads before deciding, so it says what we do with the picture. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Swaply trenger tilgang til bildene dine for å legge ved bilde av tingen du legger ut.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

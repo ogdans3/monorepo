@@ -56,6 +56,43 @@ storing them with a US provider reintroduces exactly the transfer chapter that
 choosing OVH just closed. Object storage moves to OVH so the whole record of
 processing stays inside the EEA.
 
+### Until the bucket exists: our own disk
+
+Built 09.09.2026, because a barter app whose listings have no photographs is not
+the product. The bytes go in a Docker volume beside the database — same box, same
+jurisdiction, and the same backup obligation Article 32(1)(c) already put on the
+database.
+
+**A row holds a path, never a URL.** `item_media.url` is `/media/<name>`, and the
+origin is put in front of it when a client is served. That is what makes the move
+to a bucket a migration rather than a rewrite, and it keeps a dump of the
+development database from carrying production hostnames around.
+
+**The name is sixteen random bytes**, not the client's filename and not a hash of
+anything: a filename is a path traversal waiting to happen, and a guessable name
+is an enumerable catalogue of other people's things. Reading needs no session,
+because the photograph has to render on the public page behind a shared link and
+in the chat client that drew the preview — the same posture as the invitation it
+arrives with.
+
+**Only what is a picture gets stored.** The format is sniffed from the bytes, not
+read from the content-type the client claimed, and the list is JPEG, PNG and
+WebP. No SVG: it is a document with scripts in it.
+
+**The client shrinks the picture**, at 1600px and quality 82, so what arrives is
+a few hundred kilobytes rather than the five megabytes a phone camera makes. The
+ten-megabyte ceiling on the server is for the client that does not — the browser
+build, where the picker cannot resize.
+
+**Erasure reaches the bytes.** Anonymising somebody unlinks the photographs on
+their listings, except one a completed trade snapshotted: that is the
+counterparty's record of what they got, and it lives to the retention horizon
+with the rest of the snapshot.
+
+What moving to OVH costs: `backend/src/lib/media.ts`, a bucket name, and a
+migration that rewrites the stored paths. Nothing else in the codebase knows
+where the bytes are.
+
 ## Matching: ad-hoc, with room for batch later
 
 A cycle search runs when something changes, not on a schedule.
