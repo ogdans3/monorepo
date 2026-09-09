@@ -12,10 +12,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-swaply}
       POSTGRES_INITDB_ARGS: '--encoding=UTF8'
     ports:
+      # Loopback only. Published on 0.0.0.0 this is a database on the public
+      # internet, and the only thing between it and the world is the password.
       # 5434 rather than 5432 because this machine already has other projects'
-      # databases on 5432 and 5433. Override with POSTGRES_PORT if that one is
-      # taken too.
-      - '${POSTGRES_PORT:-5434}:5432'
+      # databases on 5432 and 5433.
+      - '${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5434}:5432'
     volumes:
       - swaply-db:/var/lib/postgresql/data
     healthcheck:
@@ -71,7 +72,10 @@ services:
       NODE_ENV: production
       PORT: 3000
     ports:
-      - '${APP_BIND:-0.0.0.0}:${APP_PORT:-5175}:3000'
+      # The dashboard reaches this over the aicentral network by container name,
+      # not through a published port, so loopback is enough for a person who
+      # wants to look at it on the host.
+      - '${APP_BIND:-127.0.0.1}:${APP_PORT:-5175}:3000'
 
 # Keeps the name it was created with. Renaming a volume does not move the data,
 # it orphans it.

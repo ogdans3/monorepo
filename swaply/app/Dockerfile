@@ -15,11 +15,12 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends git curl ca-certificates unzip xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
+# The .git directory stays: the flutter tool refuses to run without it, which
+# is worth knowing before trying to save the space again.
 RUN git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$FLUTTER_HOME" \
   && git config --global --add safe.directory "$FLUTTER_HOME" \
   && flutter config --no-analytics --no-cli-animations --enable-web \
-  && flutter precache --web --no-android --no-ios --no-linux --no-macos --no-windows --no-fuchsia \
-  && rm -rf "$FLUTTER_HOME/.git" "$FLUTTER_HOME/bin/cache/artifacts/engine"/*android* 2>/dev/null || true
+  && flutter precache --web --no-android --no-ios --no-linux --no-macos --no-windows --no-fuchsia
 
 FROM flutter AS build
 WORKDIR /app
