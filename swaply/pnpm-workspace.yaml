@@ -1,0 +1,9 @@
+packages:
+  - 'backend'
+  - 'web'
+  - 'shared'
+
+# esbuild fetches a platform binary in its postinstall, and pnpm 10 blocks that
+# by default, which leaves tsx and vite unable to start.
+onlyBuiltDependencies:
+  - esbuild

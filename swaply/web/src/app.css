@@ -1,0 +1,29 @@
+/* The palette. Three files hold it — this one, docs/DESIGN.md and
+   app/lib/design/tokens.dart — and they have to be changed together. */
+:root {
+  --green: #12b76a;
+  --green-deep: #064e3b;
+  --green-pressed: #0a6c4c;
+  --bg: #fafaf9;
+  --ink: #141c18;
+  --grey: #8a938e;
+
+  /* Two reds that must never collapse into one value: coral is "no", and the
+     stronger red is reserved for report and block. */
+  --coral: #ff6b5e;
+  --red: #e5484d;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  line-height: 1.5;
+}

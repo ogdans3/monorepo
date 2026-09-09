@@ -46,5 +46,5 @@ debt, because it is what keeps them separable.
 | [`image-tools/`](image-tools/) | Client-side image converter — every format pair gets its own page, files never leave the browser. SvelteKit + WASM codecs. |
 | [`hva-koster-norge/`](hva-koster-norge/) | The Norwegian state budget priced in ordinary annual salaries, one drawing per line item. |
 | [`pain-map/`](pain-map/) | Mark where it hurts on a body and get matching conditions, with a features fraction rather than a made-up probability. |
-| [`swappify/`](swappify/) | The written product work for the Swaply bartering app — design doc, briefs and meeting notes. Documents only, nothing to build. |
+| [`swaply/`](swaply/) | The Swaply bartering app — say what you want, and when the wishes close a loop everyone swaps. Fastify API, SvelteKit web, Flutter app, and the design docs that drive them. |
 | [`swapply-design/`](swapply-design/) | Screen mockups for the Swaply bartering app — five rounds of drafts with a per-screen index, the newest not yet indexed. Static, dependency-free node server. |

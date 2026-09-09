@@ -1,0 +1,27 @@
+{
+  "name": "swaply",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bartering app. Say what you want; when the wishes close a loop, everyone swaps.",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build:shared": "pnpm --filter @swaply/shared build",
+    "dev": "pnpm run build:shared && pnpm --parallel --filter @swaply/shared --filter @swaply/backend --filter @swaply/web dev",
+    "dev:backend": "pnpm run build:shared && pnpm --parallel --filter @swaply/shared --filter @swaply/backend dev",
+    "dev:web": "pnpm run build:shared && pnpm --parallel --filter @swaply/shared --filter @swaply/web dev",
+    "dev:app": "cd app && flutter run",
+    "build": "pnpm run build:shared && pnpm --filter @swaply/backend build && pnpm --filter @swaply/web build",
+    "test": "pnpm run build:shared && pnpm --filter @swaply/backend test",
+    "typecheck": "pnpm run build:shared && pnpm -r typecheck",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "app:analyze": "cd app && flutter analyze",
+    "app:test": "cd app && flutter test"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

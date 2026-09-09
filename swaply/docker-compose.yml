@@ -1,0 +1,22 @@
+# Postgres for local development only. The port is 5434 rather than 5432 because
+# this machine already has other projects' databases on 5432 and 5433. Override
+# with POSTGRES_PORT if that one is taken too.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: swaply
+      POSTGRES_PASSWORD: swaply
+      POSTGRES_DB: swaply
+    ports:
+      - '${POSTGRES_PORT:-5434}:5432'
+    volumes:
+      - swaply-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U swaply']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  swaply-db:
