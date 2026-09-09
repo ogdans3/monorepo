@@ -35,6 +35,7 @@ pnpm install
 cp .env.example .env
 pnpm db:up          # Postgres in Docker, on 5434 to miss the ports in use
 pnpm db:migrate
+pnpm db:test:setup  # the separate database the tests are allowed to wipe
 pnpm db:seed        # three people who want each other's things
 pnpm dev            # backend on 3001, web on 5174
 pnpm dev:app        # the Flutter app, separately
@@ -89,9 +90,15 @@ SQL that matches it and nobody is going to run a migration by hand against a
 container. It races if you ever run more than one API replica.
 
 `DATABASE_URL` in `.env` is for host tooling — the dev server, migrations, the
-seed, the tests. The container gets `API_DATABASE_URL`, and falls back to the
-database next door. They are separate on purpose: Compose substitutes from
-`.env`, and `localhost` inside a container is the container.
+seed. The container gets `API_DATABASE_URL`, and falls back to the database next
+door. They are separate on purpose: Compose substitutes from `.env`, and
+`localhost` inside a container is the container.
+
+**The tests get a database of their own**, `TEST_DATABASE_URL`, created by
+`pnpm db:test:setup` and run automatically by `pnpm test`. They truncate every
+table they can reach, and on this host `DATABASE_URL` points at a Postgres that
+also serves the deployment — so the guard refuses any database whose name does
+not say test. It learned that the hard way.
 
 ## Where this is
 

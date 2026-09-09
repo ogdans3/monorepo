@@ -1,0 +1,3 @@
+# Not ready to be indexed: this is a preview deployment with seed accounts in it.
+User-agent: *
+Disallow: /
