@@ -226,7 +226,11 @@ void main() {
       expect(find.text('Kari N.'), findsOneWidget);
       expect(find.text('Se profil ›'), findsOneWidget);
       expect(find.text('SAMTALE MED KARI'), findsOneWidget);
-      expect(find.text('Jeg vil ha'), findsOneWidget);
+      expect(find.text('Send'), findsOneWidget);
+      // The export ends this screen with two circles and no words on them: a ✕
+      // that passes and the heart. `docs/round-5-screens.md` line 145.
+      expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
     testWidgets('writing the first message opens the conversation', (tester) async {
@@ -894,7 +898,7 @@ void main() {
 
       expect(find.text('Dette er din egen ting. Slik ser andre den.'), findsOneWidget);
       // Both of these are refused with «Dette er din egen gjenstand».
-      expect(find.text('Jeg vil ha'), findsNothing);
+      expect(find.byIcon(Icons.favorite_border), findsNothing);
       expect(find.textContaining('Skriv en melding'), findsNothing);
       // The share button stays: sending your own listing to somebody is the
       // whole point of it.

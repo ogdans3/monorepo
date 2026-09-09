@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 ///
 /// Values are read off the round 5 export rather than invented, which is why
 /// there are three reds: they do three different jobs and must not collapse.
+///
+/// The second half of this list was read out of the export itself — the bundled
+/// HTML in `swapply-design`, opened in a browser and asked for its computed
+/// styles — rather than guessed from the screenshots. Where a value here has a
+/// hex that looks arbitrary, that is why: it is what the drawing actually uses.
 class SwaplyColors {
   const SwaplyColors._();
 
@@ -30,6 +35,39 @@ class SwaplyColors {
 
   static const amber = Color(0xFFB77B12);
   static const amberSoft = Color(0xFFFDF5E4);
+
+  // --- read off the round 5 export -----------------------------------------
+
+  /// Green text: links, «Se profil ›», «Send», a verified badge. Lighter than
+  /// [greenPressed], which stays the colour of a filled button.
+  static const greenText = Color(0xFF0B7A47);
+
+  /// The fill behind every small pill — a category, a condition, a filter that
+  /// is not selected. No border: the fill is the shape.
+  static const chip = Color(0xFFEEF2EE);
+
+  /// The ink inside one.
+  static const chipInk = Color(0xFF3C4A43);
+
+  /// Body copy and section labels. Softer than [ink], darker than [greySoft].
+  static const inkBody = Color(0xFF41514A);
+
+  /// Hints, kickers, the placeholder in a message field.
+  static const greyLight = Color(0xFF98A29B);
+
+  /// A card's edge. Barely there, and not the same as [line], which is a
+  /// transparency and goes muddy on tinted backgrounds.
+  static const cardLine = Color(0xFFECEFEA);
+
+  /// Somebody else's avatar. Yours is [greenDeep]; the export gives other
+  /// people a colour of their own, and this is the one it uses most.
+  static const avatarGold = Color(0xFFC08B2D);
+
+  /// The «Tilgjengelig» badge on your own listing.
+  static const availableBg = Color(0xFFDEF5E9);
+
+  /// The ring around the ✕ on a listing: coral at a tenth of its strength.
+  static const declineLine = Color(0xFFF5C9C6);
 }
 
 class Insets {
@@ -49,18 +87,54 @@ class Radii {
   static const pill = 100.0;
 }
 
+/// The type scale, measured in the export the same way the colours were.
+///
+/// It is smaller and denser than a Material default, and the weights are
+/// heavier: 800 for a screen's own title, 700 for anything that names a thing,
+/// 400 for prose. Nothing here is 500.
 class Type {
   const Type._();
+
+  /// A listing's name on 04, and the biggest thing on a screen. Deep green: the
+  /// export gives the thing you are looking at the brand colour, and keeps ink
+  /// for people and for rows in a list.
   static const display = TextStyle(
-      fontSize: 27, height: 1.2, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: SwaplyColors.ink);
+      fontSize: 23,
+      height: 1.15,
+      fontWeight: FontWeight.w800,
+      letterSpacing: -0.4,
+      color: SwaplyColors.greenDeep);
+
+  /// A person's name on their own profile, and a screen heading in ink.
   static const title = TextStyle(
-      fontSize: 19, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: SwaplyColors.ink);
-  static const heading = TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: SwaplyColors.ink);
-  static const body = TextStyle(fontSize: 14.5, height: 1.45, color: SwaplyColors.ink);
-  static const secondary = TextStyle(fontSize: 13, height: 1.4, color: SwaplyColors.greySoft);
+      fontSize: 22, height: 1.15, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: SwaplyColors.ink);
+
+  /// The name of a card, a row, a person you are talking to.
+  static const heading = TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: SwaplyColors.ink);
+
+  static const body = TextStyle(fontSize: 14, height: 1.5, color: SwaplyColors.inkBody);
+
+  static const secondary = TextStyle(fontSize: 12.5, height: 1.4, color: SwaplyColors.grey);
+
   static const small = TextStyle(fontSize: 12, color: SwaplyColors.grey);
+
+  /// What a section of a screen is called: «Interesser», «Mine gjenstander · 4».
+  /// Sentence case and dark, not the tracked-out capitals of a design system
+  /// that wanted to look technical.
+  static const section =
+      TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: SwaplyColors.inkBody);
+
+  /// Capitals, and only where the export uses them: above a conversation box.
   static const kicker = TextStyle(
-      fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.3, color: SwaplyColors.greySoft);
+      fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: SwaplyColors.greyLight);
+
+  /// «Se profil ›», «Send», «Rediger profil».
+  static const link =
+      TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: SwaplyColors.greenText);
+
+  /// The value on a card and beside a title: grey, never green.
+  static const value =
+      TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: SwaplyColors.grey);
 }
 
 /// Category keys cross the wire; the Norwegian words live here and in the web

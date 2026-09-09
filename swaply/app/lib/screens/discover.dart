@@ -29,9 +29,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   String? _error;
   int _total = 0;
   List<Item> _results = const [];
-  List<({String category, List<Item> items})> _rows = const [];
 
-  bool get _searching => _search.text.trim().isNotEmpty || _filters.isActive;
+  /// «Alt» is null. The chip row is a filter on one grid, which is what the
+  /// export draws: one home tab, not a shelf per interest.
+  String? _chip;
 
   @override
   void initState() {
@@ -52,26 +53,22 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     });
     final api = context.read<SwaplyApi>();
     try {
-      if (_searching) {
-        final res = await api.discover(
-          q: _search.text.trim(),
-          category: _filters.category,
-          subcategory: _filters.subcategory,
-          minValue: _filters.minValue,
-          maxValue: _filters.maxValue,
-          condition: _filters.condition,
-          sort: _filters.sort,
-        );
-        if (!mounted) return;
-        setState(() {
-          _total = res.total;
-          _results = res.items;
-        });
-      } else {
-        final rows = await api.discoverRows();
-        if (!mounted) return;
-        setState(() => _rows = rows);
-      }
+      final res = await api.discover(
+        q: _search.text.trim(),
+        // The chip wins over the filter sheet's category: it is the one the
+        // person can see.
+        category: _chip ?? _filters.category,
+        subcategory: _filters.subcategory,
+        minValue: _filters.minValue,
+        maxValue: _filters.maxValue,
+        condition: _filters.condition,
+        sort: _filters.sort,
+      );
+      if (!mounted) return;
+      setState(() {
+        _total = res.total;
+        _results = res.items;
+      });
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -133,11 +130,38 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               ],
             ),
           ),
+          _categoryChips(),
           Expanded(child: _body()),
         ],
       ),
     );
   }
+
+  /// «Alt» and then the twelve, scrolling sideways. A filter on one grid, the
+  /// way the export draws the home tab.
+  Widget _categoryChips() => SizedBox(
+        height: 44,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
+          children: [
+            _chipButton('Alt', null),
+            for (final entry in categoryLabels.entries) _chipButton(entry.value, entry.key),
+          ],
+        ),
+      );
+
+  Widget _chipButton(String label, String? category) => Padding(
+        padding: const EdgeInsets.only(right: Insets.sm),
+        child: GestureDetector(
+          onTap: () {
+            if (_chip == category) return;
+            setState(() => _chip = category);
+            _load();
+          },
+          child: Center(child: Pill(label, selected: _chip == category)),
+        ),
+      );
 
   Widget _body() {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -151,65 +175,65 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       );
     }
 
-    if (_searching) {
-      if (_results.isEmpty) {
-        return const EmptyState(
-          icon: Icons.search_off,
-          title: 'Ingen treff',
-          body: 'Prøv et annet ord, eller løsne på filtrene.',
-        );
-      }
-      return RefreshIndicator(
-        onRefresh: _load,
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
-              sliver: SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: Insets.sm),
-                  child: Text('$_total treff', style: Type.small),
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(Insets.screen, 0, Insets.screen, Insets.xl),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 220,
-                  mainAxisSpacing: Insets.md,
-                  crossAxisSpacing: Insets.md,
-                  childAspectRatio: 0.72,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) => ItemCard(item: _results[i], onChanged: _load),
-                  childCount: _results.length,
-                ),
-              ),
-            ),
-          ],
-        ),
+    if (_results.isEmpty) {
+      final filtered = _search.text.trim().isNotEmpty || _chip != null || _filters.isActive;
+      return EmptyState(
+        icon: filtered ? Icons.search_off : Icons.explore_outlined,
+        title: filtered ? 'Ingen treff' : 'Ingenting å vise ennå',
+        body: filtered
+            ? 'Prøv et annet ord, eller løsne på filtrene.'
+            : 'Søk etter noe du vil ha, eller legg ut en ting så folk finner deg.',
+        actionLabel: filtered ? null : 'Legg ut en ting',
+        onAction: filtered
+            ? null
+            : () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
       );
     }
 
-    final rows = _rows.where((r) => r.items.isNotEmpty).toList();
-    if (rows.isEmpty) {
-      return EmptyState(
-        icon: Icons.explore_outlined,
-        title: 'Ingenting å vise ennå',
-        body: 'Søk etter noe du vil ha, eller legg ut en ting så folk finner deg.',
-        actionLabel: 'Legg ut en ting',
-        onAction: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const PostItemScreen())),
-      );
+    // Two columns that fill independently, so cards of different heights sit
+    // beside each other the way the collage in the export does. A grid with one
+    // aspect ratio would line them up in rows and lose that.
+    final left = <Item>[];
+    final right = <Item>[];
+    for (var i = 0; i < _results.length; i++) {
+      (i.isEven ? left : right).add(_results[i]);
     }
+    Widget column(List<Item> items, int offset) => Expanded(
+          child: Column(
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                ItemCard(
+                  item: items[i],
+                  onChanged: _load,
+                  // Three heights, cycling: a collage is made of things that
+                  // are not the same shape.
+                  aspect: const [1.0, 1.25, 0.85][(i * 2 + offset) % 3],
+                ),
+                const SizedBox(height: Insets.md),
+              ],
+            ],
+          ),
+        );
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: Insets.xl),
-        itemCount: rows.length,
-        itemBuilder: (context, i) => _InterestRow(row: rows[i], onChanged: _load),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.sm, Insets.screen, Insets.xl),
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: Insets.md),
+            child: Text('$_total treff', style: Type.secondary),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              column(left, 0),
+              const SizedBox(width: Insets.md),
+              column(right, 1),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -239,52 +263,15 @@ class _SquareIconButton extends StatelessWidget {
       );
 }
 
-class _InterestRow extends StatelessWidget {
-  const _InterestRow({required this.row, required this.onChanged});
-
-  final ({String category, List<Item> items}) row;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.md, Insets.screen, Insets.sm),
-          child: Row(
-            children: [
-              Icon(categoryIcons[row.category], size: 17, color: SwaplyColors.greenDeep),
-              const SizedBox(width: 7),
-              Text(categoryLabels[row.category] ?? row.category, style: Type.heading),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 218,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
-            itemCount: row.items.length,
-            separatorBuilder: (_, _) => const SizedBox(width: Insets.md),
-            itemBuilder: (context, i) => SizedBox(
-              width: 158,
-              child: ItemCard(item: row.items[i], onChanged: onChanged),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// The collage card. The heart is on the face of it, because it is the only
-/// action that creates an edge in the match graph and round 4 hid it.
 class ItemCard extends StatefulWidget {
-  const ItemCard({super.key, required this.item, required this.onChanged});
+  const ItemCard({super.key, required this.item, required this.onChanged, this.aspect});
 
   final Item item;
   final VoidCallback onChanged;
+
+  /// Width over height for the picture. Given by the collage so that cards are
+  /// not all the same shape; null lets the card fill whatever it is put in.
+  final double? aspect;
 
   @override
   State<ItemCard> createState() => _ItemCardState();
@@ -375,8 +362,8 @@ class _ItemCardState extends State<ItemCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Stack(
+          _sized(
+            Stack(
               children: [
                 Positioned.fill(
                   child: ClipRRect(
@@ -412,15 +399,31 @@ class _ItemCardState extends State<ItemCard> {
             ),
           ),
           const SizedBox(height: Insets.sm),
-          Text(item.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-          Text('Verdi ${kr(item.estimatedValueNok)}', style: Type.small),
+          // Name and value run on together and wrap, which is how the export
+          // sets them: the value is a note after the name, not a second line
+          // of its own.
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: 6,
+            children: [
+              Text(item.title,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+              if (item.estimatedValueNok != null)
+                Text('Verdi ${kr(item.estimatedValueNok)}',
+                    style: const TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+            ],
+          ),
         ],
       ),
     );
   }
+
+  /// A collage gives every card a shape; a list of one item does not, and then
+  /// the picture just fills the space it was given.
+  Widget _sized(Widget child) =>
+      widget.aspect == null ? Expanded(child: child) : AspectRatio(aspectRatio: widget.aspect!, child: child);
 
   Widget _generatedCard(Item item) => Container(
         color: SwaplyColors.greenSoft,

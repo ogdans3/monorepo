@@ -78,13 +78,16 @@ class SecondaryButton extends StatelessWidget {
   }
 }
 
-/// «O» in a circle. The export never shows a profile photo, only an initial.
+/// «O» in a circle. The export never shows a profile photo, only an initial —
+/// and it gives other people a colour of their own, so a face in a list is not
+/// the same green as everything else on the screen. Yours stays deep green.
 class Avatar extends StatelessWidget {
-  const Avatar(this.name, {super.key, this.size = 40, this.color});
+  const Avatar(this.name, {super.key, this.size = 40, this.color, this.mine = false});
 
   final String name;
   final double size;
   final Color? color;
+  final bool mine;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +96,7 @@ class Avatar extends StatelessWidget {
       width: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: color ?? SwaplyColors.greenDeep,
+        color: color ?? (mine ? SwaplyColors.greenDeep : SwaplyColors.avatarGold),
         shape: BoxShape.circle,
       ),
       child: Text(
@@ -174,6 +177,91 @@ class ItemThumb extends StatelessWidget {
       );
 }
 
+/// A category, a condition, an interest. Filled, never outlined: in the export
+/// the fill is the shape, and a border on top of it makes it look like a button.
+class Pill extends StatelessWidget {
+  const Pill(this.label, {super.key, this.selected = false});
+
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? SwaplyColors.greenPressed : SwaplyColors.chip,
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            color: selected ? Colors.white : SwaplyColors.chipInk,
+          ),
+        ),
+      );
+}
+
+/// The two round buttons at the bottom of a listing: a ✕ that passes, and the
+/// heart. Circles, because the export draws the heart as the one big thing on
+/// the screen and a pill with a word in it is not that.
+class CircleAction extends StatelessWidget {
+  const CircleAction({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.filled = false,
+    this.busy = false,
+    this.size = 62,
+    this.iconSize = 26,
+    this.color,
+    this.borderColor,
+    this.semanticLabel,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool filled, busy;
+  final double size, iconSize;
+  final Color? color, borderColor;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = color ?? SwaplyColors.greenPressed;
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Material(
+        color: filled ? tint : Colors.white,
+        shape: CircleBorder(
+          side: filled
+              ? BorderSide.none
+              : BorderSide(color: borderColor ?? SwaplyColors.cardLine),
+        ),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: busy ? null : onPressed,
+          child: SizedBox(
+            height: size,
+            width: size,
+            child: busy
+                ? const Center(
+                    child: SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                    ),
+                  )
+                : Icon(icon, size: iconSize, color: filled ? Colors.white : tint),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class StatePill extends StatelessWidget {
   const StatePill(this.label, {super.key, this.color = SwaplyColors.greenDeep, this.soft});
 
@@ -206,7 +294,7 @@ class SectionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(Radii.card),
-          border: Border.all(color: SwaplyColors.line),
+          border: Border.all(color: SwaplyColors.cardLine),
         ),
         child: child,
       );

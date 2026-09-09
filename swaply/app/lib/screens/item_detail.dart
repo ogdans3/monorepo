@@ -135,26 +135,39 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.title, style: Type.display),
-                      const SizedBox(height: 6),
-                      Text('Verdi ${kr(item.estimatedValueNok)}',
-                          style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: SwaplyColors.greenPressed)),
+                      // Name and price share a line, and the price is grey:
+                      // this is a barter app, so the number is a fact about the
+                      // thing and not the point of it.
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: Text(item.title, style: Type.display)),
+                          if (item.estimatedValueNok != null) ...[
+                            const SizedBox(width: Insets.md),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text('Verdi ${kr(item.estimatedValueNok)}',
+                                  style: Type.value),
+                            ),
+                          ],
+                        ],
+                      ),
                       const SizedBox(height: Insets.md),
                       Wrap(
                         spacing: Insets.sm,
                         runSpacing: Insets.sm,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          _fact([
+                          Pill([
                             categoryLabels[item.category] ?? item.category,
                             if (item.subcategory != null) item.subcategory!,
                           ].join(' · ')),
                           if (item.condition != null)
-                            _fact(conditionLabels[item.condition] ?? item.condition!),
-                          if (item.town != null) _fact(item.town!),
-                          if (item.kind == 'service') _fact('Tjeneste'),
+                            Pill(conditionLabels[item.condition] ?? item.condition!),
+                          if (item.kind == 'service') const Pill('Tjeneste'),
+                          // The town is not a pill in the export: where a thing
+                          // is, is a note, not a label on it.
+                          if (item.town != null) Text(item.town!, style: Type.secondary),
                         ],
                       ),
                       if (item.description != null && item.description!.isNotEmpty) ...[
@@ -275,16 +288,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         ),
       );
 
-  Widget _fact(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(Radii.pill),
-          border: Border.all(color: SwaplyColors.line),
-        ),
-        child: Text(text, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-      );
-
   Widget _ownerStrip(UserRef owner) => InkWell(
         onTap: () => Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: owner.id))),
@@ -292,7 +295,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         child: SectionCard(
           child: Row(
             children: [
-              Avatar(owner.displayName, size: 42),
+              Avatar(owner.displayName, size: 44),
               const SizedBox(width: Insets.md),
               Expanded(
                 child: Column(
@@ -321,7 +324,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   ],
                 ),
               ),
-              const Text('Se profil ›', style: TextStyle(fontSize: 13, color: SwaplyColors.greenPressed)),
+              const Text('Se profil ›', style: Type.link),
             ],
           ),
         ),
@@ -344,8 +347,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 GestureDetector(
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => ThreadScreen(threadId: _openedThreadId!))),
-                  child: const Text('Åpne ›',
-                      style: TextStyle(fontSize: 13, color: SwaplyColors.greenPressed)),
+                  child: const Text('Åpne ›', style: Type.link),
                 ),
             ],
           ),
@@ -360,17 +362,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   decoration: InputDecoration(hintText: 'Skriv en melding til $name…'),
                 ),
               ),
-              const SizedBox(width: Insets.sm),
-              SizedBox(
-                height: 48,
-                child: FilledButton(
-                  onPressed: _sending ? null : _send,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: SwaplyColors.greenPressed,
-                    shape:
-                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+              const SizedBox(width: Insets.md),
+              // A word, not a filled button: the box already invites you to
+              // write, and a green slab beside it competes with the heart.
+              GestureDetector(
+                onTap: _sending ? null : _send,
+                child: Text(
+                  'Send',
+                  style: Type.link.copyWith(
+                    fontSize: 13,
+                    color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText,
                   ),
-                  child: const Text('Send'),
                 ),
               ),
             ],
@@ -384,37 +386,35 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
   }
 
+  /// Two circles, centred. The heart is the biggest thing on the screen because
+  /// it is the only action that means anything — the ✕ beside it just goes back.
   Widget _actionBar(Item item) => Container(
-        padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.sm, Insets.screen, Insets.md),
+        padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.md, Insets.screen, Insets.md),
         decoration: const BoxDecoration(
           color: SwaplyColors.surface,
-          border: Border(top: BorderSide(color: SwaplyColors.line)),
+          border: Border(top: BorderSide(color: SwaplyColors.cardLine)),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: SizedBox(
-                height: 54,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0x22064E3B)),
-                    shape:
-                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
-                  ),
-                  child: const Icon(Icons.close, color: SwaplyColors.coral),
-                ),
-              ),
+            CircleAction(
+              icon: Icons.close,
+              size: 56,
+              iconSize: 24,
+              color: SwaplyColors.coral,
+              borderColor: SwaplyColors.declineLine,
+              semanticLabel: 'Ikke interessert',
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
-            const SizedBox(width: Insets.md),
-            Expanded(
-              flex: 2,
-              child: PrimaryButton(
-                item.likedByMe ? 'Du vil ha denne' : 'Jeg vil ha',
-                icon: item.likedByMe ? Icons.favorite : Icons.favorite_border,
-                busy: _liking,
-                onPressed: _like,
-              ),
+            const SizedBox(width: Insets.lg),
+            CircleAction(
+              icon: item.likedByMe ? Icons.favorite : Icons.favorite_border,
+              size: 68,
+              iconSize: 30,
+              filled: true,
+              busy: _liking,
+              semanticLabel: item.likedByMe ? 'Du vil ha denne' : 'Jeg vil ha',
+              onPressed: _like,
             ),
           ],
         ),
