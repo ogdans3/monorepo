@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,6 +20,13 @@ class Session extends ChangeNotifier {
   int unreadNotifications = 0;
 
   bool get signedIn => me != null;
+
+  /// Signed in as a device, with no profile behind it yet.
+  bool get anonymous => me?.anonymous ?? false;
+
+  /// The token from the link that brought you here, kept until an account is
+  /// made with it. Set before [restore] runs.
+  String? pendingInvite;
 
   /// True until the interest picker has been through once. Screen 02 is the
   /// first thing a new account sees, and it is skippable.
@@ -49,6 +58,25 @@ class Session extends ChangeNotifier {
     }
   }
 
+  /// Look around without making anything. The device id is a secret this app
+  /// generates once and keeps: it is the only credential the account has, so it
+  /// is not the phone's own identifier, which other apps can read.
+  Future<void> lookAround() async {
+    final prefs = await SharedPreferences.getInstance();
+    var deviceId = prefs.getString('deviceId');
+    if (deviceId == null) {
+      final random = Random.secure();
+      deviceId = List.generate(32, (_) => random.nextInt(16).toRadixString(16)).join();
+      await prefs.setString('deviceId', deviceId);
+    }
+
+    me = await api.startAnonymously(deviceId: deviceId, invite: pendingInvite);
+    pendingInvite = null;
+    interestsPending = me!.interests.isEmpty;
+    await _persist();
+    notifyListeners();
+  }
+
   Future<void> register({
     required String displayName,
     required String email,
@@ -64,7 +92,10 @@ class Session extends ChangeNotifier {
       password: password,
       postalCode: postalCode,
       town: town,
+      // Spent here unless this device already spent it looking around.
+      invite: pendingInvite,
     );
+    pendingInvite = null;
     interestsPending = me!.interests.isEmpty;
     await _persist();
     notifyListeners();

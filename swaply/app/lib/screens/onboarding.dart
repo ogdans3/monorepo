@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/client.dart';
+import '../api/models.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
@@ -23,6 +24,160 @@ class SplashScreen extends StatelessWidget {
                   letterSpacing: -1.4)),
         ),
       );
+}
+
+/// The screen a link opens: somebody was handed a key, and this is the door.
+///
+/// Two ways in, and the order is the product's: looking around costs nothing
+/// and needs no account, and 10c waits until there is a reason for it.
+class InviteScreen extends StatefulWidget {
+  const InviteScreen({super.key, required this.token});
+
+  final String token;
+
+  @override
+  State<InviteScreen> createState() => _InviteScreenState();
+}
+
+class _InviteScreenState extends State<InviteScreen> {
+  InvitePreview? _invite;
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final invite = await context.read<SwaplyApi>().invite(widget.token);
+      if (!mounted) return;
+      setState(() => _invite = invite);
+      // A spent invitation is not ours to hold on to. Letting it sit in the
+      // session would only turn every later attempt into the same refusal.
+      if (invite.used) context.read<Session>().pendingInvite = null;
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    }
+  }
+
+  Future<void> _lookAround() async {
+    setState(() => _busy = true);
+    try {
+      await context.read<Session>().lookAround();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final invite = _invite;
+    final inviter = invite?.inviterName;
+
+    return Scaffold(
+      backgroundColor: SwaplyColors.greenDeep,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+              Insets.screen, Insets.xl * 2, Insets.screen, Insets.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('swaply',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1.1)),
+              const SizedBox(height: Insets.xl * 1.5),
+              Text(
+                inviter == null
+                    ? 'Du er invitert til Swaply.'
+                    : '$inviter inviterer deg til Swaply.',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    height: 1.15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.8),
+              ),
+              const SizedBox(height: Insets.md),
+              const Text(
+                'Si hva du vil ha. Når ønskene lukker en sirkel, bytter dere.',
+                style: TextStyle(color: Color(0xB8FFFFFF), fontSize: 15, height: 1.45),
+              ),
+              if (invite?.itemTitle != null) ...[
+                const SizedBox(height: Insets.lg),
+                Container(
+                  padding: const EdgeInsets.all(Insets.md),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(Radii.card),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.favorite, color: SwaplyColors.green, size: 18),
+                      const SizedBox(width: Insets.sm),
+                      Expanded(
+                        child: Text('Delt med deg: ${invite!.itemTitle}',
+                            style: const TextStyle(color: Colors.white, fontSize: 14.5)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (invite?.used == true) ...[
+                const SizedBox(height: Insets.lg),
+                Text(
+                  inviter == null
+                      ? 'Invitasjonen er allerede brukt. Be om en ny lenke.'
+                      : 'Invitasjonen er allerede brukt. Be $inviter om en ny lenke.',
+                  style: const TextStyle(color: SwaplyColors.coral, fontSize: 14),
+                ),
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: Insets.lg),
+                Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 14)),
+              ],
+              const SizedBox(height: Insets.xl),
+              PrimaryButton('Se deg rundt', busy: _busy, onPressed: _lookAround),
+              const SizedBox(height: Insets.sm),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0x55FFFFFF)),
+                    shape:
+                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+                  ),
+                  child: const Text('Lag profil med en gang',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(height: Insets.sm),
+              TextButton(
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const LoginScreen())),
+                child: const Text('Jeg har konto fra før',
+                    style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 16c Logg inn. E-mail and a password, with the three social buttons the
@@ -299,8 +454,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'For å legge ut noe trenger du en profil, så folk vet hvem de bytter med.',
+              Text(
+                context.watch<Session>().anonymous
+                    // Nobody starts over. The account this device has been using
+                    // is the one that gets a name, and the wishes come with it.
+                    ? 'Profilen legges på kontoen du allerede ser deg rundt med, så alt '
+                        'du har likt blir med videre.'
+                    : 'For å legge ut noe trenger du en profil, så folk vet hvem de '
+                        'bytter med.',
                 style: Type.secondary,
               ),
               const SizedBox(height: Insets.lg),

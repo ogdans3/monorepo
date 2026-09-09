@@ -3,6 +3,7 @@
 // The strings checked here are lifted from `docs/round-5-screens.md`, so this
 // suite is what stops the app drifting away from the drawings.
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -762,6 +763,125 @@ void main() {
       await tester.tap(find.text('Tjeneste'));
       await tester.pump();
       expect(find.text('Tilstand'), findsNothing);
+    });
+  });
+
+  group('invitations · the way in and the way out', () {
+    testWidgets('04 the share button hands over the link and the line with it',
+        (tester) async {
+      await mount(tester, const ItemDetailScreen(itemId: 'item-drill'));
+
+      await tester.tap(find.byIcon(Icons.ios_share));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Del Bosch drill 18V'), findsOneWidget);
+      expect(
+          find.textContaining('Se denne på Swaply: Bosch drill 18V, verdi 600 kr.'),
+          findsOneWidget);
+      // The sheet says what the link is, because it is a key and not a preview.
+      expect(find.textContaining('kan brukes én gang'), findsOneWidget);
+      expect(server.requests, contains('POST /items/item-drill/share'));
+    });
+
+    testWidgets('04 «Kopier lenke» puts the whole line on the clipboard',
+        (tester) async {
+      final copied = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied.add((call.arguments as Map)['text'] as String);
+          }
+          return null;
+        },
+      );
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null));
+
+      await mount(tester, const ItemDetailScreen(itemId: 'item-drill'));
+      await tester.tap(find.byIcon(Icons.ios_share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kopier lenke'));
+      await tester.pumpAndSettle();
+
+      expect(copied.single, contains('http://web/i/${FakeServer.shareToken}'));
+      expect(copied.single, startsWith('Se denne på Swaply'));
+    });
+
+    testWidgets('16b the invitation row is an ordinary row that makes a link',
+        (tester) async {
+      await mount(tester, const SettingsScreen());
+
+      await tester.tap(find.text('Inviter en venn'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Ola N. inviterer deg til Swaply'), findsOneWidget);
+    });
+
+    testWidgets('a link names who sent it, and looking around makes no profile',
+        (tester) async {
+      await mount(tester, const InviteScreen(token: FakeServer.shareToken),
+          signedIn: false);
+
+      expect(find.text('Ola N. inviterer deg til Swaply.'), findsOneWidget);
+      expect(find.textContaining('Delt med deg: Bosch drill 18V'), findsOneWidget);
+
+      await tester.tap(find.text('Se deg rundt'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('POST /auth/anonymous'));
+      expect(session.signedIn, isTrue);
+      expect(session.anonymous, isTrue);
+      // Spent on the way in, so nothing is left to spend again.
+      expect(session.pendingInvite, isNull);
+    });
+
+    testWidgets('a spent invitation says so and is not kept', (tester) async {
+      server.overrides['GET /invites/${FakeServer.shareToken}'] = {
+        'token': FakeServer.shareToken,
+        'url': 'http://web/i/${FakeServer.shareToken}',
+        'used': true,
+        'inviter': {'displayName': 'Ola N.'},
+        'item': null,
+        'shareText': 'Ola N. inviterer deg til Swaply.',
+      };
+      session.pendingInvite = FakeServer.shareToken;
+
+      await mount(tester, const InviteScreen(token: FakeServer.shareToken),
+          signedIn: false);
+
+      expect(find.textContaining('allerede brukt'), findsOneWidget);
+      expect(session.pendingInvite, isNull);
+    });
+
+    testWidgets('looking around has no profile to show, and says what it is',
+        (tester) async {
+      await session.lookAround();
+      // The profile screen asks the server who you are on the way in.
+      server.overrides['GET /me'] = FakeServer.lookingAround;
+      await mount(tester, const ProfileScreen(), signedIn: false);
+
+      expect(find.text('Du ser deg rundt'), findsOneWidget);
+      expect(find.textContaining('du beholder alt du har likt'), findsOneWidget);
+      expect(find.text('Lag profil'), findsOneWidget);
+    });
+
+    testWidgets('10b listing something asks for the profile first', (tester) async {
+      await session.lookAround();
+      await mount(tester, const PostItemScreen(), signedIn: false);
+
+      // The button says «Neste» rather than «Legg ut»: there is a step in front.
+      expect(find.text('Neste'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).first, 'Fiskestang');
+      await tester.pump();
+      await tester.tap(find.text('Neste'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Lag profil og legg ut'), findsOneWidget);
+      expect(
+          find.textContaining('kontoen du allerede ser deg rundt med'), findsOneWidget);
+      expect(server.requests, isNot(contains('POST /items')));
     });
   });
 }

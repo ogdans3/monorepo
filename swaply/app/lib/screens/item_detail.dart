@@ -5,8 +5,11 @@ import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
 import '../widgets/common.dart';
+import '../widgets/share_sheet.dart';
 import '../widgets/shell.dart';
+import '../state/session.dart';
 import 'chat.dart';
+import 'onboarding.dart';
 import 'profile.dart';
 import 'trade_detail.dart';
 
@@ -78,6 +81,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Future<void> _send() async {
     final text = _message.text.trim();
     if (text.isEmpty || _sending) return;
+
+    // Writing the first message opens a trade, and a trade has two named people
+    // in it. This is the moment a device becomes a person.
+    if (context.read<Session>().anonymous) {
+      await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const CreateProfileScreen()));
+      if (!mounted || context.read<Session>().anonymous) return;
+    }
     setState(() => _sending = true);
     try {
       final result = await context.read<SwaplyApi>().messageAboutItem(widget.itemId, text);
@@ -197,10 +208,22 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _round(Icons.chevron_left, () => Navigator.of(context).maybePop()),
-                _round(Icons.more_horiz, () {
-                  showReportSheet(context,
-                      itemId: item.id, personName: item.owner?.displayName);
-                }),
+                Row(
+                  children: [
+                    _round(Icons.ios_share, () {
+                      showShareSheet(
+                        context,
+                        title: 'Del ${item.title}',
+                        mint: (api) => api.shareItem(item.id),
+                      );
+                    }),
+                    const SizedBox(width: 8),
+                    _round(Icons.more_horiz, () {
+                      showReportSheet(context,
+                          itemId: item.id, personName: item.owner?.displayName);
+                    }),
+                  ],
+                ),
               ],
             ),
           ),

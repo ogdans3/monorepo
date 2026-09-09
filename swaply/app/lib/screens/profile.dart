@@ -6,6 +6,7 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
+import '../widgets/share_sheet.dart';
 import '../widgets/shell.dart';
 import 'item_detail.dart';
 import 'liked.dart';
@@ -36,6 +37,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return const SwaplyScaffold(
         currentTab: 4,
         child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Looking around has no profile to show, and an empty one drawn as if it
+    // were a person's is worse than saying what is going on.
+    if (me.anonymous) {
+      return SwaplyScaffold(
+        currentTab: 4,
+        child: EmptyState(
+          icon: Icons.person_outline,
+          title: 'Du ser deg rundt',
+          body: 'Tingene du liker er lagret her på enheten din. Lag en profil når du '
+              'vil legge ut noe eller snakke med noen — du beholder alt du har likt.',
+          actionLabel: 'Lag profil',
+          onAction: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
+        ),
       );
     }
 
@@ -422,6 +440,11 @@ class SettingsScreen extends StatelessWidget {
                 ? null
                 : () => _verifyBankid(context),
           ),
+          // Round 5 took the colour off this row: an invitation is an ordinary
+          // thing you do, not a promotion.
+          _tile(context, 'Inviter en venn', 'Lag en lenke å sende',
+              onTap: () => showShareSheet(context,
+                  title: 'Inviter en venn', mint: (api) => api.createInvite())),
           const SizedBox(height: Insets.lg),
           const Kicker('Varsler'),
           const _NotificationToggle(label: 'Swaps og bytter'),

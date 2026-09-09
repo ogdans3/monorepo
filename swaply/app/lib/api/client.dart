@@ -61,7 +61,11 @@ class SwaplyApi {
     required String password,
     String? postalCode,
     String? town,
+    String? invite,
   }) async {
+    // The bearer token goes along if there is one: an account made while a
+    // device was looking around claims that device's row rather than starting a
+    // second one, and every wish it made comes with it.
     final json = await _post('/auth/register', {
       'displayName': displayName,
       'email': email,
@@ -69,6 +73,18 @@ class SwaplyApi {
       'password': password,
       if (postalCode != null && postalCode.isNotEmpty) 'postalCode': postalCode,
       if (town != null && town.isNotEmpty) 'town': town,
+      if (invite != null && invite.isNotEmpty) 'invite': invite,
+    });
+    token = json['token'] as String;
+    return Me.fromJson(json['user'] as Map<String, dynamic>);
+  }
+
+  /// Looking around without an account. The device id is the only credential
+  /// this identity has, which is why it is a secret and not the phone's own.
+  Future<Me> startAnonymously({required String deviceId, String? invite}) async {
+    final json = await _post('/auth/anonymous', {
+      'deviceId': deviceId,
+      if (invite != null && invite.isNotEmpty) 'invite': invite,
     });
     token = json['token'] as String;
     return Me.fromJson(json['user'] as Map<String, dynamic>);
@@ -100,6 +116,20 @@ class SwaplyApi {
           as Map<String, dynamic>);
 
   Future<UserRef> user(String id) async => UserRef.fromJson(await _get('/users/$id'));
+
+  // --- invitations ----------------------------------------------------------
+
+  /// 04 — the share button. The link is an invitation, because a listing sent
+  /// to somebody without the app would otherwise be a wall.
+  Future<ShareLink> shareItem(String itemId) async =>
+      ShareLink.fromJson(await _post('/items/$itemId/share'));
+
+  /// 16b — an invitation with no listing on it.
+  Future<ShareLink> createInvite() async => ShareLink.fromJson(await _post('/invites'));
+
+  /// The one call that needs no session: who invited you, and what they sent.
+  Future<InvitePreview> invite(String token) async =>
+      InvitePreview.fromJson(await _get('/invites/$token'));
 
   // --- listings -------------------------------------------------------------
 

@@ -41,11 +41,16 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   Future<void> _submit() async {
     final session = context.read<Session>();
-    if (!session.signedIn) {
-      // Step 2/2: no account yet, so the profile screen comes first.
+    // Looking around on a device counts as no account here: a thing on the
+    // market has to belong to somebody with a name, so 10c comes first and the
+    // account this device already has is claimed rather than replaced.
+    if (!session.signedIn || session.anonymous) {
+      // Step 2/2: no profile yet, so the profile screen comes first.
       await Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => const CreateProfileScreen(continuingToListing: true)));
-      if (!mounted || !context.read<Session>().signedIn) return;
+      if (!mounted) return;
+      final now = context.read<Session>();
+      if (!now.signedIn || now.anonymous) return;
     }
 
     setState(() {
@@ -116,7 +121,8 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final signedIn = context.watch<Session>().signedIn;
+    final watched = context.watch<Session>();
+    final signedIn = watched.signedIn && !watched.anonymous;
 
     return SwaplyScaffold(
       currentTab: 1,
@@ -127,7 +133,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Legg ut en gjenstand', style: Type.title),
+                // «Legg ut en gjenstand» and «1/2» do not both fit on a narrow
+                // phone, and the heading is the one that may give way.
+                const Flexible(child: Text('Legg ut en gjenstand', style: Type.title)),
                 if (!signedIn) const Text('1/2', style: Type.small),
               ],
             ),
@@ -141,6 +149,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
                 _label('Tittel'),
                 TextField(
                   controller: _title,
+                  // The button below reads this field, so it has to be rebuilt
+                  // as it is typed into.
+                  onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(hintText: 'Bosch drill 18V'),
                 ),
                 const SizedBox(height: Insets.md),
@@ -225,7 +236,8 @@ class _PostItemScreenState extends State<PostItemScreen> {
                 PrimaryButton(
                   signedIn ? 'Legg ut' : 'Neste',
                   busy: _busy,
-                  enabled: _title.text.trim().isNotEmpty || true,
+                  // Enabled either way: a disabled button explains nothing, and
+                  // an empty title should be told, not silently refused.
                   onPressed: _title.text.trim().isEmpty
                       ? () => setState(() => _error = 'Gi gjenstanden en tittel.')
                       : _submit,

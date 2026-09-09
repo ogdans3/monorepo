@@ -19,7 +19,8 @@ class Me {
         items = ((j['items'] as List?) ?? const []).map((e) => Item.fromJson(e)).toList(),
         likedByCount = _int(j['likedByCount']) ?? 0,
         unreadMessages = _int(j['unreadMessages']) ?? 0,
-        tradesNeedingYou = _int(j['tradesNeedingYou']) ?? 0;
+        tradesNeedingYou = _int(j['tradesNeedingYou']) ?? 0,
+        anonymous = j['anonymous'] as bool? ?? false;
 
   final String id;
   final String? displayName, email, phone, town;
@@ -29,6 +30,37 @@ class Me {
   final int ratingCount, likedByCount, unreadMessages, tradesNeedingYou;
   final DateTime? memberSince;
   final List<Item> items;
+
+  /// Looking around on this device, with no profile yet. Everything that puts
+  /// you in front of another person — listing, writing, accepting — waits for
+  /// 10c.
+  final bool anonymous;
+}
+
+/// A link to hand somebody, and the line that travels with it. The server
+/// writes the text: it is the same sentence on every client, and it has a
+/// «verdi 600 kr» in it that has to be formatted exactly once.
+class ShareLink {
+  ShareLink.fromJson(Map<String, dynamic> j)
+      : token = j['token'] as String,
+        url = j['url'] as String,
+        text = j['text'] as String;
+
+  final String token, url, text;
+}
+
+/// What is behind an invitation before it is spent — read by the screen that
+/// greets somebody arriving from a link.
+class InvitePreview {
+  InvitePreview.fromJson(Map<String, dynamic> j)
+      : token = j['token'] as String,
+        used = j['used'] as bool? ?? false,
+        inviterName = (j['inviter'] as Map<String, dynamic>?)?['displayName'] as String?,
+        itemTitle = (j['item'] as Map<String, dynamic>?)?['title'] as String?;
+
+  final String token;
+  final bool used;
+  final String? inviterName, itemTitle;
 }
 
 class UserRef {

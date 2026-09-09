@@ -35,6 +35,27 @@ class FakeServer {
         'POST /auth/login' => {'token': 'tok', 'user': me},
         'POST /auth/register' => {'token': 'tok', 'user': me},
         'POST /auth/logout' => {},
+        'POST /auth/anonymous' => {'token': 'tok', 'user': lookingAround},
+        'POST /items/item-drill/share' => {
+            'token': shareToken,
+            'url': 'http://web/i/$shareToken',
+            'text': 'Se denne på Swaply: Bosch drill 18V, verdi 600 kr. '
+                'http://web/i/$shareToken',
+          },
+        'POST /invites' => {
+            'token': shareToken,
+            'url': 'http://web/i/$shareToken',
+            'text': 'Ola N. inviterer deg til Swaply. Si hva du vil ha — når ønskene '
+                'lukker en sirkel, bytter dere. http://web/i/$shareToken',
+          },
+        'GET /invites/$shareToken' => {
+            'token': shareToken,
+            'url': 'http://web/i/$shareToken',
+            'used': false,
+            'inviter': {'displayName': 'Ola N.', 'town': 'Trondheim'},
+            'item': {'title': 'Bosch drill 18V', 'media': <String>[]},
+            'shareText': 'Se denne på Swaply: Bosch drill 18V, verdi 600 kr.',
+          },
         'GET /me' => me,
         'PUT /me/interests' => me,
         'PATCH /me' => me,
@@ -148,6 +169,22 @@ class FakeServer {
     'likedByCount': 4,
     'unreadMessages': 2,
     'tradesNeedingYou': 1,
+  };
+
+  /// Long enough to pass the client's own idea of a token.
+  static const shareToken = 'inv-token-0123456789';
+
+  /// A device that has been let in and has made nothing: no name, no address,
+  /// and the wishes it has expressed are still its own.
+  static const lookingAround = {
+    'id': 'anon-1',
+    'displayName': null,
+    'email': null,
+    'interests': <String>[],
+    'anonymous': true,
+    'items': <Object>[],
+    'unreadMessages': 0,
+    'tradesNeedingYou': 0,
   };
 
   static const kari = {

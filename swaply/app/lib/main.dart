@@ -19,9 +19,18 @@ const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://localho
 
 void main() {
   final api = SwaplyApi(baseUrl: apiBase);
+
+  // The web build reads the invitation straight out of the address the link
+  // opened. On iOS and Android the same token arrives through a universal link,
+  // which needs a registered domain and bundle id — neither exists yet — so
+  // there the way in is the link opened in a browser.
+  final invite = Uri.base.queryParameters['invitasjon'];
+
   runApp(
     ChangeNotifierProvider(
-      create: (_) => Session(api)..restore(),
+      create: (_) => Session(api)
+        ..pendingInvite = invite
+        ..restore(),
       child: SwaplyApp(api: api),
     ),
   );
@@ -100,7 +109,10 @@ class RootGate extends StatelessWidget {
     final session = context.watch<Session>();
 
     if (session.loading) return const SplashScreen();
-    if (!session.signedIn) return const LoginScreen();
+    if (!session.signedIn) {
+      final invite = session.pendingInvite;
+      return invite == null ? const LoginScreen() : InviteScreen(token: invite);
+    }
     if (session.interestsPending) return const InterestsScreen();
     return const DiscoverScreen();
   }
