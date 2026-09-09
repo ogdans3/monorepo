@@ -13,6 +13,7 @@ import {
   respondToWithdrawal,
   withdrawEarly,
 } from '../trades/actions.js'
+import { sweepForCycles } from '../trades/sweep.js'
 import { acceptOffer, completeTrade, proposeCounterOffer, startTalking } from '../trades/trades.js'
 import { tradeList, tradeView } from '../trades/view.js'
 import { publicItem } from './serialize.js'
@@ -127,7 +128,10 @@ export default async function tradeRoutes(app: FastifyInstance) {
   app.post('/trades/:id/decline', async (request) => {
     const userId = app.requireUser(request)
     const { id } = idParam.parse(request.params)
-    await declineTrade(app.db, id, userId)
+    const freed = await declineTrade(app.db, id, userId)
+    // Those listings are wanted by people whose wish was dead while the trade
+    // held them, so the search runs again on the way out.
+    await sweepForCycles(app.db, freed)
     return tradeView(app.db, id, userId)
   })
 

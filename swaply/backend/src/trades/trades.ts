@@ -289,16 +289,27 @@ export async function completeTrade(db: Database, tradeId: string) {
   })
 }
 
-/** Release everything a trade was holding, and say why it ended. */
-export async function cancelTrade(db: Database, tradeId: string, reason: string) {
-  await db.transaction(async (tx) => {
-    await tx.execute(
+/**
+ * Release everything a trade was holding, and say why it ended.
+ *
+ * Returns the listings that went back on the market, because wishes pointing at
+ * them were dead while the trade held them and the caller has to look again.
+ */
+export async function cancelTrade(
+  db: Database,
+  tradeId: string,
+  reason: string,
+): Promise<string[]> {
+  return db.transaction(async (tx) => {
+    const freed = await tx.execute<Row>(
       sql`update items set active_trade_id = null, status = 'available'
-          where active_trade_id = ${tradeId}`,
+          where active_trade_id = ${tradeId}
+          returning id`,
     )
     await tx.execute(
       sql`update trades set state = 'cancelled', closed_at = now(), close_reason = ${reason}
           where id = ${tradeId}`,
     )
+    return freed.map((row) => row['id']!)
   })
 }

@@ -23,7 +23,7 @@ export async function declineTrade(db: Database, tradeId: string, userId: string
   if (['completed', 'cancelled'].includes(trade['state'])) {
     throw conflict('trade_closed', 'Byttet er allerede avsluttet.')
   }
-  await cancelTrade(db, tradeId, 'Byttet ble avslått')
+  return cancelTrade(db, tradeId, 'Byttet ble avslått')
 }
 
 /**
