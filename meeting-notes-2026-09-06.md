@@ -107,7 +107,9 @@ dyplenker og invitasjonslenker henger alle på det.
 **Min anbefaling:** Swaply. Det er det som står i utkastene, det er kortere,
 og det er allerede slått fast som produktnavn ett sted.
 
-**Besluttet:**
+**Besluttet:** Swaply, med én p. `DESIGN.md` er rettet. Mappa `swappify/` og
+deploy-slugen `swapply-design` beholder navnene sine — de er identifikatorer,
+ikke produktnavn, og en omdøping ville flyttet nettstedet.
 
 ---
 
@@ -126,7 +128,11 @@ i rutenettet eller falle bort.
 gratis og uten inntekt? Hvis det siste, si det eksplisitt, så slutter det å
 være et åpent punkt i hver runde.
 
-**Besluttet:**
+**Besluttet:** ingenting. Punktet står fortsatt åpent, og beslutningen om
+ikke å fasilitere (punkt 2) tar dessuten bort «admin-gebyr per handel» som
+mulighet. Igjen står annonser i collagen og betaling for kontaktinfo — eller
+å si eksplisitt at MVP er gratis. Ført videre som åpent punkt 2 i
+`DESIGN.md`.
 
 ---
 
@@ -141,7 +147,10 @@ sendt. Det er riktig, men det trenger en presis definisjon — hvem
 registrerer at noe er sendt, og hva skjer med de andre i en treveis når én
 har sendt og én vil trekke seg?
 
-**Besluttet:**
+**Besluttet:** ikke besluttet. Beslutningen om ikke å fasilitere gjør
+spørsmålet skarpere, ikke enklere: «sendt» er nå noe partene selv melder
+inn, uten at vi har noe å kontrollere det mot. Ført videre som åpent punkt 1
+i `DESIGN.md`.
 
 ---
 
@@ -197,9 +206,13 @@ verdt å si høyt om neste steg er runde 5 eller første linje kode.
 
 - [x] Fyll inn beslutningene over i dette notatet under møtet.
 - [x] Skriv bestillingen til runde 5 → `round-5-brief.md`.
-- [ ] Rekonstruér hva som ble bestemt 19.08, eller stryk notatet.
-- [ ] Oppdater `DESIGN.md`: fasilitering ute, flere ting per bytte,
+- [x] Rekonstruér hva som ble bestemt 19.08, eller stryk notatet.
+      Rekonstruert i ettertid 09.09, tydelig merket som det.
+- [x] Oppdater `DESIGN.md`: fasilitering ute, flere ting per bytte,
       mellomlegg, motbytte som ny tilstand, interesser på `users`, chat uten
-      match, lest-status på meldinger.
-- [ ] Avklar navnet. Fortsatt ubesluttet.
+      match, lest-status på meldinger. Gjort 09.09 — filen er skrevet om, og
+      heter nå Swaply.
+- [x] Avklar navnet. Swaply, med én p.
 - [ ] Inntektsmodell: fortsatt ingen av de fire ideene i noen skjerm.
+- [ ] Punktet uten retur: definér når man ikke lenger kan trekke seg, nå som
+      «sendt» er selvrapportert.

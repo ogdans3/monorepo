@@ -1,5 +1,14 @@
 # Swapply — Design Brief for Claude
 
+> **Historisk.** Dette er bestillingen som ga runde 1, og den beskriver
+> produktet slik det så ut 03.08.2026: fire faner, Tinder-sveip, søkefelt på
+> Oppdag, fasilitert bytte. Flere av delene er senere kuttet. Gjeldende
+> bestilling er `round-5-brief.md`, og gjeldende produktbeskrivelse er
+> `DESIGN.md`. Filen står urørt som artefakt — den skal ikke oppdateres.
+>
+> Det åpne navnespørsmålet nederst er besvart: produktet heter **Swaply**,
+> med én p. Verken «Swapply» eller «Swappify», som var alternativene her.
+
 A prompt for generating screen mockups we can discuss. Read the **Design direction** first, then the **User flow overview** (the map), then the **Screen details** (one section per screen).
 
 Goal: **as few taps as possible to complete a trade.** Barter is visual and social — items are photos, matches are people. The design should feel effortless, trustworthy, and a little playful.
