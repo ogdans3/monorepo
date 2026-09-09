@@ -51,6 +51,24 @@ export async function buildApp(
   })
   await app.register(authPlugin, { db, inviteOnly: opts.inviteOnly ?? env.INVITE_ONLY })
 
+  // A POST with nothing to say still says `application/json` in some clients,
+  // and Fastify refuses an empty body under that content type before any route
+  // sees it. Every action without a payload — the heart, sharing, declining,
+  // signing out — goes through here, so an empty body is read as an empty
+  // object and the route's own validation gets to answer.
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_request, body: string, done) => {
+      if (body === '') return done(null, {})
+      try {
+        done(null, JSON.parse(body))
+      } catch (err) {
+        done(err as Error, undefined)
+      }
+    },
+  )
+
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
       return reply.code(error.statusCode).send({ code: error.code, message: error.message })
@@ -64,6 +82,18 @@ export async function buildApp(
         field: first?.path.join('.'),
       })
     }
+    // Fastify's own refusals — a malformed body, a request too large — are the
+    // caller's fault and carry their own status. Answering 500 blames us for it
+    // and tells the client nothing it can act on.
+    const status = (error as { statusCode?: number }).statusCode
+    if (typeof status === 'number' && status >= 400 && status < 500) {
+      request.log.warn({ err: error }, 'refused a request')
+      return reply.code(status).send({
+        code: 'invalid_request',
+        message: 'Forespørselen var ikke gyldig.',
+      })
+    }
+
     request.log.error(error)
     return reply.code(500).send({ code: 'server_error', message: 'Noe gikk galt hos oss.' })
   })

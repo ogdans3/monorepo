@@ -178,7 +178,25 @@ describe('a photograph on a listing', () => {
     expect(page.json()['item']['media']).toEqual([`http://test.local${path}`])
   })
 
-  test('6. erasing the person takes the photograph with them', async () => {
+  test('6. the share button sends a content type and no body, and is answered', async () => {
+    const listed = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { title: 'Kajakk', category: 'bat', condition: 'good' },
+    })
+    const res = await app.inject({
+      method: 'POST',
+      url: `/items/${listed.json()['id']}/share`,
+      // Exactly what the Flutter client used to send, and what Fastify refused.
+      headers: { authorization: `Bearer ${ola}`, 'content-type': 'application/json' },
+    })
+
+    expect(res.statusCode).toBe(201)
+    expect(res.json()['url']).toContain('/i/')
+  })
+
+  test('7. erasing the person takes the photograph with them', async () => {
     const file = join(env.MEDIA_DIR, path.split('/').pop()!)
     expect((await stat(file)).isFile()).toBe(true)
 
@@ -188,7 +206,7 @@ describe('a photograph on a listing', () => {
     expect((await app.inject({ method: 'GET', url: path })).statusCode).toBe(404)
   })
 
-  test('7. an upload nobody finished listing is swept, once it is old enough', async () => {
+  test('8. an upload nobody finished listing is swept, once it is old enough', async () => {
     const abandoned = (await upload(kari, PNG)).body!['path']
     const file = join(env.MEDIA_DIR, abandoned.split('/').pop()!)
 
@@ -205,7 +223,7 @@ describe('a photograph on a listing', () => {
     await expect(stat(file)).rejects.toThrow()
   })
 
-  test('8. except the one a completed trade remembers', async () => {
+  test('9. except the one a completed trade remembers', async () => {
     const kept = (await upload(kari, PNG)).body!['path']
     const file = join(env.MEDIA_DIR, kept.split('/').pop()!)
 

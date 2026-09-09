@@ -23,6 +23,16 @@ async function call(method: string, url: string, opts: { token?: string; body?: 
   return { status: res.statusCode, body: res.body ? (res.json() as Json) : null }
 }
 
+/** What the Flutter client sends: a content type, and sometimes nothing else. */
+async function callWithJsonHeader(method: string, url: string, token: string) {
+  const res = await app.inject({
+    method: method as 'POST',
+    url,
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+  })
+  return { status: res.statusCode, body: res.body ? (res.json() as Json) : null }
+}
+
 describe('the whole journey over HTTP', () => {
   let ola = '', kari = ''
   let olaId = '', kariId = ''
@@ -54,6 +64,21 @@ describe('the whole journey over HTTP', () => {
     })
     kari = b.body!['token']
     kariId = b.body!['user']['id']
+  })
+
+  test('a POST with nothing to say is not a bad request', async () => {
+    // Every action without a payload — the heart, sharing, declining, marking
+    // read, signing out — sends a JSON content type and no body. Fastify
+    // refuses that by default, which turned the heart into «Noe gikk galt hos
+    // oss» on a real phone while every test here passed.
+    const res = await callWithJsonHeader('POST', '/auth/logout', ola)
+    expect(res.status).toBe(204)
+
+    // And back in, since that just spent the token.
+    const again = await call('POST', '/auth/login', {
+      body: { email: 'ola@epost.no', password: 'drillbits123' },
+    })
+    ola = again.body!['token']
   })
 
   test('16c — the same address and password logs you back in, a wrong one does not', async () => {

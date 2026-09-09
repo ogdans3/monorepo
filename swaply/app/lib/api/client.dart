@@ -23,14 +23,18 @@ class SwaplyApi {
   final http.Client _client;
   String? token;
 
-  Map<String, String> get _headers => {
-        'content-type': 'application/json',
+  Map<String, String> _headers({required bool hasBody}) => {
+        // Only when there is one. A request that says it carries JSON and
+        // carries nothing is rejected before it reaches a route — which is what
+        // broke every action without a payload: the heart, sharing, declining,
+        // marking read, and signing out.
+        if (hasBody) 'content-type': 'application/json',
         if (token != null) 'authorization': 'Bearer $token',
       };
 
   Future<dynamic> _send(String method, String path, [Object? body]) async {
     final request = http.Request(method, Uri.parse('$baseUrl$path'))
-      ..headers.addAll(_headers);
+      ..headers.addAll(_headers(hasBody: body != null));
     if (body != null) request.body = jsonEncode(body);
 
     final response = await http.Response.fromStream(await _client.send(request));
