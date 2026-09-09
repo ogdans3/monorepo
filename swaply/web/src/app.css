@@ -1,3 +1,31 @@
+/* Familjen Grotesk, self-hosted.
+ *
+ * Not from a font CDN: `docs/ARCHITECTURE.md` picks OVH so there is no
+ * third-country transfer to document, and a stylesheet from fonts.googleapis.com
+ * would hand every visitor's IP address to a US provider before the page had
+ * drawn — reopening the chapter that hosting decision closed. The two files are
+ * the latin and latin-ext subsets; the licence sits next to them.
+ */
+@font-face {
+  font-family: 'Familjen Grotesk';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/familjen-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Familjen Grotesk';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/familjen-grotesk-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
 /* The palette. Three files hold it — this one, docs/DESIGN.md and
    app/lib/design/tokens.dart — and they have to be changed together. */
 :root {
@@ -12,6 +40,34 @@
      stronger red is reserved for report and block. */
   --coral: #ff6b5e;
   --red: #e5484d;
+
+  /* Drawn from the app's own tokens.dart, for the same jobs it uses them for:
+     the tint behind a listing with no photo, and the ink that is grey but still
+     has to be read. */
+  --green-soft: #e8f5ef;
+  --surface: #ffffff;
+  --line: rgba(6, 78, 59, 0.12);
+  --ink-soft: #46534c;
+
+  /* On the deep green. Grey text on a coloured ground goes muddy, so the quiet
+     tone is a transparency of the light one. */
+  --on-green: #f2f7f4;
+  --on-green-soft: rgba(242, 247, 244, 0.72);
+
+  --measure: 34rem;
+  --page: min(72rem, 100% - 2.5rem);
+
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 26px;
+  --radius-pill: 100px;
+
+  /* Named, so nothing ever needs a 9999. */
+  --z-sticky: 10;
+  --z-header: 20;
+  --z-overlay: 30;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 *,
@@ -20,10 +76,57 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  line-height: 1.5;
+  font-family: 'Familjen Grotesk', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+}
+
+:where(a, button, input, [tabindex]):focus-visible {
+  outline: 2.5px solid var(--green);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Every animation on these pages is opacity, transform or a stroke dash, so the
+   reduced-motion answer is simply the finished state. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

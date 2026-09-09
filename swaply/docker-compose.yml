@@ -47,6 +47,13 @@ services:
       MIGRATE_ON_BOOT: ${MIGRATE_ON_BOOT:-1}
       # Empty reflects any origin. A deployment sets the app's own hostname.
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Every invitation link the API mints points here, so it has to be the
+      # hostname the web service is actually served on — not the API's own.
+      WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:-http://localhost:5174}
+      # The product is invite-only. It is 0 here because this deployment is also
+      # the demo, where the point is that anyone can open all forty-five
+      # screens; a launch sets it to 1. See backend/src/env.ts.
+      INVITE_ONLY: ${INVITE_ONLY:-0}
     ports:
       # Published so Caddy can reach it at host.docker.internal:<port>. The bind
       # address is a variable so a deployment can keep it off the public
@@ -54,6 +61,36 @@ services:
       - '${API_BIND:-0.0.0.0}:${API_PORT:-4001}:3000'
     healthcheck:
       test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # The public web: the landing page, and the page behind every shared link.
+  # Rendered on the server, because the readers of a share link are as often
+  # chat clients building a preview as they are people.
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Server side only — these pages never call the API from the browser — so
+      # it can be the container next door rather than a public hostname.
+      API_ORIGIN: ${WEB_API_ORIGIN:-http://api:3000}
+      # Where «Åpne i Swaply» goes: the app is its own deployment.
+      PUBLIC_APP_ORIGIN: ${PUBLIC_APP_ORIGIN:-http://localhost:5175}
+    ports:
+      # Its own name, not WEB_PORT: that one belongs to the development server
+      # in .env, and reusing it here would put two things on 5174.
+      - '${WEB_BIND:-0.0.0.0}:${WEB_HTTP_PORT:-4002}:3000'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
       timeout: 5s
       retries: 5
