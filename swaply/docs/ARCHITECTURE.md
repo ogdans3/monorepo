@@ -135,7 +135,8 @@ discipline. Null means free.
 
 **The loser needs a path.** When an item is locked by trade A, any other trade
 holding it must be closed with a reason in words — `trades.close_reason` exists
-for that. It is a screen that does not exist yet.
+for that, and the trade screen reads it: a cancelled trade says «Byttet er
+avsluttet» and then why, rather than going quiet.
 
 **A service is never reserved.** One person can paint three living rooms, so
 exclusivity is wrong for it; a database constraint enforces that a service never
