@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises'
 import { join, normalize } from 'node:path'
 
 import { env } from '../env.js'
@@ -114,4 +114,13 @@ export async function removeStored(path: string): Promise<void> {
 export const mediaUrl = (value: unknown): string | null => {
   if (typeof value !== 'string' || value === '') return null
   return value.startsWith('/media/') ? `${env.MEDIA_ORIGIN}${value}` : value
+}
+
+/**
+ * The names on disk. Anything that is not one of ours is ignored rather than
+ * reported: the folder is a volume, and a volume collects `.DS_Store`.
+ */
+export async function storedNames(): Promise<string[]> {
+  const names = await readdir(env.MEDIA_DIR).catch(() => [] as string[])
+  return names.filter((name) => STORED.test(name))
 }

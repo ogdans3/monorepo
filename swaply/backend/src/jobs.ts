@@ -1,13 +1,15 @@
 import type { FastifyBaseLogger } from 'fastify'
 
 import type { Database } from './db/index.js'
+import { sweepOrphanedMedia } from './lib/media-sweep.js'
 import { expireWithdrawals } from './trades/actions.js'
 import { sweepForCycles } from './trades/sweep.js'
 
 /**
- * The two things that have to happen without anyone pressing a button: a
- * withdrawal deadline running out, and the sweep that catches cycles the
- * incremental search could not see.
+ * The three things that have to happen without anyone pressing a button: a
+ * withdrawal deadline running out, the sweep that catches cycles the
+ * incremental search could not see, and the photographs nobody finished
+ * listing.
  *
  * In-process on purpose. A second API container would run them twice, which is
  * harmless for the sweep — it refuses to open a trade on listings another one
@@ -30,5 +32,6 @@ export function startJobs(db: Database, log: FastifyBaseLogger) {
   return [
     every(5 * 60_000, 'expire-withdrawals', () => expireWithdrawals(db)),
     every(60 * 60_000, 'sweep-cycles', async () => (await sweepForCycles(db)).length),
+    every(6 * 60 * 60_000, 'sweep-media', () => sweepOrphanedMedia(db)),
   ]
 }

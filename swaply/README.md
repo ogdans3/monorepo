@@ -150,7 +150,7 @@ not say test. It learned that the hard way.
 - `backend/` — 22 tables including the `retained` schema for the sealed record,
   the trade engine (cycle search, the reservation lock, offer versions,
   completion snapshots, erasure) and the endpoints all forty-five screens need.
-  110 tests against real Postgres, 50 of them walking a whole journey over HTTP.
+  111 tests against real Postgres, 51 of them walking a whole journey over HTTP.
 - `app/` — every screen from `docs/round-5-screens.md`, plus the share sheet, the
   invitation screen, the photo picker and looking around without an account. 65
   widget tests

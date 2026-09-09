@@ -84,6 +84,13 @@ a few hundred kilobytes rather than the five megabytes a phone camera makes. The
 ten-megabyte ceiling on the server is for the client that does not — the browser
 build, where the picker cannot resize.
 
+**An upload that never became a listing is swept.** The picture is uploaded on
+10b before the listing exists, so somebody who changes their mind leaves bytes
+behind; a job every six hours deletes the ones older than a day that no listing
+and no snapshot points at. Without it the volume only grows, and it grows with
+photographs of the inside of people's homes — which is what makes it a data
+protection problem rather than a disk one.
+
 **Erasure reaches the bytes.** Anonymising somebody unlinks the photographs on
 their listings, except one a completed trade snapshotted: that is the
 counterparty's record of what they got, and it lives to the retention horizon

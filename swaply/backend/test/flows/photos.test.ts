@@ -9,7 +9,7 @@
 // living room is personal data, so erasing them takes the bytes with it —
 // except the one a completed trade snapshotted, which is the counterparty's
 // record and lives until the claim window closes.
-import { readFile, rm, stat } from 'node:fs/promises'
+import { readFile, rm, stat, utimes } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { sql } from 'drizzle-orm'
@@ -18,6 +18,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
 import { env } from '../../src/env.js'
+import { sweepOrphanedMedia } from '../../src/lib/media-sweep.js'
 import { anonymiseUser } from '../../src/trades/erasure.js'
 import { close, db, reset } from '../helpers.js'
 
@@ -187,7 +188,24 @@ describe('a photograph on a listing', () => {
     expect((await app.inject({ method: 'GET', url: path })).statusCode).toBe(404)
   })
 
-  test('7. except the one a completed trade remembers', async () => {
+  test('7. an upload nobody finished listing is swept, once it is old enough', async () => {
+    const abandoned = (await upload(kari, PNG)).body!['path']
+    const file = join(env.MEDIA_DIR, abandoned.split('/').pop()!)
+
+    // Fresh, so it is left alone: the picture is uploaded before the listing
+    // exists, and somebody is probably still filling in the form.
+    expect(await sweepOrphanedMedia(db)).toBe(0)
+    expect((await stat(file)).isFile()).toBe(true)
+
+    // A day older, and nothing points at it.
+    const old = new Date(Date.now() - 25 * 60 * 60 * 1000)
+    await utimes(file, old, old)
+
+    expect(await sweepOrphanedMedia(db)).toBe(1)
+    await expect(stat(file)).rejects.toThrow()
+  })
+
+  test('8. except the one a completed trade remembers', async () => {
     const kept = (await upload(kari, PNG)).body!['path']
     const file = join(env.MEDIA_DIR, kept.split('/').pop()!)
 
