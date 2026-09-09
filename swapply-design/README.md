@@ -1,8 +1,9 @@
 # swapply-design
 
 Hosts the screen mockups for **Swaply**, the bartering app where you swipe on
-items you want and get a trade when the wishes close a loop. Four rounds of
-drafts, each one a full pass over the flow.
+items you want and get a trade when the wishes close a loop. Five rounds of
+drafts, each one a full pass over the flow. Round 5 is stored but not yet
+served — see below.
 
 - `/` — the index: one card per round, newest first, with a live scaled preview,
   the round's own change summary and its screen groups.
@@ -41,6 +42,24 @@ To drop in a new export: put the file in `public/docs/`, add the
 ```sh
 npm run index      # rewrites public/rounds.json
 ```
+
+### Round 5 is here but not yet indexed
+
+`public/docs/round-5.html` is in place and renders on its own, but it is
+deliberately absent from `rounds.json`, so the index and the viewer still stop
+at round 4. It is a **different export format** — a self-contained "Bundled
+Page" with a `__bundler/manifest`, not a `.dc.html` beside `support.js` — and
+both of the mechanisms below assume the old format:
+
+- The `resources.js` React override works by inserting a script line before
+  `support.js`. This export has no `support.js`; it pulls React from unpkg
+  through its own `__bundler/ext_resources` manifest, which needs its own
+  override.
+- `tools/index-docs.js` parses `<section id="gN">` straight out of the HTML.
+  Here the markup sits inside escaped JavaScript strings, so the parser finds
+  no groups and would write an empty round.
+
+Both are fixable; neither is done. Until then the file is stored, not served.
 
 ## Exposure
 
