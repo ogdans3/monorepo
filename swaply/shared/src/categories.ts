@@ -3,19 +3,25 @@ import { z } from 'zod'
 // Fixed list, in the order the interest picker shows them. Interests are stored
 // on the user and are what Discover's rows are filtered by before a search, so
 // adding one here changes onboarding and discovery at the same time.
+//
+// These are the twelve from the round 5 export, and they are the `category` enum
+// in the database: the list here had drifted from the schema, which is a bug
+// waiting for the first consumer. The Norwegian words live in the clients —
+// `web/src/lib/labels.ts` and `app/lib/design/tokens.dart` — never here and
+// never in the database.
 export const CATEGORIES = [
-  'verktoy',
+  'sykling',
   'gaming',
-  'sykkel',
+  'verktoy',
   'klaer',
-  'sport',
-  'bat-og-fritid',
-  'mobler',
-  'elektronikk',
+  'bat',
+  'friluft',
   'barn',
-  'hage',
+  'hjem',
+  'sport',
   'musikk',
-  'bil-og-mc',
+  'boker',
+  'diverse',
 ] as const
 
 export const categorySchema = z.enum(CATEGORIES)

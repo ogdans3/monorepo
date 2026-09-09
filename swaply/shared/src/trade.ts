@@ -4,9 +4,13 @@ import { z } from 'zod'
 // boolean: a participant who proposes a different composition sends the whole
 // trade back into negotiation rather than only ever forward to accepted.
 export const TRADE_STATES = [
+  // A trade exists from the first message, long before there is an offer.
+  'talking',
   'pending',
   'countered',
   'accepted',
+  // Everyone had accepted and someone asked to withdraw. Screen 08b.
+  'paused',
   'completed',
   'cancelled',
 ] as const
