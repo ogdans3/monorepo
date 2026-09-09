@@ -134,11 +134,26 @@ Report and block use a stronger red, `#E5484D`. Coral `#FF6B5E` stays the app's 
 
 ## Sharing
 
-An item has a **share button** that opens the system share sheet with a link and the line «Se denne på Swaply: Bosch drill 18V, verdi 600 kr.»
+An item has a **share button** that hands over a link and the line «Se denne på Swaply: Bosch drill 18V, verdi 600 kr.» The server writes that line, so it reads the same on every client and the kroner are formatted once.
 
-The app is invite-only, so a shared link almost always lands with someone who doesn't have it. The link therefore **carries an `invites` token** — the same mechanism as the existing invite deep links — which makes sharing our best growth channel rather than a dead end.
+The app is invite-only, so a shared link almost always lands with someone who doesn't have it. The link therefore **carries an `invites` token** — the same mechanism as the invite deep links — which makes sharing our best growth channel rather than a dead end.
 
-That requires a **public web page per item**: title, image, value, an open-in-app button, and Open Graph tags so the link looks like something in a chat. This is why web is no longer only a landing page.
+Built 09.09.2026. What was decided in the building:
+
+- **One URL shape for both kinds of invitation**, `/i/<token>`: the token carries the listing when there is one, so the page behind a share and the page behind a plain invitation are the same route. It also means listings cannot be walked by guessing ids — the key is the only way in.
+- **Looking is not joining.** Reading the page never spends the invitation, and the page keeps working after somebody has used it. Only making an account spends it.
+- **An invitation is used once**, which is what the schema says: `used_by` and `used_at` are single columns. The consequence is deliberate — a link posted in a group admits the first person who takes it, and the next one is told plainly that it is spent and who to ask. If that turns out to be the wrong trade, the change is a use count, not a redesign.
+- **The page is rendered on the server**, because a share link is read by chat clients building a preview as often as by people, and they do not run our JavaScript.
+- **The listing page is `noindex`.** It was sent to someone; it was not published. The landing page is the one we want found.
+- **A retired listing leaves the page standing.** The invitation still works, and the page says there is nothing to show rather than 404-ing on somebody who did nothing wrong.
+
+### Anonymous, and what it may do
+
+The token also opens the door without an account, which is where *anonymous-first* above becomes real: **a device may look and wish.** Discovery, the item pages and the heart are open to it, and the wishes are kept.
+
+Everything that puts you in front of another person waits for 10c: **listing, writing the first message, and accepting.** A trade has two named people in it, so an unclaimed wish does not close a loop either — it is held, and counts from the moment the profile exists.
+
+Making the profile **claims the account the device already has**, rather than starting a second one. Nothing that was liked is lost, and the session is reissued because the account has just gained a password.
 
 ## Feedback
 
@@ -210,15 +225,17 @@ Round 5 came back with 45 screens and departs from the brief in two places worth
 
 ## Next steps
 
-Scaffold and schema are done. What is left, in order:
+The list as it stood on 09.09.2026, with what has since been built struck out.
+What is left is held up either by an account we do not have, or — for erasure —
+by a screen nobody has drawn.
 
 1. ~~Scaffold + Postgres schema~~ — done 09.09.2026
-2. Media upload to OVH Object Storage
-3. Item CRUD + discovery search
-4. Like endpoint + 2-cycle match, with the reservation lock and the loser path
-5. Trade composition, counter-offer and accept flow (incl. the agreement screen)
-6. 3-cycle search + the nightly sweep
-7. Chat + read state + push notifications
-8. Invite deep link + share link + public item page + anonymous account flow
-9. Report/block, reviews
-10. Erasure: anonymisation, the sealed record, and the purge job
+2. **Media upload to OVH Object Storage** — waiting on the bucket. Until it exists no listing has a photo, which is why the web page draws a caption panel instead of pretending.
+3. ~~Item CRUD + discovery search~~
+4. ~~Like endpoint + 2-cycle match, with the reservation lock and the loser path~~
+5. ~~Trade composition, counter-offer and accept flow (incl. the agreement screen)~~
+6. ~~3-cycle search + the nightly sweep~~
+7. ~~Chat + read state~~ — push notifications still need the FCM and APNs accounts
+8. ~~Invite deep link + share link + public item page + anonymous account flow~~ — done 09.09.2026
+9. ~~Report/block, reviews~~
+10. Erasure — **the engine is written and tested, and nothing calls it.** `anonymiseUser` has no endpoint and settings has no «Slett kontoen», so today the right to erasure is exercised by a person with database access. That is the next thing to close.

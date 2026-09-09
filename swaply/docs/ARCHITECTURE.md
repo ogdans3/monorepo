@@ -159,6 +159,67 @@ Several people can hold a `talking` trade about the same item at once. That is
 correct — three people may want the same drill — and it is why reservation waits
 for acceptance.
 
+## Invitations, and the page behind a link
+
+Decided in the building, 09.09.2026.
+
+**An invitation is stored as a hash**, the same way a session token and a
+password are. A stolen database should not hand out working keys to a closed app.
+The raw token is 16 bytes of base64url: a person reads it, sometimes types it,
+and 128 bits is already far past guessing.
+
+**One URL for both kinds**, `/i/<token>`. The token carries the listing when
+there is one, so the share button and the plain invitation are the same route and
+the same page. It also means the catalogue cannot be walked by guessing item
+ids — the key is the only way in — which is the same instinct as keeping the API
+off the dashboard's unauthenticated subdomains.
+
+**Reading is not redeeming.** The page renders for anyone holding the link,
+including after somebody else has joined with it; only making an account spends
+the invitation, and it is spent **inside the transaction that creates the
+account**, so a lost race leaves nobody standing in an invite-only app who was
+never invited.
+
+**Server-rendered**, because a share link is read by chat clients building a
+preview as often as by people, and they do not run our JavaScript. The web
+service therefore talks to the API server-to-server, over the container network,
+and no browser calls the API from these pages.
+
+**The web font is served from our own origin.** A stylesheet from a font CDN
+hands every visitor's IP address to a third party before the page has drawn,
+which would reopen the transfer chapter that choosing OVH closed for the sake of
+two fewer files in the repository.
+
+**`INVITE_ONLY` is a deployment flag, not a product question.** The product is
+invite-only; the flag exists because this repository is also deployed as a demo
+whose whole point is that anyone can open all forty-five screens. A redemption is
+recorded whichever way it is set — the flag only decides whether an account may
+be made *without* a token. `pnpm invite` mints the first one, which is why
+`invites.inviter_id` is nullable.
+
+## Anonymous, and why a wish waits
+
+A device id is an identity until a trade needs a stable one. `POST /auth/anonymous`
+takes a client-generated secret and returns a session; the account has a
+`device_id` and nothing else.
+
+**It may look and wish, and nothing more.** Listing, writing the first message
+and accepting all require a claimed account, because each of them puts a person
+in front of another person. A device that has been claimed is never let back in
+by device id either: after 10c the password is the credential, and a leaked
+device id must not be a way around it.
+
+**An unclaimed wish does not close a loop.** It is kept, and counts from the
+moment there is a profile. In practice the cycle search cannot reach an
+unclaimed user anyway — everyone else in a ring is giving away a listing, and
+listing requires an account — so the check in `findCyclesThrough` is the place
+that keeps it true if that ever changes.
+
+**Making a profile claims the row**, rather than creating a second one, so every
+like survives. The session is reissued at the same moment: the account has just
+gained a password, and the token that belonged to a device should not outlive
+that change.
+
 ## Data protection
 
 Norway is in the EEA, so the GDPR applies in full. This is our reading and not a

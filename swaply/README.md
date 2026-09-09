@@ -36,10 +36,14 @@ cp .env.example .env
 pnpm db:up          # Postgres in Docker, on 5434 to miss the ports in use
 pnpm db:migrate
 pnpm db:test:setup  # the separate database the tests are allowed to wipe
-pnpm db:seed        # three people who want each other's things
+pnpm db:seed        # three people who want each other's things, and two invitation links
 pnpm dev            # backend on 3001, web on 5174
 pnpm dev:app        # the Flutter app, separately
 ```
+
+The seed prints two links, because a closed app needs a way in. `pnpm invite`
+mints another at any time, and `pnpm invite ola@epost.no` mints it on somebody's
+behalf.
 
 On an Android emulator the host is `10.0.2.2`, not `localhost`:
 
@@ -49,6 +53,11 @@ cd app && flutter run --dart-define=API_BASE=http://10.0.2.2:3001
 
 After seeding, sign in as `ola@epost.no`, `kari@epost.no` or `per@epost.no` with
 the password `swaply123`.
+
+Open one of the seeded links at `http://localhost:5174/i/<token>` to see the page
+a shared listing gets, and `?invitasjon=<token>` on the app to see what it opens.
+`INVITE_ONLY=0` in development, so an account can be made without a link; a
+launch sets it to `1`.
 
 Checks:
 
@@ -68,22 +77,42 @@ it.
 ```
 swaply.<host>        the app, in a browser — all forty-five screens
 swaply-api.<host>    the API, through its own Caddy site block
+swaply-web.<host>    the public web: the landing page and every shared link
 ```
 
-Two hostnames because the app is a browser client calling the API
-cross-origin, and the dashboard gives a project one subdomain. The site block
-lives in `master-dashboard/caddy/sites/swaply-api.caddy` and points at
-`host.docker.internal:4001`, the port the `api` service publishes.
+Three hostnames because the dashboard gives a project one subdomain, and this
+project deploys three things that a browser talks to. The API's site block lives
+in `master-dashboard/caddy/sites/swaply-api.caddy` and points at
+`host.docker.internal:4001`; **the web needs the same treatment**, pointing at
+`host.docker.internal:4002`, the port the `web` service publishes. Until that
+block exists the web service runs and answers on the host, and the links it mints
+point at whatever `PUBLIC_WEB_ORIGIN` says.
+
+If the public page should own the short name instead — it is the one strangers
+see — swap `compose_service` in `.dashboard.yaml` to `web` and give the app the
+extra site block rather than the web. That is a deployment decision, not a code
+one.
 
 The API origin is **compiled into the app bundle** — there is no server in the
 app image to read an environment variable — so a deploy has to set it:
 
 ```sh
-PUBLIC_API_ORIGIN=https://swaply-api.<host>
+PUBLIC_API_ORIGIN=https://swaply-api.<host>   # compiled into the app bundle
 CORS_ORIGINS=https://swaply.<host>
+PUBLIC_WEB_ORIGIN=https://swaply-web.<host>   # what an invitation link says
+PUBLIC_APP_ORIGIN=https://swaply.<host>       # where «Åpne i Swaply» goes
 ```
 
-Change either one and the app has to be rebuilt, not just restarted.
+`PUBLIC_WEB_ORIGIN` is read by the **API**, not the web: the server writes the
+whole link and the sentence around it, so no client has to assemble one and get
+the path slightly wrong. The web service reaches the API over the container
+network (`API_ORIGIN=http://api:3000`) and never from the browser, so the
+invitation pages are outside the CORS story entirely.
+
+`PUBLIC_API_ORIGIN` is the only one baked into a bundle, so changing it means
+rebuilding the app image rather than restarting it. The API and the web server
+both read theirs at boot — the web deliberately uses SvelteKit's *dynamic*
+environment, so pointing it somewhere else is a restart.
 
 `MIGRATE_ON_BOOT` defaults to `1` in the compose file: the image carries the
 SQL that matches it and nobody is going to run a migration by hand against a
@@ -107,12 +136,21 @@ not say test. It learned that the hard way.
 - `backend/` — 22 tables including the `retained` schema for the sealed record,
   the trade engine (cycle search, the reservation lock, offer versions,
   completion snapshots, erasure) and the endpoints all forty-five screens need.
-  81 tests against real Postgres, 29 of them walking the whole journey over HTTP.
-- `app/` — every screen from `docs/round-5-screens.md`, with 55 widget tests
+  103 tests against real Postgres, 43 of them walking a whole journey over HTTP.
+- `app/` — every screen from `docs/round-5-screens.md`, plus the share sheet, the
+  invitation screen and looking around without an account. 62 widget tests
   driving the real API client against a fake server.
-- `web/` — still a placeholder. The landing page, invite handling and the public
-  item page are the next surface.
+- `web/` — the landing page and the page behind every invitation link, server
+  rendered with Open Graph tags so a shared listing looks like something in a
+  chat. The font is served from our own origin rather than a CDN, for the same
+  reason the hosting is in the EEA.
 
-Two things say plainly what is missing rather than pretending: sign-in with
-Google, Facebook or Apple needs provider agreements, and photo upload needs the
-OVH bucket. Both are one screen away when the accounts exist.
+Three things say plainly what is missing rather than pretending: sign-in with
+Google, Facebook or Apple needs provider agreements, photo upload needs the OVH
+bucket, and a link opens the app in a browser because universal links need a
+registered domain and bundle id. All three are one screen away when the accounts
+exist.
+
+The one gap that is nobody's account but ours: **erasure has an engine and no
+door**. `anonymiseUser` is written and tested, and nothing calls it — settings
+has no «Slett kontoen». It is item 10 in `docs/DESIGN.md`.

@@ -24,11 +24,28 @@ cycle search would find matches no screen can show.
 the trade back into negotiation rather than only forward to `accepted`. Modelling
 acceptance as a one-way boolean is wrong.
 
+**An invitation is one use, and looking is not joining.** The page behind
+`/i/<token>` renders for anyone holding the link, before and after somebody has
+joined with it; only making an account spends the token, and it is spent in the
+same transaction that creates the account. `used_by` and `used_at` are single
+columns, and that is the decision, not an oversight.
+
+**An unclaimed device may look and wish, and nothing else.** Listing, writing the
+first message and accepting all require a profile, because each puts a person in
+front of another person. Making that profile *claims the device's account* rather
+than making a second one, so every like survives. A device that has been claimed
+is never let in by device id again.
+
 **Two reds, and they must never collapse into one value.** Coral `#FF6B5E` is the
 "no" colour. `#E5484D` is reserved for report and block.
 
 **Three files hold one palette:** `docs/DESIGN.md`, `web/src/app.css` and
 `app/lib/design/tokens.dart`. Change them together.
+
+**The web serves its own font.** Not a font CDN: a stylesheet from one hands
+every visitor's IP to a third party before the page draws, which reopens the
+transfer chapter that choosing OVH closed. `web/static/fonts/` holds the files
+and the licence.
 
 **Every thread belongs to a trade, and the first message creates one.** Writing
 to someone about an item opens a negotiation, so the trade exists in `talking`
@@ -84,6 +101,22 @@ off.
 `backend/test/guard.ts` refuses to run against anything that is not a local host
 or a database whose name says test, because the suite truncates tables. Do not
 weaken it.
+
+## The web
+
+`web/` is the landing page and the page behind an invitation link, and both are
+server rendered: a share link is read by chat clients building a preview as often
+as by people, and they do not run our JavaScript. The web talks to the API over
+the container network and never from the browser, so these pages are outside CORS
+entirely.
+
+Until the OVH bucket exists **no listing has a photo**, so the empty state on a
+shared listing is the ordinary case rather than the exception. It says so instead
+of drawing a hole.
+
+There is no screen export for the web — round 5 drew the app — so `docs/PRODUCT.md`
+carries what a drawing would have: who these pages are for, the voice, and the
+anti-references. Read it before changing how they look or read.
 
 ## The app
 
