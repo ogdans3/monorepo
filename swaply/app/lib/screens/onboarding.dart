@@ -66,10 +66,17 @@ class _InviteScreenState extends State<InviteScreen> {
   Future<void> _lookAround() async {
     setState(() => _busy = true);
     try {
-      await context.read<Session>().lookAround();
+      final session = context.read<Session>();
+      await session.lookAround();
       if (!mounted) return;
+      // 02 first, the same as any new account gets: Oppdag is one row per
+      // interest, so arriving there with none chosen is an empty screen. It is
+      // skippable, as the export draws it.
       Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+          MaterialPageRoute(
+              builder: (_) =>
+                  session.interestsPending ? const InterestsScreen() : const DiscoverScreen()),
+          (r) => false);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {

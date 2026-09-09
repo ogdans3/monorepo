@@ -830,6 +830,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.requests, contains('POST /auth/anonymous'));
+      // 02 first: Oppdag is one row per interest, and this account has none.
+      expect(find.textContaining('Hva er du'), findsOneWidget);
       expect(session.signedIn, isTrue);
       expect(session.anonymous, isTrue);
       // Spent on the way in, so nothing is left to spend again.
