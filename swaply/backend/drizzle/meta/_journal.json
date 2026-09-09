@@ -15,6 +15,13 @@
       "when": 1788945768597,
       "tag": "0001_offer_proposer_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788946429082,
+      "tag": "0002_round5_alignment",
+      "breakpoints": true
     }
   ]
 }

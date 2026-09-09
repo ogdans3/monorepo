@@ -109,7 +109,7 @@ test('interests are three to five, or none', async () => {
   )
 
   await expect(
-    db.execute(sql`insert into users (interests) values ('{verktoy,gaming,sykkel}')`),
+    db.execute(sql`insert into users (interests) values ('{verktoy,gaming,sykling}')`),
   ).resolves.toBeTruthy()
 })
 
@@ -134,7 +134,7 @@ test('search finds a Norwegian word by its stem', async () => {
   const owner = await newUser()
   await db.execute(
     sql`insert into items (owner_id, title, description, category, condition)
-        values (${owner}, 'Sykkel til salgs', 'En fin sykkel med sykler på', 'sykkel', 'good')`,
+        values (${owner}, 'Sykkel til salgs', 'En fin sykkel med sykler på', 'sykling', 'good')`,
   )
 
   const hits = await db.execute(

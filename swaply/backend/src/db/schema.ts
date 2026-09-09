@@ -28,6 +28,9 @@ export const tradeState = pgEnum('trade_state', [
   'pending',
   'countered',
   'accepted',
+  // Someone has asked to withdraw after everyone accepted, and the trade waits
+  // while the others answer. Screen 08b.
+  'paused',
   'completed',
   'cancelled',
 ])
@@ -36,22 +39,32 @@ export const itemStatus = pgEnum('item_status', ['available', 'reserved', 'trade
 
 export const listingKind = pgEnum('listing_kind', ['item', 'service'])
 
+// The twelve from the round 5 export, in the order the interest picker shows
+// them. The round 5 brief had a different list; the export is what people saw.
 export const category = pgEnum('category', [
-  'verktoy',
+  'sykling',
   'gaming',
-  'sykkel',
+  'verktoy',
   'klaer',
-  'sport',
-  'bat_og_fritid',
-  'mobler',
-  'elektronikk',
+  'bat',
+  'friluft',
   'barn',
-  'hage',
+  'hjem',
+  'sport',
   'musikk',
-  'bil_og_mc',
+  'boker',
+  'diverse',
 ])
 
 export const condition = pgEnum('condition', ['new', 'good', 'worn'])
+
+export const withdrawalState = pgEnum('withdrawal_state', [
+  'waiting',
+  'approved',
+  'rejected',
+  'expired',
+  'withdrawn',
+])
 
 // ---------------------------------------------------------------------------
 // Identity
@@ -75,6 +88,10 @@ export const users = pgTable(
     // address would be more than the product needs.
     town: text('town'),
     county: text('county'),
+    // Entered as a postal code; only the town it resolves to is shown to others.
+    postalCode: text('postal_code'),
+    // Argon2id. Round 5 signs in with email and a password, not a magic link.
+    passwordHash: text('password_hash'),
     interests: category('interests').array().notNull().default(sql`'{}'`),
     bankidSubject: text('bankid_subject').unique(),
     bankidVerifiedAt: timestamp('bankid_verified_at', { withTimezone: true }),
@@ -148,6 +165,12 @@ export const tradeParticipants = pgTable(
       .references(() => users.id),
     // The order around the cycle: 0 gives to 1, 1 gives to 2, 2 gives back to 0.
     position: smallint('position').notNull(),
+    // Self-reported, all three of them. We do not ship and we do not take the
+    // money, so these are the only record that any of it happened — and
+    // `sentAt` is what closes the door on withdrawing.
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    receivedAt: timestamp('received_at', { withTimezone: true }),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
   },
   (t) => [
     primaryKey({ columns: [t.tradeId, t.userId] }),
@@ -171,6 +194,8 @@ export const items = pgTable(
     title: text('title').notNull(),
     description: text('description'),
     category: category('category').notNull(),
+    // Free text under the category: "Elsykler", "Elektroverktøy", "Fiske".
+    subcategory: text('subcategory'),
     // Meaningless for a service: "worn" says nothing about shovelling snow.
     condition: condition('condition'),
     estimatedValueNok: integer('estimated_value_nok'),
@@ -422,6 +447,8 @@ export const appFeedback = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
     score: smallint('score').notNull(),
+    // What worked less well: «Finne bytte», «Mellomlegg», «Frakt»…
+    chips: text('chips').array().notNull().default(sql`'{}'`),
     comment: text('comment'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -483,6 +510,30 @@ export const notifications = pgTable(
       .on(t.userId, t.createdAt.desc())
       .where(sql`read_at is null`),
   ],
+)
+
+// Withdrawing after everyone has accepted is its own negotiation: you ask, the
+// others answer, and a deadline decides it if they say nothing. Once the other
+// side has marked something sent, the answer is no and the trade carries on.
+export const tradeWithdrawals = pgTable(
+  'trade_withdrawals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tradeId: uuid('trade_id')
+      .notNull()
+      .references(() => trades.id, { onDelete: 'cascade' }),
+    requestedBy: uuid('requested_by')
+      .notNull()
+      .references(() => users.id),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    // «Svarer ikke Ola innen fristen, fortsetter byttet som vanlig.»
+    respondsBy: timestamp('responds_by', { withTimezone: true }).notNull(),
+    state: withdrawalState('state').notNull().default('waiting'),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    // Set when the answer was no because something had already been sent.
+    blockedBySent: boolean('blocked_by_sent').notNull().default(false),
+  },
+  (t) => [index('withdrawals_trade').on(t.tradeId)],
 )
 
 // ---------------------------------------------------------------------------
