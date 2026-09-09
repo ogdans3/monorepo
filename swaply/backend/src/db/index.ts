@@ -9,7 +9,12 @@ export function connect() {
     throw new Error('DATABASE_URL is not set. Copy .env.example to .env, or run pnpm db:up.')
   }
 
-  const client = postgres(env.DATABASE_URL, { max: env.NODE_ENV === 'test' ? 1 : 10 })
+  const client = postgres(env.DATABASE_URL, {
+    max: env.NODE_ENV === 'test' ? 1 : 10,
+    // Postgres emits a NOTICE per cascaded table on truncate, which buries the
+    // output of the seed and the tests in noise the reader cannot act on.
+    onnotice: () => {},
+  })
   return { client, db: drizzle(client, { schema }) }
 }
 
