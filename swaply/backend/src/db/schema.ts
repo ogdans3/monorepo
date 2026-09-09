@@ -252,9 +252,10 @@ export const tradeOffers = pgTable(
       .notNull()
       .references(() => trades.id, { onDelete: 'cascade' }),
     seq: integer('seq').notNull(),
-    proposedBy: uuid('proposed_by')
-      .notNull()
-      .references(() => users.id),
+    // Null when the cycle search put it on the table. A cycle is not proposed by
+    // anyone, and pretending it came from the last liker would be a small lie in
+    // the one record we may have to show a court.
+    proposedBy: uuid('proposed_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique('offer_seq').on(t.tradeId, t.seq)],

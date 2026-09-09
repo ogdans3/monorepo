@@ -54,4 +54,9 @@ Scaffolding plus a schema. The three skeletons build, start and answer —
 database is real: 21 tables, a `retained` schema for the sealed record, and a
 suite that asserts the invariants against actual Postgres rather than a mock.
 
-No endpoints yet beyond health. `docs/DESIGN.md` closes with the build order.
+The trade engine underneath it is real too: cycle search, the reservation lock,
+offer versions, completion snapshots and erasure, with `backend/test/flows/`
+covering six flows end to end as an executable specification.
+
+No HTTP endpoints yet beyond health. `docs/DESIGN.md` closes with the build
+order.

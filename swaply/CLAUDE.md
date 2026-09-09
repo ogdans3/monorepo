@@ -74,6 +74,13 @@ mocking them would only test the mock.
 pnpm db:up && pnpm db:migrate && pnpm test
 ```
 
+`backend/test/flows/` is the **executable specification**. Each file is one flow
+written as numbered steps that read as sentences, with the rule it exists to pin
+down stated at the top. When a rule here and a rule in `docs/DESIGN.md` disagree,
+one of them is a bug — say which rather than changing the test to match the code.
+Flow files share a database and run in order, which is why `fileParallelism` is
+off.
+
 `backend/test/guard.ts` refuses to run against anything that is not a local host
 or a database whose name says test, because the suite truncates tables. Do not
 weaken it.

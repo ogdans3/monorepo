@@ -1,0 +1,1 @@
+ALTER TABLE "trade_offers" ALTER COLUMN "proposed_by" DROP NOT NULL;
