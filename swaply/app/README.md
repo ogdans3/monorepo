@@ -36,7 +36,13 @@ several rows below point at the same file with a different `state` behind it.
 | 13 Profil · 13b Annen profil · 17c Tom · 16a Rapporter · 16b Innstillinger | `screens/profile.dart` |
 | 06h Vurdering · 07l Vurdering B2 · 06i Tilbakemelding · 09h Fullført | `screens/review.dart` |
 
-## Two things that are honest about being unfinished
+Three things are here that round 5 did not draw, because the invitations needed
+them: the sheet behind the share button on 04 and the invitation row on 16b
+(`widgets/share_sheet.dart`), and the screen a link opens — `InviteScreen` in
+`screens/onboarding.dart`, which is also where looking around without an account
+starts.
+
+## Three things that are honest about being unfinished
 
 **Sign-in with Google, Facebook and Apple** is drawn, and says so when tapped:
 each needs an agreement with the provider and a registered bundle id.
@@ -44,4 +50,9 @@ each needs an agreement with the provider and a registered bundle id.
 **Photo upload** takes a URL rather than opening the camera roll, because the
 OVH bucket it should upload to does not exist yet.
 
-Both are one screen away once the accounts exist. Neither pretends to work.
+**An invitation link opens the app in a browser**, not on the phone. A universal
+link needs a registered domain and a bundle id, and there is neither; on the web
+build the token is read straight out of the address.
+
+All three are one screen away once the accounts exist. None of them pretends to
+work.

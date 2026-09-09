@@ -15,8 +15,11 @@
 
   const people = [
     { name: 'Ola', thing: 'Drill', x: 210, y: 62, labelY: 118 },
-    { name: 'Kari', thing: 'Fiskestang', x: 312.2, y: 239, labelY: 295 },
-    { name: 'Per', thing: 'Bysykkel', x: 107.8, y: 239, labelY: 295 },
+    // The two at the bottom sit lower than the arc that runs between them, or
+    // the arrowhead lands in the middle of a word once the labels grow on a
+    // narrow screen.
+    { name: 'Kari', thing: 'Fiskestang', x: 312.2, y: 239, labelY: 309 },
+    { name: 'Per', thing: 'Bysykkel', x: 107.8, y: 239, labelY: 309 },
   ]
 
   // Clockwise arcs between the three, with a gap either end so an arrowhead
@@ -135,6 +138,23 @@
     fill: var(--on-green-soft);
     font-size: 0.85rem;
     text-anchor: middle;
+  }
+
+  /* The drawing scales with its box, and so does every label in it. On a narrow
+     phone that put the names at about eight pixels, which is a decoration and
+     not a word — so the type inside grows as the box shrinks. */
+  @media (max-width: 26rem) {
+    .node-thing {
+      font-size: 1.35rem;
+    }
+
+    .node-name {
+      font-size: 1.15rem;
+    }
+
+    .node-initial {
+      font-size: 1.9rem;
+    }
   }
 
   @keyframes draw {

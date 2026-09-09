@@ -177,6 +177,11 @@
   }
 
   .wordmark {
+    /* The padding is the tap target, not the type: a thumb needs 44px and the
+       word is 26 tall. The negative margin keeps the bar the height it draws. */
+    display: inline-block;
+    padding: 9px 4px;
+    margin: -9px -4px;
     font-size: 1.25rem;
     font-weight: 700;
     letter-spacing: -0.045em;
