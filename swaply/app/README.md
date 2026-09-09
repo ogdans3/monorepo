@@ -11,6 +11,27 @@ flutter test && flutter analyze
 
 On an Android emulator the host machine is `10.0.2.2`, not `localhost`.
 
+## The export is the authority, and it is a drawing
+
+`../docs/round-5-screens.md` is every **string** in round 5, extracted from the
+file. It says nothing about type or colour, and building from it alone is how
+this app ended up with the right words in the wrong shapes.
+
+The drawing itself is the bundled HTML the design work exports — round 5 of it,
+in the `swapply-design` project. It is a real page: open it in a browser and it
+renders all forty-five screens at 390pt. That also means it can be *asked* for
+its values rather than squinted at:
+
+```js
+// in the page's console, on any element
+getComputedStyle(el).color        // rgb(6, 78, 59) — a title is deep green
+getComputedStyle(el).fontSize     // 23px, and the weight is 800
+```
+
+Every number in `lib/design/tokens.dart` under «read off the round 5 export»
+came out that way. When a screen here looks close but not right, that is the
+place to check before changing anything.
+
 ## Where each screen lives
 
 The trade screen is one widget in every state rather than nine near-copies, so
