@@ -21,7 +21,8 @@
     "app:analyze": "cd app && flutter analyze",
     "app:test": "cd app && flutter test",
     "db:generate": "pnpm --filter @swaply/backend db:generate",
-    "db:migrate": "pnpm --filter @swaply/backend db:migrate"
+    "db:migrate": "pnpm --filter @swaply/backend db:migrate",
+    "db:seed": "pnpm --filter @swaply/backend db:seed"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
