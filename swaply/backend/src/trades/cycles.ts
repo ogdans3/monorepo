@@ -27,6 +27,17 @@ export async function findCyclesThrough(
   liker: string,
   wantedItem: string,
 ): Promise<Cycle[]> {
+  // A chain needs people who can be named to each other, so a wish from a device
+  // that has not been claimed on 10c does not close a loop. It is kept — the
+  // moment the profile is made, the sweep picks it up.
+  //
+  // Only the liker can be in that state: everyone else in a cycle is giving away
+  // a listing, and listing something already requires an account.
+  const [claimed] = await db.execute<Row>(
+    sql`select 1 from users where id = ${liker} and email is not null`,
+  )
+  if (!claimed) return []
+
   const [wanted] = await db.execute<Row>(
     sql`select owner_id from items
         where id = ${wantedItem} and status = 'available' and active_trade_id is null`,

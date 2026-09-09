@@ -4,6 +4,7 @@
 import { sql } from 'drizzle-orm'
 
 import { hashPassword } from '../auth/passwords.js'
+import { createInvite } from '../lib/invites.js'
 import { findCyclesThrough } from '../trades/cycles.js'
 import { openTradeFromCycle, startTalking } from '../trades/trades.js'
 import { connect } from './index.js'
@@ -87,6 +88,14 @@ await db.execute(sql`insert into likes (from_user, target_item) values (${kari},
 await db.execute(sql`insert into likes (from_user, target_item) values (${per}, ${drill})
                      on conflict do nothing`)
 
+// Two links to open the closed door with: one that carries a listing, the way
+// the share button makes them, and one that carries only an invitation.
+const shared = await createInvite(db, { inviterId: ola, itemId: drill })
+const plain = await createInvite(db, { inviterId: kari })
+
 await client.end()
 
 console.log(`Seeded. Sign in as ola@epost.no / kari@epost.no / per@epost.no, password "swaply123".`)
+console.log(`\nInvitations, one use each:`)
+console.log(`  a shared listing  ${shared.url}`)
+console.log(`  a plain invite    ${plain.url}`)

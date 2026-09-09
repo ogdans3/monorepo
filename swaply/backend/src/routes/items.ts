@@ -24,7 +24,9 @@ const itemBody = z.object({
 
 export default async function itemRoutes(app: FastifyInstance) {
   app.post('/items', async (request, reply) => {
-    const userId = app.requireUser(request)
+    // 10c stands between looking around and listing something: a thing on the
+    // market has to belong to somebody with a name.
+    const userId = app.requireClaimedUser(request)
     const body = itemBody.parse(request.body)
 
     if (body.kind === 'item' && !body.condition) {

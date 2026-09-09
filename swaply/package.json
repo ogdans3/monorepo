@@ -23,6 +23,7 @@
     "db:generate": "pnpm --filter @swaply/backend db:generate",
     "db:migrate": "pnpm --filter @swaply/backend db:migrate",
     "db:seed": "pnpm --filter @swaply/backend db:seed",
+    "invite": "pnpm --filter @swaply/backend invite",
     "db:test:setup": "pnpm --filter @swaply/backend db:test:setup"
   },
   "devDependencies": {

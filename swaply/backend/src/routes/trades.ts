@@ -34,7 +34,9 @@ export default async function tradeRoutes(app: FastifyInstance) {
   // Screen 04's message box. Writing is what opens the negotiation, so there is
   // no separate "start a chat" call.
   app.post('/items/:id/message', async (request, reply) => {
-    const userId = app.requireUser(request)
+    // Writing the first message opens a negotiation, which is the moment an
+    // anonymous device has to become a person the other side can hold to it.
+    const userId = app.requireClaimedUser(request)
     const { id } = idParam.parse(request.params)
     const body = z.object({ body: z.string().min(1).max(2000) }).parse(request.body)
 
@@ -77,7 +79,7 @@ export default async function tradeRoutes(app: FastifyInstance) {
   // Screen 06c: the swipe at the bottom of the agreement. Everything above it is
   // what the terms version records.
   app.post('/trades/:id/accept', async (request) => {
-    const userId = app.requireUser(request)
+    const userId = app.requireClaimedUser(request)
     const { id } = idParam.parse(request.params)
     const body = z.object({ termsVersion: z.string().default('2026-09-06') }).parse(request.body ?? {})
 

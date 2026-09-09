@@ -9,6 +9,7 @@ import authPlugin from './plugins/auth.js'
 import authRoutes from './routes/auth.js'
 import chatRoutes from './routes/chat.js'
 import discoveryRoutes from './routes/discovery.js'
+import inviteRoutes from './routes/invites.js'
 import itemRoutes from './routes/items.js'
 import likeRoutes from './routes/likes.js'
 import miscRoutes from './routes/misc.js'
@@ -17,7 +18,12 @@ import tradeRoutes from './routes/trades.js'
 
 // Building the app separately from listening on a port is what lets the tests
 // drive it with `app.inject` and no socket.
-export async function buildApp(db: Database): Promise<FastifyInstance> {
+export async function buildApp(
+  db: Database,
+  // The tests run both sides of the invite wall, and the environment is parsed
+  // once at import, so this is an argument rather than a variable read.
+  opts: { inviteOnly?: boolean } = {},
+): Promise<FastifyInstance> {
   const app = Fastify({
     logger:
       env.NODE_ENV === 'development'
@@ -36,7 +42,7 @@ export async function buildApp(db: Database): Promise<FastifyInstance> {
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['content-type', 'authorization'],
   })
-  await app.register(authPlugin, { db })
+  await app.register(authPlugin, { db, inviteOnly: opts.inviteOnly ?? env.INVITE_ONLY })
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
@@ -60,6 +66,7 @@ export async function buildApp(db: Database): Promise<FastifyInstance> {
   await app.register(authRoutes)
   await app.register(profileRoutes)
   await app.register(itemRoutes)
+  await app.register(inviteRoutes)
   await app.register(discoveryRoutes)
   await app.register(likeRoutes)
   await app.register(tradeRoutes)

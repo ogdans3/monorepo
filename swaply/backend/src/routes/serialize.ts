@@ -13,6 +13,9 @@ export const publicMe = (u: Row) => ({
   ratingAvg: num(u['rating_avg']),
   ratingCount: num(u['rating_count']) ?? 0,
   memberSince: iso(u['created_at']),
+  // Looking around on a device, with no profile yet. An account always has an
+  // e-mail — 10c demands one — so there is nothing else to store for this.
+  anonymous: u['email'] === null,
 })
 
 /** Somebody else: no e-mail, and the phone only where a trade needs it. */
@@ -55,4 +58,23 @@ export const publicMessage = (m: Row) => ({
   body: m['body'],
   createdAt: iso(m['created_at']),
   mine: m['mine'] === undefined ? undefined : Boolean(m['mine']),
+})
+
+/**
+ * A listing on the open web: the fields a link needs to look like something in a
+ * chat, and not one more. No owner id, no like count, no reservation state —
+ * whoever holds the link was given it, and that is not the same as being let
+ * into the app.
+ */
+export const sharedItem = (i: Row) => ({
+  title: i['title'],
+  description: i['description'],
+  kind: i['kind'],
+  category: i['category'],
+  subcategory: i['subcategory'],
+  condition: i['condition'],
+  estimatedValueNok: num(i['estimated_value_nok']),
+  town: i['town'],
+  media: (i['media'] ?? []) as string[],
+  ownerName: i['owner_name'] ?? null,
 })

@@ -66,6 +66,7 @@ export async function anonymiseUser(db: Database, userId: string) {
 
     // Anything that is only ever about this person goes.
     await tx.execute(sql`delete from devices where user_id = ${userId}`)
+    await tx.execute(sql`delete from sessions where user_id = ${userId}`)
     await tx.execute(sql`delete from notifications where user_id = ${userId}`)
     await tx.execute(sql`delete from likes where from_user = ${userId}`)
     await tx.execute(sql`delete from item_media where item_id in
