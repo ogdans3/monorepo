@@ -85,6 +85,22 @@ off.
 or a database whose name says test, because the suite truncates tables. Do not
 weaken it.
 
+## The app
+
+`docs/round-5-screens.md` is every string in the export, extracted from the file.
+**It is the authority for screen content**, and the widget tests assert against
+it — when the app and the export disagree, the export is right. It has already
+caught a thin space where the export uses a plain one.
+
+Screens live one file per cluster under `app/lib/screens/`, and the trade screen
+is one widget in every state rather than nine near-copies. Sheets own their own
+controllers: disposing one from the caller after `showModalBottomSheet` returns
+tears it down while the exit animation is still building the field.
+
+```sh
+cd app && flutter test && flutter analyze
+```
+
 ## Conventions
 
 - Screen copy is Norwegian. Code, comments and commits are English.

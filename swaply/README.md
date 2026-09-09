@@ -49,14 +49,17 @@ pnpm app:analyze && pnpm app:test
 
 ## Where this is
 
-Scaffolding plus a schema. The three skeletons build, start and answer —
-`/health` on the backend, one placeholder page each on web and app — and the
-database is real: 21 tables, a `retained` schema for the sealed record, and a
-suite that asserts the invariants against actual Postgres rather than a mock.
+**The app and the API are built, and every screen in round 5 is in them.**
 
-The trade engine underneath it is real too: cycle search, the reservation lock,
-offer versions, completion snapshots and erasure, with `backend/test/flows/`
-covering six flows end to end as an executable specification.
+- `backend/` — 22 tables including the `retained` schema for the sealed record,
+  the trade engine (cycle search, the reservation lock, offer versions,
+  completion snapshots, erasure) and the endpoints all forty-five screens need.
+  81 tests against real Postgres, 29 of them walking the whole journey over HTTP.
+- `app/` — every screen from `docs/round-5-screens.md`, with 55 widget tests
+  driving the real API client against a fake server.
+- `web/` — still a placeholder. The landing page, invite handling and the public
+  item page are the next surface.
 
-No HTTP endpoints yet beyond health. `docs/DESIGN.md` closes with the build
-order.
+Two things say plainly what is missing rather than pretending: sign-in with
+Google, Facebook or Apple needs provider agreements, and photo upload needs the
+OVH bucket. Both are one screen away when the accounts exist.

@@ -518,6 +518,56 @@ void main() {
     });
   });
 
+  group('09c · 09c2 · 09d the three sheets behind the chips', () {
+    Future<void> openChip(WidgetTester tester, String chip) async {
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      // The chip row scrolls sideways on a narrow phone, so the last one has to
+      // be brought into view the way a thumb would.
+      await tester.ensureVisible(find.text(chip));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(chip));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('09c offering one of yours names the thing on the button',
+        (tester) async {
+      await openChip(tester, 'Foreslå ting');
+
+      expect(find.text('Foreslå en av dine ting'), findsOneWidget);
+      expect(find.textContaining('kan svare «Jeg vil ha» direkte'), findsOneWidget);
+
+      await tester.tap(find.text('Bosch drill 18V').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Foreslå Bosch drill 18V'), findsOneWidget);
+
+      await tester.tap(find.text('Foreslå Bosch drill 18V'));
+      await tester.pumpAndSettle();
+      expect(server.requests, contains('POST /trades/trade-1/counter'));
+      // The other side gets a line in the conversation, not a silent change.
+      expect(server.requests, contains('POST /threads/thread-1/messages'));
+    });
+
+    testWidgets('09c2 asking for more of theirs', (tester) async {
+      await openChip(tester, '♥ Jeg vil ha');
+
+      expect(find.text('Vil du ha noe mer av Kari?'), findsOneWidget);
+      await tester.tap(find.text('Retro spillkonsoll').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Be om Retro spillkonsoll i tillegg'), findsOneWidget);
+    });
+
+    testWidgets('09d the cash sheet states the difference it is suggesting',
+        (tester) async {
+      await openChip(tester, 'Foreslå mellomlegg');
+
+      expect(find.text('Foreslå mellomlegg'), findsWidgets);
+      expect(find.textContaining('Differansen er 600 kr'), findsOneWidget);
+      expect(find.text('Jeg betaler'), findsOneWidget);
+      expect(find.text('Kari betaler'), findsOneWidget);
+      expect(find.text('Ingen'), findsOneWidget);
+    });
+  });
+
   group('11 · 17a trades list', () {
     testWidgets('the three tabs are counted', (tester) async {
       await mount(tester, const TradesScreen());

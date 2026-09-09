@@ -7,7 +7,7 @@ import '../design/tokens.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
-import 'counter_offer.dart';
+import 'proposal_sheets.dart';
 import 'trade_detail.dart';
 
 /// 11a Chats. One row per conversation, with what the trade is about under the
@@ -389,9 +389,14 @@ class _ThreadScreenState extends State<ThreadScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _chip('♥ Jeg vil ha', () => _openCounter(trade)),
-                  _chip('Foreslå ting', () => _openCounter(trade)),
-                  _chip('Foreslå mellomlegg', () => _openCounter(trade)),
+                  // Each chip is its own sheet in the export, not three routes
+                  // into the same screen.
+                  _chip('♥ Jeg vil ha',
+                      () => _propose(trade, ProposalKind.askTheirs)),
+                  _chip('Foreslå ting',
+                      () => _propose(trade, ProposalKind.offerMine)),
+                  _chip('Foreslå mellomlegg',
+                      () => _propose(trade, ProposalKind.cash)),
                 ],
               ),
             ),
@@ -438,17 +443,17 @@ class _ThreadScreenState extends State<ThreadScreen> {
         ),
       );
 
-  Future<void> _openCounter(Trade trade) async {
+  Future<void> _propose(Trade trade, ProposalKind kind) async {
     if (trade.isChain) {
-      // A chain has no counter-offer flow: it is agreed in the chat, which is
-      // the whole point of the banner above.
+      // A chain has no offer to counter: it is agreed here, which is what the
+      // banner above the thread says.
       showError(context, 'Treveis-bytter avtales her i chatten.');
       return;
     }
-    final changed = await Navigator.of(context)
-        .push<bool>(MaterialPageRoute(builder: (_) => CounterOfferScreen(trade: trade)));
-    if (changed == true) await _load();
+    final sent = await showProposalSheet(context, trade: trade, kind: kind);
+    if (sent) await _load();
   }
+
 }
 
 String _relative(DateTime? when) {
