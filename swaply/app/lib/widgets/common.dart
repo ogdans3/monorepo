@@ -262,8 +262,11 @@ class CircleAction extends StatelessWidget {
   }
 }
 
+/// The badge on a listing that says what state it is in: «Tilgjengelig»,
+/// «Reservert». Smaller and tighter than a [Pill], because it sits on top of a
+/// photograph rather than in a row of choices.
 class StatePill extends StatelessWidget {
-  const StatePill(this.label, {super.key, this.color = SwaplyColors.greenDeep, this.soft});
+  const StatePill(this.label, {super.key, this.color = SwaplyColors.greenText, this.soft});
 
   final String label;
   final Color color;
@@ -271,13 +274,16 @@ class StatePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          color: soft ?? color.withValues(alpha: 0.10),
+          color: soft ??
+              (color == SwaplyColors.greenText
+                  ? SwaplyColors.availableBg
+                  : color.withValues(alpha: 0.10)),
           borderRadius: BorderRadius.circular(Radii.pill),
         ),
         child: Text(label,
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: color)),
       );
 }
 

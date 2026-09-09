@@ -596,16 +596,31 @@ class _InterestsScreenState extends State<InterestsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Hva er du\ninteressert i?', style: Type.display),
+                    const Text('Hva er du\ninteressert i?',
+                        style: TextStyle(
+                            fontSize: 28,
+                            height: 1.15,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                            color: SwaplyColors.greenDeep)),
                     const SizedBox(height: Insets.sm),
                     const Text(
                       'Velg 3 til 5 kategorier, så viser vi deg de riktige tingene først.',
-                      style: Type.secondary,
+                      style: TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF5B6862)),
                     ),
                     const SizedBox(height: Insets.lg),
-                    Wrap(
-                      spacing: Insets.sm,
-                      runSpacing: Insets.sm,
+                    // Two columns of wide, soft-cornered tiles — the export
+                    // gives this screen room rather than a hedge of small pills.
+                    // Selected is a green-soft fill with a green edge and a ✓;
+                    // it never fills solid, which would make twelve choices
+                    // look like twelve buttons.
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: Insets.sm + 2,
+                      crossAxisSpacing: Insets.sm + 2,
+                      childAspectRatio: 2.55,
                       children: categoryLabels.entries.map((entry) {
                         final selected = _chosen.contains(entry.key);
                         // At five the rest go quiet rather than shouting an
@@ -620,39 +635,35 @@ class _InterestsScreenState extends State<InterestsScreen> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 160),
                             curve: Curves.easeOut,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: selected ? SwaplyColors.greenPressed : Colors.white,
-                              borderRadius: BorderRadius.circular(Radii.pill),
+                              color: selected ? SwaplyColors.greenSoft : Colors.white,
+                              borderRadius: BorderRadius.circular(Radii.card),
                               border: Border.all(
                                   color: selected
                                       ? SwaplyColors.greenPressed
-                                      : const Color(0x22064E3B)),
+                                      : SwaplyColors.cardLine),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(categoryIcons[entry.key],
-                                    size: 16,
-                                    color: selected
-                                        ? Colors.white
-                                        : locked
-                                            ? SwaplyColors.grey
-                                            : SwaplyColors.ink),
-                                const SizedBox(width: 7),
                                 Text(entry.value,
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
                                       color: selected
-                                          ? Colors.white
+                                          ? SwaplyColors.greenDeep
                                           : locked
-                                              ? SwaplyColors.grey
-                                              : SwaplyColors.ink,
+                                              ? SwaplyColors.greyLight
+                                              : SwaplyColors.inkBody,
                                     )),
                                 if (selected) ...[
                                   const SizedBox(width: 6),
-                                  const Icon(Icons.check, size: 15, color: Colors.white),
+                                  const Text('✓',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: SwaplyColors.greenText)),
                                 ],
                               ],
                             ),

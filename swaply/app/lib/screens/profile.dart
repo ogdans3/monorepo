@@ -75,14 +75,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextButton(
                   onPressed: () => Navigator.of(context)
                       .push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
-                  child: const Text('Innstillinger',
-                      style: TextStyle(color: SwaplyColors.greySoft)),
+                  child: const Text('Innstillinger', style: Type.link),
                 ),
               ],
             ),
             Row(
               children: [
-                Avatar(me.displayName ?? '?', size: 64),
+                Avatar(me.displayName ?? '?', size: 64, mine: true),
                 const SizedBox(width: Insets.md),
                 Expanded(
                   child: Column(
@@ -91,8 +90,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(me.displayName ?? 'Uten navn', style: Type.title),
                       if (me.bankidVerified)
                         const Padding(
-                          padding: EdgeInsets.only(top: 4),
-                          child: StatePill('BankID-verifisert'),
+                          padding: EdgeInsets.only(top: 3),
+                          // Green words, not a filled badge: the export gives
+                          // the pill shape to categories and keeps this quiet.
+                          child: Text('BankID-verifisert',
+                              style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: SwaplyColors.greenText)),
                         ),
                       const SizedBox(height: 4),
                       Row(
@@ -105,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ? 'Ingen vurderinger ennå'
                                   : '${me.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')} · '
                                       '${me.ratingCount} vurderinger',
-                              style: Type.small,
+                              style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -116,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           if (me.town != null) me.town!,
                           if (me.memberSince != null) 'medlem siden ${_month(me.memberSince!)}',
                         ].join(' · '),
-                        style: Type.small,
+                        style: Type.secondary,
                       ),
                     ],
                   ),
@@ -141,8 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: Type.body,
                       ),
                     ),
-                    const Text('Se hvem ›',
-                        style: TextStyle(fontSize: 13, color: SwaplyColors.greenPressed)),
+                    const Text('Se hvem ›', style: Type.link),
                   ],
                 ),
               ),
@@ -151,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Interesser', style: Type.heading),
+                const Text('Interesser', style: Type.section),
                 TextButton(
                   onPressed: () async {
                     final session = context.read<Session>();
@@ -159,18 +163,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         .push(MaterialPageRoute(builder: (_) => const InterestsScreen()));
                     await session.refresh();
                   },
-                  child: const Text('Endre',
-                      style: TextStyle(color: SwaplyColors.greenPressed)),
+                  child: const Text('Endre', style: Type.link),
                 ),
               ],
             ),
             Wrap(
               spacing: Insets.sm,
               runSpacing: Insets.sm,
-              children: me.interests
-                  .map((c) => StatePill(categoryLabels[c] ?? c,
-                      color: SwaplyColors.greenDeep))
-                  .toList(),
+              children: me.interests.map((c) => Pill(categoryLabels[c] ?? c)).toList(),
             ),
             if (me.interests.isEmpty)
               const Text('+ fylles ut mens du bruker appen', style: Type.small),
@@ -180,14 +180,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Flexible(
                   child: Text('Mine gjenstander · ${me.items.length}',
-                      style: Type.heading, overflow: TextOverflow.ellipsis),
+                      style: Type.section, overflow: TextOverflow.ellipsis),
                 ),
                 TextButton.icon(
                   onPressed: () => Navigator.of(context)
                       .push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Legg ut'),
-                  style: TextButton.styleFrom(foregroundColor: SwaplyColors.greenPressed),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Legg ut', style: Type.link),
+                  style: TextButton.styleFrom(foregroundColor: SwaplyColors.greenText),
                 ),
               ],
             ),
