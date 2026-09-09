@@ -1,0 +1,11 @@
+name: Swaply
+description: "Byttapp: si hva du vil ha, og når ønskene lukker en sirkel, bytter dere."
+
+# The one hostname goes to the app, because the app is the product and being
+# able to open all forty-five screens in a browser is the point of deploying it.
+#
+# The API has its own hostname instead, swaply-api.<host>, through a Caddy site
+# block in master-dashboard: the browser client calls it cross-origin, and the
+# dashboard's own proxy gives a project one subdomain.
+compose_service: app
+compose_port: 3000

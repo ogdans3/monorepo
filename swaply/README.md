@@ -57,6 +57,42 @@ pnpm test                        # backend
 pnpm app:analyze && pnpm app:test
 ```
 
+## Deploying
+
+Through the master dashboard, like every other project here. Never by hand:
+`docker compose up` recreates the front-door container and drops it off the
+`aicentral` network, which takes the site down until the dashboard reattaches
+it.
+
+```
+swaply.<host>        the app, in a browser — all forty-five screens
+swaply-api.<host>    the API, through its own Caddy site block
+```
+
+Two hostnames because the app is a browser client calling the API
+cross-origin, and the dashboard gives a project one subdomain. The site block
+lives in `master-dashboard/caddy/sites/swaply-api.caddy` and points at
+`host.docker.internal:4001`, the port the `api` service publishes.
+
+The API origin is **compiled into the app bundle** — there is no server in the
+app image to read an environment variable — so a deploy has to set it:
+
+```sh
+PUBLIC_API_ORIGIN=https://swaply-api.<host>
+CORS_ORIGINS=https://swaply.<host>
+```
+
+Change either one and the app has to be rebuilt, not just restarted.
+
+`MIGRATE_ON_BOOT` defaults to `1` in the compose file: the image carries the
+SQL that matches it and nobody is going to run a migration by hand against a
+container. It races if you ever run more than one API replica.
+
+`DATABASE_URL` in `.env` is for host tooling — the dev server, migrations, the
+seed, the tests. The container gets `API_DATABASE_URL`, and falls back to the
+database next door. They are separate on purpose: Compose substitutes from
+`.env`, and `localhost` inside a container is the container.
+
 ## Where this is
 
 **The app and the API are built, and every screen in round 5 is in them.**

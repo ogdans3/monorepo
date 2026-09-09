@@ -1,22 +1,79 @@
-# Postgres for local development only. The port is 5434 rather than 5432 because
-# this machine already has other projects' databases on 5432 and 5433. Override
-# with POSTGRES_PORT if that one is taken too.
+# One file for both jobs. `docker compose up -d db` is the development database;
+# the dashboard brings up all three for a deploy.
+name: swaply
+
 services:
   db:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: swaply
-      POSTGRES_PASSWORD: swaply
-      POSTGRES_DB: swaply
+      POSTGRES_USER: ${POSTGRES_USER:-swaply}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-swaply}
+      POSTGRES_DB: ${POSTGRES_DB:-swaply}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8'
     ports:
+      # 5434 rather than 5432 because this machine already has other projects'
+      # databases on 5432 and 5433. Override with POSTGRES_PORT if that one is
+      # taken too.
       - '${POSTGRES_PORT:-5434}:5432'
     volumes:
       - swaply-db:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U swaply']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-swaply} -d ${POSTGRES_DB:-swaply}']
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 12
 
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Deliberately NOT ${DATABASE_URL}. Compose substitutes from .env, and the
+      # .env here holds the host's URL — localhost:5434 — which inside a
+      # container points at the container itself. `DATABASE_URL` is for host
+      # tooling (migrate, seed, tests); this is for the container, and a hosted
+      # database goes in API_DATABASE_URL.
+      DATABASE_URL: ${API_DATABASE_URL:-postgres://${POSTGRES_USER:-swaply}:${POSTGRES_PASSWORD:-swaply}@db:5432/${POSTGRES_DB:-swaply}}
+      # The image carries the SQL that matches it, and nobody is going to run a
+      # migration by hand against a container.
+      MIGRATE_ON_BOOT: ${MIGRATE_ON_BOOT:-1}
+      # Empty reflects any origin. A deployment sets the app's own hostname.
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    ports:
+      # Published so Caddy can reach it at host.docker.internal:<port>. The bind
+      # address is a variable so a deployment can keep it off the public
+      # internet: on this host, API_BIND=172.17.0.1, the docker bridge gateway.
+      - '${API_BIND:-0.0.0.0}:${API_PORT:-4001}:3000'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        # Compiled into the bundle. The browser calls the API cross-origin, at
+        # its own hostname, so this cannot be a relative path.
+        API_BASE: ${PUBLIC_API_ORIGIN:-http://localhost:4001}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - '${APP_BIND:-0.0.0.0}:${APP_PORT:-5175}:3000'
+
+# Keeps the name it was created with. Renaming a volume does not move the data,
+# it orphans it.
 volumes:
   swaply-db:

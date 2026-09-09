@@ -25,7 +25,10 @@ export async function buildApp(db: Database): Promise<FastifyInstance> {
         : env.NODE_ENV !== 'test',
   })
 
-  await app.register(cors, { origin: true })
+  const allowed = env.CORS_ORIGINS.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+  await app.register(cors, { origin: allowed.length > 0 ? allowed : true })
   await app.register(authPlugin, { db })
 
   app.setErrorHandler((error, request, reply) => {
