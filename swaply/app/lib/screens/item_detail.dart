@@ -116,6 +116,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
 
     final owner = item.owner;
+    // Your own listing is a real thing to land on — from your profile, or from
+    // a link you sent yourself — and the two buttons at the bottom are both
+    // things the server will refuse. So it says what it is instead.
+    final mine = owner != null && owner.id == context.watch<Session>().me?.id;
 
     return SwaplyScaffold(
       currentTab: 0,
@@ -162,7 +166,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         _ownerStrip(owner),
                       ],
                       const SizedBox(height: Insets.lg),
-                      _conversationBox(owner),
+                      if (mine)
+                        const SectionCard(
+                          child: Text(
+                            'Dette er din egen ting. Slik ser andre den.',
+                            style: Type.secondary,
+                          ),
+                        )
+                      else
+                        _conversationBox(owner),
                       const SizedBox(height: Insets.lg),
                     ],
                   ),
@@ -170,7 +182,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               ],
             ),
           ),
-          _actionBar(item),
+          if (!mine) _actionBar(item),
         ],
       ),
     );

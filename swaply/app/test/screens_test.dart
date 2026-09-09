@@ -888,6 +888,20 @@ void main() {
     });
   });
 
+  group('04 your own listing', () {
+    testWidgets('offers nothing the server would refuse', (tester) async {
+      await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
+
+      expect(find.text('Dette er din egen ting. Slik ser andre den.'), findsOneWidget);
+      // Both of these are refused with «Dette er din egen gjenstand».
+      expect(find.text('Jeg vil ha'), findsNothing);
+      expect(find.textContaining('Skriv en melding'), findsNothing);
+      // The share button stays: sending your own listing to somebody is the
+      // whole point of it.
+      expect(find.byIcon(Icons.ios_share), findsOneWidget);
+    });
+  });
+
   group('10b photographs', () {
     testWidgets('a picked photo is uploaded and shown in the strip', (tester) async {
       await mount(

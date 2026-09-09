@@ -86,6 +86,12 @@ class FakeServer {
           },
         'GET /discover/subcategories' => {'subcategories': ['Elektroverktøy']},
         'GET /items/item-drill' => {...drill, 'owner': kari},
+        'GET /items/item-mine' => {
+            ...drill,
+            'id': 'item-mine',
+            'ownerId': me['id'],
+            'owner': {'id': me['id'], 'displayName': 'Ola N.'},
+          },
         'GET /items/item-console' => {...console, 'owner': kari},
         'POST /items/item-console/like' =>
           {'liked': true, 'tradeId': trade['id'], 'promptToList': false, 'likedCount': 3},
