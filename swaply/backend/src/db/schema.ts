@@ -122,6 +122,21 @@ export const devices = pgTable('devices', {
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+// Only the hash of a bearer token is stored, the same way a password is. A
+// stolen database should not hand out live sessions.
+export const sessions = pgTable(
+  'sessions',
+  {
+    tokenHash: text('token_hash').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('sessions_user').on(t.userId)],
+)
+
 export const invites = pgTable('invites', {
   // Only the hash. A raw invite token is never stored, the same way a password
   // is not.

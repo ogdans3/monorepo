@@ -1,7 +1,9 @@
 import { buildApp } from './app.js'
+import { connect } from './db/index.js'
 import { env } from './env.js'
 
-const app = buildApp()
+const { db } = connect()
+const app = await buildApp(db)
 
 try {
   await app.listen({ port: env.PORT, host: '0.0.0.0' })

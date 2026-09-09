@@ -15,9 +15,11 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
     "@swaply/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.6.0",
+    "fastify-plugin": "^6.0.0",
     "postgres": "^3.4.9",
     "zod": "^3.25.76"
   },
