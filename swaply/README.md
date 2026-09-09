@@ -80,13 +80,21 @@ swaply-api.<host>    the API, through its own Caddy site block
 swaply-web.<host>    the public web: the landing page and every shared link
 ```
 
+`<host>` is `freelunch.no` on the machine this runs on, and any subdomain of it
+already resolves without a DNS change.
+
 Three hostnames because the dashboard gives a project one subdomain, and this
-project deploys three things that a browser talks to. The API's site block lives
-in `master-dashboard/caddy/sites/swaply-api.caddy` and points at
-`host.docker.internal:4001`; **the web needs the same treatment**, pointing at
-`host.docker.internal:4002`, the port the `web` service publishes. Until that
-block exists the web service runs and answers on the host, and the links it mints
-point at whatever `PUBLIC_WEB_ORIGIN` says.
+project deploys three things a browser talks to. The two extra ones are Caddy
+site blocks in the dashboard's own tree — `caddy/sites/swaply-api.caddy` pointing
+at `host.docker.internal:4001` and `caddy/sites/swaply-web.caddy` at
+`host.docker.internal:4002` — which is why both services publish a host port
+instead of only exposing one. A published port survives the container being
+recreated on the next deploy; a container IP does not.
+
+Nothing served this way is behind the dashboard's login: a project subdomain is
+public, and each project does its own auth. That is what makes an invitation link
+work for somebody who has never heard of us, and it is why the API has its own
+entrance rather than sitting on a dashboard subdomain.
 
 If the public page should own the short name instead — it is the one strangers
 see — swap `compose_service` in `.dashboard.yaml` to `web` and give the app the
