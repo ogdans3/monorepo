@@ -132,12 +132,24 @@ AppBar swaplyAppBar(BuildContext context, String title,
           )
         : null,
     titleSpacing: showBack ? 0 : Insets.screen,
+    // Every screen with a back arrow names itself big and deep green in the
+    // export — «Innstillinger», «Bytte med Ola», «Likt». Ink at heading size is
+    // what a settings app does; this is what the drawing does.
+    toolbarHeight: subtitle == null ? 62 : 74,
     title: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: Type.heading),
-        if (subtitle != null) Text(subtitle, style: Type.small),
+        Text(title,
+            style: const TextStyle(
+                fontSize: 22,
+                height: 1.1,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.4,
+                color: SwaplyColors.greenDeep),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
+        if (subtitle != null) Text(subtitle, style: Type.secondary),
       ],
     ),
     actions: actions,

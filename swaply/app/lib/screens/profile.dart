@@ -425,6 +425,8 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
         children: [
           const Kicker('Konto'),
+          const SizedBox(height: Insets.sm),
+          _group([
           _tile(context, 'Profil', me?.displayName,
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
@@ -445,13 +447,17 @@ class SettingsScreen extends StatelessWidget {
           _tile(context, 'Inviter en venn', 'Lag en lenke å sende',
               onTap: () => showShareSheet(context,
                   title: 'Inviter en venn', mint: (api) => api.createInvite())),
+          ]),
           const SizedBox(height: Insets.lg),
           const Kicker('Varsler'),
-          const _NotificationToggle(label: 'Swaps og bytter'),
-          const _NotificationToggle(label: 'Meldinger'),
-          const _NotificationToggle(label: 'Likes på tingene mine'),
+          const SizedBox(height: Insets.sm),
+          _group(const [
+            _NotificationToggle(label: 'Swaps og bytter'),
+            _NotificationToggle(label: 'Meldinger'),
+            _NotificationToggle(label: 'Likes på tingene mine'),
+          ]),
           const SizedBox(height: Insets.lg),
-          _tile(context, 'Juridisk og personvern', null, onTap: () => _showLegal(context)),
+          _group([_tile(context, 'Juridisk og personvern', null, onTap: () => _showLegal(context))]),
           const SizedBox(height: Insets.lg),
           SecondaryButton('Logg ut', destructive: true, onPressed: () async {
             await context.read<Session>().logout();
@@ -466,14 +472,28 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  /// The export keeps a group of rows inside one card rather than letting them
+  /// float on the background with dividers between.
+  Widget _group(List<Widget> rows) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: SwaplyColors.cardLine),
+        ),
+        child: Column(children: rows),
+      );
+
   Widget _tile(BuildContext context, String title, String? value, {VoidCallback? onTap}) =>
       ListTile(
         contentPadding: EdgeInsets.zero,
-        title: Text(title, style: Type.body),
-        subtitle: value == null || value.isEmpty ? null : Text(value, style: Type.small),
+        title: Text(title,
+            style: const TextStyle(
+                fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
+        subtitle: value == null || value.isEmpty ? null : Text(value, style: Type.secondary),
         trailing: onTap == null
             ? null
-            : const Icon(Icons.chevron_right, color: SwaplyColors.grey),
+            : const Icon(Icons.chevron_right, size: 20, color: Color(0xFFC9CFCA)),
         onTap: onTap,
       );
 
@@ -552,7 +572,9 @@ class _NotificationToggleState extends State<_NotificationToggle> {
   @override
   Widget build(BuildContext context) => SwitchListTile(
         contentPadding: EdgeInsets.zero,
-        title: Text(widget.label, style: Type.body),
+        title: Text(widget.label,
+            style: const TextStyle(
+                fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
         value: _on,
         activeThumbColor: SwaplyColors.greenPressed,
         onChanged: (v) => setState(() => _on = v),
