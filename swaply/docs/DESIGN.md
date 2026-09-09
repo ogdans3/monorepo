@@ -4,11 +4,12 @@ A bartering platform where users trade items directly. Say you want something; w
 
 **The name is "Swaply", one p** — decided 06.09.2026. Earlier drafts of this file said "Swappify"; the screen mockups have said Swaply from round 1. The folder `swappify/` and the `swapply-design` deployment slug are historical identifiers and are not being renamed.
 
-This document is current as of round 5 (brief: `round-5-brief.md`, decisions: `meeting-notes-2026-09-06.md`). Where it disagrees with the screen exports, the exports win and this file is behind.
+This document is current as of round 5 (brief: `round-5-brief.md`, decisions: `meeting-notes-2026-09-06.md`) and the architecture decisions of 09.09.2026 (`ARCHITECTURE.md`, which holds the reasoning this file only states). Where it disagrees with the screen exports, the exports win and this file is behind.
 
 ## Scope (v1)
 
 - **Mobile app only** (Flutter). Web is a landing page **plus a public page per item** — see *Sharing*.
+- **Items and services.** A listing is a thing or a piece of work, and it may have no photo at all.
 - **Invite-only** via deep links.
 - **Anonymous-first**: no sign-up to add an item or express interest. Accounts are deferred until a match needs a stable identity.
 - **We are not a party to the trade.** No shipping, no payment, no cut — see *Facilitation*.
@@ -30,7 +31,8 @@ The consequence for revenue is real: a per-trade admin fee is off the table as l
 - **Backend**: Node + TypeScript
 - **Web**: SvelteKit (landing, invite handling, public item pages)
 - **DB**: Postgres
-- **Media**: Backblaze B2, delivered via Cloudflare (`items.media` holds URLs)
+- **Media**: OVH Object Storage. Item photos are personal data, so they stay inside the EEA along with everything else
+- **Hosting**: our own boxes at OVH, EEA-owned, with the API on its own authenticated entrance
 - **Push**: FCM + APNs
 - **Repo**: monorepo — `app/`, `backend/`, `web/`, `shared/`
 
@@ -69,34 +71,51 @@ A match is a **cycle** in this graph:
 - **Direct (2-cycle)**: A wants B's item and B wants A's → mutual swap.
 - **Chain (3-cycle)**: A→B→C→A. Each person gives the next what they want.
 
-**Depth is capped at 3 hops.** The many-way flow was cut in round 4, so the earlier cap of 5 no longer describes anything we build. On each new like, search for a cycle back to the liker (recursive CTE / BFS). On a hit, record a `pending` match and push-notify all participants.
+**Depth is capped at 3 hops.** The many-way flow was cut in round 4, so the earlier cap of 5 no longer describes anything we build. The two-cycle and the three-cycle are written as two explicit joins rather than a recursive CTE: at a cap of three, generality buys nothing and costs readability.
+
+The search runs on three triggers — a new like, an item becoming available again, and a nightly sweep — because an incremental search only finds cycles through the new edge. On a hit, record a `pending` trade and push-notify all participants.
 
 ### A trade is not one item against one item
 
 Each side of a hop is a **list of 1–3 items**, with a total value per side and the difference between them recorded as *mellomlegg*: «Mellomlegg: du legger til 200 kr». The cycle search still works on single-item edges — the like is what closes the loop; the item lists are what the parties negotiate afterwards.
 
+### Services, and listings without photos
+
+A listing is either an item or a service. A service has no condition — "worn" says nothing about shovelling snow — and, more importantly, **it is never exclusive**: one person can paint three living rooms, so a service never holds a reservation the way a drill does.
+
+Photos are optional for both. Discovery is a collage, so a listing without one needs a generated card rather than a hole: category mark and title on deep green.
+
 ### Lifecycle
 
 ```
-pending ⇄ countered → accepted → completed
-   └──────────┴──────→ cancelled
+talking → pending ⇄ countered → accepted → completed
+   └──────────┴──────────┴──────────────→ cancelled
 ```
 
-- **pending** — cycle found. Involved items become `reserved` (hidden from discovery so they can't be double-matched). Each participant sees whose turn it is.
+- **talking** — someone wrote the first message. Participants exist, the offer is empty or half filled, and **nothing is reserved**. Several people can be in a `talking` trade about the same item at once, which is correct: three people may want the same drill.
+- **pending** — a cycle was found, or a concrete offer is on the table. Each participant sees whose turn it is.
 - **countered** — a participant proposed a different composition (other items, different *mellomlegg*) instead of accepting. This is a state, not just a button: a trade can go back into negotiation rather than only forward. The counterparty then faces the same three actions.
 - Three actions are always available on your turn: **Avslå** · **Foreslå motbytte** · **Godta bytte**.
 - Accepting goes through **the agreement screen** before it counts: a plain-language summary of who gives what to whom and where, a terms checkbox, the non-facilitation sentence, and a swipe-to-accept that stays disabled until the box is ticked. BankID is prompted after this, on first accept.
-- **accepted** — everyone has accepted; items flip to `traded`.
-- **De-accept** reverses your acceptance → back to `pending`, items back to `reserved`. Any single de-accept holds the whole trade. There is a point past which this stops being possible — see *Open questions*.
+- **An acceptance belongs to a specific version of the offer**, not to the trade. A counter-offer creates a new version and leaves earlier acceptances on the version they were given for, which is the only way to avoid having accepted something else.
+- **accepted** — everyone has accepted; items flip to `traded`, and the trade takes a snapshot of what was traded so the listings can be deleted without erasing anyone's history.
+- **De-accept** reverses your acceptance → back to `pending`. Any single de-accept holds the whole trade. There is a point past which this stops being possible — see *Open questions*.
+
+### Reservation
+
+**An item is reserved when its own owner's acceptance lands on an offer containing it.** Not when a conversation starts, or anyone could freeze your things by saying hello; and not at `pending`, which freezes people's things on a maybe. Each party locks their own contribution by accepting.
+
+One item is in at most one trade, and that is a column rather than a discipline. When an item is locked by one trade, every other trade holding it is closed with a reason in words — never a silent disappearance.
 
 ## Chat
 
-Text-only in v1. Two kinds of thread, and this is a change: **a conversation no longer always hangs off a match.**
+Text-only in v1. **One thread per trade, always** — there is no free-floating conversation.
 
-- **Per item, between two users** — started from the item detail page, before any trade exists. Header «Snakk med Ola», a text field, and three chips above it: `Jeg vil ha` · `Foreslå ting` · `Foreslå mellomlegg`.
-- **Per match, all participants together** — a chain trade only works if everyone syncs. Confirmed 06.09 after wavering between rounds.
+Which means writing the first message about an item *is* opening a negotiation, and it creates a trade in `talking`. That is what the chips above the field are: `Jeg vil ha` · `Foreslå ting` · `Foreslå mellomlegg` are actions on a trade, not on a conversation.
 
-The same conversation component appears in the item detail, in the trade detail, and while waiting for the others to accept. You can always talk to the counterparty, at every stage.
+The four cases then follow from the model rather than needing rules of their own. No trade between you: an empty box that will create one. One trade: that thread. Several: a list of the trades with their items, opened from there. And on an item there is only ever your own conversation about it, so only the first two can happen.
+
+A chain trade's thread holds all participants together — it only works if everyone syncs. The same conversation component appears in the item detail, in the trade detail, and while waiting for the others to accept.
 
 **Read state is per participant**, which is what the unread badge on the Chats tab counts.
 
@@ -128,22 +147,53 @@ Two separate things after a completed trade, and they are not the same screen:
 - **Review of the counterparty** — five stars, optional text, quick chips (`Kom som avtalt` · `God kommunikasjon` · `Møtte ikke opp`). Feeds the profile rating.
 - **Feedback about Swaply** — a 1–5 scale and one free-text field, shown far less often.
 
-## Data model (sketch)
+## Data model
 
-- `users` — anonymous (device-scoped) until claimed. On claim: display_name, email *or* phone, location (town/county — coarse, no street address); `rating` (aggregate from reviews); `interests` (category list, 3–5, set at first run); `bankid_verified_at`
-- `items` — owner, title, description, media (image URLs; video later), estimated_price (user-set), category/tags, condition, location (coarse), status (available/reserved/traded)
-- `likes` — from_user, target_item. *(Was `swipes`. See open question 3 on whether it also carries an offered item.)*
-- `matches` — ordered participants, state (pending/countered/accepted/completed/cancelled), depth
-- `match_hops` — match, from_participant, to_participant, cash_difference (the *mellomlegg* for that hop, a recorded agreement — not a transaction)
-- `match_hop_items` — hop, item, direction (given/received). 1–3 per direction; this is what replaces the old single give/get per hop
-- `match_participants` — match, user, accepted (bool), accepted_at, terms_accepted_at
-- `threads` — either `match_id` (group thread) *or* (`item_id` + two users) for a pre-trade conversation. Exactly one of the two.
-- `messages` — thread, sender, body
-- `message_reads` — thread, user, last_read_message_id (drives the unread badge)
-- `reviews` — match, rater, ratee, score, comment (after a completed trade)
-- `app_feedback` — user, score, comment (about Swaply, not the counterparty)
-- `reports` / `blocks` — reporter/blocker, target (user or item), reason
-- `invites` — deep-link token, inviter, optional `item_id` when the token came from a share link
+The schema is code now: `backend/src/db/schema.ts`, with the migration in
+`backend/drizzle/`. That file is the authority; this is the shape of it.
+
+- `users` — anonymous (device-scoped) until claimed, then display name, email
+  *or* phone, coarse location, 3–5 interests, and a **pseudonymous BankID
+  subject**. Never a fødselsnummer.
+- `items` — a listing, item or service, with an optional photo set and an
+  `active_trade_id` that is the reservation.
+- `likes` — the directed edge, and nothing else.
+- `trades` / `trade_participants` — the negotiation and who is in it, in cycle
+  order.
+- `trade_offers` / `trade_offer_items` / `trade_offer_cash` — one immutable row
+  per version of the deal. The current offer is the highest `seq`.
+- `trade_acceptances` — keyed on the **offer**, with the terms version that was
+  ticked.
+- `trade_item_snapshots` — what was actually traded, copied at completion.
+- `threads` / `thread_participants` / `messages` — one thread per trade, with
+  read state per participant.
+- `reviews`, `app_feedback`, `reports`, `blocks`, `notifications`, `invites`,
+  `devices`.
+- `retained.identities` and `retained.blocked_subjects` — the sealed record, in
+  its own schema with its own grants. See *Erasure and retention*.
+
+## Erasure and retention
+
+Deleting an account happens in two layers, because Article 17 is not absolute:
+17(3)(e) preserves what is needed to establish or defend a legal claim, which is
+the case where someone has been defrauded.
+
+1. **The profile is anonymised immediately** — name, contact details, interests,
+   likes, push tokens. The user becomes a tombstone everywhere in the app.
+2. **A sealed record survives** in the `retained` schema, holding only enough to
+   identify a person to a court: the BankID subject, contact channel and display
+   name. The running app does not read from it.
+
+**Retention is the completed trade plus three years**, the general limitation
+period in foreldelsesloven § 2. Messages follow the same window, because the
+evidence in a dispute is almost always in the chat.
+
+Reports and blocks outlive the reported user, or delete-and-re-register is a free
+wash of the record. Deleting an account cancels its active trades first, with a
+reason to the other side.
+
+`ARCHITECTURE.md` has the rest, including the legal bases and why the photos
+moved to OVH.
 
 ## Screens
 
@@ -156,17 +206,19 @@ Round 5 came back with 45 screens and departs from the brief in two places worth
 1. **The point of no return.** Round 4 introduced a terminal state, «Ikke mulig, en ting er sendt»: past some moment you can no longer back out. Since we don't facilitate shipping, "sent" is self-reported, and nobody has defined who reports it, what it does to a three-way trade when one person has sent and another wants out, or what recourse the sender has. Left undecided on 06.09.
 2. **Revenue.** Four ideas from 31.07, none of which has appeared in any of five rounds of screens. "An ad every 10th swipe" needs a swipe, which no longer exists. A per-trade admin fee needs facilitation, which we've now ruled out. That leaves ads in the collage and paying to unlock contact info — and the honest option of saying out loud that the MVP is free and unmonetised, so it stops resurfacing every round.
 3. **Does a like carry the item you're offering?** The original model made a swipe an offer of a specific item of yours. With multi-item trades and counter-offers, composing the trade has moved to the negotiation screens, so a like is modelled above as just "I want this". If a like should still name what you'd give, the cycle search changes shape.
-4. **Services.** Trading services for services, or services for items, was raised on 31.07 and has never appeared in a screen or in this file.
+4. **How long do we keep messages beyond a dispute?** Three years is set by the claim window above. Whether an ordinary conversation that never became a trade should live that long is a separate, unanswered question.
 
 ## Next steps
 
-No code exists yet — this repo is five markdown files after six weeks and four design rounds. The build order, unchanged in shape:
+Scaffold and schema are done. What is left, in order:
 
-1. Monorepo scaffold + Postgres schema + B2/Cloudflare media upload
-2. Item CRUD + discovery search
-3. Like endpoint + 2-cycle match
-4. Trade composition, counter-offer and accept flow (incl. the agreement screen)
-5. 3-cycle search
-6. Chat (both thread kinds) + read state + push notifications
-7. Invite deep link + share link + public item page + anonymous account flow
-8. Report/block, reviews
+1. ~~Scaffold + Postgres schema~~ — done 09.09.2026
+2. Media upload to OVH Object Storage
+3. Item CRUD + discovery search
+4. Like endpoint + 2-cycle match, with the reservation lock and the loser path
+5. Trade composition, counter-offer and accept flow (incl. the agreement screen)
+6. 3-cycle search + the nightly sweep
+7. Chat + read state + push notifications
+8. Invite deep link + share link + public item page + anonymous account flow
+9. Report/block, reviews
+10. Erasure: anonymisation, the sealed record, and the purge job

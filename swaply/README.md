@@ -4,8 +4,9 @@ A bartering app. Say what you want, and when the wishes close a loop — directl
 or through a chain of three people — everyone swaps. Invite-only, and we are not
 a party to the trade: no shipping, no payment, no cut.
 
-`docs/DESIGN.md` is the product as decided, and it is the authority for
-everything here.
+`docs/DESIGN.md` is the product as decided and `docs/ARCHITECTURE.md` is how it
+stands up — hosting, matching, the trade model and the erasure model. Between
+them they are the authority for everything here.
 
 ## Layout
 
@@ -31,8 +32,9 @@ outside it and uses `flutter pub`.
 
 ```sh
 pnpm install
-pnpm db:up          # Postgres in Docker, on 5434 to miss the ports in use
 cp .env.example .env
+pnpm db:up          # Postgres in Docker, on 5434 to miss the ports in use
+pnpm db:migrate
 pnpm dev            # backend on 3001, web on 5174
 pnpm dev:app        # the Flutter app, separately
 ```
@@ -47,7 +49,9 @@ pnpm app:analyze && pnpm app:test
 
 ## Where this is
 
-Scaffolding. The three skeletons build, start and answer, and that is all they
-do — `/health` on the backend, one placeholder page each on web and app. There
-is no database schema yet, which is the next thing: `docs/DESIGN.md` has the
-model sketched under *Data model*, and its *Next steps* list is the build order.
+Scaffolding plus a schema. The three skeletons build, start and answer —
+`/health` on the backend, one placeholder page each on web and app — and the
+database is real: 21 tables, a `retained` schema for the sealed record, and a
+suite that asserts the invariants against actual Postgres rather than a mock.
+
+No endpoints yet beyond health. `docs/DESIGN.md` closes with the build order.
