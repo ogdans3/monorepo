@@ -6,23 +6,43 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
+import '../widgets/confetti.dart';
 import '../widgets/shell.dart';
 import 'discover.dart';
 
 /// 01 Splash. Deep green, the wordmark, nothing else.
+/// 01. Deep green, two faint rings, the wordmark — and the same slow confetti
+/// as the match screen, because the two are the app's two moments.
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
+  Widget build(BuildContext context) => Scaffold(
         backgroundColor: SwaplyColors.greenDeep,
-        body: Center(
-          child: Text('swaply',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1.4)),
+        body: Stack(
+          children: [
+            // The rings, where the export draws them on a 390×844 frame.
+            Positioned(left: 24, top: 244, child: _ring(342, 0.07)),
+            Positioned(left: -46, top: 174, child: _ring(482, 0.05)),
+            const Positioned.fill(child: Confetti()),
+            const Center(
+              child: Text('swaply',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 42,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1.2)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _ring(double size, double alpha) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: alpha)),
         ),
       );
 }

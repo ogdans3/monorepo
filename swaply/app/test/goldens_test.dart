@@ -96,6 +96,9 @@ class _Frame extends StatelessWidget {
           data: mq.copyWith(
             padding: mq.padding.copyWith(top: 46),
             viewPadding: mq.viewPadding.copyWith(top: 46),
+            // A picture cannot drift: the confetti holds still, as on a phone
+            // that has asked for less motion.
+            disableAnimations: true,
           ),
           child: child,
         ),

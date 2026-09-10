@@ -46,7 +46,15 @@ Future<void> mount(WidgetTester tester, Widget screen, {bool signedIn = true}) a
         Provider<SwaplyApi>.value(value: api),
         ChangeNotifierProvider<Session>.value(value: session),
       ],
-      child: MaterialApp(home: screen),
+      child: MaterialApp(
+        home: screen,
+        // pumpAndSettle waits for every animation to end, and the confetti
+        // never does; it holds still when the phone asks for less motion.
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();

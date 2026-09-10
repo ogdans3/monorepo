@@ -9,6 +9,7 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
+import '../widgets/confetti.dart';
 import '../widgets/shell.dart';
 import 'agreement.dart';
 import 'chat.dart';
@@ -67,11 +68,9 @@ class _MatchScreenState extends State<MatchScreen> {
       backgroundColor: SwaplyColors.greenDeep,
       body: Stack(
         children: [
-          // Confetti, at the four spots the export puts it.
-          const Positioned(left: 44, top: 120, child: _Dot(8, SwaplyColors.greenPressed)),
-          const Positioned(left: 314, top: 88, child: _Dot(6, SwaplyColors.badge)),
-          const Positioned(left: 344, top: 189, child: _Dot(12, Color(0xFF9BD9BE), square: true)),
-          const Positioned(left: 40, top: 587, child: _Dot(7, Color(0xFF9BD9BE))),
+          // Confetti, starting at the four spots the export puts it and
+          // drifting up from there.
+          const Positioned.fill(child: Confetti()),
           SafeArea(
             child: Column(
               children: [
@@ -290,25 +289,6 @@ class _MatchScreenState extends State<MatchScreen> {
               ),
             ),
         ],
-      );
-}
-
-class _Dot extends StatelessWidget {
-  const _Dot(this.size, this.colour, {this.square = false});
-
-  final double size;
-  final Color colour;
-  final bool square;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: colour,
-          shape: square ? BoxShape.rectangle : BoxShape.circle,
-          borderRadius: square ? BorderRadius.circular(2) : null,
-        ),
       );
 }
 
