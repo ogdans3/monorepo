@@ -205,14 +205,14 @@
   }
 
   .badge {
+    /* The chip the app draws on its green screen: a twelfth of white, no edge. */
     display: inline-block;
     font-size: 0.8rem;
     font-weight: 600;
-    letter-spacing: 0.02em;
     color: var(--on-green);
-    border: 1px solid rgba(242, 247, 244, 0.32);
+    background: rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-pill);
-    padding: 0.3rem 0.85rem;
+    padding: 0.32rem 0.75rem;
     margin-bottom: 1.5rem;
   }
 
@@ -290,24 +290,28 @@
   }
 
   .steps li {
-    /* A real sequence, so the number carries information. The rule underneath
-       ties the three together without turning them into cards. */
-    border-top: 1px solid var(--line);
-    padding-top: 1.25rem;
+    /* The app's card: white, 18 on the corners, a hairline of #ECEFEA. A real
+       sequence, so the number carries information. */
+    background: var(--surface);
+    border: 1px solid var(--card-line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.15rem 1.25rem;
   }
 
   .step-no {
     display: block;
-    font-size: 0.95rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    color: var(--green-pressed);
+    letter-spacing: 0.06em;
+    color: var(--green-text);
     margin-bottom: 0.6rem;
   }
 
   .steps h3 {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
     font-weight: 700;
     letter-spacing: -0.02em;
+    color: var(--ink);
   }
 
   .steps p {
@@ -317,7 +321,9 @@
   }
 
   .statement {
-    background: var(--green-soft);
+    /* The tinted tile the app uses for the one thing it wants you to read. */
+    background: var(--tile);
+    border: 1px solid var(--tile-line);
     border-radius: var(--radius-lg);
     padding: clamp(2.5rem, 6vw, 4.5rem);
   }
@@ -361,7 +367,7 @@
   .facts li::before {
     content: '—';
     margin-right: 0.55rem;
-    color: var(--green);
+    color: var(--green-text);
   }
 
   .trust-grid {
@@ -385,6 +391,10 @@
     display: block;
     color: var(--ink);
     font-weight: 700;
+  }
+
+  .invite h2 {
+    color: var(--on-green);
   }
 
   .invite {
@@ -412,19 +422,21 @@
   }
 
   input {
+    /* A form field, the app's way: 14 on the corners, white, a hairline. */
     flex: 1 1 18rem;
     min-width: 0;
     font: inherit;
+    font-size: 0.95rem;
     color: var(--ink);
-    background: var(--on-green);
-    border: 1.5px solid transparent;
-    border-radius: var(--radius-pill);
-    padding: 0.9rem 1.35rem;
+    background: #fff;
+    border: 1px solid var(--field-line);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 0.9rem;
   }
 
   input::placeholder {
     /* Placeholders carry the same contrast rule as body text. */
-    color: #5d6a63;
+    color: var(--ink-muted);
   }
 
   input[aria-invalid='true'] {
@@ -432,19 +444,20 @@
   }
 
   button {
+    /* The app's button on its green screen: the press green, white words. */
     font: inherit;
     font-weight: 700;
     cursor: pointer;
     border: 0;
     border-radius: var(--radius-pill);
     padding: 0.9rem 2rem;
-    background: var(--green);
-    color: #05291e;
+    background: var(--green-pressed);
+    color: #fff;
     transition: transform 220ms var(--ease-out), background-color 220ms var(--ease-out);
   }
 
   button:hover {
-    background: #16cd78;
+    background: #0c7f59;
     transform: translateY(-1px);
   }
 

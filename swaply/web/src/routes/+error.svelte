@@ -64,6 +64,7 @@
   h1 {
     font-size: clamp(2.1rem, 5.5vw, 3rem);
     font-weight: 700;
+    color: var(--green-deep);
   }
 
   p {

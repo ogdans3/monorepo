@@ -269,15 +269,18 @@
   }
 
   h1 {
+    /* The app's item title: deep green. */
     font-size: clamp(2.1rem, 5.5vw, 3.1rem);
     font-weight: 700;
+    color: var(--green-deep);
   }
 
   .value {
+    /* «Verdi 850 kr» is a note beside the title in the app, grey and quiet. */
     margin-top: 0.6rem;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--green-pressed);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--grey);
   }
 
   .facts {
@@ -290,11 +293,12 @@
   }
 
   .facts li {
-    background: var(--surface);
-    border: 1px solid var(--line);
+    /* The app's chip: filled, no edge. */
+    background: var(--chip);
+    color: var(--chip-ink);
     border-radius: var(--radius-pill);
-    padding: 0.35rem 0.85rem;
-    font-size: 0.9rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
     font-weight: 600;
   }
 
@@ -347,11 +351,13 @@
   }
 
   .notice {
+    /* Amber, as the app tells you something has changed; red is for report
+       and block only. */
     margin-bottom: 1.25rem;
     padding: 0.9rem 1.1rem;
     border-radius: var(--radius);
-    background: #fff3f1;
-    color: #6b2a24;
+    background: var(--amber-bg);
+    color: var(--amber-text);
     font-size: 0.95rem;
     max-width: var(--measure);
   }
@@ -381,6 +387,7 @@
 
   .plain h1 {
     font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--on-green);
   }
 
   .lead {
