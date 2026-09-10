@@ -141,51 +141,74 @@ class _PostItemScreenState extends State<PostItemScreen> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.sm, Insets.screen, 0),
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // «Legg ut en gjenstand» and «1/2» do not both fit on a narrow
                 // phone, and the heading is the one that may give way.
-                const Flexible(child: Text('Legg ut en gjenstand', style: Type.title)),
-                if (!signedIn) const Text('1/2', style: Type.small),
+                const Flexible(child: Text('Legg ut en gjenstand', style: Type.screen)),
+                if (!signedIn)
+                  const Text('1/2',
+                      style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.grey)),
               ],
             ),
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(Insets.screen),
+              padding: const EdgeInsets.fromLTRB(22, 13, 22, 0),
               children: [
                 _photoStrip(),
-                const SizedBox(height: Insets.lg),
+                const SizedBox(height: 14),
                 _label('Tittel'),
                 TextField(
                   controller: _title,
                   // The button below reads this field, so it has to be rebuilt
                   // as it is typed into.
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(hintText: 'Bosch drill 18V'),
+                  style: _fieldText,
+                  decoration: _field('Bosch drill 18V'),
                 ),
-                const SizedBox(height: Insets.md),
+                const SizedBox(height: 12),
                 _label('Beskrivelse'),
                 TextField(
                   controller: _description,
                   minLines: 3,
                   maxLines: 6,
-                  decoration: const InputDecoration(hintText: 'Hva bør folk vite?'),
+                  style: _fieldText,
+                  decoration: _field('Hva bør folk vite?'),
                 ),
-                const SizedBox(height: Insets.md),
+                const SizedBox(height: 12),
                 _label('Anslått verdi'),
-                TextField(
-                  controller: _value,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(hintText: '600', suffixText: 'kr'),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: TextField(
+                        controller: _value,
+                        keyboardType: TextInputType.number,
+                        style: _fieldText,
+                        // suffixText hides until the field has focus; the
+                        // export shows «kr» from the start.
+                        decoration: _field('600').copyWith(
+                            suffixIcon: const Padding(
+                                padding: EdgeInsets.only(right: 14),
+                                child: Text('kr',
+                                    style: TextStyle(fontSize: 14, color: SwaplyColors.grey))),
+                            suffixIconConstraints:
+                                const BoxConstraints(minWidth: 0, minHeight: 0)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      flex: 4,
+                      child: Text('Helt billige ting kan være gratis',
+                          style: TextStyle(fontSize: 11.5, height: 1.3, color: SwaplyColors.greyLight)),
+                    ),
+                  ],
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text('Helt billige ting kan være gratis', style: Type.small),
-                ),
-                const SizedBox(height: Insets.md),
+                const SizedBox(height: 12),
                 _label('Type'),
                 Row(
                   children: [
@@ -200,62 +223,112 @@ class _PostItemScreenState extends State<PostItemScreen> {
                     }),
                   ],
                 ),
-                const SizedBox(height: Insets.md),
-                _label('Hovedkategori'),
-                DropdownButtonFormField<String>(
-                  initialValue: _category,
-                  items: categoryLabels.entries
-                      .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _category = v ?? _category),
+                const SizedBox(height: 12),
+                // Two columns, as the export sets them: category beside
+                // subcategory, condition beside postcode.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _label('Hovedkategori'),
+                          DropdownButtonFormField<String>(
+                            initialValue: _category,
+                            isDense: true,
+                            // Not `_fieldText`: a dropdown swaps the ambient
+                            // text style for its own, so the family has to
+                            // come along explicitly.
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(fontSize: 14, color: SwaplyColors.ink),
+                            icon: const Icon(Icons.keyboard_arrow_down,
+                                size: 18, color: SwaplyColors.greySoft),
+                            decoration: _field(''),
+                            items: categoryLabels.entries
+                                .map((e) => DropdownMenuItem(
+                                    value: e.key,
+                                    child: Text(e.value, overflow: TextOverflow.ellipsis)))
+                                .toList(),
+                            onChanged: (v) => setState(() => _category = v ?? _category),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _label('Underkategori'),
+                          TextField(
+                            controller: _subcategory,
+                            style: _fieldText,
+                            decoration: _field('Elektroverktøy'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: Insets.md),
-                _label('Underkategori'),
-                TextField(
-                  controller: _subcategory,
-                  decoration: const InputDecoration(hintText: 'Elektroverktøy'),
-                ),
-                if (_kind == 'item') ...[
-                  const SizedBox(height: Insets.md),
-                  _label('Tilstand'),
-                  Row(
-                    children: conditionLabels.entries
-                        .map((e) => Padding(
-                              padding: const EdgeInsets.only(right: Insets.sm),
-                              child: _pick(e.value, _condition == e.key,
-                                  () => setState(() => _condition = e.key)),
-                            ))
-                        .toList(),
-                  ),
-                ],
-                const SizedBox(height: Insets.md),
-                _label('Postnummer'),
-                TextField(
-                  controller: _postal,
-                  keyboardType: TextInputType.number,
-                  maxLength: 4,
-                  decoration: const InputDecoration(hintText: '7030', counterText: ''),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_kind == 'item') ...[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _label('Tilstand'),
+                            _segmented(),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _label('Postnummer'),
+                          TextField(
+                            controller: _postal,
+                            keyboardType: TextInputType.number,
+                            maxLength: 4,
+                            style: _fieldText,
+                            decoration: _field('7030').copyWith(counterText: ''),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const Padding(
                   padding: EdgeInsets.only(top: 6),
-                  child: Text('Kun by vises for andre', style: Type.small),
+                  child: Text('Kun by vises for andre',
+                      style: TextStyle(fontSize: 10, color: SwaplyColors.grey)),
                 ),
                 if (_error != null) ...[
-                  const SizedBox(height: Insets.md),
+                  const SizedBox(height: 12),
                   Text(_error!, style: const TextStyle(color: SwaplyColors.red, fontSize: 13)),
                 ],
-                const SizedBox(height: Insets.lg),
-                PrimaryButton(
-                  signedIn ? 'Legg ut' : 'Neste',
-                  busy: _busy,
-                  // Enabled either way: a disabled button explains nothing, and
-                  // an empty title should be told, not silently refused.
-                  onPressed: _title.text.trim().isEmpty
-                      ? () => setState(() => _error = 'Gi gjenstanden en tittel.')
-                      : _submit,
-                ),
-                const SizedBox(height: Insets.lg),
+                const SizedBox(height: 12),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 12, 22, 30),
+            child: PrimaryButton(
+              signedIn ? 'Legg ut' : 'Neste',
+              busy: _busy,
+              // Enabled either way: a disabled button explains nothing, and
+              // an empty title should be told, not silently refused.
+              onPressed: _title.text.trim().isEmpty
+                  ? () => setState(() => _error = 'Gi gjenstanden en tittel.')
+                  : _submit,
             ),
           ),
         ],
@@ -263,24 +336,69 @@ class _PostItemScreenState extends State<PostItemScreen> {
     );
   }
 
+  static const _fieldText = TextStyle(fontSize: 14, color: SwaplyColors.ink);
+
+  /// The export's fields on this screen are a size smaller than the sign-in
+  /// ones: 14px in 11/14 padding on a 14 radius.
+  InputDecoration _field(String hint) => InputDecoration(
+        hintText: hint.isEmpty ? null : hint,
+        hintStyle: const TextStyle(fontSize: 14, color: SwaplyColors.greyLight),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      );
+
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text, style: Type.small),
+        child: Text(text, style: Type.section),
+      );
+
+  /// Condition as a three-way segment, 31 tall in a chip-coloured track.
+  Widget _segmented() => Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: SwaplyColors.chip,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Row(
+          children: conditionLabels.entries
+              .map((e) => Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _condition = e.key),
+                      child: Container(
+                        height: 31,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: _condition == e.key ? Colors.white : null,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Text(e.value,
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight:
+                                    _condition == e.key ? FontWeight.w700 : FontWeight.w600,
+                                color: _condition == e.key
+                                    ? SwaplyColors.ink
+                                    : SwaplyColors.greySoft)),
+                      ),
+                    ),
+                  ))
+              .toList(),
+        ),
       );
 
   Widget _photoStrip() => SizedBox(
-        height: 104,
+        height: 106,
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
             GestureDetector(
               onTap: _photos.length >= 10 ? null : _addPhoto,
               child: Container(
-                width: 104,
+                width: 106,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(Radii.card),
-                  border: Border.all(color: SwaplyColors.line),
+                  color: const Color(0xFFF3F7F3),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFB9C4BC)),
                 ),
                 child: _uploading
                     ? const Center(
@@ -293,10 +411,17 @@ class _PostItemScreenState extends State<PostItemScreen> {
                     : const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add, color: SwaplyColors.greenPressed),
+                          Text('+',
+                              style: TextStyle(
+                                  fontSize: 26, height: 1, color: SwaplyColors.greenText)),
                           SizedBox(height: 4),
-                          Text('Legg til bilder', style: Type.small),
-                          Text('opptil 10', style: Type.small),
+                          Text('Legg til bilder',
+                              style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: SwaplyColors.greenText)),
+                          Text('opptil 10',
+                              style: TextStyle(fontSize: 9, color: SwaplyColors.grey)),
                         ],
                       ),
               ),
@@ -308,11 +433,11 @@ class _PostItemScreenState extends State<PostItemScreen> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(Radii.card),
                         child: Image.network(entry.value.url,
-                            height: 104,
-                            width: 104,
+                            height: 106,
+                            width: 106,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
-                                height: 104, width: 104, color: SwaplyColors.greenSoft)),
+                                height: 106, width: 106, color: SwaplyColors.greenSoft)),
                       ),
                       if (entry.key == 0)
                         Positioned(
@@ -325,7 +450,8 @@ class _PostItemScreenState extends State<PostItemScreen> {
                               borderRadius: BorderRadius.circular(Radii.pill),
                             ),
                             child: const Text('Forside',
-                                style: TextStyle(color: Colors.white, fontSize: 10)),
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
                           ),
                         ),
                       Positioned(

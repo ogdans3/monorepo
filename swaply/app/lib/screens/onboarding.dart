@@ -6,6 +6,7 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
+import '../widgets/shell.dart';
 import 'discover.dart';
 
 /// 01 Splash. Deep green, the wordmark, nothing else.
@@ -234,8 +235,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-              Insets.screen, Insets.xl * 2, Insets.screen, Insets.xl),
+          // 28 at the sides and the wordmark 116 down: the export's sign-in.
+          padding: const EdgeInsets.fromLTRB(28, 116, 28, Insets.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -244,11 +245,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                         color: SwaplyColors.greenDeep,
                         fontSize: 34,
+                        height: 1.2,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -1.2)),
+                        letterSpacing: -1)),
               ),
-              const SizedBox(height: Insets.xl * 1.5),
-              const Text('E-post', style: Type.small),
+              const SizedBox(height: 24),
+              const Text('E-post', style: Type.section),
               const SizedBox(height: 6),
               TextField(
                 controller: _email,
@@ -256,8 +258,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 autofillHints: const [AutofillHints.email],
                 decoration: const InputDecoration(hintText: 'ola@epost.no'),
               ),
-              const SizedBox(height: Insets.md),
-              const Text('Passord', style: Type.small),
+              const SizedBox(height: 16),
+              const Text('Passord', style: Type.section),
               const SizedBox(height: 6),
               TextField(
                 controller: _password,
@@ -266,39 +268,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: const InputDecoration(hintText: '••••••••'),
                 onSubmitted: (_) => _submit(),
               ),
+              const SizedBox(height: 10),
+              // Words, not a button: 10 under the field, 16 over the button.
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => showDialog<void>(
+                child: GestureDetector(
+                  onTap: () => showDialog<void>(
                     context: context,
                     builder: (_) => const _ComingSoonDialog(
                         title: 'Glemt passord?',
                         body: 'Vi sender deg en lenke på e-post så snart utsendingen er på plass.'),
                   ),
-                  child: const Text('Glemt passord?',
-                      style: TextStyle(color: SwaplyColors.greenPressed)),
+                  child: const Text('Glemt passord?', style: Type.link),
                 ),
               ),
+              const SizedBox(height: 16),
               if (_error != null) ...[
                 Text(_error!, style: const TextStyle(color: SwaplyColors.red, fontSize: 13)),
                 const SizedBox(height: Insets.sm),
               ],
               PrimaryButton('Logg inn', busy: _busy, onPressed: _submit),
-              const SizedBox(height: Insets.lg),
+              const SizedBox(height: 16),
               const _OrDivider(),
-              const SizedBox(height: Insets.md),
+              const SizedBox(height: 16),
               const _SocialButtons(),
-              const SizedBox(height: Insets.xl),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Ny her?', style: Type.secondary),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).push(
+                  const Text('Ny her? ', style: Type.secondary),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
-                    child: const Text('Opprett konto',
-                        style: TextStyle(
-                            color: SwaplyColors.greenPressed, fontWeight: FontWeight.w700)),
+                    child: const Text('Opprett konto', style: Type.link),
                   ),
                 ],
               ),
@@ -316,12 +318,14 @@ class _OrDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Row(
         children: [
-          Expanded(child: Divider(color: SwaplyColors.line)),
+          Expanded(child: Divider(color: SwaplyColors.fieldLine, height: 1, thickness: 1)),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: Insets.md),
-            child: Text('eller', style: Type.small),
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Text('eller',
+                style: TextStyle(
+                    fontSize: 11.5, fontWeight: FontWeight.w600, color: SwaplyColors.greyLight)),
           ),
-          Expanded(child: Divider(color: SwaplyColors.line)),
+          Expanded(child: Divider(color: SwaplyColors.fieldLine, height: 1, thickness: 1)),
         ],
       );
 }
@@ -330,41 +334,49 @@ class _OrDivider extends StatelessWidget {
 /// and a registered bundle id, neither of which exists yet, so they say so
 /// rather than failing silently or pretending to work.
 class _SocialButtons extends StatelessWidget {
-  const _SocialButtons();
+  const _SocialButtons({this.compact = false});
+
+  /// 10c draws them two pixels shorter than 16c does: 48, 48 and 46.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    Widget button(String label, IconData icon) => Padding(
-          padding: const EdgeInsets.only(bottom: Insets.sm),
-          child: SizedBox(
-            height: 50,
-            child: OutlinedButton.icon(
-              icon: Icon(icon, size: 18, color: SwaplyColors.ink),
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) => _ComingSoonDialog(
-                  title: label,
-                  body: 'Innlogging med $label krever en avtale med leverandøren, '
-                      'og den er ikke på plass ennå. Bruk e-post og passord så lenge.',
-                ),
-              ),
-              label: Text(label,
-                  style: const TextStyle(
-                      color: SwaplyColors.ink, fontSize: 14.5, fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
-                side: const BorderSide(color: Color(0x22064E3B)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+    // Words only, centred, 50 tall with 8 between — the export draws no
+    // logos. Apple's is 48 and in ink with white text, the way Apple asks for
+    // it.
+    Widget button(String label, {bool dark = false, double height = 50}) => SizedBox(
+          height: height,
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => _ComingSoonDialog(
+                title: label,
+                body: 'Innlogging med $label krever en avtale med leverandøren, '
+                    'og den er ikke på plass ennå. Bruk e-post og passord så lenge.',
               ),
             ),
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              backgroundColor: dark ? SwaplyColors.ink : Colors.white,
+              side: BorderSide(color: dark ? SwaplyColors.ink : SwaplyColors.fieldLine),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    color: dark ? Colors.white : SwaplyColors.inkBody,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700)),
           ),
         );
 
     return Column(
       children: [
-        button('Fortsett med Google', Icons.g_mobiledata),
-        button('Fortsett med Facebook', Icons.facebook),
-        button('Fortsett med Apple', Icons.apple),
+        button('Fortsett med Google', height: compact ? 48 : 50),
+        const SizedBox(height: 8),
+        button('Fortsett med Facebook', height: compact ? 48 : 50),
+        const SizedBox(height: 8),
+        button('Fortsett med Apple', dark: true, height: compact ? 46 : 48),
       ],
     );
   }
@@ -437,27 +449,18 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: SwaplyColors.bg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left, size: 30, color: SwaplyColors.ink),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        titleSpacing: 0,
-        title: const Text('Lag profil', style: Type.heading),
-        actions: [
-          if (widget.continuingToListing)
-            const Padding(
-              padding: EdgeInsets.only(right: Insets.screen),
-              child: Center(child: Text('2/2', style: Type.small)),
-            ),
-        ],
-      ),
+      appBar: swaplyAppBar(context, 'Lag profil', inset: 24, actions: [
+        if (widget.continuingToListing)
+          const Text('2/2',
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.grey)),
+      ]),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(Insets.screen, 0, Insets.screen, Insets.xl),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(28, 12, 28, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -469,9 +472,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                         'du har likt blir med videre.'
                     : 'For å legge ut noe trenger du en profil, så folk vet hvem de '
                         'bytter med.',
-                style: Type.secondary,
+                style: const TextStyle(fontSize: 14, height: 1.5, color: SwaplyColors.inkMuted),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: Insets.lg),
+              const SizedBox(height: 15),
               _field('Visningsnavn', _name, 'Ola N.'),
               _field('E-post', _email, 'ola@epost.no',
                   keyboard: TextInputType.emailAddress),
@@ -486,32 +490,37 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 busy: _busy,
                 onPressed: _submit,
               ),
-              const SizedBox(height: Insets.lg),
+              const SizedBox(height: 15),
               const _OrDivider(),
-              const SizedBox(height: Insets.md),
-              const _SocialButtons(),
-              const SizedBox(height: Insets.md),
+              const SizedBox(height: 15),
+              const _SocialButtons(compact: true),
+              const SizedBox(height: 15),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Har du konto?', style: Type.secondary),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacement(
+                  const Text('Har du konto? ', style: Type.secondary),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pushReplacement(
                         MaterialPageRoute(builder: (_) => const LoginScreen())),
-                    child: const Text('Logg inn',
-                        style: TextStyle(
-                            color: SwaplyColors.greenPressed, fontWeight: FontWeight.w700)),
+                    child: const Text('Logg inn', style: Type.link),
                   ),
                 ],
               ),
-              const SizedBox(height: Insets.sm),
-              const Text(
-                'Vi varsler deg om swaps, aldri spam. BankID bekreftes ved ditt første bytte.',
-                style: Type.small,
-                textAlign: TextAlign.center,
-              ),
+              const SizedBox(height: 12),
             ],
           ),
+              ),
+            ),
+            // Pinned at the foot, as the export keeps it.
+            const Padding(
+              padding: EdgeInsets.fromLTRB(28, 0, 28, 26),
+              child: Text(
+                'Vi varsler deg om swaps, aldri spam. BankID bekreftes ved ditt første bytte.',
+                style: TextStyle(fontSize: 11.5, height: 1.4, color: SwaplyColors.greyLight),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -520,11 +529,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   Widget _field(String label, TextEditingController controller, String hint,
       {TextInputType? keyboard, bool obscure = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: Insets.md),
+      padding: const EdgeInsets.only(bottom: 15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: Type.small),
+          Text(label, style: Type.section),
           const SizedBox(height: 6),
           TextField(
             controller: controller,
@@ -579,20 +588,29 @@ class _InterestsScreenState extends State<InterestsScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  context.read<Session>().dismissInterests();
-                  Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
-                },
-                child: const Text('Hopp over', style: TextStyle(color: SwaplyColors.greySoft)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    context.read<Session>().dismissInterests();
+                    Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+                  },
+                  child: const SizedBox(
+                    height: 21,
+                    child: Text('Hopp over',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+                  ),
+                ),
               ),
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -601,12 +619,12 @@ class _InterestsScreenState extends State<InterestsScreen> {
                             fontSize: 28,
                             height: 1.15,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
+                            letterSpacing: -0.6,
                             color: SwaplyColors.greenDeep)),
                     const SizedBox(height: Insets.sm),
                     const Text(
                       'Velg 3 til 5 kategorier, så viser vi deg de riktige tingene først.',
-                      style: TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF5B6862)),
+                      style: TextStyle(fontSize: 14, height: 1.5, color: SwaplyColors.inkMuted),
                     ),
                     const SizedBox(height: Insets.lg),
                     // Two columns of wide, soft-cornered tiles — the export
@@ -618,9 +636,9 @@ class _InterestsScreenState extends State<InterestsScreen> {
                       crossAxisCount: 2,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: Insets.sm + 2,
-                      crossAxisSpacing: Insets.sm + 2,
-                      childAspectRatio: 2.55,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 166 / 66,
                       children: categoryLabels.entries.map((entry) {
                         final selected = _chosen.contains(entry.key);
                         // At five the rest go quiet rather than shouting an
@@ -637,12 +655,12 @@ class _InterestsScreenState extends State<InterestsScreen> {
                             curve: Curves.easeOut,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: selected ? SwaplyColors.greenSoft : Colors.white,
-                              borderRadius: BorderRadius.circular(Radii.card),
+                              color: selected ? SwaplyColors.tileSelected : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                   color: selected
                                       ? SwaplyColors.greenPressed
-                                      : SwaplyColors.cardLine),
+                                      : SwaplyColors.fieldLine),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -676,16 +694,17 @@ class _InterestsScreenState extends State<InterestsScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(Insets.screen),
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 34),
               child: Column(
                 children: [
                   Text(
                     full
                         ? 'Fem er nok. Du kan endre dette senere.'
                         : '${_chosen.length} av 5 valgt',
-                    style: Type.small,
+                    style: const TextStyle(
+                        fontSize: 12.5, fontWeight: FontWeight.w700, color: SwaplyColors.greenText),
                   ),
-                  const SizedBox(height: Insets.sm),
+                  const SizedBox(height: 12),
                   PrimaryButton('Fortsett',
                       enabled: _chosen.length >= 3, busy: _busy, onPressed: _continue),
                 ],

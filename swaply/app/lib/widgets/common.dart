@@ -6,18 +6,27 @@ import '../design/tokens.dart';
 /// The pill button every screen ends with.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton(this.label,
-      {super.key, this.onPressed, this.enabled = true, this.busy = false, this.icon});
+      {super.key,
+      this.onPressed,
+      this.enabled = true,
+      this.busy = false,
+      this.icon,
+      this.height = 54});
 
   final String label;
   final VoidCallback? onPressed;
   final bool enabled, busy;
   final IconData? icon;
 
+  /// 54 as the export draws «Logg inn» and «Fortsett»; the trade screen's
+  /// «Godta byttet» is 50 and the profile's «Send melding» 44.
+  final double height;
+
   @override
   Widget build(BuildContext context) {
     final on = enabled && !busy && onPressed != null;
     return SizedBox(
-      height: 54,
+      height: height,
       width: double.infinity,
       child: FilledButton(
         onPressed: on ? onPressed : null,
@@ -43,7 +52,7 @@ class PrimaryButton extends StatelessWidget {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -53,26 +62,47 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
+/// Three outlined looks from the export: plain, «Avslå» (badge red on a pink
+/// edge — the same pair as the ✕ on the item screen) and the green outline of
+/// «Foreslå motbytte».
 class SecondaryButton extends StatelessWidget {
-  const SecondaryButton(this.label, {super.key, this.onPressed, this.destructive = false});
+  const SecondaryButton(this.label,
+      {super.key, this.onPressed, this.destructive = false, this.accent = false, this.height = 52});
 
   final String label;
   final VoidCallback? onPressed;
   final bool destructive;
+  final bool accent;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
+    final colour = destructive
+        ? SwaplyColors.badge
+        : accent
+            ? SwaplyColors.greenText
+            : SwaplyColors.ink;
+    final edge = destructive
+        ? SwaplyColors.declineLine
+        : accent
+            ? SwaplyColors.greenPressed
+            : const Color(0x22064E3B);
     return SizedBox(
-      height: 52,
+      height: height,
       width: double.infinity,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: destructive ? SwaplyColors.red : SwaplyColors.ink,
-          side: const BorderSide(color: Color(0x22064E3B)),
+          foregroundColor: colour,
+          backgroundColor: destructive ? Colors.white : null,
+          side: BorderSide(color: edge),
+          padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: accent ? 14 : 15,
+                fontWeight: destructive || accent ? FontWeight.w700 : FontWeight.w600)),
       ),
     );
   }
@@ -84,7 +114,6 @@ const _avatarColours = [
   SwaplyColors.avatarGold,
   SwaplyColors.avatarTeal,
   SwaplyColors.avatarPurple,
-  SwaplyColors.greenPressed,
 ];
 
 /// «O» in a circle. The export never shows a profile photo, only an initial —
@@ -110,7 +139,7 @@ class Avatar extends StatelessWidget {
                 ? SwaplyColors.greenDeep
                 // Same name, same colour, every screen: the person is
                 // recognisable before the name is read.
-                : _avatarColours[name.codeUnits.fold(0, (a, b) => a + b) % _avatarColours.length]),
+                : _avatarColours[(name.isEmpty ? 0 : name.codeUnitAt(0)) % _avatarColours.length]),
         shape: BoxShape.circle,
       ),
       child: Text(
@@ -127,8 +156,12 @@ class Kicker extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) =>
-      Text(text.toUpperCase(), style: Type.kicker);
+  Widget build(BuildContext context) => Text(text.toUpperCase(),
+      style: const TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.92,
+          color: SwaplyColors.greyLight));
 }
 
 class StarRow extends StatelessWidget {
@@ -194,14 +227,20 @@ class ItemThumb extends StatelessWidget {
 /// A category, a condition, an interest. Filled, never outlined: in the export
 /// the fill is the shape, and a border on top of it makes it look like a button.
 class Pill extends StatelessWidget {
-  const Pill(this.label, {super.key, this.selected = false});
+  const Pill(this.label, {super.key, this.selected = false, this.small = false});
 
   final String label;
   final bool selected;
 
+  /// The export has two sizes: a filter chip on 05 is 12.5px with 7/13 of
+  /// padding, and a fact on a listing is 12px with 5/11.
+  final bool small;
+
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: small
+            ? const EdgeInsets.symmetric(horizontal: 11, vertical: 5)
+            : const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? SwaplyColors.greenPressed : SwaplyColors.chip,
           borderRadius: BorderRadius.circular(Radii.pill),
@@ -209,7 +248,8 @@ class Pill extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12.5,
+            fontSize: small ? 12 : 12.5,
+            height: 1.2,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
             color: selected ? Colors.white : SwaplyColors.chipInk,
           ),
@@ -288,33 +328,39 @@ class StatePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
           color: soft ??
-              (color == SwaplyColors.greenText
-                  ? SwaplyColors.availableBg
-                  : color.withValues(alpha: 0.10)),
+              switch (color) {
+                SwaplyColors.greenText => SwaplyColors.availableBg,
+                SwaplyColors.amberText || SwaplyColors.amber => SwaplyColors.amberBg,
+                _ => SwaplyColors.chip,
+              },
           borderRadius: BorderRadius.circular(Radii.pill),
         ),
         child: Text(label,
-            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: color)),
+            style: TextStyle(
+                fontSize: 9.5, height: 1.2, fontWeight: FontWeight.w700, color: color)),
       );
 }
 
 class SectionCard extends StatelessWidget {
-  const SectionCard({super.key, required this.child, this.padding});
+  const SectionCard({super.key, required this.child, this.padding, this.radius = 18, this.edge});
 
   final Widget child;
   final EdgeInsets? padding;
+  final double radius;
+  final Color? edge;
 
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
-        padding: padding ?? const EdgeInsets.all(Insets.md),
+        // 11 top and bottom, 14 at the sides: the export's card, everywhere.
+        padding: padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(Radii.card),
-          border: Border.all(color: SwaplyColors.cardLine),
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(color: edge ?? SwaplyColors.cardLine),
         ),
         child: child,
       );

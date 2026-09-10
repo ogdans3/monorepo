@@ -262,7 +262,8 @@ void main() {
       expect(find.text('Avslå'), findsOneWidget);
       expect(find.text('Godta byttet'), findsOneWidget);
       expect(find.text('Foreslå motbytte'), findsOneWidget);
-      expect(find.text('Din tur'), findsOneWidget);
+      // The other side's card says where they stand; no pill in the header.
+      expect(find.text('✓ Har godtatt'), findsOneWidget);
     });
 
     testWidgets('06b the cash difference is shown as an amount to Vipps, never taken',
@@ -277,8 +278,8 @@ void main() {
     testWidgets('06b the values and the difference add up', (tester) async {
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
-      expect(find.text('1 200 kr'), findsOneWidget);
-      expect(find.text('600 kr'), findsWidgets);
+      expect(find.textContaining('verdi 1 200 kr'), findsWidgets);
+      expect(find.textContaining('verdi 600 kr'), findsWidgets);
       expect(find.text('differanse 600 kr'), findsOneWidget);
     });
 
@@ -290,7 +291,7 @@ void main() {
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
       expect(find.text('Godta byttet'), findsNothing);
-      expect(find.text('Venter'), findsWidgets);
+      expect(find.textContaining('Har godtatt'), findsWidgets);
       expect(find.text('Trekk deg fra byttet'), findsOneWidget);
     });
 
@@ -315,7 +316,6 @@ void main() {
       };
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
-      expect(find.text('Endret'), findsOneWidget);
       expect(find.textContaining('Nytt forslag fra Kari'), findsOneWidget);
     });
 
@@ -352,8 +352,8 @@ void main() {
       expect(find.text('DU GA'), findsOneWidget);
       expect(find.text('Fullført 4. september 2026'), findsOneWidget);
       expect(find.text('«Rask og hyggelig, alt som avtalt»'), findsOneWidget);
-      expect(find.text('Mottatt'), findsOneWidget);
-      expect(find.text('Levert'), findsOneWidget);
+      expect(find.text('✓ Mottatt'), findsOneWidget);
+      expect(find.text('✓ Levert'), findsOneWidget);
     });
 
     testWidgets('08b paused: the deadline and both answers are on the screen',
@@ -372,7 +372,6 @@ void main() {
       };
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
-      expect(find.text('Pauset'), findsOneWidget);
       expect(find.text('Kari vil trekke seg'), findsOneWidget);
       expect(find.textContaining('igjen'), findsWidgets);
       expect(find.text('Ja, greit'), findsOneWidget);
@@ -420,6 +419,9 @@ void main() {
       expect(find.textContaining('som beskrevet i annonsen'), findsOneWidget);
       expect(find.textContaining('før noe sendes'), findsOneWidget);
       expect(find.textContaining('Er noe sendt, kan jeg ikke trekke meg'), findsOneWidget);
+      // The party clause is in the full terms, behind the link.
+      await tester.tap(find.text('Les hele byttevilkårene ›'));
+      await tester.pumpAndSettle();
       expect(
         find.text('Swaply er ikke part i byttet og fasiliterer ikke frakt eller '
             'betaling. Avtalen er mellom dere.'),
@@ -430,12 +432,12 @@ void main() {
     testWidgets('the swipe stays dead until the box is ticked', (tester) async {
       await mount(tester, AgreementScreen(trade: Trade.fromJson(FakeServer.trade)));
 
-      final knob = find.byIcon(Icons.chevron_right);
+      final knob = find.text('›');
       await tester.drag(knob, const Offset(400, 0));
       await tester.pumpAndSettle();
       expect(server.requests, isNot(contains('POST /trades/trade-1/accept')));
 
-      await tester.tap(find.byType(Checkbox));
+      await tester.tap(find.text('Jeg har lest og godtar vilkårene'));
       await tester.pumpAndSettle();
       await tester.drag(knob, const Offset(400, 0));
       await tester.pumpAndSettle();
@@ -464,12 +466,14 @@ void main() {
       expect(find.textContaining('reservert i annet bytte'), findsOneWidget);
     });
 
-    testWidgets('09d the cash side says we never take the money', (tester) async {
+    testWidgets('09d the cash line says who pays, and flips when tapped', (tester) async {
       await mount(tester, CounterOfferScreen(trade: Trade.fromJson(FakeServer.trade)));
 
-      expect(find.text('Jeg betaler'), findsOneWidget);
-      expect(find.text('Kari betaler'), findsOneWidget);
-      expect(find.textContaining('Swaply tar ikke imot penger'), findsOneWidget);
+      expect(find.text('MELLOMLEGG'), findsOneWidget);
+      expect(find.text('Du betaler Kari'), findsOneWidget);
+      await tester.tap(find.text('Du betaler Kari'));
+      await tester.pumpAndSettle();
+      expect(find.text('Kari betaler deg'), findsOneWidget);
     });
   });
 
@@ -638,8 +642,8 @@ void main() {
 
       expect(find.text('Ola N.'), findsOneWidget);
       expect(find.text('BankID-verifisert'), findsOneWidget);
-      expect(find.text('4,9 · 12 vurderinger'), findsOneWidget);
-      expect(find.text('4 har likt tingene dine'), findsOneWidget);
+      expect(find.textContaining('4,9 · 12 vurderinger'), findsOneWidget);
+      expect(find.text('♥ 4 har likt tingene dine'), findsOneWidget);
       expect(find.text('Mine gjenstander · 1'), findsOneWidget);
       expect(find.text('Tilgjengelig'), findsOneWidget);
     });
@@ -703,14 +707,13 @@ void main() {
       expect(find.text('Senere'), findsOneWidget);
     });
 
-    testWidgets('06h rating is about the counterparty, with quick chips',
+    testWidgets('06h rating is about the counterparty',
         (tester) async {
       await mount(tester, ReviewScreen(trade: Trade.fromJson(FakeServer.trade)));
 
-      expect(find.text('Hvordan var byttet\nmed Kari?'), findsOneWidget);
-      expect(find.text('Kom som avtalt'), findsOneWidget);
+      expect(find.text('Hvordan var byttet med Kari?'), findsOneWidget);
       expect(find.text('Vurderinger bygger tillit i Swaply.'), findsOneWidget);
-      expect(find.byIcon(Icons.star_outline_rounded), findsNWidgets(5));
+      expect(find.text('★'), findsNWidgets(5));
     });
 
     testWidgets('06h the send button waits for a score', (tester) async {
@@ -719,7 +722,7 @@ void main() {
       final button = find.widgetWithText(FilledButton, 'Send vurdering');
       expect(tester.widget<FilledButton>(button).onPressed, isNull);
 
-      await tester.tap(find.byIcon(Icons.star_outline_rounded).last);
+      await tester.tap(find.text('★').last);
       await tester.pump();
       expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
     });

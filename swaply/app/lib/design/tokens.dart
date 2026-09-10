@@ -63,13 +63,35 @@ class SwaplyColors {
   /// people a colour of their own, and these are the ones it uses.
   static const avatarGold = Color(0xFFC08B2D);
   static const avatarTeal = Color(0xFF2F9E8F);
-  static const avatarPurple = Color(0xFF8B7BD8);
+  static const avatarPurple = Color(0xFF7C6FD1);
 
   /// The «Tilgjengelig» badge on your own listing.
   static const availableBg = Color(0xFFDEF5E9);
 
   /// The ring around the ✕ on a listing: coral at a tenth of its strength.
   static const declineLine = Color(0xFFF5C9C6);
+
+  /// A text field's edge, and the edge of an unselected tile on 02.
+  static const fieldLine = Color(0xFFE4E8E3);
+
+  /// The one hairline the bottom bar draws above itself.
+  static const barLine = Color(0xFFEDEFEA);
+
+  /// A chevron that says «there is more» and nothing else.
+  static const chevron = Color(0xFFC9CFCA);
+
+  /// The amber the export uses for words: «Ola får», «Din tur», «Reservert».
+  static const amberText = Color(0xFFB25E09);
+  static const amberBg = Color(0xFFFFF3E2);
+
+  /// A chosen tile on 02: not [greenSoft], a touch lighter.
+  static const tileSelected = Color(0xFFE9F7F0);
+
+  /// Body copy on the dark screens, and the one subtitle colour on 02.
+  static const inkMuted = Color(0xFF5B6862);
+
+  /// «Logg ut», and the red of «Avslått».
+  static const redText = Color(0xFFC0271F);
 }
 
 class Insets {
@@ -79,7 +101,11 @@ class Insets {
   static const md = 14.0;
   static const lg = 20.0;
   static const xl = 28.0;
-  static const screen = 20.0;
+
+  /// The side margin most screens keep: 22 in the export. A few screens have
+  /// their own — 18 on Oppdag, 24 on the interest picker, 28 on sign-in — and
+  /// say so where they are built.
+  static const screen = 22.0;
 }
 
 class Radii {
@@ -207,25 +233,41 @@ ThemeData swaplyTheme() {
     ),
     scaffoldBackgroundColor: SwaplyColors.bg,
   );
+  final text = base.textTheme.apply(bodyColor: SwaplyColors.ink, displayColor: SwaplyColors.ink);
   return base.copyWith(
-    textTheme: base.textTheme.apply(bodyColor: SwaplyColors.ink, displayColor: SwaplyColors.ink),
+    // Material's default styles carry a line height of 1.43, and every Text
+    // that does not say its own inherits it — a 12.5px label came out 18
+    // tall instead of 15, a field 52 instead of 48. The export's line height
+    // is the font's own; 1.2 is that, for Roboto and SF alike.
+    textTheme: text.copyWith(
+      bodyLarge: text.bodyLarge?.copyWith(fontSize: 15, height: 1.2),
+      bodyMedium: text.bodyMedium?.copyWith(height: 1.2),
+      bodySmall: text.bodySmall?.copyWith(height: 1.2),
+      titleMedium: text.titleMedium?.copyWith(height: 1.2),
+      titleSmall: text.titleSmall?.copyWith(height: 1.2),
+      labelLarge: text.labelLarge?.copyWith(height: 1.2),
+      labelMedium: text.labelMedium?.copyWith(height: 1.2),
+    ),
+    // A field in the export: 48 tall, corners of 14, a hairline of #E4E8E3,
+    // 15px text with 14 of padding at the sides.
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(Radii.card),
-        borderSide: const BorderSide(color: SwaplyColors.line),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: SwaplyColors.fieldLine),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(Radii.card),
-        borderSide: const BorderSide(color: SwaplyColors.line),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: SwaplyColors.fieldLine),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(Radii.card),
-        borderSide: const BorderSide(color: SwaplyColors.greenPressed, width: 1.6),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: SwaplyColors.greenPressed),
       ),
-      hintStyle: const TextStyle(color: SwaplyColors.grey, fontSize: 14.5),
+      hintStyle: const TextStyle(color: SwaplyColors.greyLight, fontSize: 15),
     ),
   );
 }

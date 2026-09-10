@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -47,10 +49,14 @@ class _MatchScreenState extends State<MatchScreen> {
   Widget build(BuildContext context) {
     final trade = _trade;
     if (trade == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: SwaplyColors.greenDeep,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
     }
 
     final chain = trade.isChain;
+    final other = trade.receivingFrom.displayName.split(' ').first;
     final theyGive = trade.youGet.map((i) => i.title).join(' og ');
     final youGive = trade.youGive.map((i) => i.title).join(' og ');
 
@@ -59,185 +65,253 @@ class _MatchScreenState extends State<MatchScreen> {
     // the product», and a moment does not look like the rest of the app.
     return Scaffold(
       backgroundColor: SwaplyColors.greenDeep,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(Insets.screen),
-          child: Column(
-            children: [
-              const Spacer(),
-              Text(
-                chain ? 'Dere kan gjøre en\ntreveis-swap!' : 'Dere kan swappe!',
-                style: const TextStyle(
-                    fontSize: 34,
-                    height: 1.1,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.8,
-                    color: Colors.white),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: Insets.md),
-              Text(
-                chain
-                    ? 'Vi fant et bytte med tre personer.'
-                    : '${trade.receivingFrom.displayName} vil ha $youGive, '
-                        'du vil ha $theyGive.',
-                style: const TextStyle(fontSize: 15, height: 1.45, color: Color(0xCCFFFFFF)),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: Insets.xl),
-              _loop(trade),
-              const SizedBox(height: Insets.xl),
-              if (chain)
-                Container(
-                  padding: const EdgeInsets.all(Insets.md),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(Radii.card),
+      body: Stack(
+        children: [
+          // Confetti, at the four spots the export puts it.
+          const Positioned(left: 44, top: 120, child: _Dot(8, SwaplyColors.greenPressed)),
+          const Positioned(left: 314, top: 88, child: _Dot(6, SwaplyColors.badge)),
+          const Positioned(left: 344, top: 189, child: _Dot(12, Color(0xFF9BD9BE), square: true)),
+          const Positioned(left: 40, top: 587, child: _Dot(7, Color(0xFF9BD9BE))),
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 30),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 153),
+                        Text(
+                          chain ? 'Dere kan gjøre en treveis-swap!' : 'Dere kan swappe!',
+                          style: const TextStyle(
+                              fontSize: 36,
+                              height: 1.14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.8,
+                              color: Colors.white),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          chain
+                              ? 'Vi fant et bytte med tre personer.'
+                              : '$other vil ha $youGive, du vil ha $theyGive.',
+                          style: const TextStyle(
+                              fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 51),
+                        if (chain) _chainList(trade) else _table(trade, other),
+                        if (chain) ...[
+                          const SizedBox(height: 24),
+                          Container(
+                            padding: const EdgeInsets.all(Insets.md),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(Radii.card),
+                            ),
+                            child: const Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.info_outline, size: 18, color: Colors.white70),
+                                SizedBox(width: Insets.sm),
+                                Expanded(
+                                  child: Text(
+                                    'Dette byttet kan ikke Swaply fasilitere, men vi kan '
+                                    'starte en chat så dere avtaler det selv.',
+                                    style: TextStyle(
+                                        fontSize: 13, height: 1.4, color: Colors.white70),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  child: const Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 34),
+                  child: Column(
                     children: [
-                      Icon(Icons.info_outline, size: 18, color: Colors.white70),
-                      SizedBox(width: Insets.sm),
-                      Expanded(
-                        child: Text(
-                          'Dette byttet kan ikke Swaply fasilitere, men vi kan starte en '
-                          'chat så dere avtaler det selv.',
-                          style: TextStyle(fontSize: 13, height: 1.4, color: Colors.white70),
+                      PrimaryButton(
+                        chain ? 'Start chat' : 'Se byttet',
+                        onPressed: () => Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                                builder: (_) => TradeDetailScreen(tradeId: trade.id))),
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).maybePop(),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 2),
+                          child: Text('Fortsett å sveipe',
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xA6FFFFFF))),
                         ),
                       ),
                     ],
                   ),
                 ),
-              const Spacer(),
-              PrimaryButton(
-                chain ? 'Start chat' : 'Se byttet',
-                onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id))),
-              ),
-              const SizedBox(height: Insets.sm),
-              TextButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                child: const Text('Fortsett å sveipe',
-                    style: TextStyle(
-                        fontSize: 14.5, fontWeight: FontWeight.w700, color: Colors.white70)),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _loop(Trade trade) {
-    if (trade.isChain) {
-      return Column(
+  /// Your things on the left, tilted a little to the left; theirs on the
+  /// right, tilted a little to the right; the swap sign where they overlap.
+  /// The second thing you give peeks out from behind the first.
+  Widget _table(Trade trade, String other) {
+    final give = trade.youGive;
+    final get = trade.youGet;
+    return SizedBox(
+      height: 251,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          for (final p in trade.participants)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Insets.sm),
-              child: Row(
-                children: [
-                  Avatar(p.displayName, size: 34),
-                  const SizedBox(width: Insets.sm),
-                  Expanded(
-                    child: Text(
-                      '${p.position == trade.youPosition ? 'Du' : p.displayName} gir '
-                      '${p.gives.map((i) => i.title).join(' og ')}',
-                      style: Type.body,
-                    ),
-                  ),
-                  const Icon(Icons.arrow_downward, size: 16, color: SwaplyColors.grey),
-                ],
-              ),
+          if (give.length > 1)
+            Positioned(
+              left: 24,
+              top: 14,
+              child: Transform.rotate(angle: 8 * math.pi / 180, child: _card(give[1])),
             ),
+          if (give.isNotEmpty)
+            Positioned(
+              left: 16,
+              top: 2,
+              child: Transform.rotate(angle: -4 * math.pi / 180, child: _card(give.first)),
+            ),
+          if (get.isNotEmpty)
+            Positioned(
+              left: 148,
+              top: 0,
+              child: Transform.rotate(angle: 3 * math.pi / 180, child: _card(get.first)),
+            ),
+          const Positioned(
+            left: 149,
+            top: 88,
+            child: Text('⇄',
+                style: TextStyle(
+                    fontSize: 38,
+                    height: 1,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF9BD9BE))),
+          ),
+          Positioned(
+            left: 0,
+            top: 217,
+            width: 196,
+            child: Center(child: _who('Du', give.length, mine: true)),
+          ),
+          Positioned(
+            left: 126,
+            top: 217,
+            width: 204,
+            child: Center(child: _who(other, get.length)),
+          ),
         ],
-      );
-    }
-
-    // Two photographs, tilted, with the swap mark between them and a name chip
-    // under each — the export's «somebody laid two things on a table».
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Flexible(child: _card(trade.youGive, -0.055)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Insets.sm),
-              child: Container(
-                height: 40,
-                width: 40,
-                margin: const EdgeInsets.only(top: 46),
-                decoration: BoxDecoration(
-                  color: SwaplyColors.greenDeep,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                ),
-                child: const Icon(Icons.swap_horiz, size: 22, color: SwaplyColors.green),
-              ),
-            ),
-            Flexible(child: _card(trade.youGet, 0.05)),
-          ],
-        ),
-        const SizedBox(height: Insets.md),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _who('Du', trade.youGive.length, mine: true),
-            _who(trade.receivingFrom.displayName, trade.youGet.length),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _card(List<Item> items, double tilt) => Transform.rotate(
-        angle: tilt,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+  Widget _card(Item item) => SizedBox(
+        width: 156,
+        height: 204,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            ItemThumb(items.first, size: 124, radius: 18),
-            const SizedBox(height: Insets.sm),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(6),
+            ItemThumb(item, size: 204, radius: 20),
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 10,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: SwaplyColors.bg.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 9.5, color: SwaplyColors.inkMuted)),
+                ),
               ),
-              child: Text(items.first.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 11.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
             ),
           ],
         ),
       );
 
   Widget _who(String name, int count, {bool mine = false}) => Container(
-        padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+        padding: const EdgeInsets.fromLTRB(5, 5, 11, 5),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
+          color: Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(Radii.pill),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Avatar(name, size: 26, mine: mine),
-            const SizedBox(width: 7),
+            Avatar(name, size: 24, color: mine ? SwaplyColors.greenPressed : null),
+            const SizedBox(width: 6),
             Text(count > 1 ? '$name · $count ting' : name,
                 style: const TextStyle(
-                    fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                    fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
           ],
+        ),
+      );
+
+  /// The three-way loop: who gives what, one line each.
+  Widget _chainList(Trade trade) => Column(
+        children: [
+          for (final p in trade.participants)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Insets.sm),
+              child: Row(
+                children: [
+                  Avatar(p.position == trade.youPosition ? 'Du' : p.displayName,
+                      size: 28, color: SwaplyColors.greenPressed),
+                  const SizedBox(width: Insets.sm),
+                  Expanded(
+                    child: Text(
+                      '${p.position == trade.youPosition ? 'Du' : p.displayName.split(' ').first} '
+                      'gir ${p.gives.map((i) => i.title).join(' og ')}',
+                      style: const TextStyle(fontSize: 14, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot(this.size, this.colour, {this.square = false});
+
+  final double size;
+  final Color colour;
+  final bool square;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: colour,
+          shape: square ? BoxShape.rectangle : BoxShape.circle,
+          borderRadius: square ? BorderRadius.circular(2) : null,
         ),
       );
 }
 
-/// The one trade screen, in every state the export draws: 06b your turn, 06e
-/// waiting, 06f handover, 09e a counter arrived, 09f declined, 09i finished,
-/// 07j the chain overview, 08b paused and 08c refused.
 class TradeDetailScreen extends StatefulWidget {
   const TradeDetailScreen({super.key, required this.tradeId});
 
@@ -307,15 +381,16 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
 
     return SwaplyScaffold(
       currentTab: 2,
-      appBar: swaplyAppBar(context, title,
-          actions: [Padding(padding: const EdgeInsets.only(right: Insets.md), child: _statePill(trade))]),
+      // «‹ Bytte med Ola» and nothing else: the state is told by the cards
+      // and the buttons, not by a pill in the corner.
+      appBar: swaplyAppBar(context, title),
       child: Column(
         children: [
           Expanded(
             child: RefreshIndicator(
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(Insets.screen, 0, Insets.screen, Insets.lg),
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 12),
                 children: _sections(trade),
               ),
             ),
@@ -324,19 +399,6 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
         ],
       ),
     );
-  }
-
-  Widget _statePill(Trade trade) {
-    final (label, colour) = switch (trade.state) {
-      'talking' => ('Samtale', SwaplyColors.greySoft),
-      'pending' => (trade.youAccepted ? 'Venter' : 'Din tur', SwaplyColors.greenDeep),
-      'countered' => ('Endret', SwaplyColors.amber),
-      'accepted' => ('Godtatt', SwaplyColors.greenPressed),
-      'paused' => ('Pauset', SwaplyColors.amber),
-      'completed' => ('Gjennomført', SwaplyColors.greenPressed),
-      _ => ('Avslått', SwaplyColors.red),
-    };
-    return Center(child: StatePill(label, color: colour));
   }
 
   List<Widget> _sections(Trade trade) {
@@ -358,60 +420,61 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
       if (trade.state == 'completed') _completedHeader(trade),
 
       const SizedBox(height: Insets.md),
-      Kicker(trade.state == 'completed' ? 'Du fikk' : 'Du får'),
-      const SizedBox(height: Insets.sm),
-      ...trade.youGet.map((i) => _itemRow(i,
-          from: 'fra ${trade.receivingFrom.displayName.split(' ').first}',
-          done: trade.youReceivedAt != null ? 'Mottatt' : null)),
-
-      const SizedBox(height: Insets.lg),
-      Kicker(trade.state == 'completed'
-          ? 'Du ga'
-          : trade.youGive.length > 1
-              ? 'Du gir · ${trade.youGive.length} ting'
-              : 'Du gir'),
-      const SizedBox(height: Insets.sm),
-      ...trade.youGive.map((i) => _itemRow(i,
-          from: 'til ${trade.givingTo.displayName.split(' ').first}',
-          done: trade.youSentAt != null ? 'Levert' : null)),
-
-      if (!chain && ['talking', 'pending', 'countered'].contains(trade.state)) ...[
-        const SizedBox(height: Insets.sm),
-        TextButton.icon(
-          onPressed: () => _openCounterOffer(trade),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Legg til flere av dine ting'),
-          style: TextButton.styleFrom(foregroundColor: SwaplyColors.greenPressed),
-        ),
-      ],
+      // One card per leg, the kicker inside it beside the first thing.
+      _legCard(
+        kicker: trade.state == 'completed' ? 'Du fikk' : 'Du får',
+        colour: SwaplyColors.greenText,
+        items: trade.youGet,
+        from: 'fra ${trade.receivingFrom.displayName.split(' ').first}',
+        done: trade.youReceivedAt != null ? 'Mottatt' : null,
+      ),
+      const SizedBox(height: 7),
+      _legCard(
+        kicker: trade.state == 'completed'
+            ? 'Du ga'
+            : trade.youGive.length > 1
+                ? 'Du gir · ${trade.youGive.length} ting'
+                : 'Du gir',
+        colour: SwaplyColors.amberText,
+        items: trade.youGive,
+        from: 'til ${trade.givingTo.displayName.split(' ').first}',
+        done: trade.youSentAt != null ? 'Levert' : null,
+        // «Fjern» and «+ Legg til flere» both open the counter-offer, which is
+        // the only way the set of things changes once a trade exists.
+        edit: !chain && ['talking', 'pending', 'countered'].contains(trade.state)
+            ? () => _openCounterOffer(trade)
+            : null,
+      ),
 
       // 07j: the leg that is neither yours to give nor yours to receive.
       for (final leg in trade.otherLegs) ...[
-        const SizedBox(height: Insets.lg),
-        Kicker('${leg.giver.displayName.split(' ').first} gir'),
-        const SizedBox(height: Insets.sm),
-        ...leg.items.map((i) =>
-            _itemRow(i, from: 'til ${leg.receiver.displayName.split(' ').first}')),
+        const SizedBox(height: 7),
+        _legCard(
+          kicker: '${leg.giver.displayName.split(' ').first} gir',
+          colour: SwaplyColors.greyLight,
+          items: leg.items,
+          from: 'til ${leg.receiver.displayName.split(' ').first}',
+        ),
       ],
 
-      const SizedBox(height: Insets.lg),
+      const SizedBox(height: 7),
       _valueSummary(trade),
       if (trade.cash != null) ...[
-        const SizedBox(height: Insets.lg),
+        const SizedBox(height: 7),
         _cashSection(trade),
       ],
       if (trade.state == 'accepted' && !chain) ...[
-        const SizedBox(height: Insets.lg),
+        const SizedBox(height: 7),
         _handoverSection(trade),
       ],
       if (trade.state != 'completed' && trade.state != 'cancelled') ...[
-        const SizedBox(height: Insets.lg),
+        const SizedBox(height: 7),
         _statusSection(trade),
       ],
-      const SizedBox(height: Insets.lg),
+      const SizedBox(height: 7),
       _conversationSection(trade),
       if (trade.state == 'completed') ...[
-        const SizedBox(height: Insets.lg),
+        const SizedBox(height: 7),
         _reviewSection(trade),
       ],
     ];
@@ -545,67 +608,111 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
         ),
       );
 
-  Widget _itemRow(Item item, {required String from, String? done}) => Padding(
-        padding: const EdgeInsets.only(bottom: Insets.sm),
-        child: SectionCard(
-          padding: const EdgeInsets.all(Insets.sm + 2),
-          child: Row(
-            children: [
-              ItemThumb(item, size: 52),
-              const SizedBox(width: Insets.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.title, style: Type.heading),
-                    const SizedBox(height: 2),
-                    Text('$from · verdi ${kr(item.estimatedValueNok)}', style: Type.small),
-                  ],
-                ),
-              ),
-              if (done != null)
-                Row(
-                  children: [
-                    const Icon(Icons.check, size: 15, color: SwaplyColors.greenPressed),
-                    const SizedBox(width: 3),
-                    Text(done,
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: SwaplyColors.greenPressed)),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      );
-
-  Widget _valueSummary(Trade trade) => SectionCard(
+  /// A leg of the trade: 48px thumbnails, the kicker beside the first one,
+  /// «Fjern» beside the others, and the add-more line at the foot.
+  Widget _legCard({
+    required String kicker,
+    required Color colour,
+    required List<Item> items,
+    required String from,
+    String? done,
+    VoidCallback? edit,
+  }) =>
+      SectionCard(
+        radius: 16,
+        padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _valueRow('Du får verdi', kr(trade.youGetValue)),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: Insets.sm),
-              child: Divider(height: 1, color: SwaplyColors.line),
-            ),
-            _valueRow('Du gir verdi', kr(trade.youGiveValue)),
-            if (trade.difference > 0) ...[
-              const SizedBox(height: Insets.sm),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text('differanse ${kr(trade.difference)}', style: Type.small),
+            if (items.isEmpty)
+              Text(kicker.toUpperCase(),
+                  style: TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.66, color: colour)),
+            for (final (i, item) in items.indexed) ...[
+              if (i > 0) const SizedBox(height: 9),
+              Row(
+                children: [
+                  ItemThumb(item, size: 48, radius: 12),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (i == 0)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Text(kicker.toUpperCase(),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.66,
+                                    color: colour)),
+                          ),
+                        Text(item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                        Text('$from · verdi ${kr(item.estimatedValueNok)}',
+                            style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                      ],
+                    ),
+                  ),
+                  if (done != null)
+                    Text('✓ $done',
+                        style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: SwaplyColors.greenText))
+                  else if (edit != null && i > 0)
+                    GestureDetector(
+                      onTap: edit,
+                      child: const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Text('Fjern',
+                            style: TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+            if (edit != null) ...[
+              const SizedBox(height: 9),
+              GestureDetector(
+                onTap: edit,
+                child: const Text('+ Legg til flere av dine ting', style: Type.link),
               ),
             ],
           ],
         ),
       );
 
-  Widget _valueRow(String label, String value) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: Type.secondary),
-          Text(value, style: Type.heading),
-        ],
+  /// «Du får · verdi 1 200 kr» left, the difference in the middle, «Du gir ·
+  /// verdi 850 kr» right — a line, not a card.
+  Widget _valueSummary(Trade trade) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(child: _valueCell('Du får', SwaplyColors.greenText, trade.youGetValue)),
+            if (trade.difference > 0)
+              Text('differanse ${kr(trade.difference)}',
+                  style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
+            Expanded(
+                child: _valueCell('Du gir', SwaplyColors.amberText, trade.youGiveValue, end: true)),
+          ],
+        ),
+      );
+
+  Widget _valueCell(String label, Color colour, int value, {bool end = false}) => Text.rich(
+        TextSpan(children: [
+          TextSpan(
+              text: '$label ',
+              style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
+          TextSpan(text: 'verdi ${kr(value)}'),
+        ]),
+        textAlign: end ? TextAlign.end : TextAlign.start,
+        style: const TextStyle(fontSize: 12, color: SwaplyColors.inkMuted),
       );
 
   /// The cash difference. We show a number and a phone number; we never move it.
@@ -613,30 +720,50 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     final cash = trade.cash!;
     final settled = trade.youPaidAt != null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Kicker('Mellomlegg'),
-        const SizedBox(height: Insets.sm),
-        SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    // The kicker lives inside the card, with the note to its right.
+    return SectionCard(
+      radius: 16,
+      padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                cash.youPay
-                    ? 'Du betaler ${kr(cash.amountNok)} til ${cash.payee.displayName.split(' ').first}'
-                    : '${cash.payer.displayName.split(' ').first} betaler deg ${kr(cash.amountNok)}',
-                style: Type.heading,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('MELLOMLEGG',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.66,
+                            color: SwaplyColors.greyLight)),
+                    const SizedBox(height: 2),
+                    Text(
+                      cash.youPay
+                          ? 'Du betaler ${kr(cash.amountNok)} til ${cash.payee.displayName.split(' ').first}'
+                          : '${cash.payer.displayName.split(' ').first} betaler deg ${kr(cash.amountNok)}',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                settled
-                    ? '✓ betalt via Vipps'
-                    : trade.state == 'accepted'
-                        ? 'Betales direkte mellom dere, før noe sendes'
-                        : 'betales når begge har godtatt',
-                style: Type.small,
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 105,
+                child: Text(
+                  settled
+                      ? '✓ betalt via Vipps'
+                      : trade.state == 'accepted'
+                          ? 'betales direkte mellom dere, før noe sendes'
+                          : 'betales når begge har godtatt',
+                  style: const TextStyle(fontSize: 11.5, height: 1.4, color: SwaplyColors.grey),
+                ),
               ),
+            ],
+          ),
               if (cash.youPay && trade.state == 'accepted') ...[
                 const SizedBox(height: Insets.md),
                 Row(
@@ -667,10 +794,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                           (await api.mark(trade.id, 'paid', value: !settled)).trade),
                 ),
               ],
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -737,47 +862,56 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
   Widget _statusSection(Trade trade) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Kicker('Status'),
-          const SizedBox(height: Insets.sm),
-          SectionCard(
-            child: Column(
-              children: [
-                for (final p in trade.participants)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: Row(
+          // One small card per person, no kicker: face, name, what they give,
+          // and whether they have said yes.
+          for (final (i, p)
+              in trade.participants.where((p) => p.position != trade.youPosition).indexed) ...[
+            if (i > 0) const SizedBox(height: 7),
+            SectionCard(
+              radius: 16,
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+              child: Row(
+                children: [
+                  Avatar(p.displayName, size: 32),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Avatar(p.displayName, size: 32),
-                        const SizedBox(width: Insets.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                  p.position == trade.youPosition
-                                      ? 'Du'
-                                      : p.displayName,
-                                  style: const TextStyle(
-                                      fontSize: 14, fontWeight: FontWeight.w600)),
-                              Text('gir ${p.gives.map((i) => i.title).join(' og ')}',
-                                  style: Type.small),
-                            ],
-                          ),
-                        ),
-                        StatePill(
-                          p.accepted == true ? '✓ Har godtatt' : 'Venter',
-                          color: p.accepted == true
-                              ? SwaplyColors.greenPressed
-                              : SwaplyColors.greySoft,
-                        ),
+                        Text(p.displayName.split(' ').first,
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                        Text(_personMeta(p),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey)),
                       ],
                     ),
                   ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    p.accepted == true ? '✓ Har godtatt' : 'Venter',
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: p.accepted == true ? SwaplyColors.greenText : SwaplyColors.grey),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       );
+
+  /// «★ 4,7 · Trondheim» when the person has a rating and a town; what they
+  /// give otherwise, so the line is never empty.
+  String _personMeta(UserRef p) {
+    final parts = [
+      if (p.ratingAvg != null) '★ ${p.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
+      if (p.town != null) p.town!,
+    ];
+    return parts.isEmpty ? 'gir ${p.gives.map((i) => i.title).join(' og ')}' : parts.join(' · ');
+  }
 
   /// The conversation is available at every stage, including while you wait.
   Widget _conversationSection(Trade trade) {
@@ -785,80 +919,109 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
         ? 'alle'
         : trade.receivingFrom.displayName.split(' ').first;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Kicker(trade.isChain ? 'Chat · alle tre' : 'Samtale med $name'),
-            if (trade.threadId != null)
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => ThreadScreen(threadId: trade.threadId!))),
-                child: const Text('Åpne ›',
-                    style: TextStyle(fontSize: 13, color: SwaplyColors.greenPressed)),
-              ),
-          ],
-        ),
-        const SizedBox(height: Insets.sm),
-        SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    Future<void> send() async {
+      final text = _message.text.trim();
+      if (text.isEmpty || trade.threadId == null) return;
+      try {
+        await context.read<SwaplyApi>().sendMessage(trade.threadId!, text);
+        _message.clear();
+        await _load();
+      } on ApiException catch (e) {
+        if (mounted) showError(context, e);
+      }
+    }
+
+    // The same card as on the item screen: kicker and «Åpne ›» inside it,
+    // the last line as a soft bubble, a pill field and «Send» as words.
+    return SectionCard(
+      padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (trade.lastMessage != null) ...[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Avatar(trade.lastMessage!.senderName ?? '?', size: 26),
-                    const SizedBox(width: Insets.sm),
-                    Expanded(child: Text(trade.lastMessage!.body, style: Type.body)),
-                  ],
+              Text((trade.isChain ? 'Chat · alle tre' : 'Samtale med $name').toUpperCase(),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.72,
+                      color: SwaplyColors.greyLight)),
+              if (trade.threadId != null)
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => ThreadScreen(threadId: trade.threadId!))),
+                  child: const Text('Åpne ›',
+                      style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
                 ),
-                const SizedBox(height: Insets.md),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _message,
-                      decoration: InputDecoration(
-                          hintText: trade.isChain ? 'Skriv til begge…' : 'Skriv en melding…'),
-                    ),
-                  ),
-                  const SizedBox(width: Insets.sm),
-                  SizedBox(
-                    height: 48,
-                    child: FilledButton(
-                      onPressed: trade.threadId == null
-                          ? null
-                          : () async {
-                              final text = _message.text.trim();
-                              if (text.isEmpty) return;
-                              try {
-                                await context
-                                    .read<SwaplyApi>()
-                                    .sendMessage(trade.threadId!, text);
-                                _message.clear();
-                                await _load();
-                              } on ApiException catch (e) {
-                                if (mounted) showError(context, e);
-                              }
-                            },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: SwaplyColors.greenPressed,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(Radii.pill)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (trade.lastMessage != null) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Avatar(trade.lastMessage!.senderName ?? '?', size: 26),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF3F6F2),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(14),
+                        topRight: Radius.circular(14),
+                        bottomRight: Radius.circular(14),
+                        bottomLeft: Radius.circular(5),
                       ),
-                      child: const Text('Send'),
                     ),
+                    child: Text(trade.lastMessage!.body,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 13.5, height: 1.4, color: SwaplyColors.ink)),
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _message,
+                  style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
+                  onSubmitted: (_) => send(),
+                  decoration: InputDecoration(
+                    hintText: trade.isChain ? 'Skriv til begge…' : 'Skriv en melding…',
+                    hintStyle: const TextStyle(fontSize: 13, color: SwaplyColors.greyLight),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: trade.threadId == null ? null : send,
+                child: const Text('Send',
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -907,15 +1070,16 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
       if (!trade.youAccepted) {
         children.add(Row(
           children: [
-            Expanded(
+            SizedBox(
+              width: 113,
               child: SecondaryButton('Avslå',
                   destructive: true,
                   onPressed: _busy ? null : () => _confirmDecline(trade)),
             ),
-            const SizedBox(width: Insets.sm),
+            const SizedBox(width: 10),
             Expanded(
-              flex: 2,
               child: PrimaryButton('Godta byttet',
+                  height: 50,
                   busy: _busy,
                   onPressed: () async {
                     final session = context.read<Session>();
@@ -927,10 +1091,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
             ),
           ],
         ));
-        children.add(const SizedBox(height: Insets.sm));
+        children.add(const SizedBox(height: 6));
       }
       if (!trade.isChain) {
         children.add(SecondaryButton('Foreslå motbytte',
+            accent: true,
+            height: 42,
             onPressed: _busy ? null : () => _openCounterOffer(trade)));
       }
       if (trade.youAccepted) {

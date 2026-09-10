@@ -54,7 +54,8 @@ class _LikedScreenState extends State<LikedScreen> {
 
     return SwaplyScaffold(
       currentTab: 4,
-      appBar: swaplyAppBar(context, 'Likt', subtitle: 'Folk som har likt tingene dine'),
+      appBar: swaplyAppBar(context, 'Likt',
+          subtitle: 'Folk som har likt tingene dine', big: true, showBack: false),
       child: _error != null
           ? EmptyState(
               title: 'Fikk ikke kontakt',
@@ -80,29 +81,25 @@ class _LikedScreenState extends State<LikedScreen> {
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView(
-                        padding: const EdgeInsets.all(Insets.screen),
+                        padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
                         children: [
                           ...rows.map(_row),
                           const SizedBox(height: Insets.md),
                           // A green-soft box in the export, with the word
                           // «Tips:» carrying the weight.
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: Insets.md, vertical: 11),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
-                              color: SwaplyColors.greenSoft,
-                              borderRadius: BorderRadius.circular(Radii.card),
+                              color: SwaplyColors.tileSelected,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFC9EBDA)),
                             ),
                             child: const Text.rich(
                               TextSpan(children: [
-                                TextSpan(
-                                    text: 'Tips: ',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: SwaplyColors.greenDeep)),
+                                TextSpan(text: 'Tips: ', style: TextStyle(fontWeight: FontWeight.w700)),
                                 TextSpan(text: 'lik tilbake, det lukker bytter raskere.'),
                               ]),
-                              style: TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
+                              style: TextStyle(fontSize: 12, height: 1.4, color: Color(0xFF0B6B41)),
                             ),
                           ),
                         ],
@@ -119,10 +116,10 @@ class _LikedScreenState extends State<LikedScreen> {
       padding: const EdgeInsets.only(bottom: Insets.md),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(Insets.md),
+        padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(Radii.card),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
               color: open ? SwaplyColors.greenPressed : SwaplyColors.cardLine),
         ),
@@ -135,8 +132,8 @@ class _LikedScreenState extends State<LikedScreen> {
                       open ? _expanded.remove(row.item.id) : _expanded.add(row.item.id)),
               child: Row(
                 children: [
-                  ItemThumb(row.item, size: 48),
-                  const SizedBox(width: Insets.md),
+                  ItemThumb(row.item, size: 52, radius: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,45 +157,64 @@ class _LikedScreenState extends State<LikedScreen> {
                       ],
                     ),
                   ),
+                  // «⌄» when open, «›» when there is something to open.
                   if (count > 0)
-                    Icon(open ? Icons.expand_less : Icons.expand_more,
-                        color: SwaplyColors.grey),
+                    Icon(open ? Icons.expand_more : Icons.chevron_right,
+                        size: 20, color: SwaplyColors.grey),
                 ],
               ),
             ),
             if (open)
-              ...row.likers.map((liker) => Padding(
-                    padding: const EdgeInsets.only(top: Insets.md),
-                    child: InkWell(
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => OtherProfileScreen(userId: liker.id))),
-                      child: Row(
-                        children: [
-                          Avatar(liker.displayName, size: 38),
-                          const SizedBox(width: Insets.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(liker.displayName.split(' ').first, style: Type.heading),
-                                Text(
-                                  [
-                                    if (liker.itemCount != null)
-                                      '${liker.itemCount} gjenstander',
-                                    if (liker.town != null) liker.town!,
-                                  ].join(' · '),
-                                  style: Type.small,
+              // Ruled off from the thing, 44-tall rows 11 apart.
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.only(top: 12),
+                decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: Color(0xFFF0F2EE)))),
+                child: Column(
+                  children: [
+                    for (final (i, liker) in row.likers.indexed) ...[
+                      if (i > 0) const SizedBox(height: 11),
+                      InkWell(
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => OtherProfileScreen(userId: liker.id))),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 44),
+                          child: Row(
+                            children: [
+                              Avatar(liker.displayName, size: 36),
+                              const SizedBox(width: 11),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(liker.displayName.split(' ').first,
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: SwaplyColors.ink)),
+                                    Text(
+                                      [
+                                        if (liker.itemCount != null)
+                                          '${liker.itemCount} gjenstander',
+                                        if (liker.town != null) liker.town!,
+                                      ].join(' · '),
+                                      style: const TextStyle(
+                                          fontSize: 11.5, color: SwaplyColors.grey),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              const Text('Se tingene deres ›', style: Type.link),
+                            ],
                           ),
-                          const Text('Se tingene deres ›',
-                              style: TextStyle(
-                                  fontSize: 12.5, color: SwaplyColors.greenPressed)),
-                        ],
+                        ),
                       ),
-                    ),
-                  )),
+                    ],
+                  ],
+                ),
+              ),
           ],
         ),
       ),

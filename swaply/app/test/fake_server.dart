@@ -3,11 +3,18 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'export_fixtures.dart';
+
 /// A stand-in for the API, shaped exactly like the real responses. The screens
 /// are driven through the real `SwaplyApi`, so a change to the wire format
 /// breaks these tests rather than passing quietly.
 class FakeServer {
-  FakeServer();
+  FakeServer({this.export = false});
+
+  /// Serve the people and things the round-5 export draws, so a golden can
+  /// be laid over the frame it came from. The flow tests keep the small set.
+  final bool export;
+  int uploads = 0;
 
   final requests = <String>[];
 
@@ -19,7 +26,10 @@ class FakeServer {
   http.Client get client => MockClient((request) async {
         final key = '${request.method} ${request.url.path}';
         requests.add(key);
-        if (request.body.startsWith('{')) {
+        // A multipart upload is bytes that are not text; reading `body` on
+        // one throws before the request is even answered.
+        final json = (request.headers['content-type'] ?? '').startsWith('application/json');
+        if (json && request.body.startsWith('{')) {
           bodies[key] = jsonDecode(request.body) as Map<String, dynamic>;
         }
 
@@ -44,7 +54,12 @@ class FakeServer {
             headers: {'content-type': 'application/json; charset=utf-8'});
       });
 
-  Object? _canned(String key, http.Request request) => switch (key) {
+  Object? _canned(String key, http.Request request) {
+    if (export) {
+      final hit = exportCanned(key, this);
+      if (hit != null) return hit;
+    }
+    return switch (key) {
         'POST /auth/login' => {'token': 'tok', 'user': me},
         'POST /auth/register' => {'token': 'tok', 'user': me},
         'POST /auth/logout' => {},
@@ -174,6 +189,7 @@ class FakeServer {
         'GET /users/kari-1' => {...kari, 'items': [console], 'interests': ['friluft', 'bat']},
         _ => null,
       };
+  }
 
   // --- fixtures -------------------------------------------------------------
 

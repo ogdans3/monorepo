@@ -52,59 +52,54 @@ class _AgreementScreenState extends State<AgreementScreen> {
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
+                padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
                 children: [
                   SectionCard(
+                    padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _line(Icons.north_east,
-                            'Du gir ${trade.youGive.map((i) => i.title).join(' og ')} til $other'),
-                        const SizedBox(height: Insets.sm),
-                        _line(Icons.south_west,
-                            'Du får ${trade.youGet.map((i) => i.title).join(' og ')} fra $from'),
+                        _line(_thumbs(trade.youGive), 'Du gir',
+                            '${trade.youGive.map((i) => i.title).join(' og ')} til $other'),
+                        const SizedBox(height: 10),
+                        _line(_thumbs(trade.youGet), 'Du får',
+                            '${trade.youGet.map((i) => i.title).join(' og ')} fra $from'),
                         if (trade.cash != null) ...[
-                          const SizedBox(height: Insets.sm),
+                          const SizedBox(height: 10),
                           _line(
-                            Icons.payments_outlined,
+                            Container(
+                              width: 40,
+                              height: 40,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F6F2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Text('kr',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: SwaplyColors.inkBody)),
+                            ),
+                            trade.cash!.youPay ? 'Du betaler' : '$from betaler',
                             trade.cash!.youPay
-                                ? 'Du betaler ${kr(trade.cash!.amountNok)} i mellomlegg via Vipps'
-                                : '$from betaler deg ${kr(trade.cash!.amountNok)} i mellomlegg via Vipps',
+                                ? '${kr(trade.cash!.amountNok)} i mellomlegg via Vipps'
+                                : 'deg ${kr(trade.cash!.amountNok)} i mellomlegg via Vipps',
                           ),
                         ],
                       ],
                     ),
                   ),
-                  const SizedBox(height: Insets.lg),
-                  const Text('Dette godtar du', style: Type.heading),
-                  const SizedBox(height: Insets.sm),
-                  ..._terms(other).map(_term),
-                  const SizedBox(height: Insets.sm),
-                  Container(
-                    padding: const EdgeInsets.all(Insets.md),
-                    decoration: BoxDecoration(
-                      color: SwaplyColors.amberSoft,
-                      borderRadius: BorderRadius.circular(Radii.card),
-                    ),
-                    child: const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline, size: 18, color: SwaplyColors.amber),
-                        SizedBox(width: Insets.sm),
-                        Expanded(
-                          child: Text(
-                            'Swaply er ikke part i byttet og fasiliterer ikke frakt eller '
-                            'betaling. Avtalen er mellom dere.',
-                            style: TextStyle(
-                                fontSize: 13, height: 1.4, color: SwaplyColors.amber),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: Insets.sm),
-                  TextButton(
-                    onPressed: () => showDialog<void>(
+                  const SizedBox(height: 12),
+                  const Text('Dette godtar du', style: Type.section),
+                  const SizedBox(height: 12),
+                  for (final (i, t) in _terms(other).indexed) ...[
+                    if (i > 0) const SizedBox(height: 8),
+                    _term(t),
+                  ],
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => showDialog<void>(
                       context: context,
                       builder: (_) => AlertDialog(
                         title: const Text('Byttevilkår', style: Type.heading),
@@ -134,35 +129,60 @@ class _AgreementScreenState extends State<AgreementScreen> {
                         ],
                       ),
                     ),
-                    style: TextButton.styleFrom(
-                        foregroundColor: SwaplyColors.greenPressed,
-                        padding: EdgeInsets.zero,
-                        alignment: Alignment.centerLeft),
-                    child: const Text('Les hele byttevilkårene ›'),
+                    child: const Text('Les hele byttevilkårene ›', style: Type.link),
                   ),
-                  const SizedBox(height: Insets.sm),
-                  InkWell(
+                  const SizedBox(height: 12),
+                  // The consent is a card of its own with a square tick, not a
+                  // Material checkbox.
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => setState(() => _accepted = !_accepted),
-                    child: Row(
-                      children: [
-                        Checkbox(
-                          value: _accepted,
-                          activeColor: SwaplyColors.greenPressed,
-                          onChanged: (v) => setState(() => _accepted = v ?? false),
-                        ),
-                        const Expanded(
-                          child: Text('Jeg har lest og godtar vilkårene', style: Type.body),
-                        ),
-                      ],
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: SwaplyColors.cardLine),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _accepted ? SwaplyColors.greenPressed : null,
+                              borderRadius: BorderRadius.circular(7),
+                              border: _accepted
+                                  ? null
+                                  : Border.all(color: SwaplyColors.chevron, width: 2),
+                            ),
+                            child: _accepted
+                                ? const Text('✓',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        height: 1.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white))
+                                : null,
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text('Jeg har lest og godtar vilkårene',
+                                style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: SwaplyColors.ink)),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: Insets.lg),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  Insets.screen, 0, Insets.screen, Insets.md),
+              padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
               child: Column(
                 children: [
                   SwipeToConfirm(
@@ -170,8 +190,18 @@ class _AgreementScreenState extends State<AgreementScreen> {
                     enabled: _accepted && !_busy,
                     onConfirmed: _accept,
                   ),
-                  const SizedBox(height: Insets.sm),
-                  SecondaryButton('Avbryt', onPressed: () => Navigator.of(context).pop(false)),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(false),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 2),
+                      child: Text('Avbryt',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: SwaplyColors.grey)),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -188,25 +218,57 @@ class _AgreementScreenState extends State<AgreementScreen> {
         'Trekker jeg meg etterpå, må $other si ja først. Er noe sendt, kan jeg ikke trekke meg',
       ];
 
-  Widget _line(IconData icon, String text) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  /// Up to two 40px pictures, the second tucked behind the first.
+  Widget _thumbs(List<Item> items) {
+    if (items.isEmpty) return const SizedBox(width: 40, height: 40);
+    if (items.length == 1) return ItemThumb(items.first, size: 40, radius: 10);
+    return SizedBox(
+      width: 68,
+      height: 40,
+      child: Stack(
         children: [
-          Icon(icon, size: 17, color: SwaplyColors.greenPressed),
-          const SizedBox(width: Insets.sm),
-          Expanded(child: Text(text, style: Type.body)),
+          Positioned(left: 28, child: ItemThumb(items[1], size: 40, radius: 10)),
+          ItemThumb(items.first, size: 40, radius: 10),
+        ],
+      ),
+    );
+  }
+
+  Widget _line(Widget lead, String bold, String rest) => Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          lead,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(text: '$bold ', style: const TextStyle(fontWeight: FontWeight.w700)),
+                TextSpan(text: rest),
+              ]),
+              style: const TextStyle(fontSize: 13.5, height: 1.4, color: SwaplyColors.ink),
+            ),
+          ),
         ],
       );
 
-  Widget _term(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: Insets.sm),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.check, size: 16, color: SwaplyColors.greenPressed),
-            const SizedBox(width: Insets.sm),
-            Expanded(child: Text(text, style: Type.body)),
-          ],
-        ),
+  Widget _term(String text) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 3),
+            child: Text('✓',
+                style: TextStyle(
+                    fontSize: 13,
+                    height: 1.15,
+                    fontWeight: FontWeight.w800,
+                    color: SwaplyColors.greenText)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(fontSize: 13.5, height: 1.5, color: SwaplyColors.inkBody)),
+          ),
+        ],
       );
 }
 
@@ -235,34 +297,46 @@ class _SwipeToConfirmState extends State<SwipeToConfirm> {
 
   @override
   Widget build(BuildContext context) {
-    const height = 58.0;
+    const height = 60.0;
     const knob = 50.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final travel = constraints.maxWidth - knob - 8;
+        final travel = constraints.maxWidth - knob - 10;
 
         return Opacity(
           opacity: widget.enabled ? 1 : 0.5,
           child: Container(
             height: height,
+            width: double.infinity,
             decoration: BoxDecoration(
-              color: SwaplyColors.greenSoft,
+              color: const Color(0xFFE4EFE7),
               borderRadius: BorderRadius.circular(Radii.pill),
-              border: Border.all(color: SwaplyColors.line),
             ),
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Text(
-                  _done ? 'Godtatt' : widget.label,
-                  style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                      color: SwaplyColors.greenDeep),
+                Padding(
+                  padding: const EdgeInsets.only(left: 40),
+                  child: Text(
+                    _done ? 'Godtatt' : widget.label,
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: SwaplyColors.greenText),
+                  ),
+                ),
+                const Positioned(
+                  right: 41,
+                  child: Text('›››',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -2,
+                          color: Color(0xFF9BC9B0))),
                 ),
                 Positioned(
-                  left: 4 + _progress * travel,
+                  left: 5 + _progress * travel,
                   child: GestureDetector(
                     onHorizontalDragUpdate: widget.enabled && !_done
                         ? (details) => setState(() {
@@ -290,8 +364,15 @@ class _SwipeToConfirmState extends State<SwipeToConfirm> {
                         color: SwaplyColors.greenPressed,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(_done ? Icons.check : Icons.chevron_right,
-                          color: Colors.white, size: 26),
+                      alignment: Alignment.center,
+                      child: _done
+                          ? const Icon(Icons.check, color: Colors.white, size: 26)
+                          : const Text('›',
+                              style: TextStyle(
+                                  fontSize: 24,
+                                  height: 1,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white)),
                     ),
                   ),
                 ),

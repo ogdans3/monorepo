@@ -131,7 +131,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               children: [
                 _gallery(item),
                 Padding(
-                  padding: const EdgeInsets.all(Insets.screen),
+                  padding: const EdgeInsets.fromLTRB(22, 14, 22, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -143,42 +143,42 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         children: [
                           Expanded(child: Text(item.title, style: Type.display)),
                           if (item.estimatedValueNok != null) ...[
-                            const SizedBox(width: Insets.md),
+                            const SizedBox(width: 10),
                             Padding(
-                              padding: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.only(top: 9),
                               child: Text('Verdi ${kr(item.estimatedValueNok)}',
                                   style: Type.value),
                             ),
                           ],
                         ],
                       ),
-                      const SizedBox(height: Insets.md),
+                      const SizedBox(height: 11),
                       Wrap(
-                        spacing: Insets.sm,
-                        runSpacing: Insets.sm,
+                        spacing: 7,
+                        runSpacing: 7,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Pill([
                             categoryLabels[item.category] ?? item.category,
-                            if (item.subcategory != null) item.subcategory!,
-                          ].join(' · ')),
+                            if ((item.subcategory ?? '').isNotEmpty) item.subcategory!,
+                          ].join(' · '), small: true),
                           if (item.condition != null)
-                            Pill(conditionLabels[item.condition] ?? item.condition!),
-                          if (item.kind == 'service') const Pill('Tjeneste'),
+                            Pill(conditionLabels[item.condition] ?? item.condition!, small: true),
+                          if (item.kind == 'service') const Pill('Tjeneste', small: true),
                           // The town is not a pill in the export: where a thing
                           // is, is a note, not a label on it.
                           if (item.town != null) Text(item.town!, style: Type.secondary),
                         ],
                       ),
                       if (item.description != null && item.description!.isNotEmpty) ...[
-                        const SizedBox(height: Insets.md),
+                        const SizedBox(height: 11),
                         Text(item.description!, style: Type.body),
                       ],
                       if (owner != null) ...[
-                        const SizedBox(height: Insets.lg),
+                        const SizedBox(height: 11),
                         _ownerStrip(owner),
                       ],
-                      const SizedBox(height: Insets.lg),
+                      const SizedBox(height: 11),
                       if (mine)
                         const SectionCard(
                           child: Text(
@@ -205,7 +205,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final photos = item.media.isEmpty ? <String>[] : item.media;
 
     return SizedBox(
-      height: 300,
+      // 330 in the export, and the picture runs up under the status bar.
+      height: 330,
       child: Stack(
         children: [
           Positioned.fill(
@@ -226,9 +227,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   ),
           ),
           Positioned(
-            top: MediaQuery.of(context).padding.top,
-            left: 4,
-            right: 4,
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 14,
+            right: 14,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -262,12 +263,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 children: List.generate(
                   photos.length,
                   (i) => Container(
-                    height: 6,
-                    width: 6,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    height: 5,
+                    width: i == _photo ? 14 : 5,
+                    margin: const EdgeInsets.symmetric(horizontal: 2.5),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: i == _photo ? Colors.white : Colors.white54,
+                      borderRadius: BorderRadius.circular(Radii.pill),
+                      color: i == _photo ? Colors.white : Colors.white.withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -279,12 +280,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   Widget _round(IconData icon, VoidCallback onTap) => Material(
-        color: Colors.white.withValues(alpha: 0.92),
+        color: SwaplyColors.bg.withValues(alpha: 0.92),
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
-          child: SizedBox(height: 38, width: 38, child: Icon(icon, size: 22)),
+          child: SizedBox(height: 38, width: 38, child: Icon(icon, size: 20, color: SwaplyColors.ink)),
         ),
       );
 
@@ -295,31 +296,23 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         child: SectionCard(
           child: Row(
             children: [
-              Avatar(owner.displayName, size: 44),
-              const SizedBox(width: Insets.md),
+              Avatar(owner.displayName, size: 42),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(owner.displayName, style: Type.heading),
                     const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        StarRow(value: owner.ratingAvg ?? 0),
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: Text(
-                            [
-                              if (owner.ratingAvg != null)
-                                owner.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
-                              if (owner.tradeCount != null) '${owner.tradeCount} bytter',
-                              if (owner.bankidVerified) 'BankID-verifisert',
-                            ].join(' · '),
-                            style: Type.small,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    // «★ 4,8 · 23 bytter · BankID-verifisert», one grey line.
+                    Text(
+                      [
+                        if (owner.ratingAvg != null)
+                          '★ ${owner.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
+                        if (owner.tradeCount != null) '${owner.tradeCount} bytter',
+                        if (owner.bankidVerified) 'BankID-verifisert',
+                      ].join(' · '),
+                      style: const TextStyle(fontSize: 12, height: 1.35, color: SwaplyColors.grey),
                     ),
                   ],
                 ),
@@ -351,7 +344,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: Insets.md),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -359,7 +352,22 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   controller: _message,
                   minLines: 1,
                   maxLines: 3,
-                  decoration: InputDecoration(hintText: 'Skriv en melding til $name…'),
+                  style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
+                  decoration: InputDecoration(
+                    hintText: 'Skriv en melding til $name…',
+                    hintStyle: const TextStyle(fontSize: 13, color: SwaplyColors.greyLight),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                  ),
                 ),
               ),
               const SizedBox(width: Insets.md),
@@ -389,28 +397,29 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   /// Two circles, centred. The heart is the biggest thing on the screen because
   /// it is the only action that means anything — the ✕ beside it just goes back.
   Widget _actionBar(Item item) => Container(
-        padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.md, Insets.screen, Insets.md),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
         decoration: const BoxDecoration(
           color: SwaplyColors.surface,
-          border: Border(top: BorderSide(color: SwaplyColors.cardLine)),
+          border: Border(top: BorderSide(color: Color(0xFFF0F2EE))),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircleAction(
               icon: Icons.close,
-              size: 56,
-              iconSize: 24,
-              color: SwaplyColors.coral,
+              size: 58,
+              iconSize: 22,
+              color: SwaplyColors.badge,
               borderColor: SwaplyColors.declineLine,
               semanticLabel: 'Ikke interessert',
               onPressed: () => Navigator.of(context).maybePop(),
             ),
-            const SizedBox(width: Insets.lg),
+            const SizedBox(width: 26),
             CircleAction(
               icon: item.likedByMe ? Icons.favorite : Icons.favorite_border,
-              size: 68,
-              iconSize: 30,
+              size: 62,
+              iconSize: 26,
               filled: true,
               busy: _liking,
               semanticLabel: item.likedByMe ? 'Du vil ha denne' : 'Jeg vil ha',

@@ -8,7 +8,6 @@ import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
 import 'proposal_sheets.dart';
-import 'trade_detail.dart';
 
 /// 11a Chats. One row per conversation, with what the trade is about under the
 /// last message, because that is how you tell two of them apart.
@@ -99,23 +98,34 @@ class _ChatsScreenState extends State<ChatsScreen> {
     };
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: Insets.screen, vertical: 6),
-      leading: Avatar(thread.others.isEmpty ? '?' : thread.others.first, size: 46),
+      // 14 above and below, 8 at the sides inside a 16 margin; the picture is
+      // 54 across with 12 to the words.
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      horizontalTitleGap: 12,
+      leading: Avatar(thread.others.isEmpty ? '?' : thread.others.first, size: 54),
       title: Text(name, style: Type.heading),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 2),
           if (thread.lastMessage != null)
             Text(thread.lastMessage!.body,
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.body),
-          Text(subtitle, style: Type.small, maxLines: 1, overflow: TextOverflow.ellipsis),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, height: 1.2, color: SwaplyColors.inkMuted)),
+          const SizedBox(height: 2),
+          Text(subtitle,
+              style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
         ],
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(_relative(thread.lastMessage?.createdAt), style: Type.small),
+          Text(_relative(thread.lastMessage?.createdAt),
+              style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
           const SizedBox(height: 6),
           // A dot, not a count: the number is already on the tab in the nav,
           // and a red badge on every row makes a quiet list look like an alarm.
@@ -232,24 +242,31 @@ class _ThreadScreenState extends State<ThreadScreen> {
         ? 'Du, ${others.join(' og ')}'
         : (others.firstOrNull ?? 'Samtale');
 
+    final me = context.read<Session>().me?.id;
+    final faces = thread.participants.where((p) => p.id != me).take(2).toList();
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: SwaplyColors.bg,
+        // 59 tall on #FCFCFB with 18 at the sides: «‹», a 38 face, the name.
+        backgroundColor: SwaplyColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        toolbarHeight: 59,
+        leadingWidth: 44,
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left, size: 30, color: SwaplyColors.ink),
+          padding: const EdgeInsets.only(left: 10),
+          icon: const Icon(Icons.chevron_left, size: 26, color: SwaplyColors.ink),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         titleSpacing: 0,
         title: Row(
           children: [
-            for (final p in thread.participants.take(3))
+            for (final p in faces)
               Padding(
                 padding: const EdgeInsets.only(right: 4),
-                child: Avatar(p.displayName, size: 28),
+                child: Avatar(p.displayName, size: faces.length > 1 ? 30 : 38),
               ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,21 +276,14 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       style: Type.heading, maxLines: 1, overflow: TextOverflow.ellipsis),
                   if (_trade != null)
                     Text(_tradeLine(_trade!),
-                        style: Type.small, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
           ],
         ),
-        actions: [
-          if (_trade != null)
-            IconButton(
-              tooltip: 'Se byttet',
-              icon: const Icon(Icons.swap_horiz),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => TradeDetailScreen(tradeId: _trade!.id))),
-            ),
-        ],
       ),
       body: SafeArea(
         child: Column(
@@ -303,9 +313,14 @@ class _ThreadScreenState extends State<ThreadScreen> {
             Expanded(
               child: ListView.builder(
                 controller: _scroll,
-                padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                 itemCount: thread.messages.length,
-                itemBuilder: (context, i) => _bubble(thread.messages[i], thread.kind == 'chain'),
+                itemBuilder: (context, i) => Column(
+                  children: [
+                    if (i == 0) _dayLabel(thread.messages[i].createdAt),
+                    _bubble(thread.messages[i], thread.kind == 'chain'),
+                  ],
+                ),
               ),
             ),
             _composer(),
@@ -329,24 +344,56 @@ class _ThreadScreenState extends State<ThreadScreen> {
     return '$give ⇄ $get · $state';
   }
 
+  /// «I dag 14:02» over the first message, as the export sets the scene.
+  Widget _dayLabel(DateTime? when) {
+    if (when == null) return const SizedBox.shrink();
+    final local = when.toLocal();
+    final now = DateTime.now();
+    final days = DateTime(now.year, now.month, now.day)
+        .difference(DateTime(local.year, local.month, local.day))
+        .inDays;
+    final time =
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    final label = switch (days) {
+      0 => 'I dag $time',
+      1 => 'I går $time',
+      _ => '${local.day}.${local.month}. $time',
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Center(
+        child: Text(label,
+            style: const TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w600, color: SwaplyColors.greyLight)),
+      ),
+    );
+  }
+
   Widget _bubble(ChatMessage message, bool showName) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           mainAxisAlignment:
               message.mine ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (!message.mine) ...[
-              Avatar(message.senderName ?? '?', size: 26),
-              const SizedBox(width: 6),
+              Avatar(message.senderName ?? '?', size: 28),
+              const SizedBox(width: 8),
             ],
             Flexible(
               child: Container(
+                constraints: const BoxConstraints(maxWidth: 280),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: message.mine ? SwaplyColors.greenPressed : Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: SwaplyColors.line),
+                  // 18 all round but the corner nearest the sender, which is 6.
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: Radius.circular(message.mine ? 18 : 6),
+                    bottomRight: Radius.circular(message.mine ? 6 : 18),
+                  ),
+                  border: message.mine ? null : Border.all(color: SwaplyColors.cardLine),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,20 +425,24 @@ class _ThreadScreenState extends State<ThreadScreen> {
         trade != null && ['talking', 'pending', 'countered'].contains(trade.state);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.sm, Insets.screen, Insets.sm),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       decoration: const BoxDecoration(
         color: SwaplyColors.surface,
-        border: Border(top: BorderSide(color: SwaplyColors.line)),
+        border: Border(top: BorderSide(color: SwaplyColors.barLine)),
       ),
       child: Column(
         children: [
           if (negotiable)
             // Filled pills that wrap onto a second line, as the export draws
             // them — not a row that scrolls sideways and hides the third one.
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
                   // Each chip is its own sheet in the export, not three routes
                   // into the same screen.
                   _chip('♥ Jeg vil ha',
@@ -400,7 +451,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       () => _propose(trade, ProposalKind.offerMine)),
                   _chip('Foreslå mellomlegg',
                       () => _propose(trade, ProposalKind.cash)),
-                ],
+                  ],
+                ),
               ),
             ),
           Row(
@@ -410,20 +462,33 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   controller: _input,
                   minLines: 1,
                   maxLines: 4,
+                  style: const TextStyle(fontSize: 14.5, color: SwaplyColors.ink),
                   decoration: InputDecoration(
                     hintText: _thread?.kind == 'chain' ? 'Skriv til begge…' : 'Skriv en melding…',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    hintStyle: const TextStyle(fontSize: 14.5, color: SwaplyColors.greyLight),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
                   ),
                 ),
               ),
-              const SizedBox(width: Insets.sm),
-              SizedBox(
-                height: 46,
-                child: TextButton(
-                  onPressed: _sending ? null : _send,
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: _sending ? null : _send,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
                   child: Text('Send',
-                      style: Type.link.copyWith(
-                          fontSize: 13,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                           color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText)),
                 ),
               ),
@@ -434,9 +499,18 @@ class _ThreadScreenState extends State<ThreadScreen> {
     );
   }
 
-  Widget _chip(String label, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.only(right: Insets.sm, bottom: Insets.sm),
-        child: GestureDetector(onTap: onTap, child: Pill(label)),
+  Widget _chip(String label, VoidCallback onTap) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: SwaplyColors.chip,
+            borderRadius: BorderRadius.circular(Radii.pill),
+          ),
+          child: Text(label,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: SwaplyColors.chipInk)),
+        ),
       );
 
   Future<void> _propose(Trade trade, ProposalKind kind) async {

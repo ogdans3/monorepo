@@ -112,71 +112,58 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                 children: [
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
+                      padding: const EdgeInsets.fromLTRB(22, 12, 22, 12),
                       children: [
                         Text(
                           'Endre hva som byttes. $other får forslaget og må godta på nytt.',
-                          style: Type.secondary,
+                          style: const TextStyle(
+                              fontSize: 13, height: 1.5, color: SwaplyColors.inkMuted),
                         ),
-                        const SizedBox(height: Insets.lg),
-                        Kicker('Du får · ${other}s ting'),
-                        const SizedBox(height: Insets.sm),
-                        ..._theirs.map((i) => _pickRow(i, _chosenTheirs)),
-                        const SizedBox(height: Insets.lg),
-                        const Kicker('Du gir · dine ting'),
-                        const SizedBox(height: Insets.sm),
-                        ..._mine.map((i) => _pickRow(i, _chosenMine)),
-                        const SizedBox(height: Insets.lg),
-                        SectionCard(
-                          child: Column(
+                        const SizedBox(height: 9),
+                        _side('Du får · ${other}s ting', SwaplyColors.greenText, _theirs,
+                            _chosenTheirs),
+                        const SizedBox(height: 9),
+                        _side('Du gir · dine ting', SwaplyColors.amberText, _mine, _chosenMine),
+                        const SizedBox(height: 9),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Row(
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Du får verdi', style: Type.secondary),
-                                  Text(kr(getValue), style: Type.heading),
-                                ],
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: Insets.sm),
-                                child: Divider(height: 1, color: SwaplyColors.line),
-                              ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Du gir verdi', style: Type.secondary),
-                                  Text(kr(giveValue), style: Type.heading),
-                                ],
-                              ),
-                              const SizedBox(height: Insets.sm),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                    'differanse ${kr((getValue - giveValue).abs())}',
-                                    style: Type.small),
-                              ),
+                              Expanded(child: _value('Du får', SwaplyColors.greenText, getValue)),
+                              Text('differanse ${kr((getValue - giveValue).abs())}',
+                                  style: const TextStyle(
+                                      fontSize: 11, color: SwaplyColors.greyLight)),
+                              Expanded(
+                                  child: _value('Du gir', SwaplyColors.amberText, giveValue,
+                                      end: true)),
                             ],
                           ),
                         ),
-                        const SizedBox(height: Insets.lg),
-                        const Kicker('Mellomlegg'),
-                        const SizedBox(height: Insets.sm),
-                        _cashPicker(other, (getValue - giveValue).abs()),
-                        const SizedBox(height: Insets.lg),
+                        const SizedBox(height: 9),
+                        _cashPicker(other),
                       ],
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(Insets.screen),
+                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
                     child: Column(
                       children: [
                         PrimaryButton('Send motbytte',
                             busy: _busy,
                             enabled: _selectedMine.isNotEmpty || _selectedTheirs.isNotEmpty,
                             onPressed: _send),
-                        const SizedBox(height: Insets.sm),
-                        SecondaryButton('Avbryt',
-                            onPressed: () => Navigator.of(context).pop(false)),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(false),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 2),
+                            child: Text('Avbryt',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: SwaplyColors.grey)),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -186,147 +173,176 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
     );
   }
 
+  Widget _value(String label, Color colour, int value, {bool end = false}) => Text.rich(
+        TextSpan(children: [
+          TextSpan(text: '$label ', style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
+          TextSpan(text: 'verdi ${kr(value)}'),
+        ]),
+        textAlign: end ? TextAlign.end : TextAlign.start,
+        style: const TextStyle(fontSize: 12, color: SwaplyColors.inkMuted),
+      );
+
+  /// One card per side, the kicker inside it, a row per thing with a square
+  /// tick at the right.
+  Widget _side(String kicker, Color colour, List<Item> items, Set<String> selection) =>
+      SectionCard(
+        radius: 16,
+        padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(kicker.toUpperCase(),
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.66, color: colour)),
+            const SizedBox(height: 8),
+            if (items.isEmpty)
+              const Text('Ingenting å velge mellom.', style: Type.secondary),
+            for (final (i, item) in items.indexed) ...[
+              if (i > 0) const SizedBox(height: 9),
+              _pickRow(item, selection),
+            ],
+          ],
+        ),
+      );
+
   /// 09b: things another trade is holding are shown, and locked, rather than
   /// hidden — otherwise it looks like they were never there.
   Widget _pickRow(Item item, Set<String> selection) {
     final locked = item.lockedByOtherTrade;
     final selected = selection.contains(item.id);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Insets.sm),
-      child: InkWell(
-        onTap: locked
-            ? null
-            : () => setState(() =>
-                selected ? selection.remove(item.id) : selection.add(item.id)),
-        borderRadius: BorderRadius.circular(Radii.card),
-        child: Opacity(
-          opacity: locked ? 0.55 : 1,
-          child: SectionCard(
-            padding: const EdgeInsets.all(Insets.sm + 2),
-            child: Row(
-              children: [
-                ItemThumb(item, size: 48),
-                const SizedBox(width: Insets.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(item.title, style: Type.heading),
-                      Text(
-                        [
-                          'verdi ${kr(item.estimatedValueNok)}',
-                          if (locked) 'reservert i annet bytte',
-                          if (item.inOffer && !locked) 'allerede i byttet',
-                        ].join(' · '),
-                        style: Type.small,
-                      ),
-                    ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: locked
+          ? null
+          : () => setState(() => selected ? selection.remove(item.id) : selection.add(item.id)),
+      child: Opacity(
+        opacity: locked ? 0.55 : 1,
+        child: Row(
+          children: [
+            ItemThumb(item, size: 44, radius: 11),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                  Text(
+                    [
+                      'verdi ${kr(item.estimatedValueNok)}',
+                      if (locked) 'reservert i annet bytte',
+                      if (item.inOffer && !locked) 'allerede i byttet',
+                    ].join(' · '),
+                    style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey),
                   ),
-                ),
-                if (locked)
-                  const StatePill('Låst', color: SwaplyColors.greySoft)
-                else
-                  Container(
-                    height: 24,
-                    width: 24,
-                    decoration: BoxDecoration(
-                      color: selected ? SwaplyColors.greenPressed : Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: selected
-                              ? SwaplyColors.greenPressed
-                              : const Color(0x33064E3B)),
-                    ),
-                    child: selected
-                        ? const Icon(Icons.check, size: 15, color: Colors.white)
-                        : null,
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            if (locked)
+              const StatePill('Låst', color: SwaplyColors.inkMuted)
+            else
+              _tick(selected),
+          ],
         ),
       ),
     );
   }
 
-  /// 09d. The suggested amount is the difference, because that is the number
-  /// both people are already looking at.
-  Widget _cashPicker(String other, int difference) => SectionCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  /// 26 across with a two-pixel edge when off; 22, filled, with a white tick
+  /// when on. The box shrinks a little as it fills, the way the export draws it.
+  Widget _tick(bool on) => SizedBox(
+        width: 26,
+        height: 26,
+        child: Center(
+          child: Container(
+            width: on ? 22 : 26,
+            height: on ? 22 : 26,
+            decoration: BoxDecoration(
+              color: on ? SwaplyColors.greenPressed : null,
+              borderRadius: BorderRadius.circular(7),
+              border: on ? null : Border.all(color: SwaplyColors.chevron, width: 2),
+            ),
+            child: on
+                ? const Text('✓',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white))
+                : null,
+          ),
+        ),
+      );
+
+  /// 09d. «MELLOMLEGG · Du betaler Ola» and a stepper; the words flip who pays
+  /// when tapped. The suggested amount is the difference, because that is the
+  /// number both people are already looking at.
+  Widget _cashPicker(String other) => SectionCard(
+        radius: 16,
+        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _toggle('Jeg betaler', _iPay, () => setState(() => _iPay = true)),
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _iPay = !_iPay),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('MELLOMLEGG',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.66,
+                            color: SwaplyColors.greyLight)),
+                    const SizedBox(height: 2),
+                    Text(
+                      _cash == 0
+                          ? 'Ingen mellomlegg'
+                          : _iPay
+                              ? 'Du betaler $other'
+                              : '$other betaler deg',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: Insets.sm),
-                Expanded(
-                  child: _toggle('$other betaler', !_iPay, () => setState(() => _iPay = false)),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: Insets.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed: () => setState(() => _cash = (_cash - 50).clamp(0, 1000000)),
-                  icon: const Icon(Icons.remove_circle_outline),
-                ),
-                Text(_cash == 0 ? 'Ingen' : kr(_cash), style: Type.title),
-                IconButton(
-                  onPressed: () => setState(() => _cash += 50),
-                  icon: const Icon(Icons.add_circle_outline),
-                ),
-              ],
+            _step('−', () => setState(() => _cash = (_cash - 50).clamp(0, 1000000))),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 60,
+              child: Text(kr(_cash),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w800, color: SwaplyColors.ink)),
             ),
-            const SizedBox(height: Insets.sm),
-            Wrap(
-              spacing: Insets.sm,
-              children: [
-                for (final amount in {100, difference, 400}.where((a) => a > 0).toList()..sort())
-                  ActionChip(
-                    label: Text(kr(amount)),
-                    onPressed: () => setState(() => _cash = amount),
-                    backgroundColor: Colors.white,
-                    side: const BorderSide(color: SwaplyColors.line),
-                  ),
-                ActionChip(
-                  label: const Text('Ingen'),
-                  onPressed: () => setState(() => _cash = 0),
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(color: SwaplyColors.line),
-                ),
-              ],
-            ),
-            const SizedBox(height: Insets.sm),
-            const Text(
-              'Mellomlegget avtales mellom dere og betales utenfor appen. '
-              'Swaply tar ikke imot penger.',
-              style: Type.small,
-            ),
+            const SizedBox(width: 8),
+            _step('+', () => setState(() => _cash += 50)),
           ],
         ),
       );
 
-  Widget _toggle(String label, bool selected, VoidCallback onTap) => GestureDetector(
+  Widget _step(String glyph, VoidCallback onTap) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 11),
+          width: 34,
+          height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? SwaplyColors.greenPressed : Colors.white,
-            borderRadius: BorderRadius.circular(Radii.pill),
-            border: Border.all(
-                color: selected ? SwaplyColors.greenPressed : const Color(0x22064E3B)),
+            shape: BoxShape.circle,
+            border: Border.all(color: SwaplyColors.fieldLine),
           ),
-          child: Text(label,
-              style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : SwaplyColors.ink)),
+          child: Text(glyph,
+              style: const TextStyle(
+                  fontSize: 16, height: 1, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
         ),
       );
 }

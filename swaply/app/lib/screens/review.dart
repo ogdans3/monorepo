@@ -93,7 +93,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
   final _chips = <String>{};
   bool _busy = false;
 
-  static const quickChips = ['Kom som avtalt', 'God kommunikasjon', 'Møtte ikke opp'];
 
   List<UserRef> get _others =>
       widget.trade.participants.where((p) => p.position != widget.trade.youPosition).toList();
@@ -129,116 +128,131 @@ class _ReviewScreenState extends State<ReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final chain = widget.trade.isChain;
+    final first = _others.first;
 
+    // Centred and quiet: a face, a question, five stars, a box for a few
+    // words. The chain variant asks the same of two people.
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: SwaplyColors.bg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Senere', style: TextStyle(color: SwaplyColors.greySoft)),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
+                padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
                 children: [
-                  Text(
-                    chain
-                        ? 'Ble byttet gjennomført?'
-                        : 'Hvordan var byttet\nmed ${_others.first.displayName.split(' ').first}?',
-                    style: Type.display,
-                  ),
-                  if (chain) ...[
-                    const SizedBox(height: Insets.sm),
-                    const Text(
-                      'Vi var ikke med på dette byttet, så si fra hvordan det gikk med de '
-                      'to du byttet med.',
-                      style: Type.secondary,
-                    ),
-                  ],
-                  const SizedBox(height: Insets.xl),
-                  for (final person in _others)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: Insets.lg),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Avatar(person.displayName, size: 40),
-                              const SizedBox(width: Insets.md),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(person.displayName, style: Type.heading),
-                                    Text(
-                                      person.gives.isEmpty
-                                          ? 'byttet med deg'
-                                          : 'ga ${person.gives.map((i) => i.title).join(' og ')}',
-                                      style: Type.small,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: Insets.sm),
-                          StarRow(
-                            value: (_scores[person.id] ?? 0).toDouble(),
-                            size: 34,
-                            onChanged: (v) => setState(() => _scores[person.id] = v),
-                          ),
-                        ],
+                  if (!chain) ...[
+                    const SizedBox(height: 143),
+                    Center(child: Avatar(first.displayName, size: 76)),
+                    const SizedBox(height: 18),
+                    // Held to 280 so the question breaks after «byttet», as drawn.
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 280),
+                        child: Text(
+                            'Hvordan var byttet med ${first.displayName.split(' ').first}?',
+                            style: Type.screen,
+                            textAlign: TextAlign.center),
                       ),
                     ),
-                  const SizedBox(height: Insets.sm),
-                  Wrap(
-                    spacing: Insets.sm,
-                    children: quickChips
-                        .map((c) => FilterChip(
-                              label: Text(c),
-                              selected: _chips.contains(c),
-                              onSelected: (on) =>
-                                  setState(() => on ? _chips.add(c) : _chips.remove(c)),
-                              backgroundColor: Colors.white,
-                              selectedColor: SwaplyColors.greenSoft,
-                              side: const BorderSide(color: SwaplyColors.line),
-                            ))
-                        .toList(),
-                  ),
-                  const SizedBox(height: Insets.md),
+                    const SizedBox(height: 24),
+                    Center(child: _stars(first.id, 38, 10)),
+                    const SizedBox(height: 28),
+                  ] else ...[
+                    const SizedBox(height: 60),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 15),
+                      child: Text('Ble byttet gjennomført?',
+                          style: Type.screen, textAlign: TextAlign.center),
+                    ),
+                    const SizedBox(height: 8),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 15),
+                      child: Text(
+                        'Vi var ikke med på dette byttet, så si fra hvordan det gikk med de '
+                        'to du byttet med.',
+                        style: TextStyle(fontSize: 14, height: 1.45, color: SwaplyColors.inkMuted),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    for (final person in _others)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(15, 0, 15, 20),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Avatar(person.displayName, size: 40),
+                                const SizedBox(width: Insets.md),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(person.displayName, style: Type.heading),
+                                      Text(
+                                        person.gives.isEmpty
+                                            ? 'byttet med deg'
+                                            : 'ga ${person.gives.map((i) => i.title).join(' og ')}',
+                                        style: Type.small,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _stars(person.id, 32, 8),
+                          ],
+                        ),
+                      ),
+                  ],
                   TextField(
                     controller: _comment,
-                    minLines: 3,
-                    maxLines: 5,
-                    decoration:
-                        const InputDecoration(hintText: 'Si et par ord (valgfritt)…'),
+                    minLines: 4,
+                    maxLines: 6,
+                    style: const TextStyle(fontSize: 14, color: SwaplyColors.ink),
+                    decoration: InputDecoration(
+                      hintText: 'Si et par ord (valgfritt)…',
+                      hintStyle: const TextStyle(fontSize: 14, color: SwaplyColors.greyLight),
+                      contentPadding: const EdgeInsets.all(14),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                    ),
                   ),
-                  const SizedBox(height: Insets.sm),
-                  const Text('Vurderinger bygger tillit i Swaply.', style: Type.small),
-                  const SizedBox(height: Insets.lg),
+                  const SizedBox(height: 14),
+                  const Text('Vurderinger bygger tillit i Swaply.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: SwaplyColors.greyLight)),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(Insets.screen),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 34),
               child: Column(
                 children: [
-                  PrimaryButton(chain ? 'Ja, send vurdering' : 'Send vurdering',
+                  PrimaryButton('Send vurdering',
                       busy: _busy,
-                      enabled: _scores.length == _others.length,
+                      enabled: _others.every((p) => _scores.containsKey(p.id)),
                       onPressed: _submit),
-                  const SizedBox(height: Insets.sm),
-                  SecondaryButton(chain ? 'Byttet ble ikke noe av' : 'Hopp over',
-                      onPressed: () => Navigator.of(context).maybePop()),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).maybePop(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      // A chain we were not part of may simply not have happened.
+                      child: Text(chain ? 'Byttet ble ikke noe av' : 'Hopp over',
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -247,9 +261,31 @@ class _ReviewScreenState extends State<ReviewScreen> {
       ),
     );
   }
+
+  /// Five «★» as text, green when given and pale when not, the way the
+  /// export draws them.
+  Widget _stars(String personId, double size, double gap) {
+    final score = _scores[personId] ?? 0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var n = 1; n <= 5; n++)
+          GestureDetector(
+            onTap: () => setState(() => _scores[personId] = n),
+            child: Padding(
+              padding: EdgeInsets.only(right: n < 5 ? gap : 0),
+              child: Text('★',
+                  style: TextStyle(
+                      fontSize: size,
+                      height: 1,
+                      color: n <= score ? SwaplyColors.greenPressed : const Color(0xFFDCE1DB))),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
-/// 06i. About us, not about the counterparty, and shown far less often.
 class AppFeedbackScreen extends StatefulWidget {
   const AppFeedbackScreen({super.key, required this.trade});
 

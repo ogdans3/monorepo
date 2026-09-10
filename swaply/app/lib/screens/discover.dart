@@ -96,7 +96,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.sm, Insets.screen, Insets.sm),
+            // 18 at the sides on this screen, 6 above and 10 below the field.
+            padding: const EdgeInsets.fromLTRB(18, 6, 18, 10),
             child: Row(
               children: [
                 Expanded(
@@ -104,24 +105,26 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     controller: _search,
                     textInputAction: TextInputAction.search,
                     onSubmitted: (_) => _load(),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w600, color: SwaplyColors.ink),
                     decoration: InputDecoration(
                       hintText: 'Søk etter ting du vil ha',
-                      prefixIcon: const Icon(Icons.search, size: 20, color: SwaplyColors.grey),
-                      suffixIcon: _search.text.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.close, size: 18),
-                              onPressed: () {
-                                _search.clear();
-                                setState(() => _filters = const SearchFilters());
-                                _load();
-                              },
-                            ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      hintStyle: const TextStyle(fontSize: 15, color: SwaplyColors.greyLight),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                          borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                          borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                          borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                      prefixIcon: const Icon(Icons.search, size: 20, color: SwaplyColors.greenPressed),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
                     ),
                   ),
                 ),
-                const SizedBox(width: Insets.sm),
+                const SizedBox(width: 10),
                 _SquareIconButton(
                   icon: Icons.tune,
                   active: _filters.isActive,
@@ -139,20 +142,27 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   /// «Alt» and then the twelve, scrolling sideways. A filter on one grid, the
   /// way the export draws the home tab.
+  /// The order the export lines the chips up in on 05 — not the order of the
+  /// interest grid, and not alphabetical.
+  static const _chipOrder = [
+    'gaming', 'klaer', 'verktoy', 'sykling', 'bat', 'friluft',
+    'barn', 'hjem', 'sport', 'musikk', 'boker', 'diverse',
+  ];
+
   Widget _categoryChips() => SizedBox(
-        height: 44,
+        height: 41,
         child: ListView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
           children: [
             _chipButton('Alt', null),
-            for (final entry in categoryLabels.entries) _chipButton(entry.value, entry.key),
+            for (final key in _chipOrder) _chipButton(categoryLabels[key]!, key),
           ],
         ),
       );
 
   Widget _chipButton(String label, String? category) => Padding(
-        padding: const EdgeInsets.only(right: Insets.sm),
+        padding: const EdgeInsets.only(right: 7),
         child: GestureDetector(
           onTap: () {
             if (_chip == category) return;
@@ -208,9 +218,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   onChanged: _load,
                   // Three heights, cycling: a collage is made of things that
                   // are not the same shape.
-                  aspect: const [1.0, 1.25, 0.85][(i * 2 + offset) % 3],
+                  // Never taller than square: the export's collage runs from
+                  // 1:1 to about 1.4:1, and a portrait card would stand out.
+                  aspect: const [1.0, 1.42, 1.21, 1.06, 1.13][(i * 2 + offset) % 5],
                 ),
-                const SizedBox(height: Insets.md),
+                const SizedBox(height: 16),
               ],
             ],
           ),
@@ -219,17 +231,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.sm, Insets.screen, Insets.xl),
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, Insets.xl),
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: Insets.md),
-            child: Text('$_total treff', style: Type.secondary),
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text('$_total treff', style: const TextStyle(fontSize: 12.5, color: SwaplyColors.grey)),
           ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               column(left, 0),
-              const SizedBox(width: Insets.md),
+              const SizedBox(width: 14),
               column(right, 1),
             ],
           ),
@@ -249,16 +261,16 @@ class _SquareIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(Radii.card),
+        borderRadius: BorderRadius.circular(Radii.pill),
         child: Container(
-          height: 50,
-          width: 50,
+          height: 48,
+          width: 48,
           decoration: BoxDecoration(
             color: active ? SwaplyColors.greenPressed : Colors.white,
-            borderRadius: BorderRadius.circular(Radii.card),
-            border: Border.all(color: SwaplyColors.line),
+            shape: BoxShape.circle,
+            border: Border.all(color: SwaplyColors.fieldLine),
           ),
-          child: Icon(icon, size: 20, color: active ? Colors.white : SwaplyColors.ink),
+          child: Icon(icon, size: 20, color: active ? Colors.white : SwaplyColors.inkBody),
         ),
       );
 }
@@ -398,22 +410,35 @@ class _ItemCardState extends State<ItemCard> {
               ],
             ),
           ),
-          const SizedBox(height: Insets.sm),
-          // Name and value run on together and wrap, which is how the export
-          // sets them: the value is a note after the name, not a second line
-          // of its own.
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.end,
-            spacing: 6,
-            children: [
-              Text(item.title,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
-              if (item.estimatedValueNok != null)
-                Text('Verdi ${kr(item.estimatedValueNok)}',
-                    style: const TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
-            ],
+          // The export's caption: 7 down and 2 in, the name at 13/700 with the
+          // value at 10.5/600 beside it, and the name wraps while the value
+          // stays put at the top right.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Flexible(
+                  child: Text(item.title,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.15,
+                          fontWeight: FontWeight.w700,
+                          color: SwaplyColors.ink)),
+                ),
+                if (item.estimatedValueNok != null) ...[
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text('Verdi ${kr(item.estimatedValueNok)}',
+                        style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: SwaplyColors.grey)),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
@@ -514,6 +539,8 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   late final _text = TextEditingController(text: widget.query);
   late String? _category = widget.initial.category;
   late String? _subcategory = widget.initial.subcategory;
+  late final _minText = TextEditingController(text: widget.initial.minValue?.toString() ?? '');
+  late final _maxText = TextEditingController(text: widget.initial.maxValue?.toString() ?? '');
   late int? _min = widget.initial.minValue;
   late int? _max = widget.initial.maxValue;
   late String? _condition = widget.initial.condition;
@@ -532,6 +559,8 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   @override
   void dispose() {
     _text.dispose();
+    _minText.dispose();
+    _maxText.dispose();
     super.dispose();
   }
 
@@ -571,9 +600,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: swaplyAppBar(context, 'Avansert søk', actions: [
-        TextButton(
-          onPressed: () => setState(() {
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() {
             _text.clear();
+            _minText.clear();
+            _maxText.clear();
             _category = null;
             _subcategory = null;
             _min = null;
@@ -582,7 +614,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             _sort = 'newest';
             _countPreview();
           }),
-          child: const Text('Nullstill', style: TextStyle(color: SwaplyColors.greySoft)),
+          child: const Padding(
+            padding: EdgeInsets.only(top: 5),
+            child: Text('Nullstill',
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+          ),
         ),
       ]),
       body: SafeArea(
@@ -590,20 +627,25 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
+                padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
                 children: [
-                  const Text('Fritekst', style: Type.small),
+                  const Text('Fritekst', style: Type.section),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _text,
                     onChanged: (_) => _countPreview(),
                     decoration: const InputDecoration(hintText: 'sykkel'),
                   ),
-                  const SizedBox(height: Insets.md),
-                  const Text('Hovedkategori', style: Type.small),
+                  const SizedBox(height: 16),
+                  const Text('Hovedkategori', style: Type.section),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String?>(
                     initialValue: _category,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: SwaplyColors.ink),
+                    icon: const Icon(Icons.keyboard_arrow_down, size: 18, color: SwaplyColors.greySoft),
                     decoration: const InputDecoration(),
                     items: [
                       const DropdownMenuItem(value: null, child: Text('Alle')),
@@ -621,12 +663,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                     },
                   ),
                   if (_category != null && _subcategories.isNotEmpty) ...[
-                    const SizedBox(height: Insets.md),
-                    Text('Underkategori i ${categoryLabels[_category]}', style: Type.small),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 16),
+                    Text('Underkategori i ${categoryLabels[_category]}', style: Type.section),
+                    const SizedBox(height: 8),
                     Wrap(
-                      spacing: Insets.sm,
-                      runSpacing: Insets.sm,
+                      spacing: 7,
+                      runSpacing: 7,
                       children: [
                         _choice('Alle', _subcategory == null,
                             () => setState(() {
@@ -641,15 +683,23 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                       ],
                     ),
                   ],
-                  const SizedBox(height: Insets.md),
-                  const Text('Verdi', style: Type.small),
+                  const SizedBox(height: 16),
+                  const Text('Verdi', style: Type.section),
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
+                          controller: _minText,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: '0', suffixText: 'kr'),
+                          decoration: const InputDecoration(
+                              hintText: '0',
+                              // suffixText hides until focus; «kr» is always there.
+                              suffixIcon: Padding(
+                                  padding: EdgeInsets.only(right: 14),
+                                  child: Text('kr',
+                                      style: TextStyle(fontSize: 15, color: SwaplyColors.grey))),
+                              suffixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0)),
                           onChanged: (v) {
                             _min = int.tryParse(v);
                             _countPreview();
@@ -657,14 +707,14 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                         ),
                       ),
                       const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: Insets.sm),
-                        child: Text('–', style: Type.body),
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Text('–', style: TextStyle(fontSize: 14, color: SwaplyColors.grey)),
                       ),
                       Expanded(
                         child: TextField(
+                          controller: _maxText,
                           keyboardType: TextInputType.number,
-                          decoration:
-                              const InputDecoration(hintText: 'Ingen grense', suffixText: 'kr'),
+                          decoration: const InputDecoration(hintText: 'Ingen grense'),
                           onChanged: (v) {
                             _max = int.tryParse(v);
                             _countPreview();
@@ -673,11 +723,12 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: Insets.md),
-                  const Text('Tilstand', style: Type.small),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 16),
+                  const Text('Tilstand', style: Type.section),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing: Insets.sm,
+                    spacing: 7,
+                    runSpacing: 7,
                     children: conditionLabels.entries
                         .map((e) => _choice(e.value, _condition == e.key, () {
                               setState(() => _condition = _condition == e.key ? null : e.key);
@@ -685,32 +736,56 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                             }))
                         .toList(),
                   ),
-                  const SizedBox(height: Insets.md),
-                  const Text('Sorter etter', style: Type.small),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: Insets.sm,
-                    children: [
-                      _choice('Nyeste', _sort == 'newest', () {
-                        setState(() => _sort = 'newest');
-                        _countPreview();
-                      }),
-                      _choice('Nærmest', _sort == 'nearest', () {
-                        setState(() => _sort = 'nearest');
-                        _countPreview();
-                      }),
-                      _choice('Verdi', _sort == 'value', () {
-                        setState(() => _sort = 'value');
-                        _countPreview();
-                      }),
-                    ],
+                  const SizedBox(height: 16),
+                  const Text('Sorter etter', style: Type.section),
+                  const SizedBox(height: 8),
+                  // A segmented track, the same as on «Mine handler».
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: SwaplyColors.chip,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        for (final (key, label) in const [
+                          ('newest', 'Nyeste'),
+                          ('nearest', 'Nærmest'),
+                          ('value', 'Verdi'),
+                        ])
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _sort = key);
+                                _countPreview();
+                              },
+                              child: Container(
+                                height: 33,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: _sort == key ? Colors.white : null,
+                                  borderRadius: BorderRadius.circular(11),
+                                ),
+                                child: Text(label,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight:
+                                            _sort == key ? FontWeight.w700 : FontWeight.w600,
+                                        color: _sort == key
+                                            ? SwaplyColors.ink
+                                            : SwaplyColors.greySoft)),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: Insets.xl),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(Insets.screen),
+              padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
               child: PrimaryButton(
                 _preview == null ? 'Vis treff' : 'Vis $_preview treff',
                 onPressed: () => Navigator.of(context).pop(_filters),
@@ -722,22 +797,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     );
   }
 
-  Widget _choice(String label, bool selected, VoidCallback onTap) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          decoration: BoxDecoration(
-            color: selected ? SwaplyColors.greenPressed : Colors.white,
-            borderRadius: BorderRadius.circular(Radii.pill),
-            border: Border.all(
-                color: selected ? SwaplyColors.greenPressed : const Color(0x22064E3B)),
-          ),
-          child: Text(label,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : SwaplyColors.ink,
-              )),
-        ),
-      );
+  /// The chips on 05: filled green when chosen, the chip grey otherwise.
+  Widget _choice(String label, bool selected, VoidCallback onTap) =>
+      GestureDetector(onTap: onTap, child: Pill(label, selected: selected));
 }

@@ -10,7 +10,6 @@ import '../widgets/share_sheet.dart';
 import '../widgets/shell.dart';
 import 'item_detail.dart';
 import 'liked.dart';
-import 'notifications.dart';
 import 'onboarding.dart';
 import 'post_item.dart';
 
@@ -59,63 +58,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return SwaplyScaffold(
       currentTab: 4,
+      // «+ Legg ut» floats at the bottom right, 20 in from the edge and 44
+      // above the tab bar, exactly where the export leaves it.
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(right: 4, bottom: 28),
+        child: GestureDetector(
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
+          child: Container(
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: SwaplyColors.greenPressed,
+              borderRadius: BorderRadius.circular(Radii.pill),
+            ),
+            child: const Center(
+              widthFactor: 1,
+              child: Text('+ Legg ut',
+                  style: TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+            ),
+          ),
+        ),
+      ),
       child: RefreshIndicator(
         onRefresh: () => context.read<Session>().refresh(),
         child: ListView(
-          padding: const EdgeInsets.all(Insets.screen),
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, Insets.xl),
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_none),
-                  onPressed: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context)
+                // Only «Innstillinger» up here; the list of notifications is
+                // reached from the settings, since the export draws no bell.
+                GestureDetector(
+                  onTap: () => Navigator.of(context)
                       .push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
-                  child: const Text('Innstillinger', style: Type.link),
+                  child: const Padding(
+                    padding: EdgeInsets.zero,
+                    child: Text('Innstillinger',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
+                  ),
                 ),
               ],
             ),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Avatar(me.displayName ?? '?', size: 64, mine: true),
-                const SizedBox(width: Insets.md),
+                // 84 across, the initial at 32/800.
+                Avatar(me.displayName ?? '?', size: 84, mine: true),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(me.displayName ?? 'Uten navn', style: Type.title),
-                      if (me.bankidVerified)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 3),
-                          // Green words, not a filled badge: the export gives
-                          // the pill shape to categories and keeps this quiet.
-                          child: Text('BankID-verifisert',
-                              style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: SwaplyColors.greenText)),
-                        ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 12),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
                         children: [
-                          StarRow(value: me.ratingAvg ?? 0),
-                          const SizedBox(width: 5),
                           Flexible(
-                            child: Text(
-                              me.ratingCount == 0
-                                  ? 'Ingen vurderinger ennå'
-                                  : '${me.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')} · '
-                                      '${me.ratingCount} vurderinger',
-                              style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: Text(me.displayName ?? 'Uten navn',
+                                style: Type.title, overflow: TextOverflow.ellipsis),
                           ),
+                          if (me.bankidVerified) ...[
+                            const SizedBox(width: 8),
+                            // Green words on the name's line, not a badge.
+                            const Text('BankID-verifisert',
+                                style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: SwaplyColors.greenText)),
+                          ],
                         ],
                       ),
+                      const SizedBox(height: 4),
+                      Text.rich(
+                        TextSpan(children: [
+                          TextSpan(text: '${_stars(me.ratingAvg)} '),
+                          if (me.ratingCount == 0)
+                            const TextSpan(text: 'Ingen vurderinger ennå')
+                          else ...[
+                            TextSpan(
+                                text: me.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
+                                style: const TextStyle(fontWeight: FontWeight.w700)),
+                            TextSpan(text: ' · ${me.ratingCount} vurderinger'),
+                          ],
+                        ]),
+                        style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
                       Text(
                         [
                           if (me.town != null) me.town!,
@@ -128,22 +163,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: Insets.lg),
+            const SizedBox(height: 11),
             InkWell(
-              borderRadius: BorderRadius.circular(Radii.card),
+              borderRadius: BorderRadius.circular(16),
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => const LikedScreen())),
               child: SectionCard(
+                radius: 16,
                 child: Row(
                   children: [
-                    const Icon(Icons.favorite, size: 18, color: SwaplyColors.coral),
-                    const SizedBox(width: Insets.sm),
                     Expanded(
                       child: Text(
                         me.likedByCount == 0
-                            ? 'Ingen har likt tingene dine ennå'
-                            : '${me.likedByCount} har likt tingene dine',
-                        style: Type.body,
+                            ? '♥ Ingen har likt tingene dine ennå'
+                            : '♥ ${me.likedByCount} har likt tingene dine',
+                        style: const TextStyle(
+                            fontSize: 13.5, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
                       ),
                     ),
                     const Text('Se hvem ›', style: Type.link),
@@ -151,30 +186,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: Insets.lg),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const SizedBox(height: 11),
+            const Text('Interesser', style: Type.section),
+            const SizedBox(height: 7),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
               children: [
-                const Text('Interesser', style: Type.section),
-                TextButton(
-                  onPressed: () async {
-                    final session = context.read<Session>();
-                    await Navigator.of(context)
-                        .push(MaterialPageRoute(builder: (_) => const InterestsScreen()));
-                    await session.refresh();
-                  },
-                  child: const Text('Endre', style: Type.link),
-                ),
+                ...me.interests.map((c) => Pill(categoryLabels[c] ?? c, small: true)),
+                if (me.interests.length < 5)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(Radii.pill),
+                      border: Border.all(color: SwaplyColors.chevron),
+                    ),
+                    child: const Text('+ fylles ut mens du bruker appen',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+                  ),
               ],
             ),
-            Wrap(
-              spacing: Insets.sm,
-              runSpacing: Insets.sm,
-              children: me.interests.map((c) => Pill(categoryLabels[c] ?? c)).toList(),
-            ),
-            if (me.interests.isEmpty)
-              const Text('+ fylles ut mens du bruker appen', style: Type.small),
-            const SizedBox(height: Insets.lg),
+            const SizedBox(height: 11),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -182,15 +215,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text('Mine gjenstander · ${me.items.length}',
                       style: Type.section, overflow: TextOverflow.ellipsis),
                 ),
-                TextButton.icon(
-                  onPressed: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Legg ut', style: Type.link),
-                  style: TextButton.styleFrom(foregroundColor: SwaplyColors.greenText),
+                GestureDetector(
+                  onTap: () => Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => const EditProfileScreen())),
+                  child: const Text('Rediger profil',
+                      style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
                 ),
               ],
             ),
+            const SizedBox(height: 11),
             if (me.items.isEmpty)
               EmptyState(
                 icon: Icons.inventory_2_outlined,
@@ -204,16 +238,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 200,
-                  mainAxisSpacing: Insets.md,
-                  crossAxisSpacing: Insets.md,
-                  childAspectRatio: 0.78,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  // 166 across, 110 of picture and 36 of caption.
+                  childAspectRatio: 166 / 146,
                 ),
                 itemCount: me.items.length,
                 itemBuilder: (context, i) => _ownItem(me.items[i]),
               ),
-            const SizedBox(height: Insets.xl),
+            const SizedBox(height: 70),
           ],
         ),
       ),
@@ -222,10 +257,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _ownItem(Item item) {
     final (label, colour) = switch (item.status) {
-      'reserved' => ('Reservert', SwaplyColors.amber),
-      'traded' => ('Byttet', SwaplyColors.greySoft),
-      'withdrawn' => ('Trukket', SwaplyColors.greySoft),
-      _ => ('Tilgjengelig', SwaplyColors.greenPressed),
+      'reserved' => ('Reservert', SwaplyColors.amberText),
+      'traded' => ('Byttet', SwaplyColors.inkMuted),
+      'withdrawn' => ('Trukket', SwaplyColors.inkMuted),
+      _ => ('Tilgjengelig', SwaplyColors.greenText),
     };
 
     return GestureDetector(
@@ -237,17 +272,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(
             child: Stack(
               children: [
-                Positioned.fill(child: ItemThumb(item, size: 400, radius: Radii.card)),
-                Positioned(left: 6, top: 6, child: StatePill(label, color: colour, soft: Colors.white)),
+                Positioned.fill(child: ItemThumb(item, size: 400, radius: 16)),
+                Positioned(left: 8, top: 8, child: StatePill(label, color: colour)),
               ],
             ),
           ),
-          const SizedBox(height: 6),
-          Text(item.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-          Text('Verdi ${kr(item.estimatedValueNok)}', style: Type.small),
+          _caption(item),
         ],
       ),
     );
@@ -256,6 +286,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 /// 13b Annen profil. Their things are the point of the screen: it is where a
 /// loop gets closed from the other side.
+/// Title and value on one line under a 166-wide picture, as 13 and 13b draw it.
+Widget _caption(Item item) => Padding(
+      padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Flexible(
+            child: Text(item.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 13, height: 1.15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+          ),
+          if (item.estimatedValueNok != null) ...[
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text('Verdi ${kr(item.estimatedValueNok)}',
+                  style: const TextStyle(
+                      fontSize: 10.5, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+            ),
+          ],
+        ],
+      ),
+    );
+
+/// «★★★★★» for 4,6 and up, «★★★★☆» below: the export writes the stars as
+/// text and puts the number beside them.
+String _stars(double? rating) {
+  if (rating == null) return '☆☆☆☆☆';
+  final full = rating.round().clamp(0, 5);
+  return '★' * full + '☆' * (5 - full);
+}
+
 class OtherProfileScreen extends StatefulWidget {
   const OtherProfileScreen({super.key, required this.userId});
 
@@ -300,52 +364,70 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
     return SwaplyScaffold(
       currentTab: 0,
-      appBar: swaplyAppBar(context, user.displayName, actions: [
-        IconButton(
-          icon: const Icon(Icons.more_horiz),
-          onPressed: () => showReportSheet(context,
-              userId: user.id, personName: user.displayName, alreadyBlocked: user.blockedByYou),
-        ),
+      // «‹» and «⋯» and nothing between them: the name is in the body.
+      appBar: swaplyAppBar(context, '', actions: [
+        headerAction(
+            Icons.more_horiz,
+            () => showReportSheet(context,
+                userId: user.id, personName: user.displayName, alreadyBlocked: user.blockedByYou)),
       ]),
       child: ListView(
-        padding: const EdgeInsets.all(Insets.screen),
+        padding: const EdgeInsets.fromLTRB(22, 6, 22, Insets.xl),
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Avatar(user.displayName, size: 64),
-              const SizedBox(width: Insets.md),
+              Avatar(user.displayName, size: 76),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(user.displayName, style: Type.title),
-                    if (user.bankidVerified)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 4),
-                        child: StatePill('BankID-verifisert'),
-                      ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
                       children: [
-                        StarRow(value: user.ratingAvg ?? 0),
-                        const SizedBox(width: 5),
-                        Text(
-                          [
-                            if (user.ratingAvg != null)
-                              user.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
-                            if (user.tradeCount != null) '${user.tradeCount} bytter',
-                          ].join(' · '),
-                          style: Type.small,
+                        Flexible(
+                          child: Text(user.displayName,
+                              style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.4,
+                                  color: SwaplyColors.ink),
+                              overflow: TextOverflow.ellipsis),
                         ),
+                        if (user.bankidVerified) ...[
+                          const SizedBox(width: 8),
+                          const Text('BankID-verifisert',
+                              style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: SwaplyColors.greenText)),
+                        ],
                       ],
                     ),
+                    const SizedBox(height: 4),
+                    Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: '${_stars(user.ratingAvg)} '),
+                        if (user.ratingAvg != null)
+                          TextSpan(
+                              text: user.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
+                              style: const TextStyle(fontWeight: FontWeight.w700)),
+                        if (user.tradeCount != null)
+                          TextSpan(text: ' · ${user.tradeCount} bytter'),
+                      ]),
+                      style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
+                    ),
+                    const SizedBox(height: 2),
                     Text(
                       [
                         if (user.town != null) user.town!,
                         if (user.memberSince != null)
                           'medlem siden ${_month(user.memberSince!)}',
                       ].join(' · '),
-                      style: Type.small,
+                      style: Type.secondary,
                     ),
                   ],
                 ),
@@ -353,30 +435,51 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
             ],
           ),
           if (user.interests.isNotEmpty) ...[
-            const SizedBox(height: Insets.md),
+            const SizedBox(height: 12),
             Wrap(
-              spacing: Insets.sm,
-              runSpacing: Insets.sm,
+              spacing: 7,
+              runSpacing: 7,
               children: user.interests
-                  .map((c) => StatePill(categoryLabels[c] ?? c))
+                  .map((c) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: SwaplyColors.chip,
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                        ),
+                        child: Text(categoryLabels[c] ?? c,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: SwaplyColors.chipInk)),
+                      ))
                   .toList(),
             ),
           ],
-          const SizedBox(height: Insets.lg),
+          const SizedBox(height: 12),
+          // A 44-tall «Send melding» between the chips and the things.
+          SizedBox(
+            height: 44,
+            child: PrimaryButton('Send melding',
+                onPressed: user.items.isEmpty
+                    ? null
+                    : () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => ItemDetailScreen(itemId: user.items.first.id)))),
+          ),
+          const SizedBox(height: 12),
           Text('${user.displayName.split(' ').first} sine gjenstander · ${user.items.length}',
-              style: Type.heading),
-          const SizedBox(height: Insets.sm),
+              style: Type.section),
+          const SizedBox(height: 12),
           if (user.items.isEmpty)
             const Text('Ingen ting ute akkurat nå.', style: Type.secondary)
           else
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 200,
-                mainAxisSpacing: Insets.md,
-                crossAxisSpacing: Insets.md,
-                childAspectRatio: 0.78,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 166 / 146,
               ),
               itemCount: user.items.length,
               itemBuilder: (context, i) {
@@ -390,14 +493,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: ItemThumb(item, size: 400, radius: Radii.card)),
-                      const SizedBox(height: 6),
-                      Text(item.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 13.5, fontWeight: FontWeight.w600)),
-                      Text('Verdi ${kr(item.estimatedValueNok)}', style: Type.small),
+                      Expanded(child: ItemThumb(item, size: 400, radius: 16)),
+                      _caption(item),
                     ],
                   ),
                 );
@@ -420,52 +517,63 @@ class SettingsScreen extends StatelessWidget {
     final me = session.me;
 
     return Scaffold(
-      appBar: swaplyAppBar(context, 'Innstillinger'),
+      appBar: swaplyAppBar(context, 'Innstillinger', big: true),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: Insets.screen),
         children: [
+          const SizedBox(height: 2),
           const Kicker('Konto'),
-          const SizedBox(height: Insets.sm),
+          const SizedBox(height: 7),
           _group([
-          _tile(context, 'Profil', me?.displayName,
+          _tile(context, 'Profil', null,
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
-          _tile(context, 'E-post og telefon',
-              [me?.email, me?.phone].where((s) => s != null).join(' · '),
+          _tile(context, 'E-post og telefon', null,
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
           _tile(
             context,
             'BankID-verifisering',
             me?.bankidVerified == true ? 'Verifisert' : 'Ikke verifisert',
+            good: me?.bankidVerified == true,
             onTap: me?.bankidVerified == true
                 ? null
                 : () => _verifyBankid(context),
           ),
           // Round 5 took the colour off this row: an invitation is an ordinary
           // thing you do, not a promotion.
-          _tile(context, 'Inviter en venn', 'Lag en lenke å sende',
+          _tile(context, 'Inviter en venn', null,
               onTap: () => showShareSheet(context,
                   title: 'Inviter en venn', mint: (api) => api.createInvite())),
           ]),
-          const SizedBox(height: Insets.lg),
+          const SizedBox(height: 16),
           const Kicker('Varsler'),
-          const SizedBox(height: Insets.sm),
-          _group(const [
-            _NotificationToggle(label: 'Swaps og bytter'),
-            _NotificationToggle(label: 'Meldinger'),
-            _NotificationToggle(label: 'Likes på tingene mine'),
+          const SizedBox(height: 7),
+          _group([
+            const _NotificationToggle(label: 'Swaps og bytter'),
+            const _NotificationToggle(label: 'Meldinger'),
+            const _NotificationToggle(label: 'Likes på tingene mine'),
           ]),
-          const SizedBox(height: Insets.lg),
-          _group([_tile(context, 'Juridisk og personvern', null, onTap: () => _showLegal(context))]),
-          const SizedBox(height: Insets.lg),
-          SecondaryButton('Logg ut', destructive: true, onPressed: () async {
-            await context.read<Session>().logout();
-            if (context.mounted) {
-              Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
-            }
-          }),
+          const SizedBox(height: 16),
+          _group([
+            _tile(context, 'Juridisk og personvern', null, onTap: () => _showLegal(context)),
+            // A red row in the last card, not a button of its own: that is
+            // where the export puts it, and it is not something to advertise.
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Logg ut',
+                  style: TextStyle(
+                      fontSize: 14.5, fontWeight: FontWeight.w700, color: SwaplyColors.redText)),
+              onTap: () async {
+                await context.read<Session>().logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
+                }
+              },
+            ),
+          ]),
           const SizedBox(height: Insets.xl),
         ],
       ),
@@ -475,7 +583,7 @@ class SettingsScreen extends StatelessWidget {
   /// The export keeps a group of rows inside one card rather than letting them
   /// float on the background with dividers between.
   Widget _group(List<Widget> rows) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
@@ -484,17 +592,34 @@ class SettingsScreen extends StatelessWidget {
         child: Column(children: rows),
       );
 
-  Widget _tile(BuildContext context, String title, String? value, {VoidCallback? onTap}) =>
-      ListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(title,
-            style: const TextStyle(
-                fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
-        subtitle: value == null || value.isEmpty ? null : Text(value, style: Type.secondary),
-        trailing: onTap == null
-            ? null
-            : const Icon(Icons.chevron_right, size: 20, color: Color(0xFFC9CFCA)),
+  /// A 48-tall row: the label, a word at the right if there is one
+  /// («Verifisert», green), and the chevron.
+  Widget _tile(BuildContext context, String title, String? value,
+          {VoidCallback? onTap, bool good = false}) =>
+      InkWell(
         onTap: onTap,
+        child: SizedBox(
+          height: 48,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(title,
+                    style: const TextStyle(
+                        fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
+              ),
+              if (value != null && value.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text(value,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: good ? SwaplyColors.greenText : SwaplyColors.grey)),
+                ),
+              const Icon(Icons.chevron_right, size: 20, color: SwaplyColors.chevron),
+            ],
+          ),
+        ),
       );
 
   Future<void> _verifyBankid(BuildContext context) async {
@@ -570,14 +695,39 @@ class _NotificationToggleState extends State<_NotificationToggle> {
   bool _on = true;
 
   @override
-  Widget build(BuildContext context) => SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(widget.label,
-            style: const TextStyle(
-                fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
-        value: _on,
-        activeThumbColor: SwaplyColors.greenPressed,
-        onChanged: (v) => setState(() => _on = v),
+  // A 58-tall row with the export's own switch: 50×31, green when on, the
+  // field-line grey when off, a 23px white thumb.
+  Widget build(BuildContext context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _on = !_on),
+        child: SizedBox(
+          height: 58,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(widget.label,
+                    style: const TextStyle(
+                        fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 50,
+                height: 31,
+                padding: const EdgeInsets.all(4),
+                alignment: _on ? Alignment.centerRight : Alignment.centerLeft,
+                decoration: BoxDecoration(
+                  color: _on ? SwaplyColors.greenPressed : SwaplyColors.fieldLine,
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                ),
+                child: Container(
+                  width: 23,
+                  height: 23,
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
 }
 
