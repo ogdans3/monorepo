@@ -51,7 +51,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(Insets.screen, Insets.sm, Insets.screen, Insets.sm),
-            child: Text('Chats', style: Type.display),
+            child: Text('Chats', style: Type.screen),
           ),
           Expanded(
             child: _error != null
@@ -86,7 +86,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   Widget _row(ChatSummary thread) {
-    final name = thread.others.isEmpty ? 'Samtale' : thread.others.join(', ');
+    // First names in the list, the way the export writes them: «Ola», not
+    // «Ola N.» — the full name belongs on a profile.
+    final name = thread.others.isEmpty
+        ? 'Samtale'
+        : thread.others.map((o) => o.split(' ').first).join(', ');
     final subtitle = switch (thread.state) {
       'completed' => 'Fullført bytte',
       'cancelled' => 'Avsluttet bytte',
@@ -112,17 +116,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(_relative(thread.lastMessage?.createdAt), style: Type.small),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
+          // A dot, not a count: the number is already on the tab in the nav,
+          // and a red badge on every row makes a quiet list look like an alarm.
           if (thread.unread > 0)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: SwaplyColors.badge,
-                borderRadius: BorderRadius.circular(Radii.pill),
-              ),
-              child: Text('${thread.unread}',
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+              height: 9,
+              width: 9,
+              decoration: const BoxDecoration(
+                  color: SwaplyColors.greenPressed, shape: BoxShape.circle),
             ),
         ],
       ),
@@ -384,10 +386,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
       child: Column(
         children: [
           if (negotiable)
-            SizedBox(
-              height: 38,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
+            // Filled pills that wrap onto a second line, as the export draws
+            // them — not a row that scrolls sideways and hides the third one.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
                 children: [
                   // Each chip is its own sheet in the export, not three routes
                   // into the same screen.
@@ -416,14 +419,12 @@ class _ThreadScreenState extends State<ThreadScreen> {
               const SizedBox(width: Insets.sm),
               SizedBox(
                 height: 46,
-                child: FilledButton(
+                child: TextButton(
                   onPressed: _sending ? null : _send,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: SwaplyColors.greenPressed,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill)),
-                  ),
-                  child: const Text('Send'),
+                  child: Text('Send',
+                      style: Type.link.copyWith(
+                          fontSize: 13,
+                          color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText)),
                 ),
               ),
             ],
@@ -435,12 +436,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
   Widget _chip(String label, VoidCallback onTap) => Padding(
         padding: const EdgeInsets.only(right: Insets.sm, bottom: Insets.sm),
-        child: ActionChip(
-          label: Text(label, style: const TextStyle(fontSize: 12.5)),
-          onPressed: onTap,
-          backgroundColor: Colors.white,
-          side: const BorderSide(color: SwaplyColors.line),
-        ),
+        child: GestureDetector(onTap: onTap, child: Pill(label)),
       );
 
   Future<void> _propose(Trade trade, ProposalKind kind) async {

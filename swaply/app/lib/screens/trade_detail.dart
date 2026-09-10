@@ -54,7 +54,11 @@ class _MatchScreenState extends State<MatchScreen> {
     final theyGive = trade.youGet.map((i) => i.title).join(' og ');
     final youGive = trade.youGive.map((i) => i.title).join(' og ');
 
+    // The one screen the export drenches: deep green, white type, the two
+    // things tilted like photographs somebody put on a table. «The moment is
+    // the product», and a moment does not look like the rest of the app.
     return Scaffold(
+      backgroundColor: SwaplyColors.greenDeep,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(Insets.screen),
@@ -63,7 +67,12 @@ class _MatchScreenState extends State<MatchScreen> {
               const Spacer(),
               Text(
                 chain ? 'Dere kan gjøre en\ntreveis-swap!' : 'Dere kan swappe!',
-                style: Type.display.copyWith(fontSize: 30),
+                style: const TextStyle(
+                    fontSize: 34,
+                    height: 1.1,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.8,
+                    color: Colors.white),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: Insets.md),
@@ -72,7 +81,7 @@ class _MatchScreenState extends State<MatchScreen> {
                     ? 'Vi fant et bytte med tre personer.'
                     : '${trade.receivingFrom.displayName} vil ha $youGive, '
                         'du vil ha $theyGive.',
-                style: Type.secondary,
+                style: const TextStyle(fontSize: 15, height: 1.45, color: Color(0xCCFFFFFF)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: Insets.xl),
@@ -82,19 +91,19 @@ class _MatchScreenState extends State<MatchScreen> {
                 Container(
                   padding: const EdgeInsets.all(Insets.md),
                   decoration: BoxDecoration(
-                    color: SwaplyColors.amberSoft,
+                    color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(Radii.card),
                   ),
                   child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline, size: 18, color: SwaplyColors.amber),
+                      Icon(Icons.info_outline, size: 18, color: Colors.white70),
                       SizedBox(width: Insets.sm),
                       Expanded(
                         child: Text(
                           'Dette byttet kan ikke Swaply fasilitere, men vi kan starte en '
                           'chat så dere avtaler det selv.',
-                          style: TextStyle(fontSize: 13, height: 1.4, color: SwaplyColors.amber),
+                          style: TextStyle(fontSize: 13, height: 1.4, color: Colors.white70),
                         ),
                       ),
                     ],
@@ -107,8 +116,12 @@ class _MatchScreenState extends State<MatchScreen> {
                     MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id))),
               ),
               const SizedBox(height: Insets.sm),
-              SecondaryButton('Fortsett å sveipe',
-                  onPressed: () => Navigator.of(context).maybePop()),
+              TextButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                child: const Text('Fortsett å sveipe',
+                    style: TextStyle(
+                        fontSize: 14.5, fontWeight: FontWeight.w700, color: Colors.white70)),
+              ),
             ],
           ),
         ),
@@ -142,29 +155,83 @@ class _MatchScreenState extends State<MatchScreen> {
       );
     }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    // Two photographs, tilted, with the swap mark between them and a name chip
+    // under each — the export's «somebody laid two things on a table».
+    return Column(
       children: [
-        _side(trade.youGive, 'Du', trade.youGive.length),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: Insets.md),
-          child: Text('⇄', style: TextStyle(fontSize: 30, color: SwaplyColors.greenPressed)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Flexible(child: _card(trade.youGive, -0.055)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Insets.sm),
+              child: Container(
+                height: 40,
+                width: 40,
+                margin: const EdgeInsets.only(top: 46),
+                decoration: BoxDecoration(
+                  color: SwaplyColors.greenDeep,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                ),
+                child: const Icon(Icons.swap_horiz, size: 22, color: SwaplyColors.green),
+              ),
+            ),
+            Flexible(child: _card(trade.youGet, 0.05)),
+          ],
         ),
-        _side(trade.youGet, trade.receivingFrom.displayName, trade.youGet.length),
+        const SizedBox(height: Insets.md),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _who('Du', trade.youGive.length, mine: true),
+            _who(trade.receivingFrom.displayName, trade.youGet.length),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _side(List<Item> items, String label, int count) => Column(
-        children: [
-          Wrap(
-            spacing: 6,
-            children: items.take(2).map((i) => ItemThumb(i, size: 62)).toList(),
-          ),
-          const SizedBox(height: Insets.sm),
-          Text(count > 1 ? '$label · $count ting' : label,
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-        ],
+  Widget _card(List<Item> items, double tilt) => Transform.rotate(
+        angle: tilt,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ItemThumb(items.first, size: 124, radius: 18),
+            const SizedBox(height: Insets.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(items.first.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 11.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _who(String name, int count, {bool mine = false}) => Container(
+        padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Avatar(name, size: 26, mine: mine),
+            const SizedBox(width: 7),
+            Text(count > 1 ? '$name · $count ting' : name,
+                style: const TextStyle(
+                    fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),
+          ],
+        ),
       );
 }
 

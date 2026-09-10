@@ -84,8 +84,27 @@ class _LikedScreenState extends State<LikedScreen> {
                         children: [
                           ...rows.map(_row),
                           const SizedBox(height: Insets.md),
-                          const Text('Tips: lik tilbake, det lukker bytter raskere.',
-                              style: Type.small),
+                          // A green-soft box in the export, with the word
+                          // «Tips:» carrying the weight.
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: Insets.md, vertical: 11),
+                            decoration: BoxDecoration(
+                              color: SwaplyColors.greenSoft,
+                              borderRadius: BorderRadius.circular(Radii.card),
+                            ),
+                            child: const Text.rich(
+                              TextSpan(children: [
+                                TextSpan(
+                                    text: 'Tips: ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: SwaplyColors.greenDeep)),
+                                TextSpan(text: 'lik tilbake, det lukker bytter raskere.'),
+                              ]),
+                              style: TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -98,7 +117,15 @@ class _LikedScreenState extends State<LikedScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: Insets.md),
-      child: SectionCard(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(Insets.md),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(Radii.card),
+          border: Border.all(
+              color: open ? SwaplyColors.greenPressed : SwaplyColors.cardLine),
+        ),
         child: Column(
           children: [
             InkWell(
@@ -121,7 +148,14 @@ class _LikedScreenState extends State<LikedScreen> {
                               : count == 1
                                   ? '1 har likt denne'
                                   : '$count har likt denne',
-                          style: Type.small,
+                          // Green and bold when somebody has: it is the good
+                          // news on this screen.
+                          style: count == 0
+                              ? Type.small
+                              : const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: SwaplyColors.greenText),
                         ),
                       ],
                     ),
@@ -146,7 +180,7 @@ class _LikedScreenState extends State<LikedScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(liker.displayName, style: Type.heading),
+                                Text(liker.displayName.split(' ').first, style: Type.heading),
                                 Text(
                                   [
                                     if (liker.itemCount != null)

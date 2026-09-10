@@ -48,7 +48,7 @@ class SwaplyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Swaply',
         debugShowCheckedModeBanner: false,
-        theme: _theme(),
+        theme: swaplyTheme(),
         home: const RootGate(),
         routes: {
           '/discover': (_) => const DiscoverScreen(),
@@ -61,39 +61,6 @@ class SwaplyApp extends StatelessWidget {
           '/login': (_) => const LoginScreen(),
           '/register': (_) => const CreateProfileScreen(),
         },
-      ),
-    );
-  }
-
-  ThemeData _theme() {
-    final base = ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: SwaplyColors.greenDeep,
-        primary: SwaplyColors.greenPressed,
-        surface: SwaplyColors.bg,
-      ),
-      scaffoldBackgroundColor: SwaplyColors.bg,
-    );
-    return base.copyWith(
-      textTheme: base.textTheme.apply(bodyColor: SwaplyColors.ink, displayColor: SwaplyColors.ink),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Radii.card),
-          borderSide: const BorderSide(color: SwaplyColors.line),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Radii.card),
-          borderSide: const BorderSide(color: SwaplyColors.line),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Radii.card),
-          borderSide: const BorderSide(color: SwaplyColors.greenPressed, width: 1.6),
-        ),
-        hintStyle: const TextStyle(color: SwaplyColors.grey, fontSize: 14.5),
       ),
     );
   }

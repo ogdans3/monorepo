@@ -78,6 +78,15 @@ class SecondaryButton extends StatelessWidget {
   }
 }
 
+/// The colours the export gives people. Not decoration: a list of chats is a
+/// list of faces, and four identical green circles is not a list of faces.
+const _avatarColours = [
+  SwaplyColors.avatarGold,
+  SwaplyColors.avatarTeal,
+  SwaplyColors.avatarPurple,
+  SwaplyColors.greenPressed,
+];
+
 /// «O» in a circle. The export never shows a profile photo, only an initial —
 /// and it gives other people a colour of their own, so a face in a list is not
 /// the same green as everything else on the screen. Yours stays deep green.
@@ -96,7 +105,12 @@ class Avatar extends StatelessWidget {
       width: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: color ?? (mine ? SwaplyColors.greenDeep : SwaplyColors.avatarGold),
+        color: color ??
+            (mine
+                ? SwaplyColors.greenDeep
+                // Same name, same colour, every screen: the person is
+                // recognisable before the name is read.
+                : _avatarColours[name.codeUnits.fold(0, (a, b) => a + b) % _avatarColours.length]),
         shape: BoxShape.circle,
       ),
       child: Text(

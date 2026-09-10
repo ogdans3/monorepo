@@ -478,7 +478,8 @@ void main() {
       await mount(tester, const ChatsScreen());
 
       expect(find.text('Chats'), findsWidgets);
-      expect(find.text('Kari N.'), findsOneWidget);
+      // First names in the list, as the export writes them: «Kari», not «Kari N.»
+      expect(find.text('Kari'), findsOneWidget);
       expect(find.text('Bytte · Bosch drill 18V ⇄ Retro spillkonsoll'), findsOneWidget);
     });
 
@@ -607,7 +608,8 @@ void main() {
       expect(find.text('Likt'), findsOneWidget);
       expect(find.text('Folk som har likt tingene dine'), findsOneWidget);
       expect(find.text('1 har likt denne'), findsOneWidget);
-      expect(find.text('Kari N.'), findsOneWidget);
+      // First name, as the export lists people: «Kari», «Ola», «Per».
+      expect(find.text('Kari'), findsOneWidget);
       expect(find.text('Se tingene deres ›'), findsOneWidget);
     });
 

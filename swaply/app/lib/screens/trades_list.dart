@@ -64,20 +64,40 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(Insets.screen, Insets.sm, Insets.screen, Insets.sm),
-            child: Text('Mine handler', style: Type.display),
+            child: Text('Mine handler', style: Type.screen),
           ),
           if (data != null && !empty)
-            TabBar(
-              controller: _tabs,
-              labelColor: SwaplyColors.greenDeep,
-              unselectedLabelColor: SwaplyColors.grey,
-              indicatorColor: SwaplyColors.greenPressed,
-              labelStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
-              tabs: [
-                Tab(text: 'Venter · ${data.waiting.length}'),
-                Tab(text: 'Aktive · ${data.active.length}'),
-                Tab(text: 'Fullført · ${data.done.length}'),
-              ],
+            // A segmented control, not an underline: the export draws a grey
+            // track with the chosen one as a white pill inside it.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Insets.screen, 0, Insets.screen, Insets.md),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: SwaplyColors.chip,
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                ),
+                child: TabBar(
+                  controller: _tabs,
+                  labelColor: SwaplyColors.ink,
+                  unselectedLabelColor: SwaplyColors.chipInk,
+                  labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  unselectedLabelStyle:
+                      const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  dividerHeight: 0,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  splashBorderRadius: BorderRadius.circular(Radii.pill),
+                  indicator: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(Radii.pill),
+                  ),
+                  tabs: [
+                    Tab(height: 38, text: 'Venter · ${data.waiting.length}'),
+                    Tab(height: 38, text: 'Aktive · ${data.active.length}'),
+                    Tab(height: 38, text: 'Fullført · ${data.done.length}'),
+                  ],
+                ),
+              ),
             ),
           Expanded(
             child: _error != null
@@ -138,7 +158,9 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
 
     final (label, colour) = switch (trade.state) {
       'talking' => ('Samtale', SwaplyColors.greySoft),
-      'pending' => yourTurn ? ('Din tur', SwaplyColors.greenDeep) : ('Venter på $other', SwaplyColors.greySoft),
+      'pending' => yourTurn
+          ? ('Din tur', SwaplyColors.amber)
+          : ('Venter på $other', SwaplyColors.greySoft),
       'countered' => ('Endret', SwaplyColors.amber),
       'accepted' => ('Godtatt', SwaplyColors.greenPressed),
       'paused' => ('Pauset', SwaplyColors.amber),
@@ -155,7 +177,16 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
               .push(MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id)));
           await _load();
         },
-        child: SectionCard(
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(Insets.md),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(Radii.card),
+            // The one waiting on you wears a green edge, as the export draws it.
+            border: Border.all(
+                color: yourTurn ? SwaplyColors.greenPressed : SwaplyColors.cardLine),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -168,11 +199,35 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
                 ],
               ),
               const SizedBox(height: Insets.md),
-              _leg('${trade.receivingFrom.displayName.split(' ').first} gir',
-                  trade.youGet, 'deg'),
-              const SizedBox(height: Insets.sm),
-              _leg('${trade.givingTo.displayName.split(' ').first} får',
-                  trade.youGive, null),
+              // «det du får → deg → det du gir», with the name over each thing.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _leg('${trade.receivingFrom.displayName.split(' ').first} gir',
+                        trade.youGet, SwaplyColors.greenText),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: Insets.sm),
+                    child: Column(
+                      children: [
+                        SizedBox(height: 30),
+                        Icon(Icons.arrow_forward, size: 20, color: SwaplyColors.greenPressed),
+                        SizedBox(height: 2),
+                        Text('deg',
+                            style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: SwaplyColors.inkBody)),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: _leg('${trade.givingTo.displayName.split(' ').first} får',
+                        trade.youGive, SwaplyColors.amber),
+                  ),
+                ],
+              ),
               if (yourTurn) ...[
                 const SizedBox(height: Insets.md),
                 PrimaryButton('Godta byttet', onPressed: () async {
@@ -188,31 +243,37 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _leg(String label, List<Item> items, String? to) => Row(
+  /// One side of the row: whose it is, the picture, and what it is. The name
+  /// sits *over* the thing, as the export's caption says it should.
+  Widget _leg(String label, List<Item> items, Color labelColour) => Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (items.isNotEmpty) ...[
-            ItemThumb(items.first, size: 40, radius: 10),
-            const SizedBox(width: Insets.sm),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: Type.small),
-                Text(
-                  items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' + '),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+          Text(label,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: labelColour),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 6),
+          if (items.isEmpty)
+            Container(
+              height: 74,
+              width: 74,
+              decoration: BoxDecoration(
+                color: SwaplyColors.chip,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.more_horiz, color: SwaplyColors.greyLight),
+            )
+          else
+            ItemThumb(items.first, size: 74, radius: 14),
+          const SizedBox(height: 6),
+          Text(
+            items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' + '),
+            style: const TextStyle(
+                fontSize: 12.5, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          if (to != null) ...[
-            const Icon(Icons.arrow_forward, size: 15, color: SwaplyColors.grey),
-            const SizedBox(width: 4),
-            Text(to, style: Type.small),
-          ],
         ],
       );
 }
