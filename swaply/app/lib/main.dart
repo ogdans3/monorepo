@@ -12,6 +12,7 @@ import 'screens/post_item.dart';
 import 'screens/profile.dart';
 import 'screens/trades_list.dart';
 import 'state/session.dart';
+import 'widgets/desk.dart';
 
 /// Points at the machine's own address in development so a phone on the same
 /// network can reach it. Override with `--dart-define=API_BASE=…`.
@@ -49,6 +50,8 @@ class SwaplyApp extends StatelessWidget {
         title: 'Swaply',
         debugShowCheckedModeBanner: false,
         theme: swaplyTheme(),
+        // Phone-sized on a desk; see Desk.
+        builder: (context, child) => Desk(child: child!),
         home: const RootGate(),
         routes: {
           '/discover': (_) => const DiscoverScreen(),
