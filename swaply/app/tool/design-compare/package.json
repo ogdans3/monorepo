@@ -1,0 +1,14 @@
+{
+  "name": "swaply-design-compare",
+  "private": true,
+  "type": "module",
+  "description": "Lays the app's goldens beside the frames of the round-5 export.",
+  "scripts": {
+    "blueprint": "node blueprint.mjs",
+    "ref": "node ref.mjs",
+    "pairs": "node pairs.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.48.0"
+  }
+}

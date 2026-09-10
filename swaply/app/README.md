@@ -32,6 +32,15 @@ Every number in `lib/design/tokens.dart` under «read off the round 5 export»
 came out that way. When a screen here looks close but not right, that is the
 place to check before changing anything.
 
+`tool/design-compare/` does the asking for all forty-five frames at once: it
+writes a blueprint of every frame (geometry, type, colour, padding, gaps),
+renders the frames in Roboto, and lays each golden beside its frame with a heat
+map and a percentage of pixels that differ. The goldens are rendered in the
+export's own world for this — its status bar, its people and things, its
+photographs (`test/export_fixtures.dart`, `test/photos/`) — so a golden can be
+laid straight over the drawing it came from. The README there has the three
+commands.
+
 ## Where each screen lives
 
 The trade screen is one widget in every state rather than nine near-copies, so
