@@ -86,6 +86,60 @@ forskjellige påstander.
 
 ---
 
+## Tråd 4 — Hvordan jeg har satt det opp
+
+> Hvordan jeg har satt det opp. Egen server, egen pc, deploy keys, eget repo.
+> Ingen nøkler.
+
+Dette er svaret på spørsmålet alle i salen kommer til å ha: *tør du virkelig
+la den kjøre fritt?* Poenget er ikke tillit, det er **sprengradius**. Den kan
+gjøre hva den vil, fordi det den kan nå er avgrenset på forhånd.
+
+Lagene, slik de faktisk står (sjekket 11.09.2026):
+
+- **Egen maskin.** Alt kjører som `ai_user` på en server som ikke er PC-en din.
+  Verste utfall er en server du kan bygge opp igjen, ikke arbeidsmaskinen din.
+- **Egne repoer.** `phonemockup-ai`, `witchcary-ai`, `hvalen-minigolf-ai` — de
+  har `-ai` i navnet fordi de *er* AI-ens repoer, ikke dine.
+- **Egne deploy keys, én per repo.** Seks stykker i `~/.ssh`: `monorepo_`,
+  `duo_words_`, `hvalen_minigolf_`, `id_ed25519_phonemockup`,
+  `witchcary_ai_`, `server2_`. En nøkkel som lekker åpner ett repo.
+- **Ingen API-nøkler.** `claude auth status` sier `claude.ai` / `firstParty` —
+  abonnement over OAuth, ingen `ANTHROPIC_API_KEY`, ingen skynøkler, ingenting
+  som kan bruke penger eller nå infrastruktur du ikke eier.
+
+### Vær presis med «ingen nøkler»
+
+Påstanden er sterk, men den er for bred slik den står, og noen i salen kommer
+til å ta deg på den. Den *presise* versjonen er bedre og holder:
+
+> Ingen tredjeparts API-nøkler. Ingenting som kan bruke penger. Ingenting som
+> når noe jeg ikke eier.
+
+For det finnes nøkler og hemmeligheter på boksen, og de er verdt å nevne selv
+før noen spør:
+
+- `.env` med `DASHBOARD_PASSWORD`, databasepassord osv.
+- Dashboardet holder Docker-socketen, som er root-ekvivalent på verten. Det var
+  hele grunnen til at Sessions-daemonen ble bygget som den ble — ikke gi den
+  dør nummer to.
+- Deploy keys *er* nøkler. De er bare små.
+
+### To ting å rydde opp i før du viser dette fram
+
+1. **`~/.ssh/config` sier at `id_ed25519` er «your normal personal key».**
+   Standardruten `git@github.com:` går dit — og `witchecary` og
+   `hvalen-minigolf` har remotes som treffer nettopp den, selv om begge har en
+   egen nøkkel liggende. I dine egne arbeidsnotater står den samme nøkkelen
+   beskrevet som *read-only*. De to beskrivelsene kan ikke begge stemme. Finn
+   ut hvilken det er før du sier «deploy keys» fra en scene.
+2. **`id_ed25519_phonemockup` ligger også i `~/git/`**, altså inne i katalogen
+   AI-en jobber i, ikke bare i `~/.ssh`. Sannsynligvis en rest. Verdt å fjerne.
+
+Ingen av de to velter poenget. De gjør det bare sant.
+
+---
+
 ## Ting å sjekke før du sier det fra scenen
 
 **GPS-påstanden.** Den fungerer retorisk, men den vanlige versjonen er en
@@ -115,3 +169,4 @@ ikke vet. Begge deler er greit; å ikke ha tenkt på det er ikke det.
 - [ ] Hvor lenge varer det?
 - [ ] Er det tre tråder eller ett foredrag? Bærende linje mangler foreløpig.
 - [ ] Skal demoene være live eller opptak? Live er sterkere og kan feile.
+- [ ] Er `id_ed25519` den personlige nøkkelen eller en read-only nøkkel? (tråd 4)
