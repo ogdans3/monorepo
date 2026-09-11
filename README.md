@@ -41,6 +41,7 @@ debt, because it is what keeps them separable.
 
 | Folder | What it is |
 |---|---|
+| [`ai-foredrag/`](ai-foredrag/) | Arbeidsnotater til et foredrag om AI — eksplosjonen av software, hva vi slutter å bruke, og hvor produksjonsklart dette egentlig er. |
 | [`checkpost/`](checkpost/) | A shared checklist that lives at a link. Node API, Flutter app, SvelteKit landing page. |
 | [`flow-chart/`](flow-chart/) | Draw a flow chart in the browser. Boxes, decisions and arrows, in and out as Mermaid, SVG or PNG. SvelteKit, no server side. |
 | [`image-tools/`](image-tools/) | Client-side image converter — every format pair gets its own page, files never leave the browser. SvelteKit + WASM codecs. |
