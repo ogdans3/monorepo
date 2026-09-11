@@ -15,11 +15,13 @@
 	} from '$lib/video/edit';
 	import {
 		defaultRamp,
+		FASTER,
 		rampIsFlat,
-		speedAt,
-		rampSlowest,
+		rampPeak,
 		rampTotal,
 		sampleRamp,
+		SLOWER,
+		speedAt,
 		type RampPoint
 	} from '$lib/video/ramp';
 	import { formatTimecode, parseTimecode } from '$lib/video/timecode';
@@ -80,6 +82,14 @@
 	 * a mode switch must not do.
 	 */
 	let stretchMode = $state<'simple' | 'curve'>('simple');
+	/**
+	 * Slow motion and speeding up are the same edit pointed in opposite
+	 * directions, so they are one page's worth of controls used twice rather
+	 * than two near-copies. Everything that differs between them is this flag
+	 * and the words next to it.
+	 */
+	const faster = $derived(tool.direction === 'faster');
+	const rampRange = $derived(faster ? FASTER : SLOWER);
 	let rampPoints = $state<RampPoint[]>([]);
 	/** Where the preview has reached, so the curve can show a playhead. */
 	let playhead = $state(0);
@@ -149,7 +159,7 @@
 			case 'speed':
 				return { kind: 'speed', factor: speedFactor };
 			case 'stretch':
-				if (stretchMode === 'curve') return { kind: 'ramp', points: rampPoints };
+				if (stretchMode === 'curve') return { kind: 'ramp', points: rampPoints, range: rampRange };
 				return {
 					kind: 'stretch',
 					startSeconds: stretchStart,
@@ -240,11 +250,21 @@
 		endSeconds = media.duration;
 		// A section in the middle, at half pace, so the page opens on something
 		// that already means something rather than on a no-op.
-		setStretch(media.duration * 0.25, media.duration * 0.75, media.duration);
+		// A section in the middle, retimed by two, so the page opens on something
+		// that already means something rather than on a no-op.
+		{
+			const section = media.duration * 0.5;
+			const faster = tool.direction === 'faster';
+			setStretch(
+				media.duration * 0.25,
+				media.duration * 0.75,
+				faster ? section / 2 : section * 2
+			);
+		}
 		// Same reasoning for the curve: it opens on the shape somebody means
 		// when they say slow motion, ready to be dragged rather than drawn from
 		// a flat line.
-		rampPoints = defaultRamp(media.duration);
+		rampPoints = defaultRamp(media.duration, faster ? FASTER : SLOWER);
 		playhead = 0;
 		resizeWidth = Math.min(1280, media.width || 1280);
 		textSize = Math.max(16, Math.round((media.height || 720) * 0.06));
@@ -312,11 +332,11 @@
 
 	const rampInfo = $derived.by(() => {
 		if (tool.op !== 'stretch' || stretchMode !== 'curve' || !media.duration) return null;
-		const segments = sampleRamp(rampPoints, media.duration);
+		const segments = sampleRamp(rampPoints, media.duration, rampRange);
 		if (segments.length === 0) return null;
 		return {
 			total: rampTotal(segments),
-			slowest: rampSlowest(rampPoints),
+			peak: rampPeak(rampPoints),
 			pieces: segments.length
 		};
 	});
@@ -617,12 +637,13 @@
 					<RampCurve
 						points={rampPoints}
 						duration={media.duration}
+						range={rampRange}
 						{playhead}
 						onchange={(next) => (rampPoints = next)}
 					/>
 					<p class="hint">
 						{#if rampInfo}
-							Slowest {rampInfo.slowest.toFixed(2)}×, and the clip runs
+							{faster ? 'Fastest' : 'Slowest'} {rampInfo.peak.toFixed(2)}×, and the clip runs
 							{formatTimecode(rampInfo.total)} instead of {formatTimecode(media.duration)}.
 							{#if rampInfo.pieces > 1}
 								It's cut into {rampInfo.pieces} pieces to follow the curve.
@@ -636,12 +657,12 @@
 				{#if tool.op === 'stretch' && stretchMode === 'simple'}
 					<div class="field">
 						<span>
-							Slow part starts
+							{faster ? 'Fast part starts' : 'Slow part starts'}
 							<input
 								class="tc mono"
 								type="text"
 								inputmode="decimal"
-								aria-label="Where the slow part starts"
+								aria-label="Where the retimed part starts"
 								bind:value={stretchStartText}
 								onchange={() => commitTimecode(stretchStartText, setStretchStart, stretchStart)}
 							/>
@@ -652,7 +673,7 @@
 							max={media.duration}
 							step="0.1"
 							value={stretchStart}
-							aria-label="Where the slow part starts, as a slider"
+							aria-label="Where the retimed part starts, as a slider"
 							oninput={(e) => setStretchStart(Number(e.currentTarget.value))}
 						/>
 					</div>
@@ -663,7 +684,7 @@
 								class="tc mono"
 								type="text"
 								inputmode="decimal"
-								aria-label="Where the slow part stops"
+								aria-label="Where the retimed part stops"
 								bind:value={stretchEndText}
 								onchange={() => commitTimecode(stretchEndText, setStretchEnd, stretchEnd)}
 							/>
@@ -674,7 +695,7 @@
 							max={media.duration}
 							step="0.1"
 							value={stretchEnd}
-							aria-label="Where the slow part stops, as a slider"
+							aria-label="Where the retimed part stops, as a slider"
 							oninput={(e) => setStretchEnd(Number(e.currentTarget.value))}
 						/>
 					</div>
@@ -685,7 +706,7 @@
 								class="tc mono"
 								type="text"
 								inputmode="decimal"
-								aria-label="How long the slow part should run"
+								aria-label="How long the retimed part should run"
 								bind:value={stretchTargetText}
 								onchange={() => commitTimecode(stretchTargetText, setStretchTarget, stretchTarget)}
 							/>
@@ -693,8 +714,14 @@
 					</div>
 					<div class="row">
 						{#each [2, 4, 10, 20] as times (times)}
-							<button class="chip" onclick={() => setStretchTarget((stretchEnd - stretchStart) * times)}>
-								{times}× slower
+							<button
+								class="chip"
+								onclick={() =>
+									setStretchTarget(
+										faster ? (stretchEnd - stretchStart) / times : (stretchEnd - stretchStart) * times
+									)}
+							>
+								{times}× {faster ? 'faster' : 'slower'}
 							</button>
 						{/each}
 					</div>
@@ -704,7 +731,8 @@
 						{#if stretchInfo}
 							<br />
 							{stretchInfo.section.toFixed(1)}s becomes {stretchInfo.target.toFixed(1)}s, which is
-							{stretchInfo.stretch.toFixed(1)}× slower, and the whole clip runs
+							{(stretchInfo.stretch < 1 ? 1 / stretchInfo.stretch : stretchInfo.stretch).toFixed(1)}×
+							{stretchInfo.stretch < 1 ? 'faster' : 'slower'}, and the whole clip runs
 							{formatTimecode(stretchInfo.total)} instead of {formatTimecode(media.duration)}.
 						{/if}
 					</p>

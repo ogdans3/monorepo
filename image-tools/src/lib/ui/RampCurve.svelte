@@ -3,27 +3,37 @@
 		defaultRamp,
 		normaliseRamp,
 		RAMP_MAX_POINTS,
-		RAMP_SPEED_MAX,
-		RAMP_SPEED_MIN,
+		SLOWER,
 		speedAt,
-		type RampPoint
+		type RampPoint,
+		type RampRange
 	} from '$lib/video/ramp';
 	import { formatTimecode } from '$lib/video/timecode';
 
 	interface Props {
 		points: RampPoint[];
 		duration: number;
+		/** Which way the curve runs, and how far. One end is always 1. */
+		range?: RampRange;
 		/** Where the preview has got to, drawn as a playhead. */
 		playhead?: number;
 		onchange: (points: RampPoint[]) => void;
 	}
-	let { points, duration, playhead = 0, onchange }: Props = $props();
+	let { points, duration, range = SLOWER, playhead = 0, onchange }: Props = $props();
+
+	/**
+	 * Up is always faster, whichever direction the page runs in. The slow page
+	 * puts 1 at the top and 0.1 at the floor, the speed up page puts 1 at the
+	 * floor and 4 at the ceiling. Either way dragging a point up means the clip
+	 * runs closer to, or past, its own pace, which is the one thing about the
+	 * graph nobody should have to be told.
+	 */
+	const faster = $derived(range.min >= 1);
 
 	const HEIGHT = 172;
 	const PAD = { top: 12, right: 12, bottom: 22, left: 34 };
 
-	/** The gridlines, which are also the only numbers on the axis. */
-	const MARKS = [1, 0.75, 0.5, 0.25, RAMP_SPEED_MIN];
+
 
 	let width = $state(0);
 	/**
@@ -45,18 +55,14 @@
 
 	const x = (t: number) => PAD.left + (t / span) * innerWidth;
 	const y = (speed: number) =>
-		PAD.top +
-		(1 - (speed - RAMP_SPEED_MIN) / (RAMP_SPEED_MAX - RAMP_SPEED_MIN)) * innerHeight;
+		PAD.top + (1 - (speed - range.min) / (range.max - range.min)) * innerHeight;
 
 	const timeAt = (px: number) =>
 		Math.min(span, Math.max(0, ((px - PAD.left) / innerWidth) * span));
 	const speedFor = (py: number) =>
 		Math.min(
-			RAMP_SPEED_MAX,
-			Math.max(
-				RAMP_SPEED_MIN,
-				RAMP_SPEED_MAX - ((py - PAD.top) / innerHeight) * (RAMP_SPEED_MAX - RAMP_SPEED_MIN)
-			)
+			range.max,
+			Math.max(range.min, range.max - ((py - PAD.top) / innerHeight) * (range.max - range.min))
 		);
 
 	/**
@@ -85,7 +91,13 @@
 	const active = $derived(
 		selected >= 0 && selected < points.length
 			? selected
-			: points.reduce((best, p, i) => (p.speed < points[best].speed ? i : best), 0)
+			: // The point furthest from the original pace, which is the one worth
+				// landing on: the ends of the curve cannot move along the clip.
+				points.reduce(
+					(best, p, i) =>
+						Math.abs(p.speed - 1) > Math.abs(points[best].speed - 1) ? i : best,
+					0
+				)
 	);
 	const current = $derived(points[active]);
 	const isEnd = $derived(active === 0 || active === points.length - 1);
@@ -107,7 +119,7 @@
 		if (index === points.length - 1) moved[index] = { t: span, speed };
 
 		const target = moved[index];
-		const cleaned = normaliseRamp(moved, duration);
+		const cleaned = normaliseRamp(moved, duration, range);
 		const at = cleaned.findIndex((p) => Math.abs(p.t - target.t) < 1e-6);
 		const landed = at >= 0 ? at : Math.min(index, cleaned.length - 1);
 		selected = landed;
@@ -152,7 +164,7 @@
 	function addHere(event: PointerEvent) {
 		if (points.length >= RAMP_MAX_POINTS || duration <= 0) return;
 		const { t, speed } = pointerPosition(event);
-		const next = normaliseRamp([...points, { t, speed }], duration);
+		const next = normaliseRamp([...points, { t, speed }], duration, range);
 		const at = next.findIndex((p) => Math.abs(p.t - t) < 1e-6);
 		selected = at >= 0 ? at : selected;
 		dragging = at >= 0 ? at : null;
@@ -163,7 +175,7 @@
 	function removePoint(index: number) {
 		if (points.length <= 2 || index === 0 || index === points.length - 1) return;
 		selected = Math.max(0, index - 1);
-		onchange(normaliseRamp(points.filter((_, i) => i !== index), duration));
+		onchange(normaliseRamp(points.filter((_, i) => i !== index), duration, range));
 	}
 
 	/**
@@ -174,7 +186,10 @@
 	function onKey(event: KeyboardEvent, index: number) {
 		const point = points[index];
 		if (!point) return;
-		const speedStep = event.shiftKey ? 0.01 : 0.05;
+		// Steps scale with the range, so one arrow press feels the same on a
+		// 0.1-to-1 axis as on a 1-to-4 one.
+		const spread = range.max - range.min;
+		const speedStep = (event.shiftKey ? 0.011 : 0.055) * spread;
 		const timeStep = (event.shiftKey ? 0.01 : 0.05) * span;
 		let handled = true;
 		switch (event.key) {
@@ -191,10 +206,10 @@
 				movePoint(index, point.t + timeStep, point.speed);
 				break;
 			case 'Home':
-				movePoint(index, point.t, RAMP_SPEED_MAX);
+				movePoint(index, point.t, 1);
 				break;
 			case 'End':
-				movePoint(index, point.t, RAMP_SPEED_MIN);
+				movePoint(index, point.t, range.peak);
 				break;
 			case 'Delete':
 			case 'Backspace':
@@ -206,39 +221,46 @@
 		if (handled) event.preventDefault();
 	}
 
-	/** The shapes worth having a button for, so nobody has to draw them. */
-	const SHAPES: { label: string; build: (d: number) => RampPoint[] }[] = [
-		{ label: 'Slow in the middle', build: (d) => defaultRamp(d) },
+	/**
+	 * The shapes worth a button, so nobody has to draw the common ones. Named
+	 * for what they do rather than which way the line goes, because "slow" and
+	 * "fast" are the same three shapes pointing opposite ways.
+	 */
+	const SHAPES = $derived([
 		{
-			label: 'Slow to the end',
-			build: (d) => [
+			label: faster ? 'Fast in the middle' : 'Slow in the middle',
+			build: (d: number) => defaultRamp(d, range)
+		},
+		{
+			label: faster ? 'Build to the end' : 'Slow to the end',
+			build: (d: number) => [
 				{ t: 0, speed: 1 },
 				{ t: d * 0.4, speed: 1 },
-				{ t: d, speed: 0.25 }
+				{ t: d, speed: range.peak }
 			]
 		},
 		{
-			label: 'Slow from the start',
-			build: (d) => [
-				{ t: 0, speed: 0.25 },
+			label: faster ? 'Start fast, settle' : 'Slow from the start',
+			build: (d: number) => [
+				{ t: 0, speed: range.peak },
 				{ t: d * 0.6, speed: 1 },
 				{ t: d, speed: 1 }
 			]
 		},
 		{
 			label: 'Flat',
-			build: (d) => [
+			build: (d: number) => [
 				{ t: 0, speed: 1 },
 				{ t: d, speed: 1 }
 			]
 		}
-	];
+	]);
 
 	function applyShape(build: (d: number) => RampPoint[]) {
 		// Back to "nobody has picked one", so the new shape gets the same
 		// sensible default the first one did.
 		selected = -1;
-		onchange(normaliseRamp(build(span), duration));
+		onchange(normaliseRamp(build(span), duration, range));
 	}
 
 	const label = (p: RampPoint) => `${formatTimecode(p.t)}, ${p.speed.toFixed(2)} times speed`;
@@ -268,7 +290,7 @@
 			>
 				<title>Speed curve. Higher is closer to the original pace.</title>
 
-				{#each MARKS as mark (mark)}
+				{#each range.marks as mark (mark)}
 					<line class="grid" x1={PAD.left} x2={width - PAD.right} y1={y(mark)} y2={y(mark)} />
 					<text class="tick" x={PAD.left - 6} y={y(mark) + 3.5} text-anchor="end">
 						{mark === 1 ? '1×' : `${mark}×`}
@@ -297,8 +319,8 @@
 						role="slider"
 						tabindex="0"
 						aria-label="Curve point {i + 1} of {points.length}"
-						aria-valuemin={RAMP_SPEED_MIN}
-						aria-valuemax={RAMP_SPEED_MAX}
+						aria-valuemin={range.min}
+						aria-valuemax={range.max}
 						aria-valuenow={point.speed}
 						aria-valuetext={label(point)}
 						onpointerdown={(e) => grab(e, i)}
@@ -341,8 +363,8 @@
 				<span>runs at</span>
 				<input
 					type="range"
-					min={RAMP_SPEED_MIN}
-					max={RAMP_SPEED_MAX}
+					min={range.min}
+					max={range.max}
 					step="0.01"
 					value={current.speed}
 					aria-label="How fast the clip runs at this point"
@@ -370,9 +392,9 @@
 	</div>
 
 	<p class="hint">
-		Drag a point to change the pace where it sits, or tap the graph to add one. Up is the
-		original speed and down is slower. Everything between two points eases, so the clip slides
-		into slow motion rather than snapping into it.
+		Drag a point to change the pace where it sits, or tap the graph to add one. Up is faster and
+		down is slower, and the flat line at {faster ? 'the bottom' : 'the top'} is the clip's own pace.
+		Everything between two points eases, so the speed slides rather than snapping.
 		{#if points.length >= RAMP_MAX_POINTS}
 			<br />That's the most points one curve takes.
 		{/if}

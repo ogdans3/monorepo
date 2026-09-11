@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
 	defaultRamp,
 	normaliseRamp,
+	FASTER,
 	RAMP_MAX_SEGMENTS,
 	RAMP_MIN_STEP,
-	RAMP_SPEED_MAX,
-	RAMP_SPEED_MIN,
 	rampIsFlat,
-	rampSlowest,
+	rampPeak,
 	rampTotal,
 	sampleRamp,
+	SLOWER,
 	speedAt,
 	type RampPoint
 } from './ramp';
@@ -21,13 +21,7 @@ describe('normaliseRamp', () => {
 	it('sorts, clamps and spans the whole clip', () => {
 		const out = normaliseRamp(ramp([6, 0.5], [2, 9], [4, -3]), 10);
 		expect(out.map((p) => p.t)).toEqual([0, 2, 4, 6, 10]);
-		expect(out.map((p) => p.speed)).toEqual([
-			RAMP_SPEED_MAX,
-			RAMP_SPEED_MAX,
-			RAMP_SPEED_MIN,
-			0.5,
-			0.5
-		]);
+		expect(out.map((p) => p.speed)).toEqual([SLOWER.max, SLOWER.max, SLOWER.min, 0.5, 0.5]);
 	});
 
 	it('holds the outermost values rather than running off the ends', () => {
@@ -190,7 +184,7 @@ describe('defaultRamp', () => {
 		const curve = defaultRamp(10);
 		expect(curve[0]).toEqual({ t: 0, speed: 1 });
 		expect(curve[curve.length - 1].speed).toBe(1);
-		expect(rampSlowest(curve)).toBe(0.25);
+		expect(rampPeak(curve)).toBe(0.25);
 		expect(rampIsFlat(curve)).toBe(false);
 	});
 
@@ -206,5 +200,43 @@ describe('rampIsFlat', () => {
 	it('knows when the curve is asking for nothing', () => {
 		expect(rampIsFlat(defaultRamp(10))).toBe(false);
 		expect(rampIsFlat(ramp([0, 1], [10, 1]))).toBe(true);
+	});
+});
+
+describe('a curve that runs the other way', () => {
+	it('clamps to its own range rather than to the slow one', () => {
+		const out = normaliseRamp(ramp([0, 1], [5, 9], [10, 0.2]), 10, FASTER);
+		expect(out.map((p) => p.speed)).toEqual([FASTER.min, FASTER.max, FASTER.min]);
+	});
+
+	it('opens on a shape that speeds up rather than slows down', () => {
+		const curve = defaultRamp(10, FASTER);
+		expect(curve[0].speed).toBe(1);
+		expect(rampPeak(curve)).toBe(FASTER.peak);
+		expect(rampIsFlat(curve)).toBe(false);
+	});
+
+	it('makes the clip shorter, where the slow range makes it longer', () => {
+		const quick = rampTotal(sampleRamp(defaultRamp(10, FASTER), 10, FASTER));
+		const slow = rampTotal(sampleRamp(defaultRamp(10, SLOWER), 10, SLOWER));
+		expect(quick).toBeLessThan(10);
+		expect(slow).toBeGreaterThan(10);
+	});
+
+	it('spends its pieces in proportion to the range, not a fixed step', () => {
+		// A fixed 0.05 step is right across 0.1 to 1 and absurd across 1 to 4,
+		// where a single sweep would eat sixty pieces of the budget.
+		const sweep = sampleRamp([{ t: 0, speed: 1 }, { t: 10, speed: 4 }], 10, FASTER);
+		expect(sweep.length).toBeLessThanOrEqual(RAMP_MAX_SEGMENTS);
+		expect(sweep.length).toBeGreaterThan(5);
+		expect(sweep.length).toBeLessThan(30);
+	});
+
+	it('still neither gains nor loses time against its curve', () => {
+		const curve = normaliseRamp(defaultRamp(10, FASTER), 10, FASTER);
+		const steps = 20000;
+		let exact = 0;
+		for (let i = 0; i < steps; i++) exact += 10 / steps / speedAt(curve, ((i + 0.5) * 10) / steps);
+		expect(rampTotal(sampleRamp(defaultRamp(10, FASTER), 10, FASTER))).toBeCloseTo(exact, 0);
 	});
 });

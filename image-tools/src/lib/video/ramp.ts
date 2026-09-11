@@ -1,11 +1,15 @@
 /**
  * The speed ramp: a drawn curve saying how fast the clip runs at each moment.
  *
- * The other half of the slow motion page. The simple mode marks a section and
- * gives it a length, which is one speed applied to one block. This one takes a
- * curve, so the footage can ease down into slow motion, hold there, and ease
- * back to its own pace, which is the shape people actually mean when they talk
- * about a slow motion shot.
+ * The other half of the two retiming pages. Their simple mode marks a section
+ * and gives it a length, which is one speed applied to one block. This one
+ * takes a curve, so the footage can ease away from its own pace, hold there,
+ * and ease back, which is the shape people actually mean when they talk about
+ * a slow motion shot or a clip that races through the middle.
+ *
+ * A curve runs in one direction only, set by its `RampRange`: the slow motion
+ * page draws 0.1 to 1 and the speed up page draws 1 to 4. See RampRange for
+ * why that beats one axis crossing 1 in the middle.
  *
  * Pure and tested, like `edit.ts`, and for the same reason: this is where the
  * result is decided, and none of it needs a browser to check.
@@ -40,17 +44,45 @@ export interface RampSegment {
 }
 
 /**
- * Ten times slower. Past this the frames are so far apart that the result is a
- * slideshow, and the sound has been through four instances of atempo.
+ * How far a curve may go, and which way.
+ *
+ * One end is always 1, the original pace, because a page that could both slow
+ * down and speed up would need an axis crossing 1 in the middle: half the
+ * graph would be dead space for whichever thing you actually came to do, and
+ * the point somebody drags would mean two different things either side of the
+ * centre line. A page picks a direction and gets the whole axis for it.
  */
-export const RAMP_SPEED_MIN = 0.1;
+export interface RampRange {
+	min: number;
+	max: number;
+	/** Where the stock shape parks, and what the keyboard's End key reaches. */
+	peak: number;
+	/** Gridlines and their labels, fastest first. */
+	marks: number[];
+}
+
 /**
- * The curve slows footage down and never speeds it up. Going faster than the
- * original is the speed page's job, and an axis that crossed 1 in both
- * directions would make the graph harder to read for a case this page does not
- * handle anyway.
+ * Down to ten times slower. Past that the frames are so far apart the result
+ * is a slideshow, and the sound has been through four instances of atempo.
  */
-export const RAMP_SPEED_MAX = 1;
+export const SLOWER: RampRange = {
+	min: 0.1,
+	max: 1,
+	peak: 0.25,
+	marks: [1, 0.75, 0.5, 0.25, 0.1]
+};
+
+/**
+ * Up to four times faster, the same ceiling the whole-clip speed page uses.
+ * Beyond that a hand held shot stops reading as motion and starts reading as a
+ * cut, and the sound is three chained atempo instances deep.
+ */
+export const FASTER: RampRange = {
+	min: 1,
+	max: 4,
+	peak: 3,
+	marks: [4, 3, 2, 1.5, 1]
+};
 
 /** More points than this is a shape nobody is drawing on purpose. */
 export const RAMP_MAX_POINTS = 12;
@@ -64,8 +96,13 @@ export const RAMP_MAX_POINTS = 12;
  */
 export const RAMP_MIN_STEP = 0.2;
 
-/** How much the speed may step between one piece and the next. */
-const RAMP_SPEED_STEP = 0.05;
+/**
+ * How much the speed may step between one piece and the next, as a fraction of
+ * the range. Proportional rather than absolute: a fixed 0.05 is right across
+ * 0.1 to 1 and absurdly fine across 1 to 4, where it would spend sixty pieces
+ * on a single sweep.
+ */
+const RAMP_SPEED_STEP_FRACTION = 0.05;
 
 /**
  * The ceiling on pieces in one graph. Each one is two filter chains plus a
@@ -77,8 +114,8 @@ export const RAMP_MAX_SEGMENTS = 64;
 /** Below this two times, or two speeds, are the same time or speed. */
 const EPSILON = 1e-3;
 
-function clampSpeed(speed: number): number {
-	return Math.min(RAMP_SPEED_MAX, Math.max(RAMP_SPEED_MIN, speed));
+function clampSpeed(speed: number, range: RampRange): number {
+	return Math.min(range.max, Math.max(range.min, speed));
 }
 
 /**
@@ -89,7 +126,11 @@ function clampSpeed(speed: number): number {
  * off, which is what lets a ramp drawn in the middle of a clip leave both ends
  * at their own pace without anybody having to place a point there.
  */
-export function normaliseRamp(points: RampPoint[], duration: number | null): RampPoint[] {
+export function normaliseRamp(
+	points: RampPoint[],
+	duration: number | null,
+	range: RampRange = SLOWER
+): RampPoint[] {
 	const usable = points.filter((p) => Number.isFinite(p.t) && Number.isFinite(p.speed));
 	const span =
 		duration !== null && Number.isFinite(duration) && duration > 0
@@ -99,7 +140,7 @@ export function normaliseRamp(points: RampPoint[], duration: number | null): Ram
 				Math.max(RAMP_MIN_STEP, ...usable.map((p) => p.t));
 
 	const sorted = usable
-		.map((p) => ({ t: Math.min(Math.max(0, p.t), span), speed: clampSpeed(p.speed) }))
+		.map((p) => ({ t: Math.min(Math.max(0, p.t), span), speed: clampSpeed(p.speed, range) }))
 		.sort((a, b) => a.t - b.t);
 
 	const out: RampPoint[] = [];
@@ -155,9 +196,13 @@ export function speedAt(points: RampPoint[], t: number): number {
 	return last.speed;
 }
 
-/** The slowest the curve ever gets, for the readout. */
-export function rampSlowest(points: RampPoint[]): number {
-	return points.reduce((slowest, p) => Math.min(slowest, p.speed), RAMP_SPEED_MAX);
+/**
+ * The furthest the curve gets from the original pace, for the readout. The
+ * slowest point on a slow curve and the fastest on a fast one, which is the
+ * same question asked once rather than twice.
+ */
+export function rampPeak(points: RampPoint[]): number {
+	return points.reduce((far, p) => (Math.abs(p.speed - 1) > Math.abs(far - 1) ? p.speed : far), 1);
 }
 
 /**
@@ -172,6 +217,7 @@ export function rampSlowest(points: RampPoint[]): number {
 export function sampleRamp(
 	points: RampPoint[],
 	duration: number | null,
+	range: RampRange = SLOWER,
 	maxSegments: number = RAMP_MAX_SEGMENTS
 ): RampSegment[] {
 	// A clip whose length reads as zero has not loaded its metadata yet. Null
@@ -180,7 +226,7 @@ export function sampleRamp(
 	// asked for.
 	if (duration !== null && !(duration > 0)) return [];
 
-	const curve = normaliseRamp(points, duration);
+	const curve = normaliseRamp(points, duration, range);
 	const span = curve[curve.length - 1].t;
 	if (span <= EPSILON) return [];
 
@@ -194,7 +240,8 @@ export function sampleRamp(
 		// A flat interval is one piece however long it runs. A changing one is
 		// cut fine enough that the step between pieces stays small, but never
 		// so fine that a piece drops below what atempo can work with.
-		const wanted = delta < EPSILON ? 1 : Math.ceil(delta / RAMP_SPEED_STEP);
+		const step = Math.max(0.02, (range.max - range.min) * RAMP_SPEED_STEP_FRACTION);
+		const wanted = delta < EPSILON ? 1 : Math.ceil(delta / step);
 		const room = Math.max(1, Math.floor(length / RAMP_MIN_STEP));
 		intervals.push({ from: a.t, length, pieces: Math.max(1, Math.min(wanted, room)) });
 	}
@@ -242,14 +289,14 @@ export function rampTotal(segments: RampSegment[]): number {
 }
 
 /**
- * The curve a clip opens with: normal, ease down, hold, ease back, normal.
+ * The curve a clip opens with: normal, ease away, hold, ease back, normal.
  *
- * The shape somebody is describing when they say they want slow motion, ready
- * to be dragged rather than built from a flat line. Quarter speed because it
- * is slow enough to read as an effect and not so slow that ordinary footage
- * starts stepping.
+ * The shape somebody is describing when they say they want slow motion, or a
+ * clip that speeds through the middle, ready to be dragged rather than built
+ * from a flat line. `range.peak` is how far it goes: far enough to read as an
+ * effect, not so far that ordinary footage falls apart.
  */
-export function defaultRamp(duration: number): RampPoint[] {
+export function defaultRamp(duration: number, range: RampRange = SLOWER): RampPoint[] {
 	const span = Math.max(duration, RAMP_MIN_STEP * 5);
 	const middle = span / 2;
 	const ease = Math.min(span * 0.18, 1.5);
@@ -258,12 +305,13 @@ export function defaultRamp(duration: number): RampPoint[] {
 		[
 			{ t: 0, speed: 1 },
 			{ t: middle - hold / 2 - ease, speed: 1 },
-			{ t: middle - hold / 2, speed: 0.25 },
-			{ t: middle + hold / 2, speed: 0.25 },
+			{ t: middle - hold / 2, speed: range.peak },
+			{ t: middle + hold / 2, speed: range.peak },
 			{ t: middle + hold / 2 + ease, speed: 1 },
 			{ t: span, speed: 1 }
 		],
-		span
+		span,
+		range
 	);
 }
 

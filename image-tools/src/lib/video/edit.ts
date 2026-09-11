@@ -1,6 +1,6 @@
 import type { VideoFormat } from './formats';
 import type { ConvertPlan, ProbeResult } from './plan';
-import { sampleRamp, type RampPoint, type RampSegment } from './ramp';
+import { sampleRamp, SLOWER, type RampPoint, type RampRange, type RampSegment } from './ramp';
 
 /**
  * Turning an edit into ffmpeg arguments.
@@ -38,7 +38,17 @@ export type EditOp =
 	 * each moment, rather than one section given one length. `ramp.ts` owns the
 	 * curve and the sampling, this file only turns the result into arguments.
 	 */
-	| { kind: 'ramp'; points: RampPoint[] }
+	| {
+			kind: 'ramp';
+			points: RampPoint[];
+			/**
+			 * Which way the curve runs. Not optional in practice: the range is
+			 * what the points are clamped against, so planning a speed up curve
+			 * against the slow range would quietly flatten every point above 1
+			 * back down to it and encode a clip that does nothing.
+			 */
+			range: RampRange;
+	  }
 	| { kind: 'fps'; fps: number }
 	| { kind: 'rotate'; quarterTurns: number; flipHorizontal: boolean; flipVertical: boolean }
 	| { kind: 'blur'; strength: number }
@@ -447,7 +457,7 @@ export function planEdit(
 	// The same page's curve mode. Both modes end up as a concat of retimed
 	// slices, so they share everything below the graph itself.
 	if (op.kind === 'ramp') {
-		const segments = sampleRamp(op.points, probe.durationSeconds);
+		const segments = sampleRamp(op.points, probe.durationSeconds, op.range ?? SLOWER);
 		// One piece is a constant speed across the whole clip, which the plain
 		// speed path already does with one filter instead of a concat of one.
 		// The same reasoning as a stretch with no head and no tail.

@@ -150,10 +150,22 @@ decisions. This file is the short version of what matters when editing.
   about copy says so rather than pretending the result glides. A section that
   turns out to be the whole clip has no head and no tail, so `planEdit` hands
   it to the ordinary `speed` path instead of building a concat of one.
+- **Two retiming pages, one set of controls, pointed opposite ways.**
+  `slow-motion-video` and `speed-up-video` are both `op: 'stretch'` and differ
+  only by `direction: 'slower' | 'faster'` in the registry. The panel derives
+  everything else from that flag: the curve's `RampRange`, the preset labels,
+  the chips, and whether the readout says slowest or fastest. Do not fork them
+  into two panels, and do not add a third direction that crosses 1 in the
+  middle — a `RampRange` always has 1 at one end, so the whole axis belongs to
+  the thing the visitor came to do and a dragged point means one thing.
+- **The ramp op carries its range, and that is not decoration.** Planning a
+  speed up curve against the slow range clamps every point above 1 back down to
+  it, and the result is a graph that encodes a clip doing nothing, which is
+  indistinguishable from success. `edit.test.ts` pins it.
 - **The slow motion page has two modes, and they share one filter builder.**
   `stretch` marks a section and gives it a length. `ramp` takes a drawn curve of
-  how fast the clip runs at each moment, so footage can ease into slow motion,
-  hold, and ease back out. Both end up as a concat of retimed slices, so
+  how fast the clip runs at each moment, so footage can ease away from its own
+  pace, hold, and ease back. Both end up as a concat of retimed slices, so
   `concatFilter` in `edit.ts` builds the graph for both and `concatPlan` wraps
   it with the same arguments. That is the only reason the curve was cheap: a
   marked section is three slices and a curve is thirty, and past that they are

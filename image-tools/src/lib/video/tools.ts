@@ -41,6 +41,12 @@ export interface VideoTool {
 	aboutHeading: string;
 	about: string[];
 	faq: { q: string; a: string }[];
+	/**
+	 * Which way a retiming page's curve runs. Only the two `stretch` pages use
+	 * it: slow motion draws 0.1 to 1, speeding up draws 1 to 4. A curve runs in
+	 * one direction so the whole axis belongs to the thing you came to do.
+	 */
+	direction?: 'slower' | 'faster';
 	/** Output name suffix, e.g. "-trimmed". */
 	suffix: string;
 	next?: string[];
@@ -271,7 +277,50 @@ export const VIDEO_TOOLS: VideoTool[] = [
 				a: "Switch to the speed curve and drag the line down where you want the slow part and back up where you want it to end. The curve eases between the points you place rather than jumping between them, so the clip slides into slow motion, holds as long as the line stays flat, and slides back out to its own pace. There are buttons for the usual shapes if you would rather not draw one."
 			}
 		],
+		direction: 'slower',
 		suffix: '-slowed'
+	},
+	{
+		slug: 'speed-up-video',
+		category: 'time',
+		op: 'stretch',
+		direction: 'faster',
+		name: 'Speed up part',
+		h1: 'Speed up part of a video',
+		title: 'Speed Up Part of a Video - Free, No Upload',
+		description:
+			'Speed one section of a video up to an exact length online free, in your browser. The rest of the clip keeps its own pace, and nothing is uploaded.',
+		lede: 'Race through the dull part and leave the rest alone, or draw a curve so the clip winds up and back down again.',
+		blurb: 'Compress one section to an exact length, or draw the pace as a curve.',
+		steps: [
+			'Drop a video in the box above. MP4, MOV, WebM, MKV and AVI all work.',
+			'Pick section and length to mark the dull part and give it a running time, or speed curve to draw the pace across the whole clip.',
+			'Drag the marks or the curve until the preview reads right, then download. The file keeps its name, with -sped-up added.'
+		],
+		aboutHeading: 'About speeding part of a video up here',
+		about: [
+			"The other speed page changes the pace of the whole clip. This one changes a section of it and leaves the rest alone, which is what you want when four minutes of a six minute recording is somebody walking back to the camera. Say how long that section should take rather than how many times faster it should go, because a length is usually the thing you actually know.",
+			"Speeding a section up throws frames away rather than inventing them, so the result is as smooth as the original was and the file comes out smaller. That is the opposite trade to slowing footage down, where the frames get spread out and the picture starts to step. There is no quality cost to worry about here beyond the re-encode itself.",
+			"The speed curve is the other way in. Instead of one section at one pace it takes a graph of how fast the clip runs at each moment, so the footage can wind up, hold, and wind back down to its own speed. Everything between two points on the curve is eased rather than switched, and the preview plays the curve as you drag it, so you can see the shape before spending a second encoding.",
+			"The sound is compressed along with the picture so it stays in step. A small change still sounds like a voice. Past about double, speech turns into chatter, which is why a lot of sped up clips drop the sound entirely or put music over it."
+		],
+		next: ['change-video-speed', 'slow-motion-video', 'trim-video'],
+		keywords: ['speed up', 'timelapse', 'fast forward', 'hyperlapse', 'speed ramp', 'speed curve'],
+		faq: [
+			{
+				q: 'How do I speed up only one part of a video?',
+				a: "Mark where the section starts and stops, then say how long it should take. Everything before and after it is kept at its original pace and joined back on, so you get one file rather than three pieces to stitch together yourself. A six minute clip with four minutes compressed to thirty seconds comes out two and a half minutes long."
+			},
+			{
+				q: 'Does speeding a video up lose quality?',
+				a: "Not in the way slowing one down does. Going faster drops frames rather than spreading them out, so what survives is as smooth as it ever was and the file gets smaller. The only cost is the re-encode itself, which is the same cost every edit on this site that touches the picture has to pay."
+			},
+			{
+				q: 'How do I make a clip wind up and then slow back to normal?',
+				a: "Switch to the speed curve and drag the line up where you want the fast part and back down where you want it to end. The curve eases between the points you place rather than jumping between them, so the clip winds up, holds as long as the line stays flat, and winds back down to its own pace. There are buttons for the usual shapes if you would rather not draw one."
+			}
+		],
+		suffix: '-sped-up'
 	},
 	{
 		slug: 'change-video-frame-rate',

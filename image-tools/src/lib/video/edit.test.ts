@@ -12,7 +12,7 @@ import {
 	type EditOp
 } from './edit';
 import type { ProbeResult } from './plan';
-import { defaultRamp, sampleRamp, type RampPoint } from './ramp';
+import { defaultRamp, FASTER, sampleRamp, SLOWER, type RampPoint } from './ramp';
 
 const mp4 = VIDEO_FORMATS.mp4;
 const webm = VIDEO_FORMATS.webm;
@@ -352,12 +352,12 @@ describe('planEdit for a drawn speed curve', () => {
 		const args = argsOf(op, mp4, p);
 		return args[args.indexOf('-filter_complex') + 1];
 	};
-	const ramp = (points: RampPoint[]): EditOp => ({ kind: 'ramp', points });
+	const ramp = (points: RampPoint[], range = SLOWER): EditOp => ({ kind: 'ramp', points, range });
 
 	it('builds one slice per constant-speed piece and joins them', () => {
 		const points = defaultRamp(10);
 		const graph = graphOf(ramp(points));
-		const pieces = sampleRamp(points, 10).length;
+		const pieces = sampleRamp(points, 10, SLOWER).length;
 		expect(graph).toContain(`concat=n=${pieces}:v=1:a=1[v][a]`);
 		expect(graph.match(/\[0:v\]trim=/g)).toHaveLength(pieces);
 	});
@@ -411,5 +411,45 @@ describe('planEdit for a drawn speed curve', () => {
 		// out as a plain re-encode rather than a graph built from nothing.
 		const args = argsOf(ramp(defaultRamp(10)), mp4, probe({ durationSeconds: 0 }));
 		expect(args).not.toContain('-filter_complex');
+	});
+});
+
+describe('planEdit for a curve that speeds a clip up', () => {
+	const graphOf = (op: EditOp, p = probe()) => {
+		const args = argsOf(op, mp4, p);
+		return args[args.indexOf('-filter_complex') + 1];
+	};
+	const fast = (points: RampPoint[]): EditOp => ({ kind: 'ramp', points, range: FASTER });
+
+	it('keeps the points above 1 instead of flattening them', () => {
+		// The whole reason the op carries its range. Planned against the slow
+		// range every point would be clamped back down to 1 and the graph would
+		// encode a clip that does nothing, which looks exactly like success.
+		const graph = graphOf(fast(defaultRamp(10, FASTER)));
+		expect(graph).toMatch(/setpts=0\.\d+\*/);
+		expect(graph).toContain('concat=');
+	});
+
+	it('multiplies timestamps down, which is what running faster is', () => {
+		// Triple speed is a one third multiplier.
+		const graph = graphOf(
+			fast([
+				{ t: 0, speed: 3 },
+				{ t: 5, speed: 3 },
+				{ t: 10, speed: 1 }
+			])
+		);
+		expect(graph).toContain('setpts=0.333333*(PTS-STARTPTS)');
+	});
+
+	it('comes out shorter than it went in', () => {
+		const segments = sampleRamp(defaultRamp(10, FASTER), 10, FASTER);
+		const total = segments.reduce((sum, seg) => sum + (seg.to - seg.from) / seg.speed, 0);
+		expect(total).toBeLessThan(10);
+		expect(total).toBeGreaterThan(3);
+	});
+
+	it('takes the sound with it', () => {
+		expect(graphOf(fast(defaultRamp(10, FASTER)))).toContain('atempo=');
 	});
 });
