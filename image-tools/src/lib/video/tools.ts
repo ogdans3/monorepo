@@ -261,7 +261,7 @@ export const VIDEO_TOOLS: VideoTool[] = [
 			"The sound is stretched along with the picture so it stays in step. A gentle slowdown still sounds like a voice, and a large one sounds like a large one. If the result is unusable, the mute page drops the track entirely and copies the picture untouched.",
 			"The speed curve is the other way in. Instead of one section at one pace it takes a graph of how fast the clip runs at each moment, so the footage can ease down into slow motion, hold there, and ease back to its own speed. Everything between two points on the curve is eased rather than switched, which is the difference between a ramp that looks deliberate and one that looks like a dropped frame. The preview plays the curve as you drag it, so you can see the shape before spending a single second encoding."
 		],
-		next: ['change-video-speed', 'trim-video', 'compress-video'],
+		next: ['speed-up-video', 'change-video-speed', 'trim-video'],
 		keywords: ['slow motion', 'slowmo', 'slow down', 'stretch', 'section', 'ramp', 'speed ramp', 'speed curve', 'ease'],
 		faq: [
 			{
