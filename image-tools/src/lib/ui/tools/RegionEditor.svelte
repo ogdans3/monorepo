@@ -87,6 +87,9 @@
 
 	function composite(ctx: CanvasRenderingContext2D, all: Shape[]) {
 		if (!base) return;
+		// Same reason as DrawEditor: an image with transparent pixels does not
+		// cover the frame before it, so every dragged region would pile up.
+		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 		ctx.drawImage(base, 0, 0);
 		for (const s of all) {
 			if (variant === 'blur') {

@@ -116,6 +116,11 @@
 
 	function composite(ctx: CanvasRenderingContext2D, all: Drawing[], image: RawImage) {
 		if (!base) return;
+		// Painting the picture over the canvas does not wipe it: where the image
+		// is transparent, whatever was underneath survives. On a WebP, PNG or
+		// HEIC with an alpha channel that turned every frame of a drag into a
+		// mark that stayed, so stretching one circle left a hundred behind it.
+		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 		ctx.drawImage(base, 0, 0);
 		for (const d of all) paint(ctx, d, image);
 	}
