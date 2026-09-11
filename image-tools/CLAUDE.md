@@ -150,6 +150,50 @@ decisions. This file is the short version of what matters when editing.
   about copy says so rather than pretending the result glides. A section that
   turns out to be the whole clip has no head and no tail, so `planEdit` hands
   it to the ordinary `speed` path instead of building a concat of one.
+- **The slow motion page has two modes, and they share one filter builder.**
+  `stretch` marks a section and gives it a length. `ramp` takes a drawn curve of
+  how fast the clip runs at each moment, so footage can ease into slow motion,
+  hold, and ease back out. Both end up as a concat of retimed slices, so
+  `concatFilter` in `edit.ts` builds the graph for both and `concatPlan` wraps
+  it with the same arguments. That is the only reason the curve was cheap: a
+  marked section is three slices and a curve is thirty, and past that they are
+  the same operation. Do not give either mode its own copy of the graph, or
+  they will drift on `-fps_mode vfr` and the `-STARTPTS` on every slice, which
+  are the two things that were expensive to get right.
+- **A curve cannot be handed to ffmpeg, so it is sampled.** `setpts` takes a
+  constant multiplier and `atempo` takes a constant factor, and neither has a
+  form that accepts a curve. `ramp.ts` cuts the curve into constant-speed
+  pieces, spending them where the speed is moving and saving them where it is
+  not: an untouched head or tail comes back as **one** segment at exactly 1, so
+  it gets no multiplier and no atempo at all. `RAMP_MIN_STEP` is a floor, not a
+  round number, because atempo works on a window of samples and a piece below
+  it leaves the sound nothing to work with. `ramp.test.ts` checks the sampled
+  running time against a numerical integral of 1/speed rather than against
+  hand-written numbers, which is what catches a sampler that drifts.
+- **A step change is deliberately not expressible on the curve.**
+  `normaliseRamp` collapses two points closer than a millisecond, so a vertical
+  edge cannot be drawn. That is the point: this mode draws ramps and the simple
+  mode does square edges. A test asserts it, because the first version of that
+  test tried to build a square out of 1ms transitions and quietly measured
+  something else.
+- **Both modes live in `VideoToolPanel`, unlike merge.** The split for
+  `VideoMergePanel` was about shape: a join takes a list of files. Here the
+  shape is identical, one file and one preview and one probe, and only the
+  controls differ, which is what that panel already branches on for ten tools.
+  Splitting them would also throw the loaded video away on every mode switch,
+  which is the one thing a mode switch must not do.
+- **The preview plays the curve.** `playbackRate` on the `<video>` costs
+  nothing and answers the question the graph cannot, which is whether the ramp
+  actually looks right. Finding that out by encoding is a two minute round
+  trip. Browsers clamp the rate to roughly a sixteenth and up, so the whole
+  `RAMP_SPEED_MIN` to `RAMP_SPEED_MAX` range is inside what they will play.
+  Leaving the curve mode has to hand the rate back to 1.
+- **The graph has a keyboard and touch equivalent, and it is not optional.**
+  Dragging circles is no use on a phone where they are smaller than a
+  fingertip, and no use at all to a screen reader. Each point is a real
+  `role="slider"`, and the row under the graph edits the selected point with
+  two native range inputs. The `<svg>` itself is `role="group"`: the pointer
+  handlers on it are a shortcut, not the only way in.
 - **Joining videos: exit code 0 proves nothing, and that is the whole story
   of `merge.ts`.** The concat demuxer fails silently in two different ways and
   both were caught only in a browser with real files. An MP4 followed by a

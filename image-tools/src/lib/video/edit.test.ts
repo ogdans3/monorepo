@@ -12,6 +12,7 @@ import {
 	type EditOp
 } from './edit';
 import type { ProbeResult } from './plan';
+import { defaultRamp, sampleRamp, type RampPoint } from './ramp';
 
 const mp4 = VIDEO_FORMATS.mp4;
 const webm = VIDEO_FORMATS.webm;
@@ -343,5 +344,72 @@ describe('planEdit for a slowed section', () => {
 		);
 		expect(graph).toContain('[0:v]trim=start=152.000:end=222.000,setpts=14.285714*(PTS-STARTPTS)[v1]');
 		expect(graph).toContain('concat=n=3:v=1:a=1[v][a]');
+	});
+});
+
+describe('planEdit for a drawn speed curve', () => {
+	const graphOf = (op: EditOp, p = probe()) => {
+		const args = argsOf(op, mp4, p);
+		return args[args.indexOf('-filter_complex') + 1];
+	};
+	const ramp = (points: RampPoint[]): EditOp => ({ kind: 'ramp', points });
+
+	it('builds one slice per constant-speed piece and joins them', () => {
+		const points = defaultRamp(10);
+		const graph = graphOf(ramp(points));
+		const pieces = sampleRamp(points, 10).length;
+		expect(graph).toContain(`concat=n=${pieces}:v=1:a=1[v][a]`);
+		expect(graph.match(/\[0:v\]trim=/g)).toHaveLength(pieces);
+	});
+
+	it('leaves the untouched head and tail unretimed', () => {
+		// Not cosmetic. A segment at exactly 1 gets no setpts multiplier and no
+		// atempo at all, so the parts of the clip nobody asked to change keep
+		// their own timing rather than being resampled to the same value.
+		const graph = graphOf(ramp(defaultRamp(10)));
+		expect(graph).toContain('[0:v]trim=start=0.000:end=');
+		expect(graph).toMatch(/\[0:v\]trim=start=0\.000:end=[\d.]+,setpts=PTS-STARTPTS\[v0\]/);
+		// and the last slice has no end, so it runs to whatever the file has left
+		expect(graph).toMatch(/\[0:v\]trim=start=[\d.]+,setpts=PTS-STARTPTS\[v\d+\]/);
+	});
+
+	it('slows the picture down by multiplying timestamps up', () => {
+		// Quarter speed is a four times multiplier, and that is the only
+		// direction this mode goes.
+		const graph = graphOf(ramp([{ t: 0, speed: 0.25 }, { t: 5, speed: 0.25 }, { t: 10, speed: 1 }]));
+		expect(graph).toContain('setpts=4.000000*(PTS-STARTPTS)');
+		expect(graph).not.toMatch(/setpts=0\.\d+\*/);
+	});
+
+	it('takes the sound with it, and drops the audio half when there is none', () => {
+		const graph = graphOf(ramp(defaultRamp(10)));
+		expect(graph).toContain('atempo=');
+		const silent = probe({ audioCodec: null });
+		expect(graphOf(ramp(defaultRamp(10)), silent)).not.toContain('[0:a]');
+		expect(argsOf(ramp(defaultRamp(10)), mp4, silent)).toContain('-an');
+	});
+
+	it('keeps the frames it has rather than repeating them', () => {
+		const args = argsOf(ramp(defaultRamp(10)));
+		expect(args).toContain('-fps_mode');
+		expect(args[args.indexOf('-fps_mode') + 1]).toBe('vfr');
+		expect(args.join(' ')).not.toContain('fps=');
+		expect(planEdit(ramp(defaultRamp(10)), mp4, probe(), 'out.mp4').framesIntact).toBe(false);
+	});
+
+	it('hands a curve that never changes to the plain speed path', () => {
+		// A concat of one is a filter graph doing what a single -vf already
+		// does, which is the same call the stretch mode makes when its section
+		// turns out to be the whole clip.
+		const flat = argsOf(ramp([{ t: 0, speed: 0.5 }, { t: 10, speed: 0.5 }]));
+		expect(flat).not.toContain('-filter_complex');
+		expect(flat.join(' ')).toContain('setpts=2');
+	});
+
+	it('does nothing surprising with a curve for a clip of no length', () => {
+		// The panel gates on this, but a zero duration reaching here must come
+		// out as a plain re-encode rather than a graph built from nothing.
+		const args = argsOf(ramp(defaultRamp(10)), mp4, probe({ durationSeconds: 0 }));
+		expect(args).not.toContain('-filter_complex');
 	});
 });

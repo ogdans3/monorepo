@@ -13,7 +13,17 @@
 		type EditOp,
 		type TextPosition
 	} from '$lib/video/edit';
+	import {
+		defaultRamp,
+		rampIsFlat,
+		speedAt,
+		rampSlowest,
+		rampTotal,
+		sampleRamp,
+		type RampPoint
+	} from '$lib/video/ramp';
 	import { formatTimecode, parseTimecode } from '$lib/video/timecode';
+	import RampCurve from './RampCurve.svelte';
 	import type { VideoTool } from '$lib/video/tools';
 	import { downloadBlob } from './download';
 	import Dropzone from './Dropzone.svelte';
@@ -55,6 +65,24 @@
 	let stretchStartText = $state('0:00.0');
 	let stretchEndText = $state('0:00.0');
 	let stretchTargetText = $state('0:00.0');
+
+	/**
+	 * The slow motion page has two ways in. The simple one marks a section and
+	 * gives it a length, which is one speed applied to one block. The curve one
+	 * draws the pace across the whole clip, so the footage can ease down into
+	 * slow motion, hold, and ease back out.
+	 *
+	 * Both live in this panel rather than in a panel each, because the shape
+	 * either one works on is identical: one file, one preview, one probe, one
+	 * download. Only the controls differ, which is what this panel already
+	 * branches on for ten other tools. Splitting them would also throw the
+	 * loaded video away every time somebody switched, which is the one thing
+	 * a mode switch must not do.
+	 */
+	let stretchMode = $state<'simple' | 'curve'>('simple');
+	let rampPoints = $state<RampPoint[]>([]);
+	/** Where the preview has reached, so the curve can show a playhead. */
+	let playhead = $state(0);
 
 	let cropBox = $state({ x: 0, y: 0, w: 1, h: 1 });
 	/** Where the crop preview is paused, since it has no controls of its own. */
@@ -121,6 +149,7 @@
 			case 'speed':
 				return { kind: 'speed', factor: speedFactor };
 			case 'stretch':
+				if (stretchMode === 'curve') return { kind: 'ramp', points: rampPoints };
 				return {
 					kind: 'stretch',
 					startSeconds: stretchStart,
@@ -148,6 +177,12 @@
 		if (tool.op === 'text') return text.trim().length > 0;
 		if (tool.op === 'trim') return startSeconds > 0 || (endSeconds > 0 && endSeconds < media.duration);
 		if (tool.op === 'stretch') {
+			if (stretchMode === 'curve') {
+				// A curve sitting flat at the original speed is not an edit, and
+				// offering to spend two minutes encoding one would be a tool
+				// pretending to have been asked something.
+				return rampPoints.length > 1 && !rampIsFlat(rampPoints) && media.duration > 0;
+			}
 			return stretchEnd > stretchStart && stretchTarget > 0 && stretchTarget !== stretchEnd - stretchStart;
 		}
 		if (tool.op === 'rotate') return quarterTurns % 4 !== 0 || flipHorizontal || flipVertical;
@@ -206,6 +241,11 @@
 		// A section in the middle, at half pace, so the page opens on something
 		// that already means something rather than on a no-op.
 		setStretch(media.duration * 0.25, media.duration * 0.75, media.duration);
+		// Same reasoning for the curve: it opens on the shape somebody means
+		// when they say slow motion, ready to be dragged rather than drawn from
+		// a flat line.
+		rampPoints = defaultRamp(media.duration);
+		playhead = 0;
 		resizeWidth = Math.min(1280, media.width || 1280);
 		textSize = Math.max(16, Math.round((media.height || 720) * 0.06));
 	}
@@ -247,6 +287,40 @@
 	}
 
 	/** What the finished file will look like, for the line under the controls. */
+	/**
+	 * The preview plays the curve.
+	 *
+	 * `playbackRate` on the element costs nothing and answers the question the
+	 * graph cannot: whether the ramp actually looks right. Finding that out by
+	 * encoding is a two minute round trip, and this is immediate. Browsers clamp
+	 * the rate to roughly a sixteenth and up, so the whole range here is inside
+	 * what they will play.
+	 */
+	function onTimeUpdate() {
+		if (!video) return;
+		playhead = video.currentTime;
+		if (tool.op !== 'stretch' || stretchMode !== 'curve') return;
+		const rate = speedAt(rampPoints, video.currentTime);
+		if (Math.abs(video.playbackRate - rate) > 0.005) video.playbackRate = rate;
+	}
+
+	/** Leaving the curve mode hands the preview back at its own pace. */
+	function setStretchMode(mode: 'simple' | 'curve') {
+		stretchMode = mode;
+		if (mode === 'simple' && video) video.playbackRate = 1;
+	}
+
+	const rampInfo = $derived.by(() => {
+		if (tool.op !== 'stretch' || stretchMode !== 'curve' || !media.duration) return null;
+		const segments = sampleRamp(rampPoints, media.duration);
+		if (segments.length === 0) return null;
+		return {
+			total: rampTotal(segments),
+			slowest: rampSlowest(rampPoints),
+			pieces: segments.length
+		};
+	});
+
 	const stretchInfo = $derived.by(() => {
 		if (tool.op !== 'stretch' || !media.duration || stretchEnd <= stretchStart) return null;
 		const layout = stretchLayout(
@@ -364,7 +438,13 @@
 	{/if}
 
 	{#if file && previewUrl && stage !== 'done'}
-		<div class="stage">
+		<!--
+			The curve is a timeline, so it wants the width of the clip it
+			describes rather than the sixteen-rem settings column the other ten
+			tools are happy in. In that mode the preview goes full width and the
+			curve sits under it.
+		-->
+		<div class="stage" class:full={tool.op === 'stretch' && stretchMode === 'curve'}>
 			<div class="viewer">
 			<!-- svelte-ignore a11y_media_has_caption -->
 			<div class="preview" bind:this={frame}>
@@ -374,6 +454,7 @@
 					controls={tool.op !== 'crop'}
 					playsinline
 					onloadedmetadata={onLoadedMetadata}
+					ontimeupdate={onTimeUpdate}
 					style:filter={tool.op === 'blur' ? `blur(${blurStrength * 0.6}px)` : undefined}
 					style:transform={tool.op === 'rotate'
 						? `rotate(${quarterTurns * 90}deg) scaleX(${flipHorizontal ? -1 : 1}) scaleY(${flipVertical ? -1 : 1})`
@@ -511,6 +592,48 @@
 				{/if}
 
 				{#if tool.op === 'stretch'}
+					<!--
+						Two ways of saying the same thing, so the one that fits what
+						somebody already knows is the one they use. A length is what
+						you know when the interesting part is a fixed clip. A curve is
+						what you want when the point is the easing itself.
+					-->
+					<div class="modes" role="tablist" aria-label="How to describe the slowdown">
+						{#each [['simple', 'Section and length'], ['curve', 'Speed curve']] as const as [mode, label] (mode)}
+							<button
+								role="tab"
+								class="mode"
+								class:on={stretchMode === mode}
+								aria-selected={stretchMode === mode}
+								onclick={() => setStretchMode(mode)}
+							>
+								{label}
+							</button>
+						{/each}
+					</div>
+				{/if}
+
+				{#if tool.op === 'stretch' && stretchMode === 'curve'}
+					<RampCurve
+						points={rampPoints}
+						duration={media.duration}
+						{playhead}
+						onchange={(next) => (rampPoints = next)}
+					/>
+					<p class="hint">
+						{#if rampInfo}
+							Slowest {rampInfo.slowest.toFixed(2)}×, and the clip runs
+							{formatTimecode(rampInfo.total)} instead of {formatTimecode(media.duration)}.
+							{#if rampInfo.pieces > 1}
+								It's cut into {rampInfo.pieces} pieces to follow the curve.
+							{/if}
+						{:else}
+							Press play on the preview to watch the curve before you commit to it.
+						{/if}
+					</p>
+				{/if}
+
+				{#if tool.op === 'stretch' && stretchMode === 'simple'}
 					<div class="field">
 						<span>
 							Slow part starts
@@ -821,6 +944,10 @@
 		align-items: start;
 	}
 
+	.stage.full {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
 	@media (max-width: 46rem) {
 		.stage {
 			grid-template-columns: 1fr;
@@ -974,6 +1101,41 @@
 		border-radius: 99px;
 		background: var(--surface);
 		cursor: pointer;
+	}
+
+	/* Two modes of one tool, so an underline rather than two pill buttons:
+	   a segmented control would read as two things to pick between, and these
+	   are two views of the same edit. */
+	.modes {
+		display: flex;
+		gap: 0.25rem;
+		border-bottom: 1px solid var(--line);
+		margin-bottom: 0.2rem;
+	}
+
+	.mode {
+		font: inherit;
+		font-size: 0.875rem;
+		padding: 0.45rem 0.6rem;
+		border: 0;
+		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
+		background: none;
+		color: var(--muted);
+		cursor: pointer;
+		transition:
+			color 150ms var(--ease),
+			border-color 150ms var(--ease);
+	}
+
+	.mode:hover {
+		color: var(--ink);
+	}
+
+	.mode.on {
+		color: var(--ink);
+		border-bottom-color: var(--primary);
+		font-weight: 600;
 	}
 
 	.chip.on {

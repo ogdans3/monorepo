@@ -1,5 +1,6 @@
 import type { VideoFormat } from './formats';
 import type { ConvertPlan, ProbeResult } from './plan';
+import { sampleRamp, type RampPoint, type RampSegment } from './ramp';
 
 /**
  * Turning an edit into ffmpeg arguments.
@@ -32,6 +33,12 @@ export type EditOp =
 	| { kind: 'resize'; width: number; height: number | null }
 	| { kind: 'speed'; factor: number }
 	| { kind: 'stretch'; startSeconds: number; endSeconds: number; targetSeconds: number }
+	/**
+	 * The same page's other mode: a drawn curve of how fast the clip runs at
+	 * each moment, rather than one section given one length. `ramp.ts` owns the
+	 * curve and the sampling, this file only turns the result into arguments.
+	 */
+	| { kind: 'ramp'; points: RampPoint[] }
 	| { kind: 'fps'; fps: number }
 	| { kind: 'rotate'; quarterTurns: number; flipHorizontal: boolean; flipVertical: boolean }
 	| { kind: 'blur'; strength: number }
@@ -221,55 +228,98 @@ export function stretchedTotal(layout: StretchLayout, sourceSeconds: number): nu
 }
 
 /**
- * The filter graph that slows one section and leaves the rest alone.
+ * The filter graph that slows one section and leaves the rest alone: head,
+ * retimed section, tail. `concatFilter` below does the work and carries the
+ * reasoning.
+ */
+export function stretchFilter(layout: StretchLayout, hasAudio: boolean): string {
+	const pieces: ConcatPiece[] = [];
+	if (layout.head) pieces.push({ from: 0, to: layout.startSeconds, scale: 1 });
+	pieces.push({ from: layout.startSeconds, to: layout.endSeconds, scale: layout.stretch });
+	// Open ended, so a duration that was a hundredth out does not clip the last
+	// frames off the end of the clip.
+	if (layout.tail) pieces.push({ from: layout.endSeconds, to: null, scale: 1 });
+	return concatFilter(pieces, hasAudio);
+}
+
+/** One constant-speed slice of the input, before it becomes a filter chain. */
+export interface ConcatPiece {
+	from: number;
+	/** Null runs to the end of the clip. */
+	to: number | null;
+	/** The setpts multiplier. Above 1 is slower, exactly 1 is untouched. */
+	scale: number;
+}
+
+/**
+ * Cut the input into slices, retime the ones that asked for it, and join them
+ * back into one stream.
  *
- * Three segments cut out of the same input, the middle one retimed, then
- * concatenated back into one stream. `setpts` multiplies the timestamps, which
- * is what spreads the section over its new length, and every segment needs
- * `-STARTPTS` because a trimmed piece still carries the timestamps it had
- * where it came from and concat would leave the gap in.
+ * Shared by both modes of the slow motion page, which is the only reason the
+ * curve mode was cheap to add: a marked section is three slices and a drawn
+ * curve is thirty, and past that they are the same operation. Keeping one
+ * builder means the two cannot drift on the things that were expensive to get
+ * right, all of which are here.
+ *
+ * Every slice needs `-STARTPTS`, because a trimmed piece still carries the
+ * timestamps it had where it came from and concat would leave the gap in.
  *
  * The sound follows the picture through `atempo`, chained by `tempoChain`
  * because one instance refuses anything outside half to double speed. A big
- * stretch is several instances and it sounds like it, which is honest: the
+ * change is several instances and it sounds like it, which is honest: the
  * alternative is a clip whose sound is silently out of step with its picture.
  *
- * No `fps` filter anywhere in here, and that is the expensive decision on this
- * page. Repeating frames to keep a constant rate would mean encoding 14 times
- * as many of them for a 14 times stretch, for a picture that steps at exactly
- * the same moments either way. So the frames that exist are spread out and
- * `-fps_mode vfr` keeps ffmpeg from filling the gaps back in.
+ * There is no `fps` filter anywhere in here, and that is the expensive
+ * decision on this page. Repeating frames to hold a constant rate would mean
+ * encoding 14 times as many of them for a 14 times stretch, for a picture that
+ * changes at exactly the same moments either way. So the frames that exist are
+ * spread out, and `-fps_mode vfr` beside the filter keeps ffmpeg from filling
+ * the gaps back in.
  */
-export function stretchFilter(layout: StretchLayout, hasAudio: boolean): string {
+export function concatFilter(pieces: ConcatPiece[], hasAudio: boolean): string {
 	const parts: string[] = [];
 	const labels: string[] = [];
-	let n = 0;
 
-	const segment = (from: number, to: number | null, scale: number) => {
-		const i = n++;
-		const span = `start=${from.toFixed(3)}${to === null ? '' : `:end=${to.toFixed(3)}`}`;
-		const setpts = scale === 1 ? 'PTS-STARTPTS' : `${scale.toFixed(6)}*(PTS-STARTPTS)`;
+	pieces.forEach((piece, i) => {
+		const span = `start=${piece.from.toFixed(3)}${piece.to === null ? '' : `:end=${piece.to.toFixed(3)}`}`;
+		const setpts = piece.scale === 1 ? 'PTS-STARTPTS' : `${piece.scale.toFixed(6)}*(PTS-STARTPTS)`;
 		parts.push(`[0:v]trim=${span},setpts=${setpts}[v${i}]`);
 		if (hasAudio) {
 			const tempo =
-				scale === 1
+				piece.scale === 1
 					? ''
-					: `,${tempoChain(1 / scale)
+					: `,${tempoChain(1 / piece.scale)
 							.map((step) => `atempo=${step}`)
 							.join(',')}`;
 			parts.push(`[0:a]atrim=${span},asetpts=PTS-STARTPTS${tempo}[a${i}]`);
 		}
 		labels.push(`[v${i}]${hasAudio ? `[a${i}]` : ''}`);
-	};
-
-	if (layout.head) segment(0, layout.startSeconds, 1);
-	segment(layout.startSeconds, layout.endSeconds, layout.stretch);
-	if (layout.tail) segment(layout.endSeconds, null, 1);
+	});
 
 	parts.push(
-		`${labels.join('')}concat=n=${n}:v=1:a=${hasAudio ? 1 : 0}[v]${hasAudio ? '[a]' : ''}`
+		`${labels.join('')}concat=n=${pieces.length}:v=1:a=${hasAudio ? 1 : 0}[v]${hasAudio ? '[a]' : ''}`
 	);
 	return parts.join(';');
+}
+
+/**
+ * The filter graph for a drawn curve: one slice per constant-speed piece.
+ *
+ * A segment at exactly 1 comes back with no multiplier and no atempo, which is
+ * how the untouched head and tail of a ramped clip stay untouched.
+ */
+export function rampFilter(segments: RampSegment[], hasAudio: boolean): string {
+	return concatFilter(
+		segments.map((segment, i) => ({
+			from: segment.from,
+			// Same reason as the stretch tail: the last piece runs to the end of
+			// the clip rather than to a computed timestamp, so a duration read a
+			// hundredth out does not lose the final frames.
+			to: i === segments.length - 1 ? null : segment.to,
+			scale: 1 / segment.speed
+		})),
+		hasAudio
+	);
 }
 
 /** True when the sound has to be re-encoded because its timing changed. */
@@ -298,6 +348,43 @@ function makePlan(
 			return copy === 'full' || copy === 'video';
 		}
 	};
+}
+
+/**
+ * Everything a concat of retimed slices needs past the graph itself.
+ *
+ * `-fps_mode vfr` is the load bearing part: left to itself ffmpeg makes the
+ * output constant rate, which means repeating every frame of the slowed
+ * section until it fills the new running time. The same picture, many times
+ * the encode.
+ */
+function concatPlan(
+	graph: string,
+	hasAudio: boolean,
+	target: VideoFormat,
+	quality: number,
+	outName: string
+): ConvertPlan {
+	return makePlan(
+		[
+			'-i',
+			IN,
+			'-filter_complex',
+			graph,
+			'-map',
+			'[v]',
+			...(hasAudio ? ['-map', '[a]'] : []),
+			'-fps_mode',
+			'vfr',
+			...encodeVideoArgs(target, quality),
+			// Filtered sound cannot be copied, so it is always re-encoded here.
+			...(hasAudio ? ['-c:a', target.audioCodec ?? 'aac'] : ['-an']),
+			'-y',
+			outName
+		],
+		'none',
+		'slow'
+	);
 }
 
 export interface EditOptions {
@@ -354,27 +441,22 @@ export function planEdit(
 			return planEdit({ kind: 'speed', factor: 1 / layout.stretch }, target, probe, outName, opts);
 		}
 		const hasAudio = Boolean(probe.audioCodec);
-		const args = [
-			'-i',
-			IN,
-			'-filter_complex',
-			stretchFilter(layout, hasAudio),
-			'-map',
-			'[v]',
-			...(hasAudio ? ['-map', '[a]'] : []),
-			// Pass the frames through with the timestamps the filter gave them.
-			// Left to itself ffmpeg makes the output constant rate, which means
-			// repeating every frame of the slowed section until it fills the new
-			// running time: the same picture, many times the encode.
-			'-fps_mode',
-			'vfr',
-			...encodeVideoArgs(target, quality),
-			// Filtered sound cannot be copied, so it is always re-encoded here.
-			...(hasAudio ? ['-c:a', target.audioCodec ?? 'aac'] : ['-an']),
-			'-y',
-			outName
-		];
-		return makePlan(args, 'none', 'slow');
+		return concatPlan(stretchFilter(layout, hasAudio), hasAudio, target, quality, outName);
+	}
+
+	// The same page's curve mode. Both modes end up as a concat of retimed
+	// slices, so they share everything below the graph itself.
+	if (op.kind === 'ramp') {
+		const segments = sampleRamp(op.points, probe.durationSeconds);
+		// One piece is a constant speed across the whole clip, which the plain
+		// speed path already does with one filter instead of a concat of one.
+		// The same reasoning as a stretch with no head and no tail.
+		if (segments.length <= 1) {
+			const factor = segments[0]?.speed ?? 1;
+			return planEdit({ kind: 'speed', factor }, target, probe, outName, opts);
+		}
+		const hasAudio = Boolean(probe.audioCodec);
+		return concatPlan(rampFilter(segments, hasAudio), hasAudio, target, quality, outName);
 	}
 
 	// Dropping the sound leaves every frame of the picture untouched.

@@ -241,21 +241,22 @@ export const VIDEO_TOOLS: VideoTool[] = [
 		title: 'Slow Motion Video Online - Free, No Upload',
 		description:
 			'Slow one section of a video down to an exact length online free, in your browser. The rest of the clip keeps its own pace, and nothing is uploaded.',
-		lede: 'Mark the part that matters, say how long it should take, and everything either side of it plays at normal speed.',
-		blurb: 'Stretch one section to an exact length.',
+		lede: 'Mark the part that matters and say how long it should take, or draw a curve and let the clip ease into slow motion and back out again.',
+		blurb: 'Stretch one section to an exact length, or draw the pace as a curve.',
 		steps: [
 			'Drop a video in the box above. MP4, MOV, WebM, MKV and AVI all work.',
-			'Set where the slow part starts and stops, by typing a timecode like 2:32 or dragging the sliders.',
-			'Say how long that section should run, then download. The file keeps its name, with -slowed added.'
+			'Pick section and length to mark one part and give it a running time, or speed curve to draw the pace across the whole clip.',
+			'Drag the marks or the curve until the preview reads right, then download. The file keeps its name, with -slowed added.'
 		],
 		aboutHeading: 'About slowing part of a video down here',
 		about: [
 			"The other speed page changes the pace of the whole clip. This one changes a section of it and leaves the rest alone, which is what you want when the thing worth looking at is four seconds in the middle of a two minute recording. Say how long the section should take rather than how many times slower it should go, since a length is usually what you actually know.",
 			"The frames aren't repeated to fill the new running time. A section stretched fourteen times over holds exactly the frames it always did, spread out, so it steps rather than glides. That's what slowing footage down looks like unless it was shot at a high frame rate to begin with, and inventing the frames in between would mean encoding fourteen times as many of them for a picture that changes at the same moments anyway.",
-			"The sound is stretched along with the picture so it stays in step. A gentle slowdown still sounds like a voice, and a large one sounds like a large one. If the result is unusable, the mute page drops the track entirely and copies the picture untouched."
+			"The sound is stretched along with the picture so it stays in step. A gentle slowdown still sounds like a voice, and a large one sounds like a large one. If the result is unusable, the mute page drops the track entirely and copies the picture untouched.",
+			"The speed curve is the other way in. Instead of one section at one pace it takes a graph of how fast the clip runs at each moment, so the footage can ease down into slow motion, hold there, and ease back to its own speed. Everything between two points on the curve is eased rather than switched, which is the difference between a ramp that looks deliberate and one that looks like a dropped frame. The preview plays the curve as you drag it, so you can see the shape before spending a single second encoding."
 		],
 		next: ['change-video-speed', 'trim-video', 'compress-video'],
-		keywords: ['slow motion', 'slowmo', 'slow down', 'stretch', 'section', 'ramp'],
+		keywords: ['slow motion', 'slowmo', 'slow down', 'stretch', 'section', 'ramp', 'speed ramp', 'speed curve', 'ease'],
 		faq: [
 			{
 				q: 'How do I slow down only one part of a video?',
@@ -264,6 +265,10 @@ export const VIDEO_TOOLS: VideoTool[] = [
 			{
 				q: 'Why does heavily slowed footage look jerky?',
 				a: "Because the camera only recorded so many pictures a second, and slowing the clip down spreads those same pictures over more time rather than finding new ones. At fourteen times slower each frame is held for about half a second. Footage shot at 120 or 240 frames a second has the extra pictures already and slows down smoothly, which is what a phone's slow motion mode is doing."
+			},
+			{
+				q: 'How do I make a video get slower and then speed back up?',
+				a: "Switch to the speed curve and drag the line down where you want the slow part and back up where you want it to end. The curve eases between the points you place rather than jumping between them, so the clip slides into slow motion, holds as long as the line stays flat, and slides back out to its own pace. There are buttons for the usual shapes if you would rather not draw one."
 			}
 		],
 		suffix: '-slowed'
