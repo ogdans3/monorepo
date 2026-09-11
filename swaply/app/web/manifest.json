@@ -5,31 +5,32 @@
     "display": "standalone",
     "background_color": "#064E3B",
     "theme_color": "#064E3B",
-    "description": "Si hva du vil ha. N\u00e5r \u00f8nskene lukker en sirkel, bytter dere.",
+    "description": "Si hva du vil ha. Når ønskene lukker en sirkel, bytter dere.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
         {
-            "src": "icons/Icon-192.png",
+            "src": "icons/swaply-192.png",
             "sizes": "192x192",
             "type": "image/png"
         },
         {
-            "src": "icons/Icon-512.png",
+            "src": "icons/swaply-512.png",
             "sizes": "512x512",
             "type": "image/png"
         },
         {
-            "src": "icons/Icon-maskable-192.png",
+            "src": "icons/swaply-maskable-192.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "maskable"
         },
         {
-            "src": "icons/Icon-maskable-512.png",
+            "src": "icons/swaply-maskable-512.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
         }
-    ]
+    ],
+    "lang": "no"
 }
