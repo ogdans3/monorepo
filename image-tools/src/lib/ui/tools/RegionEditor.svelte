@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { dragToShape, type Shape } from '$lib/tools/shapes';
 	import { readImageFile, rawToCanvas } from './load';
@@ -261,7 +262,7 @@
 			<div class="quality">
 				<label for="strength">Strength</label>
 				<input id="strength" type="range" min="4" max="50" bind:value={strength} />
-				<output class="mono" for="strength">{strength}</output>
+				<NumberBox bind:value={strength} min={4} max={50} />
 			</div>
 		{/if}
 

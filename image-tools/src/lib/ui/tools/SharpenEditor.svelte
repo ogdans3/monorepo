@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { unsharpMask } from '$lib/tools/unsharp';
 	import { readImageFile, rawToCanvas } from './load';
@@ -97,7 +98,7 @@
 			<div class="quality strength">
 				<label for="sharpen-amount">Amount</label>
 				<input id="sharpen-amount" type="range" min="0" max="100" bind:value={amount} />
-				<output class="mono" for="sharpen-amount">{amount}</output>
+				<NumberBox bind:value={amount} min={0} max={100} />
 			</div>
 			<div class="toolbar-group">
 				<button class="btn-ghost" onclick={() => (amount = 0)} disabled={amount === 0}>Reset</button>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
@@ -147,7 +148,7 @@
 		<div class="quality">
 			<label for="export-quality">Quality</label>
 			<input id="export-quality" type="range" min="1" max="100" bind:value={quality} />
-			<output class="mono" for="export-quality">{quality}</output>
+			<NumberBox bind:value={quality} min={1} max={100} />
 		</div>
 	{/if}
 	{#if needsBackground(format)}

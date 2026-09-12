@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { floodErase } from '$lib/tools/floodfill';
 	import { readImageFile } from './load';
@@ -136,7 +137,7 @@
 					bind:value={tolerance}
 					oninput={onTolerance}
 				/>
-				<output class="mono" for="tolerance">{tolerance}</output>
+				<NumberBox bind:value={tolerance} min={0} max={100} />
 			</div>
 			<div class="toolbar-group">
 				<button class="btn-ghost" onclick={undo} disabled={!ops.length}>Undo</button>

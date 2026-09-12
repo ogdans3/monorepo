@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { readImageFile, rawToCanvas } from './load';
 	import Dropzone from '../Dropzone.svelte';
@@ -147,7 +148,7 @@
 			<div class="quality">
 				<label for="text-size">Size</label>
 				<input id="text-size" type="range" min="2" max="30" bind:value={sizePct} />
-				<output class="mono" for="text-size">{sizePct}%</output>
+				<NumberBox bind:value={sizePct} min={2} max={30} unit="%" />
 			</div>
 			<div class="row" role="group" aria-label="Colour">
 				<button class="chip" class:active={colorMode === 'white'} aria-pressed={colorMode === 'white'} onclick={() => (colorMode = 'white')}>White</button>

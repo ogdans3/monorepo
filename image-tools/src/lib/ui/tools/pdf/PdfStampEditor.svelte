@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { loadPdfLib, pdfBlob, pdfName, readPdf, releasePdf, type LoadedPdf } from '$lib/tools/pdf';
 	import { downloadBlob } from '../../download';
 	import Dropzone from '../../Dropzone.svelte';
@@ -162,18 +163,18 @@
 			<div class="quality">
 				<label for="stamp-size">Size</label>
 				<input id="stamp-size" type="range" min={mode === 'watermark' ? 20 : 6} max={mode === 'watermark' ? 140 : 24} bind:value={size} />
-				<output class="mono" for="stamp-size">{size}</output>
+				<NumberBox bind:value={size} min={mode === 'watermark' ? 20 : 6} max={mode === 'watermark' ? 140 : 24} />
 			</div>
 			<div class="quality">
 				<label for="stamp-opacity">Opacity</label>
 				<input id="stamp-opacity" type="range" min="5" max="100" bind:value={opacity} />
-				<output class="mono" for="stamp-opacity">{opacity}</output>
+				<NumberBox bind:value={opacity} min={5} max={100} />
 			</div>
 			{#if mode === 'watermark'}
 				<div class="quality">
 					<label for="stamp-angle">Angle</label>
 					<input id="stamp-angle" type="range" min="0" max="90" bind:value={angle} />
-					<output class="mono" for="stamp-angle">{angle}°</output>
+					<NumberBox bind:value={angle} min={0} max={90} />
 				</div>
 			{/if}
 		</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { readImageFile, rawToCanvas } from './load';
 	import Dropzone from '../Dropzone.svelte';
@@ -183,19 +184,19 @@
 				<div class="quality">
 					<label for="pad-v">Top and bottom</label>
 					<input id="pad-v" type="range" min="0" max="400" bind:value={padTop} />
-					<output class="mono" for="pad-v">{padTop}px</output>
+					<NumberBox bind:value={padTop} min={0} max={400} unit="px" />
 				</div>
 				<div class="quality">
 					<label for="pad-h">Left and right</label>
 					<input id="pad-h" type="range" min="0" max="400" bind:value={padRight} />
-					<output class="mono" for="pad-h">{padRight}px</output>
+					<NumberBox bind:value={padRight} min={0} max={400} unit="px" />
 				</div>
 				<button class="btn-ghost" onclick={squareUp}>Pad to a square</button>
 			{:else if variant === 'border'}
 				<div class="quality">
 					<label for="border-width">Width</label>
 					<input id="border-width" type="range" min="1" max="200" bind:value={borderWidth} />
-					<output class="mono" for="border-width">{borderWidth}px</output>
+					<NumberBox bind:value={borderWidth} min={1} max={200} unit="px" />
 				</div>
 				<label class="check">
 					<input type="checkbox" bind:checked={innerLine} />
@@ -205,12 +206,12 @@
 				<div class="quality">
 					<label for="shadow-blur">Softness</label>
 					<input id="shadow-blur" type="range" min="0" max="80" bind:value={shadowBlur} />
-					<output class="mono" for="shadow-blur">{shadowBlur}px</output>
+					<NumberBox bind:value={shadowBlur} min={0} max={80} unit="px" />
 				</div>
 				<div class="quality">
 					<label for="shadow-offset">Distance</label>
 					<input id="shadow-offset" type="range" min="-40" max="60" bind:value={shadowOffset} />
-					<output class="mono" for="shadow-offset">{shadowOffset}px</output>
+					<NumberBox bind:value={shadowOffset} min={-40} max={60} unit="px" />
 				</div>
 				<span class="colour-pick">
 					<span class="check-label">Shadow</span>

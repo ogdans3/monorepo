@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { trimBounds } from '$lib/tools/pixels';
 	import { readImageFile, rawToCanvas } from './load';
@@ -83,7 +84,7 @@
 			<div class="quality main">
 				<label for="trim-tolerance">Tolerance</label>
 				<input id="trim-tolerance" type="range" min="0" max="40" bind:value={tolerance} />
-				<output class="mono" for="trim-tolerance">{tolerance}</output>
+				<NumberBox bind:value={tolerance} min={0} max={40} />
 			</div>
 			<button class="btn-ghost" onclick={startOver}>Start over</button>
 		</div>

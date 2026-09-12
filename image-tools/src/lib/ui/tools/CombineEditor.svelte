@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { acceptAttribute, type RawImage } from '$lib/engine';
 	import { readImageFile, rawToCanvas } from './load';
 	import {
@@ -581,7 +582,14 @@
 					value={spacing}
 					oninput={(e) => setSpacing(+e.currentTarget.value)}
 				/>
-				<output class="mono" for="gap">{spacing}px</output>
+				<NumberBox
+					value={spacing}
+					min={0}
+					max={200}
+					unit="px"
+					label="Spacing"
+					oninput={setSpacing}
+				/>
 			</div>
 
 			<div class="bg-row" role="group" aria-label="Background">

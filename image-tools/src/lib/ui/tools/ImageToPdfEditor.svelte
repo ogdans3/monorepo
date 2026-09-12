@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { editedFileName } from '$lib/engine';
 	import { readImageFile, rawToCanvas, steppedScale } from './load';
 	import { untrack } from 'svelte';
@@ -156,7 +157,7 @@
 		<div class="quality">
 			<label for="pdf-quality">Quality</label>
 			<input id="pdf-quality" type="range" min="1" max="100" bind:value={quality} />
-			<output class="mono" for="pdf-quality">{quality}</output>
+			<NumberBox bind:value={quality} min={1} max={100} />
 		</div>
 
 		<BackgroundPicker bind:value={background} label="Behind transparent parts" />

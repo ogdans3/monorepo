@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import {
 		arrowHead,
@@ -297,7 +298,7 @@
 			<div class="quality">
 				<label for="draw-width">Thickness</label>
 				<input id="draw-width" type="range" min="1" max="30" bind:value={width} />
-				<output class="mono" for="draw-width">{width}</output>
+				<NumberBox bind:value={width} min={1} max={30} />
 			</div>
 		</div>
 

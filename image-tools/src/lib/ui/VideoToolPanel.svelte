@@ -6,6 +6,8 @@
 		BLUR_MAX,
 		BLUR_MIN,
 		evenSize,
+		SPEED_MAX,
+		SPEED_MIN,
 		STRETCH_MAX_SECONDS,
 		STRETCH_MIN_SECONDS,
 		stretchLayout,
@@ -26,6 +28,7 @@
 	} from '$lib/video/ramp';
 	import { formatTimecode, parseTimecode } from '$lib/video/timecode';
 	import RampCurve from './RampCurve.svelte';
+	import SliderField from './SliderField.svelte';
 	import type { VideoTool } from '$lib/video/tools';
 	import { downloadBlob } from './download';
 	import Dropzone from './Dropzone.svelte';
@@ -540,14 +543,24 @@
 
 			<div class="controls">
 				{#if tool.op === 'trim'}
-					<label class="field">
-						<span>Start <output class="mono">{startSeconds.toFixed(1)}s</output></span>
-						<input type="range" min="0" max={media.duration} step="0.1" bind:value={startSeconds} />
-					</label>
-					<label class="field">
-						<span>End <output class="mono">{endSeconds.toFixed(1)}s</output></span>
-						<input type="range" min="0" max={media.duration} step="0.1" bind:value={endSeconds} />
-					</label>
+					<SliderField
+						label="Start"
+						bind:value={startSeconds}
+						min={0}
+						max={media.duration}
+						step={0.1}
+						format={formatTimecode}
+						parse={(t) => parseTimecode(t)}
+					/>
+					<SliderField
+						label="End"
+						bind:value={endSeconds}
+						min={0}
+						max={media.duration}
+						step={0.1}
+						format={formatTimecode}
+						parse={(t) => parseTimecode(t)}
+					/>
 					<label class="check">
 						<input type="checkbox" bind:checked={exactTrim} />
 						<span>Cut exactly where I set it. Slower, because it re-encodes.</span>
@@ -582,10 +595,14 @@
 				{/if}
 
 				{#if tool.op === 'resize'}
-					<label class="field">
-						<span>Width <output class="mono">{resizeWidth}px</output></span>
-						<input type="range" min="160" max={Math.max(1920, media.width || 1920)} step="2" bind:value={resizeWidth} />
-					</label>
+					<SliderField
+						label="Width"
+						bind:value={resizeWidth}
+						min={160}
+						max={Math.max(1920, media.width || 1920)}
+						step={2}
+						unit="px"
+					/>
 					<div class="row">
 						{#each [426, 640, 854, 1280, 1920] as w (w)}
 							<button class="chip" onclick={() => (resizeWidth = w)}>{w}</button>
@@ -600,10 +617,15 @@
 				{/if}
 
 				{#if tool.op === 'speed'}
-					<label class="field">
-						<span>Speed <output class="mono">{speedFactor}×</output></span>
-						<input type="range" min="0.25" max="4" step="0.25" bind:value={speedFactor} />
-					</label>
+					<SliderField
+						label="Speed"
+						bind:value={speedFactor}
+						min={SPEED_MIN}
+						max={SPEED_MAX}
+						step={0.05}
+						unit="×"
+						decimals={2}
+					/>
 					<p class="hint">
 						{#if media.duration}
 							{media.duration.toFixed(1)}s becomes about {(media.duration / speedFactor).toFixed(1)}s.
@@ -655,50 +677,32 @@
 				{/if}
 
 				{#if tool.op === 'stretch' && stretchMode === 'simple'}
-					<div class="field">
-						<span>
-							{faster ? 'Fast part starts' : 'Slow part starts'}
-							<input
-								class="tc mono"
-								type="text"
-								inputmode="decimal"
-								aria-label="Where the retimed part starts"
-								bind:value={stretchStartText}
-								onchange={() => commitTimecode(stretchStartText, setStretchStart, stretchStart)}
-							/>
-						</span>
-						<input
-							type="range"
-							min="0"
-							max={media.duration}
-							step="0.1"
-							value={stretchStart}
-							aria-label="Where the retimed part starts, as a slider"
-							oninput={(e) => setStretchStart(Number(e.currentTarget.value))}
-						/>
-					</div>
-					<div class="field">
-						<span>
-							and stops
-							<input
-								class="tc mono"
-								type="text"
-								inputmode="decimal"
-								aria-label="Where the retimed part stops"
-								bind:value={stretchEndText}
-								onchange={() => commitTimecode(stretchEndText, setStretchEnd, stretchEnd)}
-							/>
-						</span>
-						<input
-							type="range"
-							min="0"
-							max={media.duration}
-							step="0.1"
-							value={stretchEnd}
-							aria-label="Where the retimed part stops, as a slider"
-							oninput={(e) => setStretchEnd(Number(e.currentTarget.value))}
-						/>
-					</div>
+					<!--
+						Timecodes as well as sliders, because somebody who already knows
+						the interesting part starts at 2:32 knows it as 2:32. The boxes
+						hold text so a half typed value does not jump the mark about,
+						and only a value that parses is committed.
+					-->
+					<SliderField
+						label={faster ? 'Fast part starts' : 'Slow part starts'}
+						bind:value={stretchStart}
+						min={0}
+						max={media.duration}
+						step={0.1}
+						format={formatTimecode}
+						parse={(t) => parseTimecode(t)}
+						oninput={setStretchStart}
+					/>
+					<SliderField
+						label="and stops"
+						bind:value={stretchEnd}
+						min={0}
+						max={media.duration}
+						step={0.1}
+						format={formatTimecode}
+						parse={(t) => parseTimecode(t)}
+						oninput={setStretchEnd}
+					/>
 					<div class="field">
 						<span>
 							and should run for
@@ -757,10 +761,7 @@
 				{/if}
 
 				{#if tool.op === 'blur'}
-					<label class="field">
-						<span>Strength <output class="mono">{blurStrength}</output></span>
-						<input type="range" min={BLUR_MIN} max={BLUR_MAX} step="1" bind:value={blurStrength} />
-					</label>
+					<SliderField label="Strength" bind:value={blurStrength} min={BLUR_MIN} max={BLUR_MAX} />
 					<p class="hint">The preview is close. The finished file is blurred by ffmpeg, not the browser.</p>
 				{/if}
 
@@ -769,10 +770,13 @@
 						<span>Text</span>
 						<input type="text" bind:value={text} placeholder="Your caption" maxlength="120" />
 					</label>
-					<label class="field">
-						<span>Size <output class="mono">{textSize}px</output></span>
-						<input type="range" min="12" max={Math.max(120, Math.round((media.height || 720) * 0.2))} step="1" bind:value={textSize} />
-					</label>
+					<SliderField
+						label="Size"
+						bind:value={textSize}
+						min={12}
+						max={Math.max(120, Math.round((media.height || 720) * 0.2))}
+						unit="px"
+					/>
 					<div class="row">
 						{#each ['top', 'centre', 'bottom'] as const as pos (pos)}
 							<button class="chip" class:on={textPosition === pos} onclick={() => (textPosition = pos)}>{pos}</button>
@@ -785,10 +789,7 @@
 				{/if}
 
 				{#if tool.op === 'compress'}
-					<label class="field">
-						<span>Quality <output class="mono">{quality}</output></span>
-						<input type="range" min="18" max="40" step="1" bind:value={quality} />
-					</label>
+					<SliderField label="Quality" bind:value={quality} min={18} max={40} />
 					<p class="hint">Lower is better quality and a bigger file. 28 is a sensible middle.</p>
 				{/if}
 
@@ -1079,10 +1080,6 @@
 		justify-content: space-between;
 		gap: 0.5rem;
 		color: var(--muted);
-	}
-
-	.field input[type='range'] {
-		width: 100%;
 	}
 
 	.field input[type='text'] {

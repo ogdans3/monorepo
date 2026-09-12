@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { acceptAttribute, type RawImage } from '$lib/engine';
 	import { anchorPoint, ANCHORS, type AnchorPosition } from '$lib/tools/watermark';
 	import { readImageFile, rawToCanvas } from './load';
@@ -188,12 +189,12 @@
 			<div class="quality">
 				<label for="wm-size">Size</label>
 				<input id="wm-size" type="range" min="2" max="15" bind:value={sizePct} />
-				<output class="mono" for="wm-size">{sizePct}%</output>
+				<NumberBox bind:value={sizePct} min={2} max={15} unit="%" />
 			</div>
 			<div class="quality">
 				<label for="wm-opacity">Opacity</label>
 				<input id="wm-opacity" type="range" min="5" max="100" bind:value={opacity} />
-				<output class="mono" for="wm-opacity">{opacity}</output>
+				<NumberBox bind:value={opacity} min={5} max={100} />
 			</div>
 			<div class="placement">
 				<div class="anchor-grid" role="group" aria-label="Position">

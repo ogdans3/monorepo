@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { TARGETS, needsBackground, resolveFormat, warmDecoder, type Format } from '$lib/engine';
 	import BackgroundPicker from './BackgroundPicker.svelte';
 	import { Converter } from './converter.svelte';
@@ -82,7 +83,13 @@
 				bind:value={conv.quality}
 				onchange={() => conv.redoDone()}
 			/>
-			<output class="mono" for="quality">{conv.quality}</output>
+			<NumberBox
+				bind:value={conv.quality}
+				min={1}
+				max={100}
+				label="Quality"
+				oninput={() => conv.redoDone()}
+			/>
 		</div>
 	{/if}
 

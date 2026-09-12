@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { adjustFilter } from '$lib/tools/transforms';
 	import { readImageFile, rawToCanvas } from './load';
@@ -98,17 +99,17 @@
 			<div class="quality">
 				<label for="adj-brightness">Brightness</label>
 				<input id="adj-brightness" type="range" min="-100" max="100" bind:value={brightness} />
-				<output class="mono" for="adj-brightness">{brightness}</output>
+				<NumberBox bind:value={brightness} min={-100} max={100} />
 			</div>
 			<div class="quality">
 				<label for="adj-contrast">Contrast</label>
 				<input id="adj-contrast" type="range" min="-100" max="100" bind:value={contrast} />
-				<output class="mono" for="adj-contrast">{contrast}</output>
+				<NumberBox bind:value={contrast} min={-100} max={100} />
 			</div>
 			<div class="quality">
 				<label for="adj-saturation">Saturation</label>
 				<input id="adj-saturation" type="range" min="-100" max="100" bind:value={saturation} />
-				<output class="mono" for="adj-saturation">{saturation}</output>
+				<NumberBox bind:value={saturation} min={-100} max={100} />
 			</div>
 			<div class="toolbar-group">
 				<button class="btn-ghost" onclick={reset} disabled={untouched}>Reset</button>
@@ -159,10 +160,6 @@
 
 	.sliders .quality label {
 		min-width: 5.5rem;
-	}
-
-	.sliders .quality output {
-		min-width: 3.2ch;
 	}
 
 	.toolbar-group {

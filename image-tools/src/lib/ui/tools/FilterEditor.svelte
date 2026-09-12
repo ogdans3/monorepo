@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { grayscale, sepia } from '$lib/tools/pixels';
 	import { readImageFile, rawToCanvas, steppedScale } from './load';
@@ -153,13 +154,13 @@
 					max={copy.max}
 					bind:value={amount}
 				/>
-				<output class="mono" for="filter-amount">{amount}{copy.unit}</output>
+				<NumberBox bind:value={amount} min={copy.min} max={copy.max} />
 			</div>
 			{#if variant === 'vignette'}
 				<div class="quality main">
 					<label for="filter-spread">Size</label>
 					<input id="filter-spread" type="range" min="0" max="95" bind:value={spread} />
-					<output class="mono" for="filter-spread">{spread}%</output>
+					<NumberBox bind:value={spread} min={0} max={95} unit="%" />
 				</div>
 				<label class="check">
 					<input type="checkbox" bind:checked={lighten} />

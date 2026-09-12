@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { FORMATS, editedFileName, encodeRaw, zipBlobs, type FormatId } from '$lib/engine';
 	import { readImageFile, rawToCanvas, steppedScale } from './load';
 	import { downloadBlob } from '../download';
@@ -135,7 +136,7 @@
 			<div class="quality">
 				<label for="bulk-quality">Quality</label>
 				<input id="bulk-quality" type="range" min="1" max="100" bind:value={quality} />
-				<output class="mono" for="bulk-quality">{quality}</output>
+				<NumberBox bind:value={quality} min={1} max={100} />
 			</div>
 		{/if}
 

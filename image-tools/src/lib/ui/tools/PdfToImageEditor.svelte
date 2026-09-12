@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { FORMATS, editedFileName, encodeRaw, zipBlobs, type FormatId } from '$lib/engine';
 	import { untrack } from 'svelte';
 	import ContinueIn from '../ContinueIn.svelte';
@@ -164,7 +165,7 @@
 			<div class="quality">
 				<label for="pdf-img-quality">Quality</label>
 				<input id="pdf-img-quality" type="range" min="1" max="100" bind:value={quality} />
-				<output class="mono" for="pdf-img-quality">{quality}</output>
+				<NumberBox bind:value={quality} min={1} max={100} />
 			</div>
 		{/if}
 

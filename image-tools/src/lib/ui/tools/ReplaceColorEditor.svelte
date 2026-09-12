@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { replaceColor } from '$lib/tools/pixels';
 	import { rgbToHex } from '$lib/tools/color';
@@ -117,7 +118,7 @@
 		<div class="quality">
 			<label for="rc-tolerance">Tolerance</label>
 			<input id="rc-tolerance" type="range" min="0" max="100" bind:value={tolerance} />
-			<output class="mono" for="rc-tolerance">{tolerance}</output>
+			<NumberBox bind:value={tolerance} min={0} max={100} />
 		</div>
 
 		<div class="stage">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import { FORMATS, editedFileName, encodeRaw, zipBlobs, type FormatId } from '$lib/engine';
 	import { tileRects } from '$lib/tools/split';
 	import { readImageFile, rawToCanvas } from './load';
@@ -137,7 +138,7 @@
 			<div class="quality">
 				<label for="split-quality">Quality</label>
 				<input id="split-quality" type="range" min="1" max="100" bind:value={quality} />
-				<output class="mono" for="split-quality">{quality}</output>
+				<NumberBox bind:value={quality} min={1} max={100} />
 			</div>
 		{/if}
 

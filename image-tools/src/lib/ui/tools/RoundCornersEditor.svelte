@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { readImageFile, rawToCanvas } from './load';
 	import Dropzone from '../Dropzone.svelte';
@@ -104,7 +105,7 @@
 					bind:value={radiusPct}
 					disabled={circle}
 				/>
-				<output class="mono" for="corner-radius">{circle ? 'max' : `${radiusPct}%`}</output>
+				<NumberBox bind:value={radiusPct} min={0} max={100} />
 			</div>
 			<label class="circle-toggle">
 				<input type="checkbox" bind:checked={circle} />

@@ -8,7 +8,8 @@
 		type RampPoint,
 		type RampRange
 	} from '$lib/video/ramp';
-	import { formatTimecode } from '$lib/video/timecode';
+	import { formatTimecode, parseTimecode } from '$lib/video/timecode';
+	import SliderField from './SliderField.svelte';
 
 	interface Props {
 		points: RampPoint[];
@@ -345,33 +346,27 @@
 						>, an end of the clip</span
 					>{/if}
 			</p>
-			<label class="pair">
-				<span>at</span>
-				<input
-					type="range"
-					min="0"
-					max={span}
-					step="0.05"
-					value={current.t}
-					disabled={isEnd}
-					aria-label="When this point is, in seconds"
-					oninput={(e) => movePoint(active, Number(e.currentTarget.value), current.speed)}
-				/>
-				<output class="mono">{formatTimecode(current.t)}</output>
-			</label>
-			<label class="pair">
-				<span>runs at</span>
-				<input
-					type="range"
-					min={range.min}
-					max={range.max}
-					step="0.01"
-					value={current.speed}
-					aria-label="How fast the clip runs at this point"
-					oninput={(e) => movePoint(active, current.t, Number(e.currentTarget.value))}
-				/>
-				<output class="mono">{current.speed.toFixed(2)}×</output>
-			</label>
+			<SliderField
+				label="at"
+				value={current.t}
+				min={0}
+				max={span}
+				step={0.05}
+				disabled={isEnd}
+				format={formatTimecode}
+				parse={(t) => parseTimecode(t)}
+				oninput={(t) => movePoint(active, t, current.speed)}
+			/>
+			<SliderField
+				label="runs at"
+				value={current.speed}
+				min={range.min}
+				max={range.max}
+				step={0.01}
+				unit="×"
+				decimals={2}
+				oninput={(speed) => movePoint(active, current.t, speed)}
+			/>
 			<button
 				type="button"
 				class="btn-ghost"
@@ -476,8 +471,15 @@
 	.edit {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: center;
+		align-items: flex-end;
 		gap: 0.5rem 0.8rem;
+	}
+
+	/* The two fields share the row with the Remove button, and each needs
+	   enough width that its slider is still worth dragging. */
+	.edit > :global(.field) {
+		flex: 1 1 13rem;
+		min-width: 0;
 	}
 
 	.which {
@@ -491,29 +493,9 @@
 		color: var(--muted);
 	}
 
-	.pair {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		font-size: 0.875rem;
-		flex: 1 1 14rem;
-	}
 
-	.pair input[type='range'] {
-		flex: 1;
-		min-width: 6rem;
-		accent-color: var(--primary);
-	}
 
-	.pair input[type='range']:disabled {
-		opacity: 0.45;
-	}
 
-	.pair output {
-		min-width: 3.6rem;
-		text-align: right;
-		font-size: 0.8125rem;
-	}
 
 	.shapes {
 		display: flex;

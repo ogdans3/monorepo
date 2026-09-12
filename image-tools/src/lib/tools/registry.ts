@@ -348,7 +348,7 @@ export const TOOLS: ImageTool[] = [
 		blurb: 'Brightness, contrast and saturation with a live preview.',
 		steps: [
 			'Drop an image in the box above.',
-			'Drag the sliders. The preview updates live, and Reset takes you back to the original.',
+			'Drag the sliders, or type an exact number in the box beside each one. The preview updates live, and Reset takes you back to the original.',
 			'Choose an output format and download.'
 		],
 		aboutHeading: 'About adjusting images here',
@@ -620,7 +620,7 @@ export const TOOLS: ImageTool[] = [
 		blurb: 'One slider that makes soft images crisp again.',
 		steps: [
 			'Drop an image in the box above.',
-			'Drag the slider until edges look crisp. If bright outlines appear, go back a little.',
+			'Drag the slider until edges look crisp, or type an exact amount beside it. If bright outlines appear, go back a little.',
 			'Choose a format and download at full quality.'
 		],
 		aboutHeading: 'How sharpening works here',

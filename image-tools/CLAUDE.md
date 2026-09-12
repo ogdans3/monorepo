@@ -150,6 +150,19 @@ decisions. This file is the short version of what matters when editing.
   about copy says so rather than pretending the result glides. A section that
   turns out to be the whole clip has no head and no tail, so `planEdit` hands
   it to the ordinary `speed` path instead of building a concat of one.
+- **Every slider has a box you can type the exact number into.** A standing
+  rule from the operator, not a one-off: dragging is good for finding a value
+  and useless for setting a known one. `NumberBox` is the drop-in that replaced
+  every read-only `<output>` in a slider row, and `SliderField` is the fuller
+  label-slider-box unit the video panel uses. Do not add a bare
+  `<input type="range">` with an `<output>` beside it.
+  The box holds **text**, not the bound number, and that is the whole trick: a
+  half typed "12" on its way to "1280" would otherwise yank the slider on every
+  keystroke and clamp the value out from under the person typing it. Only a
+  value that parses is committed, and the committed value is echoed back, so an
+  out-of-range entry visibly snaps to what was accepted instead of silently
+  doing nothing. The crop scrubber is deliberately exempt: it is a transport
+  control for the preview, not a value that goes into the export.
 - **Two retiming pages, one set of controls, pointed opposite ways.**
   `slow-motion-video` and `speed-up-video` are both `op: 'stretch'` and differ
   only by `direction: 'slower' | 'faster'` in the registry. The panel derives

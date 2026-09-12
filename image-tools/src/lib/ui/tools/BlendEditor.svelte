@@ -1,4 +1,5 @@
 <script lang="ts">
+	import NumberBox from '$lib/ui/NumberBox.svelte';
 	import type { RawImage } from '$lib/engine';
 	import { readImageFile, rawToCanvas } from './load';
 	import Dropzone from '../Dropzone.svelte';
@@ -127,7 +128,7 @@
 		<div class="quality">
 			<label for="blend-mix">Mix</label>
 			<input id="blend-mix" type="range" min="0" max="100" bind:value={mix} disabled={!top} />
-			<output class="mono" for="blend-mix">{mix}%</output>
+			<NumberBox bind:value={mix} min={0} max={100} unit="%" />
 		</div>
 
 		<div class="stage">
