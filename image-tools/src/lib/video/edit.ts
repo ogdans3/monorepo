@@ -62,7 +62,15 @@ export type EditOp =
 	 * input, and a join is the one operation that is about several. `merge.ts`
 	 * plans it and `mergeVideos` runs it.
 	 */
-	| { kind: 'merge' };
+	| { kind: 'merge' }
+	/**
+	 * Pulling stills out of a clip. Here for the same reason as `merge`: the
+	 * registry types `op` as `EditOp['kind']`, so a page cannot be named
+	 * without one. It never reaches `planEdit` either, because every function
+	 * in this file produces exactly one output file and this one produces a
+	 * pile. `frames.ts` plans it and `extractFrames` runs it.
+	 */
+	| { kind: 'frames' };
 
 export type TextPosition = 'top' | 'centre' | 'bottom';
 
@@ -423,6 +431,13 @@ export function planEdit(
 	// looks like it worked.
 	if (op.kind === 'merge') {
 		throw new Error('A merge has several inputs and is planned by merge.ts, not planEdit');
+	}
+
+	// Loud for the same reason: routed through here it would fall past every
+	// branch and come back as a plain re-encode of the clip, which looks like
+	// it worked right up until somebody opens the file expecting images.
+	if (op.kind === 'frames') {
+		throw new Error('Frame extraction has many outputs and is planned by frames.ts, not planEdit');
 	}
 
 	// Trimming on a keyframe copies both streams, which is the difference

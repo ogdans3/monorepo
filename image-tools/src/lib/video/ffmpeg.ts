@@ -11,6 +11,14 @@ import {
 	listFileContents
 } from './merge';
 import { looksReadable, parseProbe } from './probe';
+import {
+	FRAME_FORMATS,
+	FRAME_MAX,
+	frameCount,
+	planFrames,
+	tooManyFrames,
+	type FrameRequest
+} from './frames';
 
 /**
  * The only part of the video section that touches a browser.
@@ -282,6 +290,104 @@ export async function editVideo(
 	} finally {
 		ff.off('progress', report);
 		await ff.deleteFile(outName).catch(() => {});
+	}
+}
+
+export interface FrameResult {
+	frames: { name: string; data: Uint8Array; blob: Blob }[];
+	probe: ProbeResult;
+}
+
+/**
+ * Stills out of a clip, read back one at a time.
+ *
+ * The odd shape in this file: every other runner here reads a single output
+ * back by name, and this one does not know exactly how many files it made.
+ * ffmpeg's fps filter decides that from the source's real timing, so the
+ * planned count is close but not a promise.
+ *
+ * So the frames are read by walking the numbered pattern until one is missing,
+ * rather than by trusting the estimate or by listing the filesystem. Missing is
+ * the reliable signal: `readFile` on a name ffmpeg never wrote fails, and that
+ * is the end of the run. A hard stop sits past the cap as well, so a pattern
+ * that somehow kept matching cannot spin forever.
+ */
+export async function extractFrames(
+	ff: FFmpeg,
+	file: File,
+	request: FrameRequest,
+	opts: { onProgress?: (ratio: number) => void; onFrame?: (count: number) => void } = {}
+): Promise<FrameResult> {
+	const info = await probe(ff, file);
+
+	// Now that the real frame rate is known, check the count against it rather
+	// than against the panel's estimate. "Every frame" of a 60fps clip is more
+	// than twice what a 25fps stand-in predicted, and the difference is the
+	// gap between refusing a run and truncating one silently at the ceiling.
+	const count = frameCount(request, info.durationSeconds, info.fps);
+	if (tooManyFrames(count)) {
+		throw new Error(
+			`That comes to about ${count.toLocaleString()} frames, past the limit of ` +
+				`${FRAME_MAX.toLocaleString()}. Lower the rate, or trim the clip first.`
+		);
+	}
+
+	const plan = planFrames(request, INPUT);
+	const mime = FRAME_FORMATS[request.format].mime;
+
+	const report = ({ progress }: { progress: number }) => {
+		opts.onProgress?.(Math.max(0, Math.min(1, progress)));
+	};
+	ff.on('progress', report);
+
+	const written: string[] = [];
+	try {
+		logLines = [];
+		const code = await ff.exec(plan.args);
+		if (code !== 0) {
+			const said = lastFfmpegLines(3)
+				.filter((line) => /error|invalid|no such|could not|unable/i.test(line))
+				.join(' ');
+			throw new Error(said || 'ffmpeg could not read frames out of that file');
+		}
+
+		const frames: FrameResult['frames'] = [];
+		for (let i = 1; i <= FRAME_MAX + 1; i++) {
+			const name = plan.pattern.replace('%05d', String(i).padStart(5, '0'));
+			let data: Uint8Array;
+			try {
+				const read = await ff.readFile(name);
+				if (typeof read === 'string' || read.length === 0) break;
+				data = new Uint8Array(read);
+			} catch {
+				break;
+			}
+			written.push(name);
+			frames.push({
+				name,
+				data,
+				blob: new Blob([data as unknown as ArrayBuffer], { type: mime })
+			});
+			opts.onFrame?.(frames.length);
+		}
+
+		if (frames.length === 0) throw new Error('That clip produced no frames');
+		// Belt and braces against the one failure that would look like success:
+		// more files on disk than the loop agreed to read. Better to say so than
+		// to hand back a folder that quietly stops partway through the clip.
+		if (frames.length > FRAME_MAX) {
+			throw new Error(
+				`That clip holds more than ${FRAME_MAX.toLocaleString()} frames at this rate. ` +
+					'Lower the rate, or trim the clip first.'
+			);
+		}
+		return { frames, probe: info };
+	} finally {
+		ff.off('progress', report);
+		// Leaving a thousand stills in the wasm filesystem would make the next
+		// run start from a full disk, and they are the largest thing this tool
+		// ever puts there.
+		for (const name of written) await ff.deleteFile(name).catch(() => {});
 	}
 }
 

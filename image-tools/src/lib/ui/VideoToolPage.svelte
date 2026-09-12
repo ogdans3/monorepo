@@ -4,6 +4,7 @@
 	import { nextVideoTools, videoToolPath, type VideoTool } from '$lib/video/tools';
 	import VideoToolPanel from './VideoToolPanel.svelte';
 	import VideoMergePanel from './VideoMergePanel.svelte';
+	import VideoFramesPanel from './VideoFramesPanel.svelte';
 	import TrustLine from './TrustLine.svelte';
 	import Breadcrumbs from './Breadcrumbs.svelte';
 	import Faq from './Faq.svelte';
@@ -41,6 +42,9 @@
 {#if tool.op === 'merge'}
 	<!-- The join takes a list of files, so it has a panel of its own. -->
 	<VideoMergePanel {tool} />
+{:else if tool.op === 'frames'}
+	<!-- And this one gives a list of files back, which needs the same. -->
+	<VideoFramesPanel {tool} />
 {:else}
 	<VideoToolPanel {tool} />
 {/if}

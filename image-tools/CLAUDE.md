@@ -163,6 +163,25 @@ decisions. This file is the short version of what matters when editing.
   out-of-range entry visibly snaps to what was accepted instead of silently
   doing nothing. The crop scrubber is deliberately exempt: it is a transport
   control for the preview, not a value that goes into the export.
+- **Frame extraction is the one video tool that gives many files back, and the
+  cap is the whole design.** `extract-video-frames` holds each still three
+  times before it reaches the download: in ffmpeg's filesystem, as a blob, and
+  inside the zip. A thousand 1080p stills is already a few hundred megabytes of
+  that and the tab dies rather than degrading, so `FRAME_MAX` is a refusal, not
+  a warning, and the count is shown before anything runs.
+  The trap is that the count cannot be known up front. The browser will not say
+  what a clip's frame rate is, so "every frame" has to estimate, and an
+  estimate low enough to pass the cap would let a run start that the read loop
+  then truncates at the ceiling, which looks exactly like success. That is why
+  `parseProbe` reads `fps` off ffmpeg's stream line and `extractFrames`
+  re-checks the count against the real rate and refuses **before** running,
+  with a second guard that throws if more files exist than the loop agreed to
+  read. Do not weaken either into a warning.
+  Only JPG and PNG are offered, and that is deliberate: both are in every
+  ffmpeg build, and both were confirmed to decode in a browser rather than
+  assumed. The frames are read back by walking the numbered pattern until one
+  is missing rather than by listing the filesystem, because missing is the
+  reliable signal and the planned count is not a promise.
 - **Two retiming pages, one set of controls, pointed opposite ways.**
   `slow-motion-video` and `speed-up-video` are both `op: 'stretch'` and differ
   only by `direction: 'slower' | 'faster'` in the registry. The panel derives

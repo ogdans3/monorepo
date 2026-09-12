@@ -323,6 +323,46 @@ export const VIDEO_TOOLS: VideoTool[] = [
 		suffix: '-sped-up'
 	},
 	{
+		slug: 'extract-video-frames',
+		category: 'frame',
+		op: 'frames',
+		name: 'Frames to images',
+		h1: 'Split a video into images',
+		title: 'Video to JPG - Extract Frames Free, No Upload',
+		description:
+			'Split a video into JPG or PNG stills online free, in your browser. Pick how many frames a second and download them all as a zip. Nothing is uploaded.',
+		lede: 'Turn a clip into a folder of stills. Pick how often to take one, and get them back as a zip.',
+		blurb: 'Pull every frame, or one a second, out as JPG or PNG.',
+		steps: [
+			'Drop a video in the box above. MP4, MOV, WebM, MKV and AVI all work.',
+			'Choose JPG or PNG, then how many frames a second to take. The count updates as you change it.',
+			'Extract, then download the lot as a zip or save single frames from the grid.'
+		],
+		aboutHeading: 'About splitting a video into images here',
+		about: [
+			"Every still comes straight out of the clip at full resolution, so a 1080p video gives 1920 by 1080 images. Nothing is scaled, cropped or sharpened on the way out. JPG keeps the files small enough to handle in bulk and PNG keeps every pixel exactly as the decoder produced it, which matters if the frames are going into something else rather than being looked at.",
+			"How many frames a second you ask for is the whole decision. One a second turns a three minute clip into 180 images, which is a contact sheet. Every frame turns the same clip into thousands, which is a folder no browser should be asked to hold, so the count is shown before anything runs and the tool refuses past a thousand. Lower the rate rather than fighting it.",
+			"The work happens on your own machine, which is why nothing is uploaded and why a long clip takes longer than a short one. The frames arrive as a zip built in the browser, and the grid shows the first of them so you can check the timing was right before saving anything."
+		],
+		next: ['trim-video', 'change-video-speed', 'compress-video'],
+		keywords: ['video to jpg', 'video to png', 'extract frames', 'screenshot', 'stills', 'contact sheet'],
+		faq: [
+			{
+				q: 'How do I turn a video into JPG images?',
+				a: "Drop the clip in, choose JPG, and say how many frames a second you want. One a second is the usual answer for picking a moment out of footage, and every frame is what you want if the stills are going into animation software. The result comes back as a zip, and single frames can be saved straight from the grid."
+			},
+			{
+				q: 'How many images will I get out of my video?',
+				a: "Length times the rate you pick, plus one for the frame at the very start. A ninety second clip at two frames a second is 181 images. The number is shown before you run anything, because it is the difference between a folder you can use and one your browser cannot hold, and the tool stops at a thousand."
+			},
+			{
+				q: 'Do the extracted frames lose any quality?',
+				a: "PNG frames are exactly what the video decoder produced, pixel for pixel. JPG frames are compressed on the way out, and the quality control decides how hard. Neither is upscaled or sharpened. What limits them is the video itself, since heavily compressed footage has artefacts baked into every frame already."
+			}
+		],
+		suffix: '-frames'
+	},
+	{
 		slug: 'change-video-frame-rate',
 		category: 'time',
 		op: 'fps',

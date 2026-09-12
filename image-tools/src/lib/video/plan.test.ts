@@ -15,7 +15,8 @@ const h264: ProbeResult = {
 	audioCodec: 'aac',
 	durationSeconds: 60,
 	width: 1280,
-	height: 720
+	height: 720,
+	fps: 25
 };
 const vp8: ProbeResult = { ...h264, videoCodec: 'vp8', audioCodec: 'vorbis' };
 const prores: ProbeResult = { ...h264, videoCodec: 'prores', audioCodec: 'pcm_s16le' };

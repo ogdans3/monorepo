@@ -23,6 +23,7 @@ const probe = (over: Partial<ProbeResult> = {}): ProbeResult => ({
 	durationSeconds: 10,
 	width: 1280,
 	height: 720,
+	fps: 25,
 	...over
 });
 

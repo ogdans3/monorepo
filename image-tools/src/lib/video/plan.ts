@@ -31,6 +31,14 @@ export interface ProbeResult {
 	durationSeconds: number | null;
 	width: number | null;
 	height: number | null;
+	/**
+	 * Frames a second, as ffmpeg reports it on the stream line.
+	 *
+	 * Only the frame extraction page needs it, and it needs it badly: without
+	 * it, "every frame" has to guess, and a guess low enough to pass the cap
+	 * would let a run start that gets silently truncated at the ceiling.
+	 */
+	fps: number | null;
 }
 
 /**

@@ -26,7 +26,8 @@ export function usuallyInstant(page: VideoPairPage): boolean {
 		...probe,
 		durationSeconds: null,
 		width: null,
-		height: null
+		height: null,
+		fps: null
 	});
 }
 

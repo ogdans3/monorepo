@@ -18,6 +18,12 @@ const VIDEO_STREAM = /Stream #\d+:\d+.*?:\s*Video:\s*([a-z0-9_]+)/i;
 const AUDIO_STREAM = /Stream #\d+:\d+.*?:\s*Audio:\s*([a-z0-9_]+)/i;
 /** Dimensions appear after the pixel format, e.g. "yuv420p, 1280x720 [SAR..." */
 const SIZE = /,\s*(\d{2,5})x(\d{2,5})\b/;
+/**
+ * The frame rate, e.g. ", 29.97 fps,". ffmpeg also prints tbr, tbn and tbc on
+ * the same line, which are timebases rather than frame rates and are wrong
+ * here often enough to matter, so only "fps" is read.
+ */
+const FPS = /,\s*(\d+(?:\.\d+)?)\s*fps\b/;
 
 export function parseProbe(lines: string[]): ProbeResult {
 	const result: ProbeResult = {
@@ -25,7 +31,8 @@ export function parseProbe(lines: string[]): ProbeResult {
 		audioCodec: null,
 		durationSeconds: null,
 		width: null,
-		height: null
+		height: null,
+		fps: null
 	};
 
 	for (const line of lines) {
@@ -43,6 +50,8 @@ export function parseProbe(lines: string[]): ProbeResult {
 				result.width = Number(size[1]);
 				result.height = Number(size[2]);
 			}
+			const fps = FPS.exec(line);
+			if (fps) result.fps = Number(fps[1]);
 		}
 
 		const audio = AUDIO_STREAM.exec(line);
