@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../api/client.dart';
@@ -237,6 +238,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await context.read<Session>().login(_email.text.trim(), _password.text);
+      // Commits the autofill form: the browser may now offer to save it.
+      TextInput.finishAutofillContext();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
@@ -257,7 +260,11 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           // 28 at the sides and the wordmark 116 down: the export's sign-in.
           padding: const EdgeInsets.fromLTRB(28, 116, 28, Insets.xl),
-          child: Column(
+          // One group, so a password manager sees a form with a username and
+          // a password in it rather than one lone field at a time — which is
+          // what makes it offer anything at all, on the web as on a phone.
+          child: AutofillGroup(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Center(
@@ -275,7 +282,10 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
+                // «username» first: it is the hint browsers and iCloud Keychain
+                // key a saved login on; «email» tells the keyboard what it is.
+                autofillHints: const [AutofillHints.username, AutofillHints.email],
                 decoration: const InputDecoration(hintText: 'ola@epost.no'),
               ),
               const SizedBox(height: 16),
@@ -284,6 +294,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _password,
                 obscureText: true,
+                textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.password],
                 decoration: const InputDecoration(hintText: '••••••••'),
                 onSubmitted: (_) => _submit(),
@@ -325,6 +336,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -456,6 +468,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             phone: _phone.text.trim(),
             password: _password.text,
           );
+      // Commits the autofill form: the browser may now offer to save it.
+      TextInput.finishAutofillContext();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const InterestsScreen()), (r) => false);
@@ -496,11 +510,22 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 15),
-              _field('Visningsnavn', _name, 'Ola N.'),
-              _field('E-post', _email, 'ola@epost.no',
-                  keyboard: TextInputType.emailAddress),
-              _field('Telefonnummer', _phone, '412 34 567', keyboard: TextInputType.phone),
-              _field('Passord', _password, 'Velg et passord', obscure: true),
+              AutofillGroup(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _field('Visningsnavn', _name, 'Ola N.', hints: const [AutofillHints.name]),
+                    _field('E-post', _email, 'ola@epost.no',
+                        keyboard: TextInputType.emailAddress,
+                        hints: const [AutofillHints.username, AutofillHints.email]),
+                    _field('Telefonnummer', _phone, '412 34 567',
+                        keyboard: TextInputType.phone,
+                        hints: const [AutofillHints.telephoneNumber]),
+                    _field('Passord', _password, 'Velg et passord',
+                        obscure: true, hints: const [AutofillHints.newPassword], last: true),
+                  ],
+                ),
+              ),
               if (_error != null) ...[
                 Text(_error!, style: const TextStyle(color: SwaplyColors.red, fontSize: 13)),
                 const SizedBox(height: Insets.sm),
@@ -547,7 +572,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   }
 
   Widget _field(String label, TextEditingController controller, String hint,
-      {TextInputType? keyboard, bool obscure = false}) {
+      {TextInputType? keyboard,
+      bool obscure = false,
+      List<String>? hints,
+      bool last = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
       child: Column(
@@ -559,6 +587,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             controller: controller,
             keyboardType: keyboard,
             obscureText: obscure,
+            autofillHints: hints,
+            textInputAction: last ? TextInputAction.done : TextInputAction.next,
+            onSubmitted: last ? (_) => _submit() : null,
             decoration: InputDecoration(hintText: hint),
           ),
         ],
@@ -586,6 +617,14 @@ class _InterestsScreenState extends State<InterestsScreen> {
   }
 
   Future<void> _continue() async {
+    // Three to five is advice, not a gate: with nothing chosen «Fortsett» is
+    // the same door as «Hopp over».
+    if (_chosen.isEmpty) {
+      context.read<Session>().dismissInterests();
+      Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+      return;
+    }
     setState(() => _busy = true);
     try {
       await context.read<Session>().setInterests(_chosen.toList());
@@ -720,13 +759,14 @@ class _InterestsScreenState extends State<InterestsScreen> {
                   Text(
                     full
                         ? 'Fem er nok. Du kan endre dette senere.'
-                        : '${_chosen.length} av 5 valgt',
+                        : _chosen.isEmpty
+                            ? 'Anbefalt, ikke påkrevd. Du kan endre dette senere.'
+                            : '${_chosen.length} av 5 valgt',
                     style: const TextStyle(
                         fontSize: 12.5, fontWeight: FontWeight.w700, color: SwaplyColors.greenText),
                   ),
                   const SizedBox(height: 12),
-                  PrimaryButton('Fortsett',
-                      enabled: _chosen.length >= 3, busy: _busy, onPressed: _continue),
+                  PrimaryButton('Fortsett', busy: _busy, onPressed: _continue),
                 ],
               ),
             ),

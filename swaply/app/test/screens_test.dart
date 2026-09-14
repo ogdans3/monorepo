@@ -132,24 +132,35 @@ void main() {
       }
     });
 
-    testWidgets('below three the button is dead, at three it is alive', (tester) async {
+    testWidgets('choosing is advised, never required', (tester) async {
       final fresh = {...FakeServer.me, 'interests': const []};
       server.overrides['POST /auth/login'] = {'token': 'tok', 'user': fresh};
       server.overrides['GET /me'] = fresh;
       await mount(tester, const InterestsScreen());
 
+      // Alive from the first frame, and honest about it.
       final button = find.widgetWithText(FilledButton, 'Fortsett');
-      expect(tester.widget<FilledButton>(button).onPressed, isNull);
+      expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+      expect(find.text('Anbefalt, ikke påkrevd. Du kan endre dette senere.'), findsOneWidget);
 
       await tester.tap(find.text('Sykling'));
       await tester.tap(find.text('Gaming'));
       await tester.pump();
-      expect(tester.widget<FilledButton>(button).onPressed, isNull);
       expect(find.text('2 av 5 valgt'), findsOneWidget);
-
-      await tester.tap(find.text('Verktøy'));
-      await tester.pump();
       expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+    });
+
+    testWidgets('«Fortsett» with nothing chosen writes nothing and moves on', (tester) async {
+      final fresh = {...FakeServer.me, 'interests': const []};
+      server.overrides['POST /auth/login'] = {'token': 'tok', 'user': fresh};
+      server.overrides['GET /me'] = fresh;
+      await mount(tester, const InterestsScreen());
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Fortsett'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, isNot(contains('PUT /me/interests')));
+      expect(find.byType(DiscoverScreen), findsOneWidget);
     });
 
     testWidgets('at five the rest go quiet rather than shouting', (tester) async {
