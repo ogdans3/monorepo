@@ -139,10 +139,21 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------------
 
   Future<void> _openItem(ChecklistItem item) async {
+    final open = _controller.openItems;
+    final at = open.indexWhere((candidate) => candidate.id == item.id);
+    // A checked item is not in the open list, and the done shelf is ordered by
+    // being done rather than by hand, so it gets no position controls.
+    final movable = _controller.canWrite && at >= 0 && open.length > 1;
+
     final result = await itemSheet(
       context,
       item: item,
       onToggle: () => _controller.toggle(item),
+      onMove: movable
+          ? (direction) => _controller.stepItem(item, direction)
+          : null,
+      canMoveUp: movable && at > 0,
+      canMoveDown: movable && at < open.length - 1,
     );
     if (result == null || !mounted) return;
     if (result.deleted) {
@@ -374,8 +385,23 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
                 Composer(
                   enabled: list != null,
                   onSubmit: (text) {
+                    // Whether to follow the new row down, decided before
+                    // anything moves.
+                    //
+                    // It used to jump to the bottom every time. The composer is
+                    // pinned there, so somebody can scroll up to check what is
+                    // already on the list, type the thing they just remembered,
+                    // and be thrown to the end for their trouble, losing the
+                    // place they were reading. Following only when they were
+                    // already at the bottom keeps the common case, add after
+                    // add after add, and drops the annoying one.
+                    final stick =
+                        !_scroll.hasClients ||
+                        _scroll.position.maxScrollExtent -
+                                _scroll.position.pixels <
+                            _stickSlack;
                     _controller.addItem(text);
-                    // Land at the bottom, where the new row is.
+                    if (!stick) return;
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!_scroll.hasClients) return;
                       _scroll.animateTo(
@@ -393,6 +419,10 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
     );
   }
 }
+
+/// How close to the bottom still counts as being at the bottom. A row is 56dp,
+/// so this is "the last row is in view" rather than "pixel perfect".
+const double _stickSlack = 72;
 
 class _Body extends StatelessWidget {
   const _Body({
@@ -430,23 +460,56 @@ class _Body extends StatelessWidget {
       );
     }
 
-    Widget rowFor(ChecklistItem item) => ItemRow(
+    // Declared before rowFor so the done rows can reserve the same left column
+    // the open rows spend on their handle.
+    final canReorder = controller.canWrite && open.length > 1;
+
+    Widget rowFor(ChecklistItem item, {int? reorderIndex}) => ItemRow(
       key: ValueKey(item.id),
       item: item,
       washing: controller.isWashing(item.id),
       readOnly: !controller.canWrite,
+      reorderIndex: reorderIndex,
+      reserveGrip: canReorder,
       onToggle: () => controller.toggle(item),
       onOpen: () => onOpenItem(item),
     );
 
+    // Only the open items reorder. A reorderable list draws its own
+    // separators, so the divider rides along under each row rather than
+    // between them, which is what keeps the hairline where it was.
     return CustomScrollView(
       controller: scroll,
       slivers: [
-        SliverList.separated(
-          itemCount: open.length,
-          separatorBuilder: (_, _) => Divider(color: colors.line, height: 1),
-          itemBuilder: (_, index) => rowFor(open[index]),
-        ),
+        if (canReorder)
+          SliverReorderableList(
+            itemCount: open.length,
+            onReorder: (from, to) {
+              // Flutter reports the destination in the pre-removal list, so a
+              // downward move is one past where the row actually lands.
+              controller.moveItem(open[from], to > from ? to - 1 : to);
+            },
+            proxyDecorator: (child, index, animation) => Material(
+              color: colors.surfaceHover,
+              elevation: 4,
+              shadowColor: Colors.black26,
+              child: child,
+            ),
+            itemBuilder: (_, index) => Column(
+              key: ValueKey('reorder-${open[index].id}'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                rowFor(open[index], reorderIndex: index),
+                Divider(color: colors.line, height: 1),
+              ],
+            ),
+          )
+        else
+          SliverList.separated(
+            itemCount: open.length,
+            separatorBuilder: (_, _) => Divider(color: colors.line, height: 1),
+            itemBuilder: (_, index) => rowFor(open[index]),
+          ),
         if (done.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(

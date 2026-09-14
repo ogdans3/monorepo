@@ -171,7 +171,7 @@ void main() {
       expect(find.text('Done · 1'), findsOneWidget);
     });
 
-    testWidgets('tapping a row ticks it off immediately', (tester) async {
+    testWidgets('tapping the box ticks it off immediately', (tester) async {
       server.addItem('Firewood');
       final library = libraryWith([savedList(total: 1)]);
       await openList(tester, library);
@@ -181,7 +181,7 @@ void main() {
         isFalse,
       );
 
-      await tester.tap(find.text('Firewood'));
+      await tester.tap(find.byType(CheckMark).first);
       await tester.pump();
 
       // No await on the network: the tick is on screen in the very next frame.
@@ -192,6 +192,27 @@ void main() {
 
       await tester.pumpAndSettle();
       expect(server.items.single['checked'], isTrue);
+    });
+
+    testWidgets('tapping the row opens the item rather than ticking it', (
+      tester,
+    ) async {
+      // The two used to be the same gesture, which made the cheap accident the
+      // easy one. Ticking something off by misjudging a tap costs a change
+      // everybody on the list sees; opening a sheet costs a tap to close.
+      server.addItem('Firewood');
+      final library = libraryWith([savedList(total: 1)]);
+      await openList(tester, library);
+
+      await tester.tap(find.text('Firewood'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Not done yet'), findsOneWidget);
+      expect(
+        server.items.single['checked'],
+        isFalse,
+        reason: 'opening an item must not change it',
+      );
     });
 
     testWidgets('checked text is struck through, not just dimmed', (

@@ -5,15 +5,33 @@
     item,
     washing = false,
     readonly = false,
+    reorderable = false,
+    reserveGrip = false,
+    dragging = false,
     onToggle,
     onOpen,
+    onGrab,
   }: {
     item: Item;
     washing?: boolean;
     /** A read link. The row still shows everything, and nothing responds. */
     readonly?: boolean;
+    /** Only the open items reorder, so only they get a grip. */
+    reorderable?: boolean;
+    /**
+     * Keep the grip's width even without a grip.
+     *
+     * The done shelf never reorders, so its rows have no handle, and without
+     * this their boxes sit 40px left of the open ones directly above them. Two
+     * lists on one screen whose columns do not line up reads as broken rather
+     * than as a distinction.
+     */
+    reserveGrip?: boolean;
+    /** True while this row is the one being dragged. */
+    dragging?: boolean;
     onToggle: () => void;
     onOpen: () => void;
+    onGrab?: (event: PointerEvent) => void;
   } = $props();
 
   /**
@@ -21,7 +39,7 @@
    * library, because the only thing this needs is a horizontal drag with a
    * threshold, and a gesture that fights the page scroll is worse than none.
    */
-  let dragging = $state(false);
+  let swiping = $state(false);
   let offset = $state(0);
   let startX = 0;
   let startY = 0;
@@ -36,11 +54,11 @@
     startX = event.clientX;
     startY = event.clientY;
     decided = null;
-    dragging = true;
+    swiping = true;
   }
 
   function move(event: PointerEvent) {
-    if (!dragging) return;
+    if (!swiping) return;
     const dx = event.clientX - startX;
     const dy = event.clientY - startY;
 
@@ -58,9 +76,9 @@
   }
 
   function up() {
-    if (!dragging) return;
+    if (!swiping) return;
     const released = offset;
-    dragging = false;
+    swiping = false;
     offset = 0;
     decided = null;
     if (released > MAX * THRESHOLD) onOpen();
@@ -71,7 +89,9 @@
   class="row"
   class:done={item.checked}
   class:washing
+  class:swiping
   class:dragging
+  data-item={item.id}
   style:--offset="{offset}px"
   onpointerdown={down}
   onpointermove={move}
@@ -89,12 +109,46 @@
   </span>
 
   <div class="sheet">
+    {#if reserveGrip && !(reorderable && !readonly)}
+      <span class="grip-space" aria-hidden="true"></span>
+    {/if}
+    {#if reorderable && !readonly}
+      <!--
+        Press and drag to move the row. A handle of its own rather than a long
+        press on the row, because the row's own job is now opening the item,
+        and a gesture that starts on top of another one is a gesture people
+        trigger by accident. The item sheet carries Move up and Move down for
+        the same job without a drag, which is what keeps this from being a
+        gesture-only affordance.
+      -->
+      <button
+        type="button"
+        class="grip"
+        onpointerdown={onGrab}
+        aria-label="Reorder {item.text}"
+        title="Drag to reorder"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+          <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+          <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+        </svg>
+      </button>
+    {/if}
+
+    <!--
+      The box alone ticks the item. Tapping anywhere else opens it. Before,
+      the whole row toggled and only a 48px chevron opened, which meant the
+      cheap accident (ticking something off by misjudging a tap) was the easy
+      one and the deliberate act was the fiddly one. This is the other way up.
+    -->
     <button
       type="button"
       class="tick"
       onclick={onToggle}
       disabled={readonly}
       aria-pressed={item.checked}
+      aria-label="{item.checked ? 'Untick' : 'Tick'} {item.text}"
     >
       <span class="box" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="15" height="15">
@@ -108,6 +162,9 @@
           />
         </svg>
       </span>
+    </button>
+
+    <button type="button" class="body" onclick={onOpen} disabled={readonly}>
       <span class="text">
         <span class="t">{item.text}</span>
         {#if item.note.trim()}<span class="note">{item.note.trim()}</span>{/if}
@@ -145,6 +202,19 @@
     touch-action: pan-y;
   }
 
+  /* The row being carried. Lifted off the page so it is obvious which one is
+     in hand, and it does not take the swipe transition with it. */
+  .row.dragging {
+    position: relative;
+    z-index: 2;
+  }
+
+  .row.dragging .sheet {
+    background: var(--surface-hover);
+    box-shadow: 0 6px 18px oklch(0 0 0 / 0.12);
+    transition: none;
+  }
+
   .hint {
     position: absolute;
     inset: 0 auto 0 0;
@@ -162,14 +232,14 @@
   .sheet {
     position: relative;
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto auto 1fr auto;
     align-items: stretch;
     background: var(--bg);
     transform: translate3d(var(--offset, 0), 0, 0);
     transition: background 900ms var(--ease);
   }
 
-  .row:not(.dragging) .sheet {
+  .row:not(.swiping) .sheet {
     transition:
       transform var(--base) var(--ease),
       background 900ms var(--ease);
@@ -182,13 +252,54 @@
     transition: none;
   }
 
+  .grip-space {
+    width: 40px;
+  }
+
+  .grip {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--ink-faint);
+    cursor: grab;
+    /* The handle owns its touches. Without this the browser scrolls the list
+       under the finger that is trying to carry a row. */
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  .grip svg {
+    fill: currentColor;
+  }
+
+  .grip:active {
+    cursor: grabbing;
+  }
+
   .tick {
     display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 13px;
+    place-items: center;
+    /* 48px of hit target for the one thing that is hard to undo by accident
+       less easily than it is to do. */
+    width: 48px;
     min-height: 56px;
-    padding: 13px 4px 13px 20px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .body {
+    display: grid;
+    align-items: center;
+    min-height: 56px;
+    padding: 13px 4px 13px 12px;
     background: none;
     border: 0;
     font: inherit;
@@ -196,7 +307,7 @@
     text-align: left;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    user-select: none;
+    min-width: 0;
   }
 
   .box {
@@ -241,7 +352,7 @@
     overflow-wrap: anywhere;
   }
 
-  .row.done .text {
+  .row.done .body {
     color: var(--ink-muted);
   }
 
@@ -275,7 +386,8 @@
   /* A read link still sees everything. The affordances stop responding rather
      than disappearing, so the list does not look different for no reason, and
      the chevron goes because there is nothing behind it. */
-  .tick:disabled {
+  .tick:disabled,
+  .body:disabled {
     cursor: default;
   }
 

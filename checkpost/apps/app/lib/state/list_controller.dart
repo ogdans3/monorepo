@@ -264,6 +264,59 @@ class ListController extends ChangeNotifier {
     );
   }
 
+  /// Moves an item to a new place among the unchecked ones.
+  ///
+  /// The position is worked out here rather than waited for, because this app
+  /// carries the same fractional-index algorithm the API does and can name the
+  /// key between two neighbours itself. The server is still told in terms of
+  /// neighbours, not the key: two people dragging into the same gap at once
+  /// have to end up with different keys, and only the server can see both.
+  ///
+  /// Only the open items reorder. The done shelf is ordered by the fact of
+  /// being done.
+  Future<void> moveItem(ChecklistItem item, int toIndex) async {
+    final open = openItems;
+    final from = open.indexWhere((candidate) => candidate.id == item.id);
+    if (from < 0) return;
+    final to = toIndex.clamp(0, open.length - 1);
+    if (from == to) return;
+
+    final reordered = List.of(open)..removeAt(from);
+    reordered.insert(to, item);
+
+    // The neighbours in the new arrangement, not the old one. Naming the row it
+    // used to sit after would put it straight back where it came from.
+    final before = to > 0 ? reordered[to - 1] : null;
+    final after = to + 1 < reordered.length ? reordered[to + 1] : null;
+
+    final previous = List.of(_items);
+    _replace(
+      item.copyWith(position: keyBetween(before?.position, after?.position)),
+    );
+    _notify();
+
+    await _write(
+      () => api.updateItem(
+        _token,
+        item.id,
+        afterId: before?.id,
+        beforeId: before == null ? after?.id : null,
+      ),
+      onResult: _replace,
+      onFailure: () {
+        _items = previous;
+      },
+      whenGone: 'This list is gone, so nothing was moved.',
+    );
+  }
+
+  /// One place up or down, for the sheet's buttons and for a screen reader.
+  Future<void> stepItem(ChecklistItem item, int direction) async {
+    final at = openItems.indexWhere((candidate) => candidate.id == item.id);
+    if (at < 0) return;
+    await moveItem(item, at + direction);
+  }
+
   Future<void> editItem(
     ChecklistItem item, {
     String? text,

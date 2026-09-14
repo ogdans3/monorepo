@@ -80,6 +80,16 @@ The app's copy depends on the distinction.
 **Three files hold one palette:** `DESIGN.md`, `apps/web/src/app.css`,
 `apps/app/lib/design/tokens.dart`. Change them together.
 
+**Only two clients may compute a position, and the web is not one of them.**
+The Flutter app carries `fractional_index.dart`, so it works out the key for a
+dragged row itself and shows the move instantly. The web client has no copy and
+must not gain one, because that would make three files to keep byte-identical.
+It holds a short-lived id order (`#pendingOrder` in `list-session.svelte.ts`)
+until the server answers with the real key, and drops it then. Either way the
+**server** is told in terms of neighbours, never a key: two people dragging
+into the same gap have to end up with different keys, and only the server sees
+both.
+
 **Two files hold one ordering algorithm:**
 `apps/api/src/lib/fractional-index.ts` and
 `apps/app/lib/data/fractional_index.dart`. They must produce byte-identical
@@ -116,7 +126,20 @@ From `PRODUCT.md` / `DESIGN.md`, restated because they get eroded first:
 - **No second destructive red.** Consequences are spelled out in words in a
   confirm sheet, and the confirm button uses the normal accent.
 - **No gesture-only affordance.** Swipe-to-open is a shortcut. The right-edge
-  chevron and the menu do the same job.
+  chevron and the menu do the same job. Drag-to-reorder is the same: the grip
+  is a shortcut, and Move up / Move down in the item sheet do the same job.
+  They are also the only way to move something a long way in a list that does
+  not fit on one screen.
+- **The box ticks, the row opens.** Not the other way round, which is what it
+  was. The two acts are not equally cheap to get wrong: a stray tick is a
+  change everybody on the list sees, a stray open costs a tap to close. So the
+  one worth being sure about gets its own 48dp target and nothing else fires
+  it. `widget_test.dart` pins both halves.
+- **The done shelf reserves the grip's width without having a grip.** Its rows
+  never reorder, but if they do not hold the column open, their checkboxes sit
+  40dp left of the open rows directly above them, and a screen whose two lists
+  do not line up reads as broken rather than as a distinction. The golden is
+  what caught this, which is what goldens are for.
 - **Cards are not the answer.** Both list surfaces are hairline-separated rows.
 - **Motion 150 to 250ms, ease-out, no bounce**, and every animation has a
   `prefers-reduced-motion` / `disableAnimations` path. The one exception that

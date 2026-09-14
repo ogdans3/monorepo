@@ -26,18 +26,38 @@ Future<ItemSheetResult?> itemSheet(
   BuildContext context, {
   required ChecklistItem item,
   required VoidCallback onToggle,
+  void Function(int direction)? onMove,
+  bool canMoveUp = false,
+  bool canMoveDown = false,
 }) {
   return showCheckpostSheet<ItemSheetResult>(
     context: context,
-    builder: (context) => _ItemSheet(item: item, onToggle: onToggle),
+    builder: (context) => _ItemSheet(
+      item: item,
+      onToggle: onToggle,
+      onMove: onMove,
+      canMoveUp: canMoveUp,
+      canMoveDown: canMoveDown,
+    ),
   );
 }
 
 class _ItemSheet extends StatefulWidget {
-  const _ItemSheet({required this.item, required this.onToggle});
+  const _ItemSheet({
+    required this.item,
+    required this.onToggle,
+    this.onMove,
+    this.canMoveUp = false,
+    this.canMoveDown = false,
+  });
 
   final ChecklistItem item;
   final VoidCallback onToggle;
+
+  /// Step the item one place. Absent on a checked item and on a read link.
+  final void Function(int direction)? onMove;
+  final bool canMoveUp;
+  final bool canMoveDown;
 
   @override
   State<_ItemSheet> createState() => _ItemSheetState();
@@ -134,6 +154,43 @@ class _ItemSheetState extends State<_ItemSheet> {
               maxLength: 4000,
               minLines: 3,
             ),
+            if (widget.onMove != null) ...[
+              const SizedBox(height: Space.lg),
+              // The same job as the grip, without the drag. The handle is a
+              // shortcut, not the only way in, which is what the design
+              // contract means by no gesture-only affordance. It is also the
+              // only way to move something a long way in a list that does not
+              // fit on one screen.
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Position',
+                      style: text.bodyMedium?.copyWith(color: colors.inkMuted),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: widget.canMoveUp
+                        ? () {
+                            widget.onMove!(-1);
+                            Navigator.of(context).pop();
+                          }
+                        : null,
+                    child: const Text('Move up'),
+                  ),
+                  const SizedBox(width: Space.xs),
+                  TextButton(
+                    onPressed: widget.canMoveDown
+                        ? () {
+                            widget.onMove!(1);
+                            Navigator.of(context).pop();
+                          }
+                        : null,
+                    child: const Text('Move down'),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: Space.xxl),
             TextButton(
               onPressed: _delete,

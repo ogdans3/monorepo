@@ -224,6 +224,44 @@ class FakeServer {
             ? '2026-01-02T00:00:00.000Z'
             : null;
       }
+      // A move names its neighbours and the server works out the key, the same
+      // way the real one does. Modelled here rather than stubbed, so a test of
+      // reordering exercises the arithmetic instead of asserting that the
+      // client sent what the client sent.
+      if (body.containsKey('afterId') || body.containsKey('beforeId')) {
+        final others = [
+          for (final other in items)
+            if (other['id'] != id) other,
+        ]..sort(
+          (a, b) => (a['position'] as String).compareTo(b['position'] as String),
+        );
+        final afterId = body['afterId'] as String?;
+        final beforeId = body['beforeId'] as String?;
+
+        String? lower;
+        String? upper;
+        if (afterId != null) {
+          final at = others.indexWhere((other) => other['id'] == afterId);
+          if (at == -1) {
+            return _error(404, 'not_found', 'That neighbour is gone.');
+          }
+          lower = others[at]['position'] as String;
+          upper = at + 1 < others.length
+              ? others[at + 1]['position'] as String
+              : null;
+        } else if (beforeId != null) {
+          final at = others.indexWhere((other) => other['id'] == beforeId);
+          if (at == -1) {
+            return _error(404, 'not_found', 'That neighbour is gone.');
+          }
+          lower = at > 0 ? others[at - 1]['position'] as String : null;
+          upper = others[at]['position'] as String;
+        } else {
+          // beforeId: null means "put it first".
+          upper = others.isEmpty ? null : others.first['position'] as String;
+        }
+        item['position'] = keyBetween(lower, upper);
+      }
       items[index] = item;
       revision++;
       return _json(200, item);

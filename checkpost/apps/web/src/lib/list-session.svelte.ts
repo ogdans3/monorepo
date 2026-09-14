@@ -43,6 +43,18 @@ export class ListSession {
   settling = $state<string[]>([]);
   /** Ids somebody else changed recently, highlighted so the change is visible. */
   washing = $state<string[]>([]);
+  /**
+   * The order a drag has put the open items in, before the server has said
+   * what their real positions are.
+   *
+   * An override rather than invented positions, and deliberately so. Positions
+   * are fractional indices, the algorithm for making one lives in the API and
+   * the Flutter app, and CLAUDE.md says those two copies are the only two. A
+   * third one here to guess at a placeholder would be a third copy to keep
+   * byte-identical. This holds ids instead and is dropped the moment the real
+   * positions land.
+   */
+  #pendingOrder = $state<string[] | null>(null);
 
   #token = $state('');
   #realtime: Realtime | null = null;
@@ -59,7 +71,17 @@ export class ListSession {
   }
 
   get openItems() {
-    return this.items.filter((item) => !this.#showAsDone(item));
+    const open = this.items.filter((item) => !this.#showAsDone(item));
+    const pending = this.#pendingOrder;
+    if (!pending) return open;
+    // Anything that arrived mid-drag is not in the pending order, and goes
+    // where its position says: at the end, since that is where an append lands.
+    const known = new Set(pending);
+    const byId = new Map(open.map((item) => [item.id, item]));
+    return [
+      ...pending.map((id) => byId.get(id)).filter((item): item is Item => Boolean(item)),
+      ...open.filter((item) => !known.has(item.id)),
+    ];
   }
 
   get doneItems() {
@@ -227,6 +249,58 @@ export class ListSession {
       (fresh) => this.#replace(fresh),
       () => this.#remove(id),
     );
+  }
+
+  /**
+   * Move an item to a new place among the unchecked ones.
+   *
+   * The client cannot work out the new position itself, because a position is
+   * a fractional index and that algorithm lives in the API. So it sends the
+   * neighbours and lets the server answer with the real key, holding the new
+   * arrangement in `#pendingOrder` in the meantime. That is what makes a drag
+   * feel like it landed rather than like it was submitted.
+   *
+   * Only the open items reorder. The done shelf is ordered by the fact of
+   * being done, and arranging it would be arranging a pile already finished
+   * with.
+   */
+  async move(item: Item, toIndex: number) {
+    const open = this.openItems;
+    const from = open.findIndex((candidate) => candidate.id === item.id);
+    const to = Math.max(0, Math.min(open.length - 1, toIndex));
+    if (from < 0 || from === to) return;
+
+    const reordered = [...open];
+    reordered.splice(to, 0, ...reordered.splice(from, 1));
+
+    // The neighbours in the new arrangement, not the old one. Naming the item
+    // it used to sit after would put it straight back where it started.
+    const before = reordered[to - 1];
+    const after = reordered[to + 1];
+    const patch = before ? { afterId: before.id } : { beforeId: after?.id ?? null };
+
+    this.#pendingOrder = reordered.map((candidate) => candidate.id);
+
+    await this.#write(
+      () => api.updateItem(this.#token, item.id, patch),
+      (fresh) => {
+        // The real fractional index has landed, so sorting by position now
+        // produces the arrangement the drag asked for and the override has
+        // nothing left to say.
+        this.#replace(fresh);
+        this.#pendingOrder = null;
+      },
+      () => {
+        this.#pendingOrder = null;
+      },
+    );
+  }
+
+  /** One place up or down, for the sheet's buttons and for a keyboard. */
+  async step(item: Item, direction: -1 | 1) {
+    const at = this.openItems.findIndex((candidate) => candidate.id === item.id);
+    if (at < 0) return;
+    await this.move(item, at + direction);
   }
 
   async edit(item: Item, patch: { text?: string; note?: string }) {

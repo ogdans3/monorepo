@@ -54,15 +54,92 @@
     session.token === data.token ? data.shareUrl : `${location.origin}/l/${session.token}`,
   );
 
+  let openList = $state<HTMLElement | null>(null);
+  /** One flag for the screen, so the done shelf reserves the same left column. */
+  const canReorder = $derived(session.canWrite && session.openItems.length > 1);
+  let dragId = $state<string | null>(null);
+
+  /**
+   * Carrying a row to a new place.
+   *
+   * Measured off the rows themselves rather than tracked as a transform: the
+   * rows are already laid out, their midpoints are what decides where a drop
+   * lands, and reading them once at grab time means the pointer handler does
+   * arithmetic instead of layout. The list reorders live as the finger passes
+   * each midpoint, so what is on screen is what will be saved.
+   */
+  function grab(event: PointerEvent, item: Item) {
+    if (!session.canWrite || !openList) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    // The grip sits inside the row, which has its own swipe handler. Without
+    // this, carrying a row sideways would also try to open it.
+    event.stopPropagation();
+
+    const handle = event.currentTarget as Element;
+    handle.setPointerCapture(event.pointerId);
+    dragId = item.id;
+
+    const rows = () => [...openList!.querySelectorAll<HTMLElement>('li[data-item]')];
+    const ids = rows().map((row) => row.dataset.item!);
+    const midpoints = rows().map((row) => {
+      const box = row.getBoundingClientRect();
+      return box.top + box.height / 2;
+    });
+
+    let index = ids.indexOf(item.id);
+
+    // Typed as Event because addEventListener on a plain Element has no
+    // pointer-specific overload, and the alternative is a cast at every use.
+    const move = (moved: Event) => {
+      const at = (moved as PointerEvent).clientY;
+      // Where the finger is, against the midpoints as they were when the drag
+      // started. Using live rects would chase the rows it just moved.
+      let next = 0;
+      while (next < midpoints.length - 1 && at > midpoints[next + 1]) next++;
+      if (next === index) return;
+      index = next;
+      session.move(item, next);
+    };
+
+    const done = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', done);
+      handle.removeEventListener('pointercancel', done);
+      dragId = null;
+    };
+
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', done);
+    handle.addEventListener('pointercancel', done);
+  }
+
+  /**
+   * How close to the bottom still counts as being at the bottom. A row is 56px,
+   * so this is "the last row is in view" rather than "pixel perfect".
+   */
+  const STICK = 72;
+
   async function submit(event?: Event) {
     event?.preventDefault();
     const text = draft.trim();
     if (!text) return;
+
+    // Whether to follow the new row down, decided before anything moves.
+    //
+    // It used to jump to the bottom every time. The composer is fixed to the
+    // bottom of the shell, so somebody can scroll up to check what is already
+    // on the list, type the thing they just remembered, and get thrown to the
+    // end of the list for their trouble, losing the place they were reading.
+    // Sticking only when they were already at the bottom keeps the common case
+    // (add, add, add) and stops the annoying one.
+    const stick = !scroller || scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < STICK;
+
     draft = '';
     // Straight back to an empty field, still focused. Type, enter, type.
     composer?.focus();
     await session.add(text);
-    requestAnimationFrame(() => scroller?.scrollTo({ top: scroller.scrollHeight }));
+    if (stick) requestAnimationFrame(() => scroller?.scrollTo({ top: scroller.scrollHeight }));
   }
 
   function keydown(event: KeyboardEvent) {
@@ -218,14 +295,18 @@
           </p>
         </div>
       {:else}
-        <ul class="rows">
+        <ul class="rows" bind:this={openList}>
           {#each session.openItems as item (item.id)}
             <ItemRow
               {item}
               washing={session.isWashing(item.id)}
               readonly={!session.canWrite}
+              reorderable={canReorder}
+              reserveGrip={canReorder}
+              dragging={dragId === item.id}
               onToggle={() => session.toggle(item)}
               onOpen={() => (openItem = item)}
+              onGrab={(event) => grab(event, item)}
             />
           {/each}
         </ul>
@@ -243,6 +324,7 @@
                 {item}
                 washing={session.isWashing(item.id)}
                 readonly={!session.canWrite}
+                reserveGrip={canReorder}
                 onToggle={() => session.toggle(item)}
                 onOpen={() => (openItem = item)}
               />
@@ -303,6 +385,12 @@
     onclose={() => (openItem = null)}
     onsave={(patch) => session.edit(item, patch)}
     onremove={() => session.remove(item)}
+    onmove={session.canWrite && !item.checked ? (direction) => session.step(item, direction) : undefined}
+    canMoveUp={session.openItems.findIndex((candidate) => candidate.id === item.id) > 0}
+    canMoveDown={(() => {
+      const at = session.openItems.findIndex((candidate) => candidate.id === item.id);
+      return at >= 0 && at < session.openItems.length - 1;
+    })()}
   />
 {/if}
 

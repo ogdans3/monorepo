@@ -9,11 +9,18 @@
     onclose,
     onsave,
     onremove,
+    onmove,
+    canMoveUp = false,
+    canMoveDown = false,
   }: {
     item: Item;
     onclose: () => void;
     onsave: (patch: { text?: string; note?: string }) => void;
     onremove: () => void;
+    /** Step the item one place. Absent on a checked item and on a read link. */
+    onmove?: (direction: -1 | 1) => void;
+    canMoveUp?: boolean;
+    canMoveDown?: boolean;
   } = $props();
 
   // Deliberately the value as it was when the sheet opened. The sheet is
@@ -54,6 +61,24 @@
     ></textarea>
   </label>
 
+  <!--
+    The same job as the drag handle, without the drag. The handle is a
+    shortcut, not the only way in, which is what the design contract means by
+    no gesture-only affordance. It is also the only way to move something a
+    long way in a list that does not fit on one screen.
+  -->
+  {#if onmove}
+    <div class="move" role="group" aria-label="Position in the list">
+      <span>Position</span>
+      <button type="button" class="quiet" disabled={!canMoveUp} onclick={() => onmove(-1)}>
+        Move up
+      </button>
+      <button type="button" class="quiet" disabled={!canMoveDown} onclick={() => onmove(1)}>
+        Move down
+      </button>
+    </div>
+  {/if}
+
   {#if confirming}
     <div class="confirm">
       <p>
@@ -72,6 +97,24 @@
 </Sheet>
 
 <style>
+  .move {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .move > span {
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--ink-muted);
+  }
+
+  .move button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
   .save {
     min-height: 44px;
     padding: 0 14px;

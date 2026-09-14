@@ -143,7 +143,16 @@ export const api = {
   updateItem: (
     token: string,
     itemId: string,
-    patch: { text?: string; note?: string; checked?: boolean },
+    // afterId and beforeId are how an item moves. The API works them into a
+    // fractional index, so a move writes one row and two people dragging at
+    // once do not fight over integers.
+    patch: {
+      text?: string;
+      note?: string;
+      checked?: boolean;
+      afterId?: string | null;
+      beforeId?: string | null;
+    },
   ) => send<Item>('PATCH', `/list/items/${itemId}`, { token, body: patch }),
 
   deleteItem: (token: string, itemId: string) =>

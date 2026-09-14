@@ -7,8 +7,16 @@ import 'check_mark.dart';
 
 /// One line of the checklist.
 ///
-/// Anatomy: checkbox · text · right-edge affordance. Tapping the row or the
-/// box ticks it off. Swiping the row, or tapping the right edge, opens it.
+/// Anatomy: grip · checkbox · text · right-edge affordance. **The box ticks it
+/// off and nothing else does.** Tapping anywhere else on the row opens it, as
+/// does swiping it or tapping the right edge.
+///
+/// That split is deliberate and it used to be the other way round: the whole
+/// row toggled and only a 44dp chevron opened. Which made the cheap accident,
+/// ticking something off by misjudging a tap, the easy one, and the deliberate
+/// act the fiddly one. Ticking is the thing worth being sure about, so it gets
+/// its own target and nothing else triggers it.
+///
 /// The chevron is always drawn, because this is a touch product and a
 /// hover-revealed affordance is no affordance at all.
 class ItemRow extends StatelessWidget {
@@ -18,6 +26,8 @@ class ItemRow extends StatelessWidget {
     required this.onOpen,
     this.washing = false,
     this.readOnly = false,
+    this.reorderIndex,
+    this.reserveGrip = false,
     super.key,
   });
 
@@ -31,6 +41,18 @@ class ItemRow extends StatelessWidget {
   /// A read link. The row shows everything and responds to nothing.
   final bool readOnly;
 
+  /// Where this row sits in the reorderable list, or null when it cannot be
+  /// dragged: a read link, or the done shelf, which is ordered by being done.
+  final int? reorderIndex;
+
+  /// Keep the grip's width even without a grip.
+  ///
+  /// The done shelf never reorders, so its rows have no handle, and without
+  /// this their checkboxes sat 24dp left of the open ones directly above them.
+  /// Two lists on one screen with their columns not lining up reads as broken
+  /// rather than as a distinction, which the golden caught.
+  final bool reserveGrip;
+
   @override
   Widget build(BuildContext context) {
     final colors = CheckpostTheme.of(context);
@@ -40,14 +62,14 @@ class ItemRow extends StatelessWidget {
     final row = Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: readOnly ? null : onToggle,
+        onTap: readOnly ? null : onOpen,
         splashColor: colors.primaryQuiet.withValues(alpha: 0.5),
         highlightColor: colors.surfaceHover,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: Space.rowHeight),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Space.gutter,
+            padding: EdgeInsets.fromLTRB(
+              reorderIndex == null && !reserveGrip ? Space.gutter : Space.xs,
               Space.md,
               0,
               Space.md,
@@ -55,16 +77,51 @@ class ItemRow extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // The box has its own 48dp target inside the row's tap area,
-                // so the two never fight over a near-miss.
+                if (reorderIndex == null && reserveGrip)
+                  const SizedBox(width: 40)
+                else if (reorderIndex != null) ...[
+                  // Press and drag to carry the row. A handle of its own rather
+                  // than a long press on the row, because the row's own job is
+                  // opening the item now, and a gesture stacked on top of
+                  // another one is a gesture people fire by accident. The item
+                  // sheet carries Move up and Move down for the same job
+                  // without a drag, so this is not gesture-only.
+                  ReorderableDragStartListener(
+                    index: reorderIndex!,
+                    child: Semantics(
+                      label: 'Reorder ${item.text}',
+                      child: SizedBox(
+                        width: 40,
+                        height: Space.minTarget,
+                        child: Icon(
+                          Icons.drag_indicator_rounded,
+                          size: 20,
+                          color: colors.inkFaint,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                // The box owns ticking, with its own 48dp target. The row
+                // around it opens the item, so the two never fight over a
+                // near-miss and a miss costs a sheet rather than a change.
                 Semantics(
                   checked: item.checked,
                   label: item.text,
+                  button: true,
                   child: ExcludeSemantics(
-                    child: CheckMark(checked: item.checked),
+                    child: InkResponse(
+                      onTap: readOnly ? null : onToggle,
+                      radius: 24,
+                      child: SizedBox(
+                        width: Space.minTarget,
+                        height: Space.minTarget,
+                        child: Center(child: CheckMark(checked: item.checked)),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: Space.md + 1),
+                const SizedBox(width: Space.xs),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

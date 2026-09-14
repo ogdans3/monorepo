@@ -18,6 +18,78 @@ void main() {
     realtimeFactory: noRealtime,
   );
 
+  group('reordering', () {
+    test('moves an item and keeps the new order after the server answers', () async {
+      server
+        ..addItem('Tent')
+        ..addItem('Stove')
+        ..addItem('Kettle');
+      final controller = controllerFor(server);
+      await controller.load();
+
+      await controller.moveItem(controller.openItems[2], 0);
+
+      expect(
+        controller.openItems.map((item) => item.text),
+        ['Kettle', 'Tent', 'Stove'],
+      );
+      // And the server agrees, which is what makes it survive a reload. The
+      // position is a fractional index, so the check is the order it sorts
+      // into rather than the key itself.
+      final positions = {
+        for (final item in server.items) item['text']: item['position'] as String,
+      };
+      expect(
+        positions['Kettle']!.compareTo(positions['Tent']!),
+        lessThan(0),
+      );
+    });
+
+    test('puts the row on screen before the request lands', () async {
+      server
+        ..addItem('Tent')
+        ..addItem('Stove');
+      final controller = controllerFor(server);
+      await controller.load();
+
+      // No await: the arrangement is optimistic, because a drag that waits for
+      // a round trip springs back under the finger.
+      final move = controller.moveItem(controller.openItems[1], 0);
+      expect(controller.openItems.map((item) => item.text), ['Stove', 'Tent']);
+      await move;
+      expect(controller.openItems.map((item) => item.text), ['Stove', 'Tent']);
+    });
+
+    test('puts the order back when the move fails', () async {
+      server
+        ..addItem('Tent')
+        ..addItem('Stove');
+      final controller = controllerFor(server);
+      await controller.load();
+      server
+        ..failNextStatus = 409
+        ..failNextCode = 'conflict'
+        ..failNextMessage = 'Somebody else moved it.';
+
+      await controller.moveItem(controller.openItems[1], 0);
+
+      expect(controller.openItems.map((item) => item.text), ['Tent', 'Stove']);
+    });
+
+    test('stepping past either end does nothing', () async {
+      server
+        ..addItem('Tent')
+        ..addItem('Stove');
+      final controller = controllerFor(server);
+      await controller.load();
+
+      await controller.stepItem(controller.openItems.first, -1);
+      expect(controller.openItems.map((item) => item.text), ['Tent', 'Stove']);
+      await controller.stepItem(controller.openItems.last, 1);
+      expect(controller.openItems.map((item) => item.text), ['Tent', 'Stove']);
+    });
+  });
+
   group('loading', () {
     test('shows the list, in position order', () async {
       server

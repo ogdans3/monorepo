@@ -113,9 +113,22 @@ loading / error states.
 - **Checkbox.** 24dp square, 8dp radius, 1.5dp `inkFaint` border when
   unchecked. Fills `primary` with a white mark when checked. 48dp hit target.
   The mark draws in over 180ms. It does not pop or bounce.
-- **Item row.** Checkbox · text · right-edge affordance (a 44dp column with a
-  low-contrast chevron that is always present, never hover-revealed). Checked
-  rows go `inkMuted` with a strikethrough and drift to the bottom shelf.
+- **Item row.** Grip · checkbox · text · right-edge affordance (a 44dp column
+  with a low-contrast chevron that is always present, never hover-revealed).
+  Checked rows go `inkMuted` with a strikethrough and drift to the bottom shelf.
+  **The box ticks the item and nothing else does. Tapping the row opens it.**
+  That split is the way round it is because the two acts are not equally cheap
+  to get wrong: a stray tick is a change everyone on the list sees, and a stray
+  open costs a tap to close. It used to be the other way, with the whole row
+  toggling and only the 44dp chevron opening.
+- **Grip.** A 40dp column of `inkFaint` dots at the head of every unchecked
+  row, held and dragged to move the row. The done shelf never reorders, but its
+  rows **reserve the same 40dp** so the two lists' checkbox columns line up: a
+  screen where they do not reads as broken rather than as a distinction. On a
+  read link, and on a list of one, neither the grip nor its space is drawn.
+  Dragging is a shortcut, never the only way: the item sheet carries Move up
+  and Move down, which is also the only way to move something a long way in a
+  list that does not fit on one screen.
 - **Composer.** A persistent bottom field on the list screen, not a modal. Enter
   submits and keeps focus so you can type five items in a row.
 - **Sheets.** The item detail and the share sheet are bottom sheets with a
@@ -140,6 +153,7 @@ choreography.
 | Sheet in / out | 240ms / 180ms | Translate + scrim fade |
 | Remote change arrives | 200ms | Crossfade in place, plus one 900ms `primaryQuiet` wash on the changed row so you can see what someone else did |
 | Swipe-to-open | tracks finger | Row translates, chevron rotates, releases past 40% |
+| Carrying a row | tracks finger | The row lifts on a `surfaceHover` fill and a soft shadow, and the rows under it part as it passes their midpoints |
 
 Under **Reduce Motion** every one of these becomes an instant state change or a
 plain crossfade. The remote-change wash still fires, because it is information
