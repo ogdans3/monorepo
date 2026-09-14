@@ -37,6 +37,10 @@ FILE="$DEST/checkpost-$(date -u '+%Y%m%dT%H%M%SZ').dump"
 TMP="$FILE.partial"
 INSIDE="/tmp/checkpost-backup.dump"
 
+# A run that dies halfway leaves a .partial behind, and a directory slowly
+# filling with them is how you stop reading the backup log.
+trap '[ -f "$TMP" ] && rm -f "$TMP"' EXIT
+
 # The dump is written inside the container and copied out afterwards, rather
 # than piped through stdout. A custom-format archive has to be seekable to be
 # read back, and `pg_restore --list /dev/stdin` under `docker exec` is not:
