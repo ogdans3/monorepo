@@ -35,17 +35,27 @@ fi
 
 FILE="$DEST/checkpost-$(date -u '+%Y%m%dT%H%M%SZ').dump"
 TMP="$FILE.partial"
+INSIDE="/tmp/checkpost-backup.dump"
 
+# The dump is written inside the container and copied out afterwards, rather
+# than piped through stdout. A custom-format archive has to be seekable to be
+# read back, and `pg_restore --list /dev/stdin` under `docker exec` is not:
+# it fails with "did not find magic string in file header" on a perfectly good
+# dump, which is a bad way to learn your backups are fine.
+docker exec "$CONTAINER" rm -f "$INSIDE"
 docker exec "$CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" \
-  --no-owner --no-acl --format=custom > "$TMP"
+  --no-owner --no-acl --format=custom --file="$INSIDE"
 
 # A dump that restores to an empty database is worse than no dump, because it
 # looks like one. Refuse anything missing the tables the app cannot work without.
-TOC="$(docker exec -i "$CONTAINER" pg_restore --list /dev/stdin < "$TMP")"
+TOC="$(docker exec "$CONTAINER" pg_restore --list "$INSIDE")"
 MISSING=""
 for t in lists items share_links; do
   grep -q "TABLE DATA public $t " <<<"$TOC" || MISSING="$MISSING $t"
 done
+
+docker cp "$CONTAINER:$INSIDE" "$TMP" >/dev/null
+docker exec "$CONTAINER" rm -f "$INSIDE"
 
 if [ -n "$MISSING" ]; then
   mv "$TMP" "$FILE.suspect"
