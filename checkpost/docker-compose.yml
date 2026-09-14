@@ -21,7 +21,12 @@ services:
       # ssh -L 5433:127.0.0.1:5433 <server>.
       - '${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5433}:5432'
     volumes:
-      - db-data:/var/lib/postgresql/data
+      # The mount is one level up from where you would expect. From 18 the
+      # image keeps its data in a major-version subdirectory of
+      # /var/lib/postgresql, so that pg_upgrade --link can see both versions
+      # inside one mount. Mounting /var/lib/postgresql/data instead makes the
+      # container refuse to start with "unused mount/volume".
+      - db-data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-checkpost} -d ${POSTGRES_DB:-checkpost}']
       interval: 5s
