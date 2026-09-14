@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
+import '../util/clock.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
@@ -348,8 +349,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
   Widget _dayLabel(DateTime? when) {
     if (when == null) return const SizedBox.shrink();
     final local = when.toLocal();
-    final now = DateTime.now();
-    final days = DateTime(now.year, now.month, now.day)
+    final today = now();
+    final days = DateTime(today.year, today.month, today.day)
         .difference(DateTime(local.year, local.month, local.day))
         .inDays;
     final time =
@@ -528,11 +529,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
 String _relative(DateTime? when) {
   if (when == null) return '';
-  final now = DateTime.now();
-  final diff = now.difference(when);
+  final today = now();
+  final diff = today.difference(when);
   if (diff.inMinutes < 1) return 'nå';
   if (diff.inHours < 1) return '${diff.inMinutes} min';
-  if (now.day == when.day && diff.inHours < 24) {
+  if (today.day == when.day && diff.inHours < 24) {
     return '${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}';
   }
   if (diff.inDays < 2) return 'i går';

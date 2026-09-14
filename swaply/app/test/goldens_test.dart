@@ -33,6 +33,7 @@ import 'package:swaply_app/screens/review.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/util/clock.dart';
 
 import 'export_fixtures.dart' as fx;
 import 'fake_photos.dart';
@@ -195,6 +196,9 @@ Future<PickedPhoto?> _pick() async =>
 
 void main() {
   setUp(() async {
+    // A Thursday afternoon, so «i går» and «tirsdag» stay what they were drawn.
+    now = () => DateTime(2026, 9, 10, 14, 30);
+    addTearDown(() => now = DateTime.now);
     await _loadFonts();
     SharedPreferences.setMockInitialValues({});
     server = FakeServer(export: true);

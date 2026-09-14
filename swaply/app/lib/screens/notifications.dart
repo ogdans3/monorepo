@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
+import '../util/clock.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
 import 'item_detail.dart';
@@ -140,7 +141,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   String _ago(DateTime? when) {
     if (when == null) return '';
-    final diff = DateTime.now().difference(when);
+    final diff = now().difference(when);
     if (diff.inMinutes < 1) return 'nå';
     if (diff.inHours < 1) return '${diff.inMinutes} min';
     if (diff.inDays < 1) return '${diff.inHours} t';

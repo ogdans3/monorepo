@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
+import '../util/clock.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/confetti.dart';
@@ -476,7 +477,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
   Widget _withdrawalBanner(Trade trade) {
     final w = trade.withdrawal!;
     final other = trade.receivingFrom.displayName.split(' ').first;
-    final left = w.respondsBy?.difference(DateTime.now());
+    final left = w.respondsBy?.difference(now());
 
     return Padding(
       padding: const EdgeInsets.only(top: Insets.sm),

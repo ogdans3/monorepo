@@ -4,6 +4,8 @@
 // show the same things, so this is Ola's world as the export has it: his four
 // things, Kari with six, a trade waiting on him and one waiting on Anne, three
 // chats, the people who liked his drill. The photographs are the export's own.
+import 'package:swaply_app/util/clock.dart';
+
 import 'fake_server.dart';
 
 const photos = 'http://test/photos/';
@@ -21,7 +23,7 @@ const photoFiles = [
 
 /// «14:12» today, «i går», «tirsdag»: times relative to when the test runs.
 String _at(int daysAgo, int hour, int minute) {
-  final n = DateTime.now();
+  final n = now();
   return DateTime(n.year, n.month, n.day - daysAgo, hour, minute).toUtc().toIso8601String();
 }
 
