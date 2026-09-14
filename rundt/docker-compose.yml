@@ -1,0 +1,21 @@
+name: rundt
+
+# Compose og ikke en enslig container, av én grunn: e-postlista må overleve at
+# containeren byttes ut. Dashboardet sletter og gjenskaper containeren for hver
+# start, og en enslig container får ikke noe volum. Her får den det.
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATA_DIR: /data
+      # Settes den, dukker et kontaktavsnitt opp på personvernsida. Står den
+      # tom, forsvinner avsnittet helt — bedre enn en mailto-lenke til ingen.
+      KONTAKT_EPOST: ${KONTAKT_EPOST:-}
+    volumes:
+      - liste:/data
+
+volumes:
+  liste:

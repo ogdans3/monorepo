@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RUNDT — tegn streken, bilen følger</title>
+<meta name="description" content="RUNDT er et trafikkpuslespill for telefon. Du tegner ruta hver bil skal kjøre, og bilen kjører den. Sju baner. Ikke ute enda — legg igjen e-posten, så sier vi fra.">
+<link rel="canonical" href="https://rundt.freelunch.no/">
+<meta name="theme-color" content="#0b2a40">
+<link rel="icon" href="/ikon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="RUNDT — tegn streken, bilen følger">
+<meta property="og:description" content="Et trafikkpuslespill for telefon. Sju baner. Ikke ute enda.">
+<meta property="og:image" content="https://rundt.freelunch.no/bilder/delebilde.png">
+<meta property="og:locale" content="nb_NO">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/skrift/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/stil.css">
+</head>
+<body>
+
+<a class="hopp" href="#hovedinnhold">Hopp til innholdet</a>
+
+<header class="topp">
+  <p class="merke"><span class="merke__navn">RUNDT</span> <span class="merke__slagord">Finn flyten.</span></p>
+  <p class="status">Ikke ute enda</p>
+</header>
+
+<main id="hovedinnhold">
+
+  <section class="apning">
+    <div class="apning__ord">
+      <h1>Tegn streken.<br>Bilen følger.</h1>
+      <p class="ingress">
+        Et trafikkpuslespill for telefon. Du drar en strek fra bilen til utgangen
+        den skal ut av, og så kjører den dit i sitt eget tempo. Det er den lette
+        delen. Den vanskelige er at det står seksti biler til i rundkjøringa, og
+        ingen av dem skal møtes.
+      </p>
+
+      <svg class="rute" viewBox="0 0 420 76" aria-hidden="true" focusable="false">
+        <path class="rute__skygge" d="M6 20 C 96 20, 110 62, 196 62 S 300 16, 352 46 L 352 58" />
+        <path class="rute__strek" d="M6 20 C 96 20, 110 62, 196 62 S 300 16, 352 46 L 352 58" />
+        <path class="rute__pil" d="M342 50 L 352 64 L 362 50" />
+      </svg>
+
+      <form class="skjema" data-varsling data-kilde="apning" method="post" action="/api/varsling" novalidate>
+        <h2 class="skjema__tittel">Si fra når det kommer</h2>
+        <div class="skjema__rad">
+          <label class="skjema__merkelapp" for="epost-apning">E-post</label>
+          <input class="felt" id="epost-apning" name="epost" type="email" inputmode="email"
+                 autocomplete="email" placeholder="navn@epost.no" required
+                 spellcheck="false" enterkeyhint="send">
+          <p class="felt__gate" aria-hidden="true">
+            <label for="gate-apning">Gateadresse</label>
+            <input id="gate-apning" name="gate" type="text" tabindex="-1" autocomplete="off">
+          </p>
+          <button class="knapp" type="submit">Sett meg på lista</button>
+        </div>
+        <p class="skjema__beskjed" data-beskjed role="status"></p>
+        <p class="skjema__liten">
+          Én e-post, den dagen spillet slippes. Ikke noe annet. Vi lagrer adressen
+          selv, deler den ikke, og du kan <a href="/personvern#slett">slette den</a> når du vil.
+        </p>
+      </form>
+    </div>
+
+    <figure class="apning__bilde">
+      <picture>
+        <source media="(max-width: 600px)" srcset="/bilder/spill-590.webp">
+        <img src="/bilder/spill.webp" width="1179" height="2556" fetchpriority="high"
+             alt="Nivå 12 i Rundkjøringen: tre tegnede ruter i rødt, blått og gult går fra biler inne i rundkjøringa og ut til utgang 1, 2 og 3. Teller øverst viser 60 biler igjen.">
+      </picture>
+      <figcaption>Rundkjøringen, nivå 12. Tre ruter tegnet, seksti biler igjen.</figcaption>
+    </figure>
+  </section>
+
+  <section class="del del--regler">
+    <div class="del__ord">
+      <h2>Reglene tar ti sekunder</h2>
+      <div class="del__tekst">
+        <p>
+          Hver bil har et tall på taket og skal ut av utgangen med samme tall. Du
+          tegner ruta med fingeren. Bilen kjører akkurat den ruta, uansett hva som
+          skjer rundt den, så det er timingen din som avgjør — ikke refleksene.
+          To biler som møtes er slutten på nivået.
+        </p>
+        <p>
+          Tre knapper hjelper når det strammer seg til. <b>Fart</b> skrur opp
+          tempoet mens du har kontroll. <b>Pusterom</b> sakker alt ned når du ikke
+          har det. <b>Spøkelse</b> lar én bil kjøre tvers gjennom de andre. Du har
+          ikke mange av dem.
+        </p>
+        <p>
+          Biler du får ut gir mynter, og myntene går i garasjen: Lynbil,
+          Sprettbilen, Skarpe svinger, Klarsyn. Noen varer ett nivå, noen varer
+          for alltid, og noen er bare til pynt.
+        </p>
+      </div>
+    </div>
+
+    <div class="stripe" role="group" tabindex="0" aria-label="Skjermbilder fra spillet">
+      <figure>
+        <img src="/bilder/ruter.webp" srcset="/bilder/ruter-590.webp 590w, /bilder/ruter.webp 1179w"
+             sizes="(max-width: 700px) 62vw, 240px" width="1179" height="2556" loading="lazy" decoding="async"
+             alt="Samme nivå med fem ruter tegnet samtidig, kryss i kryss.">
+        <figcaption>Det pleier å se sånn ut etter et halvt minutt.</figcaption>
+      </figure>
+      <figure>
+        <img src="/bilder/garasjen.webp" srcset="/bilder/garasjen-590.webp 590w, /bilder/garasjen.webp 1179w"
+             sizes="(max-width: 700px) 62vw, 240px" width="1179" height="2556" loading="lazy" decoding="async"
+             alt="Garasjen, med fanene Ladninger, Permanent og Kosmetikk og oppgraderingene Lynbil, Sprettbilen, Skarpe svinger og Klarsyn.">
+        <figcaption>Garasjen. Myntene skal et sted.</figcaption>
+      </figure>
+      <figure>
+        <img src="/bilder/nivaer.webp" srcset="/bilder/nivaer-590.webp 590w, /bilder/nivaer.webp 1179w"
+             sizes="(max-width: 700px) 62vw, 240px" width="1179" height="2556" loading="lazy" decoding="async"
+             alt="Nivåkartet for Rundkjøringen med tjue nivåer, der noen er merket Tog, Bro og Dobbel bro.">
+        <figcaption>Tjue nivåer i den første banen alene.</figcaption>
+      </figure>
+      <figure>
+        <img src="/bilder/krasj.webp" srcset="/bilder/krasj-590.webp 590w, /bilder/krasj.webp 1179w"
+             sizes="(max-width: 700px) 62vw, 240px" width="1179" height="2556" loading="lazy" decoding="async"
+             alt="Sluttskjerm etter en kollisjon: Krasj, 53 mynter tjent, 45 av 72 biler, tid 01:37.">
+        <figcaption>Og sånn her ser det ut etter ett minutt og trettisju.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="del del--baner">
+    <div class="del__ord">
+      <h2>Sju baner</h2>
+      <p>
+        Hver bane er sitt eget kryss med sine egne problemer. Du åpner den neste
+        ved å komme deg gjennom de ti første nivåene i den forrige.
+      </p>
+    </div>
+
+    <ol class="baner">
+      <li>
+        <span class="baner__nr">01</span>
+        <span class="baner__navn">Rundkjøringen</span>
+        <span class="baner__note">Tjue nivåer. Tog gjennom krysset, så bro over, så dobbel bro.</span>
+      </li>
+      <li>
+        <span class="baner__nr">02</span>
+        <span class="baner__navn">Parkeringsplassen</span>
+        <span class="baner__note">Tjue nivåer. Trangt, og noen står parkert fra før.</span>
+      </li>
+      <li class="baner--laast">
+        <span class="baner__nr">03</span>
+        <span class="baner__navn">Skoleveien</span>
+        <span class="baner__note">Åpnes av Parkeringsplassen.</span>
+      </li>
+      <li class="baner--laast">
+        <span class="baner__nr">04</span>
+        <span class="baner__navn">Bykrysset</span>
+        <span class="baner__note">Åpnes av Skoleveien.</span>
+      </li>
+      <li class="baner--laast">
+        <span class="baner__nr">05</span>
+        <span class="baner__navn">Trikkegata</span>
+        <span class="baner__note">Åpnes av Bykrysset. Trikken kommer uansett hva du har tegnet.</span>
+      </li>
+      <li class="baner--laast">
+        <span class="baner__nr">06</span>
+        <span class="baner__navn">Motorveien</span>
+        <span class="baner__note">Åpnes av Trikkegata. Ingen rundkjøring å gjemme seg i, bare to kjøreretninger.</span>
+      </li>
+      <li class="baner--laast">
+        <span class="baner__nr">07</span>
+        <span class="baner__navn">Fergekaia</span>
+        <span class="baner__note">Åpnes av Motorveien.</span>
+      </li>
+    </ol>
+
+    <figure class="baner__bilde">
+      <picture>
+        <source media="(max-width: 600px)" srcset="/bilder/velg-bane-590.webp">
+        <img src="/bilder/velg-bane.webp" width="1179" height="2556" loading="lazy" decoding="async"
+             alt="Banevelgeren i spillet, med Rundkjøringen på skjermen og 11 av 20 nivåer fullført.">
+      </picture>
+      <figcaption>Og så er det en globus der også, merket «Utforsk verden». Vi sier ikke mer om den enda.</figcaption>
+    </figure>
+  </section>
+
+  <section class="del del--slutt">
+    <form class="skjema skjema--slutt" data-varsling data-kilde="slutt" method="post" action="/api/varsling" novalidate>
+      <h2 class="skjema__tittel">Det er ingen dato enda</h2>
+      <p class="skjema__ingress">
+        Men det blir en. Legg igjen adressen, så er du den første som får vite det.
+      </p>
+      <div class="skjema__rad">
+        <label class="skjema__merkelapp" for="epost-slutt">E-post</label>
+        <input class="felt" id="epost-slutt" name="epost" type="email" inputmode="email"
+               autocomplete="email" placeholder="navn@epost.no" required
+               spellcheck="false" enterkeyhint="send">
+        <p class="felt__gate" aria-hidden="true">
+          <label for="gate-slutt">Gateadresse</label>
+          <input id="gate-slutt" name="gate" type="text" tabindex="-1" autocomplete="off">
+        </p>
+        <button class="knapp" type="submit">Sett meg på lista</button>
+      </div>
+      <p class="skjema__beskjed" data-beskjed role="status"></p>
+      <p class="skjema__liten">
+        Én e-post, den dagen spillet slippes. <a href="/personvern#slett">Slett adressen</a> når du vil.
+      </p>
+    </form>
+  </section>
+
+</main>
+
+<footer class="bunn">
+  <p class="bunn__navn">RUNDT</p>
+  <p>Under utvikling. Kommer til telefon.</p>
+  <p><a href="/personvern">Personvern</a></p>
+</footer>
+
+<script src="/side.js" defer></script>
+</body>
+</html>

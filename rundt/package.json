@@ -1,0 +1,13 @@
+{
+  "name": "rundt",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Landingsside for RUNDT, et trafikkpuslespill for telefon.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js"
+  }
+}

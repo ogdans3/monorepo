@@ -1,0 +1,7 @@
+name: RUNDT
+description: Landingsside for RUNDT, et trafikkpuslespill for telefon. Spillet er ikke ute, så sida samler e-postadresser til lanseringen.
+
+# Front-døra er den eneste tjenesten. Den trenger ingen publisert port —
+# dashboardet kobler den på aicentral-nettet og proxyer dit selv.
+compose_service: web
+compose_port: 3000

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personvern — RUNDT</title>
+<meta name="description" content="Hva vi lagrer når du ber om beskjed om RUNDT, hvorfor, hvor lenge, og hvordan du blir kvitt det.">
+<meta name="theme-color" content="#0b2a40">
+<link rel="icon" href="/ikon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/stil.css">
+</head>
+<body>
+
+<header class="topp">
+  <p class="merke"><a class="merke__navn" href="/">RUNDT</a> <span class="merke__slagord">Finn flyten.</span></p>
+</header>
+
+<main class="tekstside">
+  <a class="tilbake" href="/">← Tilbake til forsiden</a>
+
+  <h1>Personvern</h1>
+
+  <p>
+    Denne siden har ett skjema, og skjemaet lagrer én ting. Resten av siden
+    sender ingenting noe sted.
+  </p>
+
+  <h2>Hva vi lagrer</h2>
+  <p>Når du melder deg på varsling, lagrer vi tre ting:</p>
+  <ul>
+    <li>e-postadressen du skrev inn,</li>
+    <li>tidspunktet du skrev den inn,</li>
+    <li>hvilket av de to skjemaene på siden du brukte.</li>
+  </ul>
+  <p>
+    Det er alt. Vi lagrer ikke IP-adressen din, og siden har ingen
+    informasjonskapsler, ingen analyseverktøy og ingen sporingspiksler. Skrift,
+    bilder og skript kommer fra vår egen server, så nettleseren din snakker
+    ikke med noen andre mens du er her.
+  </p>
+
+  <h2>Hva vi bruker det til</h2>
+  <p>
+    Til å sende deg én e-post den dagen RUNDT er ute. Ikke noe annet. Ikke et
+    nyhetsbrev, ikke oppdateringer underveis, ikke noe fra noen andre. Vi selger
+    ikke lista og deler den ikke.
+  </p>
+  <p>
+    Det rettslige grunnlaget er samtykket ditt, altså at du fylte inn adressen
+    selv. Du kan trekke det tilbake når som helst ved å slette adressen nedenfor.
+  </p>
+
+  <h2>Hvor lenge</h2>
+  <p>
+    Til vi har sendt den ene e-posten. Da har lista gjort jobben sin, og den
+    slettes. Skulle spillet bli lagt bort uten å bli sluppet, slettes lista
+    også da.
+  </p>
+
+  <h2>Hvor det ligger</h2>
+  <p>
+    På vår egen server i Europa, i en helt vanlig fil. Ingen tredjepart har
+    tilgang til den.
+  </p>
+
+  <h2>Rettighetene dine</h2>
+  <p>
+    Du kan når som helst få vite om adressen din står der, få den rettet, eller
+    få den slettet. Sletting kan du gjøre selv, med en gang, i skjemaet under.
+    Du kan også klage til Datatilsynet hvis du mener vi håndterer dette feil.
+  </p>
+
+  <h2 id="slett">Slett adressen min</h2>
+  <p>
+    Skriv inn adressen, så er den borte fra fila. Ingen bekreftelse, ingen
+    e-post, ingen «er du sikker».
+  </p>
+
+  <form class="skjema" data-slett method="post" action="/api/varsling/slett" novalidate>
+    <div class="skjema__rad">
+      <label class="skjema__merkelapp" for="epost-slett">E-post</label>
+      <input class="felt" id="epost-slett" name="epost" type="email" inputmode="email"
+             autocomplete="email" placeholder="navn@epost.no" required
+             spellcheck="false" enterkeyhint="send">
+      <p class="felt__gate" aria-hidden="true">
+        <label for="gate-slett">Gateadresse</label>
+        <input id="gate-slett" name="gate" type="text" tabindex="-1" autocomplete="off">
+      </p>
+      <button class="knapp" type="submit">Slett adressen</button>
+    </div>
+    <p class="skjema__beskjed" data-beskjed role="status"></p>
+    <p class="skjema__liten">
+      Svaret er det samme enten adressen sto på lista eller ikke. Ellers hadde
+      dette skjemaet vært en måte å finne ut hvem som står der.
+    </p>
+  </form>
+
+  <!-- hvis:KONTAKT -->
+  <h2>Kontakt</h2>
+  <p>Spørsmål om noe av dette: <a href="mailto:{{KONTAKT}}">{{KONTAKT}}</a></p>
+  <!-- /hvis:KONTAKT -->
+</main>
+
+<script src="/side.js" defer></script>
+</body>
+</html>

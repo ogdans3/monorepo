@@ -1,0 +1,530 @@
+/* RUNDT — landingsside.
+   Fargene er plukket ut av spillets egne skjermbilder, ikke valgt ved siden av
+   dem: #0b2a40 er menybakgrunnen, #ffc32b er tittelen, #5ed78f er gresset.
+   Derfor må siden og skjermbildene på den se ut som samme sted. */
+
+@font-face {
+  font-family: 'Archivo';
+  src: url('/skrift/archivo-latin.woff2') format('woff2');
+  font-weight: 400 900;
+  font-stretch: 62% 125%;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                 U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+                 U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* grunnen: menybakgrunnen i spillet, med lyset den har i midten */
+  --grunn: oklch(0.2744 0.0544 243.4);
+  --grunn-2: oklch(0.3372 0.0595 233.5);
+  --grunn-3: oklch(0.4022 0.0730 235.3);
+  /* Kanten rundt et skjemafelt er en komponentkant og må ha 3:1 mot grunnen,
+     ikke bare være synlig. --asfalt lå på 1,7:1 og så helt grei ut, som er
+     nettopp problemet. Denne ligger på 3,5:1. */
+  --kant: oklch(0.5795 0.0477 236.1);
+  /* Dempet, men fortsatt lesbar: 5,3:1. Brukes på nummeret til en låst bane. */
+  --kritt-svak: oklch(0.6852 0.0479 236.3);
+
+  /* skiltgult gjør alt arbeidet: tittel, knapper, tall */
+  --skilt: oklch(0.8489 0.1645 84.5);
+  --skilt-dyp: oklch(0.6300 0.1280 74.0);
+
+  --gress: oklch(0.7917 0.1505 154.7);
+  --kjegle: oklch(0.6797 0.2100 32.4);
+
+  --kritt: oklch(0.9588 0.0117 231.7);
+  --kritt-dempet: oklch(0.7894 0.0438 231.9);
+
+  --skygge-hard: oklch(0.2320 0.0428 237.7);
+
+  --linje: color-mix(in oklab, var(--kritt) 14%, transparent);
+
+  --radius: 16px;
+  --radius-bilde: 26px;
+
+  --kurve: cubic-bezier(0.22, 1, 0.36, 1);
+  --fart: 200ms;
+
+  --marg: clamp(1.25rem, 5vw, 4rem);
+  --bredde: 72rem;
+
+  /* dropdown < sticky < modal < toast. Ingen 9999. */
+  --lag-innhold: 1;
+  --lag-topp: 10;
+  --lag-hopp: 100;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--grunn);
+  /* Det lyse feltet bak innholdet er det samme som ligger bak menyene i
+     spillet. Det er en enkelt myk sirkel, ikke en gradientflate. */
+  background-image: radial-gradient(
+    120% 70% at 50% -8%,
+    var(--grunn-2) 0%,
+    var(--grunn) 62%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--kritt);
+  font-family: 'Archivo', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  font-variation-settings: 'wdth' 100;
+  font-weight: 450;
+  line-height: 1.62;
+  text-wrap: pretty;
+}
+
+h1, h2 {
+  font-weight: 800;
+  font-variation-settings: 'wdth' 108;
+  letter-spacing: -0.03em;
+  line-height: 1.0;
+  text-wrap: balance;
+  margin: 0;
+}
+
+h1 { font-size: clamp(2.5rem, 1.6rem + 4.4vw, 4.4rem); }
+h2 { font-size: clamp(1.7rem, 1.2rem + 2.2vw, 2.6rem); line-height: 1.05; }
+
+p { margin: 0 0 1rem; }
+p:last-child { margin-bottom: 0; }
+
+a {
+  color: var(--skilt);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, var(--skilt) 45%, transparent);
+  transition: text-decoration-color var(--fart) var(--kurve);
+}
+a:hover { text-decoration-color: var(--skilt); }
+
+b { font-weight: 700; color: var(--kritt); }
+
+img { max-width: 100%; height: auto; display: block; }
+
+:focus-visible {
+  outline: 3px solid var(--skilt);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.hopp {
+  position: absolute;
+  left: -9999px;
+  z-index: var(--lag-hopp);
+  background: var(--skilt);
+  color: var(--grunn);
+  padding: 0.75rem 1.25rem;
+  border-radius: 0 0 var(--radius) 0;
+  font-weight: 700;
+  text-decoration: none;
+}
+.hopp:focus { left: 0; top: 0; }
+
+/* ---------- topp ---------- */
+
+.topp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  max-width: var(--bredde);
+  margin-inline: auto;
+  padding: clamp(1.25rem, 3vw, 2.25rem) var(--marg) 0;
+}
+
+.merke {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.85rem;
+  margin: 0;
+}
+
+/* Ordmerket er et sitat fra spillets egen tittelskjerm: gult med en hard,
+   uskarp skygge rett under. Det er det eneste stedet på siden med en
+   teksteffekt, og det er derfor den får være der. */
+.merke__navn {
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-variation-settings: 'wdth' 122;
+  letter-spacing: 0.01em;
+  color: var(--skilt);
+  text-shadow: 0 3px 0 var(--skygge-hard);
+}
+
+.merke__slagord {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gress);
+}
+
+.status {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variation-settings: 'wdth' 108;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kritt-dempet);
+  border: 2px solid var(--kant);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+}
+
+/* ---------- åpningen ---------- */
+
+.apning {
+  max-width: var(--bredde);
+  margin-inline: auto;
+  padding: clamp(2.5rem, 6vw, 5rem) var(--marg) clamp(3rem, 7vw, 6rem);
+  display: grid;
+  gap: clamp(2.5rem, 5vw, 4rem);
+  align-items: start;
+}
+
+@media (min-width: 62rem) {
+  .apning {
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+    gap: clamp(2rem, 5vw, 5rem);
+    /* Skjermbildet er høyere enn teksten uansett hva teksten sier, så
+       teksten sentreres mot det. Toppjustert ble det et hull under skjemaet. */
+    align-items: center;
+  }
+}
+
+.ingress {
+  margin-top: 1.5rem;
+  font-size: clamp(1.0625rem, 1rem + 0.5vw, 1.3rem);
+  line-height: 1.5;
+  color: var(--kritt-dempet);
+  max-width: 34ch;
+}
+@media (min-width: 40rem) { .ingress { max-width: 46ch; } }
+
+/* Den ene streken. Den tegner seg selv én gang, fordi det er nøyaktig det
+   spillet går ut på, og den ender i en pil som peker på skjemaet. */
+.rute {
+  display: block;
+  width: min(100%, 26rem);
+  height: auto;
+  margin: 1.75rem 0 0.25rem;
+  overflow: visible;
+}
+.rute path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.rute__skygge { stroke: var(--skygge-hard); stroke-width: 7; transform: translateY(4px); }
+.rute__strek { stroke: var(--skilt); stroke-width: 6; }
+.rute__pil { stroke: var(--skilt); stroke-width: 6; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .rute__skygge, .rute__strek { stroke-dasharray: 460; stroke-dashoffset: 460; animation: tegn 1100ms var(--kurve) 350ms forwards; }
+  .rute__pil { opacity: 0; animation: dukkOpp 220ms var(--kurve) 1400ms forwards; }
+}
+@keyframes tegn { to { stroke-dashoffset: 0; } }
+@keyframes dukkOpp { to { opacity: 1; } }
+
+/* ---------- skjema ---------- */
+
+.skjema { margin-top: 2rem; }
+
+.skjema__tittel {
+  font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.6rem);
+  margin-bottom: 0.75rem;
+}
+
+.skjema__ingress { color: var(--kritt-dempet); max-width: 44ch; margin-bottom: 1.25rem; }
+
+.skjema__merkelapp {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skjema__rad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.felt {
+  flex: 1 1 15rem;
+  min-width: 0;
+  font: inherit;
+  font-weight: 500;
+  color: var(--kritt);
+  background: var(--grunn);
+  border: 2px solid var(--kant);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  transition: border-color var(--fart) var(--kurve), background-color var(--fart) var(--kurve);
+}
+.felt::placeholder { color: var(--kritt-dempet); opacity: 1; }
+.felt:hover { border-color: var(--kritt-svak); }
+.felt:focus-visible { outline: none; border-color: var(--skilt); box-shadow: 0 0 0 3px color-mix(in oklab, var(--skilt) 35%, transparent); }
+.felt[aria-invalid='true'] { border-color: var(--kjegle); }
+
+/* Honningkrukka. Skjult for folk, synlig for skript. */
+.felt__gate { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Knappene i spillet er en flate med en hard, uskarp kant under seg, og de
+   synker ned når du trykker. Det er den samme knappen. */
+.knapp {
+  flex: 0 0 auto;
+  font: inherit;
+  font-weight: 800;
+  font-variation-settings: 'wdth' 105;
+  letter-spacing: -0.005em;
+  color: var(--grunn);
+  background: var(--skilt);
+  border: 0;
+  border-radius: var(--radius);
+  padding: 0.85rem 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--skilt-dyp);
+  transform: translateY(0);
+  transition: transform 90ms var(--kurve), box-shadow 90ms var(--kurve), background-color var(--fart) var(--kurve);
+}
+.knapp:hover { background: color-mix(in oklab, var(--skilt) 88%, white); }
+.knapp:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--skilt-dyp); }
+.knapp[disabled] { cursor: progress; background: var(--grunn-3); color: var(--kritt-dempet); box-shadow: 0 5px 0 var(--grunn-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .knapp { transition: background-color 1ms linear; }
+  .knapp:active { transform: none; }
+}
+
+/* Når feltet og knappen uansett havner under hverandre, ser en halvbred knapp
+   ut som noe som falt av. Da tar den hele bredden. */
+@media (max-width: 34rem) {
+  .knapp { width: 100%; }
+}
+
+.skjema__beskjed {
+  margin: 0.9rem 0 0;
+  font-weight: 600;
+  min-height: 1.6em;
+}
+.skjema__beskjed[data-slag='feil'] { color: var(--kjegle); }
+.skjema__beskjed[data-slag='ok'] { color: var(--gress); }
+
+.skjema__liten {
+  margin-top: 0.6rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--kritt-dempet);
+  max-width: 48ch;
+}
+
+/* ---------- skjermbilder ---------- */
+
+.apning__bilde { margin: 0; }
+
+.apning__bilde img,
+.baner__bilde img,
+.stripe img {
+  border-radius: var(--radius-bilde);
+  border: 2px solid var(--grunn-3);
+  box-shadow: 0 8px 0 var(--skygge-hard);
+}
+
+.apning__bilde img { width: 100%; max-width: 20rem; }
+.apning__bilde figcaption,
+.baner__bilde figcaption,
+.stripe figcaption {
+  margin-top: 0.85rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--kritt-dempet);
+  max-width: 30ch;
+}
+
+@media (max-width: 61.99rem) {
+  .apning__bilde { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .apning__bilde figcaption { text-align: center; }
+}
+
+/* ---------- seksjoner ---------- */
+
+.del {
+  max-width: var(--bredde);
+  margin-inline: auto;
+  padding: clamp(3rem, 7vw, 6rem) var(--marg);
+  border-top: 1px solid var(--linje);
+}
+
+.del__ord p {
+  color: var(--kritt-dempet);
+  max-width: 62ch;
+  margin-top: 1.25rem;
+}
+
+/* Overskrift til venstre, teksten i en egen spalte til høyre. To seksjoner
+   etter hverandre med samme oppsett begynner å se ut som en mal, og dette er
+   den ene av de to som har nok tekst til å bære en spalte. */
+@media (min-width: 62rem) {
+  .del--regler .del__ord {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: clamp(2rem, 5vw, 4.5rem);
+    align-items: start;
+  }
+  .del--regler .del__tekst p:first-child { margin-top: 0; }
+}
+
+/* Fire skjermbilder på rad. På telefon er det en rad du drar på, ikke fire
+   kort under hverandre — det er sånn man ser på skjermbilder. */
+.stripe {
+  display: flex;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+  margin-top: clamp(2.5rem, 5vw, 3.5rem);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 1rem;
+  margin-inline: calc(var(--marg) * -1);
+  padding-inline: var(--marg);
+  scrollbar-color: var(--grunn-3) transparent;
+  overscroll-behavior-x: contain;
+}
+.stripe figure {
+  margin: 0;
+  flex: 0 0 auto;
+  width: min(62vw, 15rem);
+  scroll-snap-align: start;
+}
+.stripe figcaption { max-width: none; }
+
+@media (min-width: 62rem) {
+  .stripe { overflow: visible; align-items: start; }
+  .stripe figure { flex: 1 1 0; width: auto; }
+  /* Litt forskjøvet, så rada leser som en hylle med skjermbilder og ikke som
+     fire like store kort. */
+  .stripe figure:nth-child(even) { margin-top: 2rem; }
+}
+
+/* ---------- banene ---------- */
+
+.del--baner { display: grid; gap: clamp(2.5rem, 5vw, 4rem); }
+
+@media (min-width: 62rem) {
+  .del--baner {
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 17rem);
+    grid-template-areas: 'ord bilde' 'liste bilde';
+    align-items: start;
+  }
+  .del--baner .del__ord { grid-area: ord; }
+  .baner { grid-area: liste; }
+  .baner__bilde { grid-area: bilde; }
+}
+
+/* Nummereringen er spillets egen: banevelgeren teller 01/07, og rekkefølgen
+   er faktisk en rekkefølge — du låser opp den neste med den forrige. */
+.baner {
+  list-style: none;
+  margin: clamp(2rem, 4vw, 3rem) 0 0;
+  padding: 0;
+  counter-reset: none;
+}
+.baner li {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0 1rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--linje);
+}
+.baner li:first-child { border-top: 1px solid var(--linje); }
+
+.baner__nr {
+  font-weight: 800;
+  font-variation-settings: 'wdth' 118;
+  font-size: 1.15rem;
+  color: var(--skilt);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.baner__navn {
+  font-weight: 700;
+  font-variation-settings: 'wdth' 106;
+  font-size: clamp(1.15rem, 1.05rem + 0.5vw, 1.45rem);
+  letter-spacing: -0.015em;
+}
+.baner__note {
+  grid-column: 2;
+  color: var(--kritt-dempet);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.baner--laast .baner__nr { color: var(--kritt-svak); }
+.baner--laast .baner__navn { color: var(--kritt-dempet); }
+
+.baner__bilde { margin: 0; }
+@media (min-width: 62rem) {
+  .baner__bilde { position: sticky; top: clamp(1.5rem, 5vh, 3rem); }
+}
+.baner__bilde img { width: 100%; }
+
+@media (max-width: 61.99rem) {
+  .baner__bilde { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .baner__bilde img { max-width: 15rem; }
+}
+
+/* ---------- slutten ---------- */
+
+.del--slutt { padding-bottom: clamp(3.5rem, 8vw, 7rem); }
+.del--slutt .skjema { margin-top: 0; max-width: 38rem; }
+.skjema--slutt .skjema__tittel { font-size: clamp(1.7rem, 1.2rem + 2.2vw, 2.6rem); }
+
+/* ---------- bunn ---------- */
+
+.bunn {
+  border-top: 1px solid var(--linje);
+  max-width: var(--bredde);
+  margin-inline: auto;
+  padding: 2rem var(--marg) 3rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.75rem;
+  color: var(--kritt-dempet);
+  font-size: 0.9375rem;
+}
+.bunn p { margin: 0; }
+.bunn__navn {
+  font-weight: 900;
+  font-variation-settings: 'wdth' 122;
+  font-size: 1.05rem;
+  color: var(--skilt);
+  letter-spacing: 0.02em;
+}
+
+/* ---------- personvern ---------- */
+
+.tekstside {
+  max-width: 44rem;
+  margin-inline: auto;
+  padding: clamp(2.5rem, 6vw, 5rem) var(--marg);
+}
+.tekstside h1 { font-size: clamp(2rem, 1.5rem + 2.4vw, 3rem); margin-bottom: 1.1rem; }
+.tekstside h2 { font-size: clamp(1.25rem, 1.1rem + 0.8vw, 1.6rem); margin: 2.75rem 0 0.7rem; }
+.tekstside p, .tekstside li { color: var(--kritt-dempet); max-width: 68ch; }
+.tekstside ul { padding-left: 1.15rem; }
+.tekstside li { margin-bottom: 0.5rem; }
+.tekstside .skjema { border-top: 1px solid var(--linje); padding-top: 2rem; }
+.tekstside .tilbake { display: inline-block; margin-bottom: 2rem; font-weight: 600; }
+
+a.merke__navn { text-decoration: none; }
+a.merke__navn:hover { color: color-mix(in oklab, var(--skilt) 88%, white); }

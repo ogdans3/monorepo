@@ -1,0 +1,6 @@
+Archivo, variabel (wght 100–900, wdth 62–125), latin-utsnittet.
+Omnibus-Type. SIL Open Font License 1.1 — se OFL.txt.
+https://github.com/Omnibus-Type/Archivo
+
+Fila er hentet fra Google Fonts sin utgave av v25 og legges ved her fordi sida
+ikke henter noe utenfra. Se DESIGN.md.
