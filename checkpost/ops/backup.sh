@@ -68,6 +68,9 @@ if [ -n "$MISSING" ]; then
 fi
 
 mv "$TMP" "$FILE"
+# docker cp writes 0644. These files are every list in the product, in plain
+# text, plus the hashes the share links are checked against.
+chmod 600 "$FILE"
 say "wrote $FILE ($(du -h "$FILE" | cut -f1))"
 
 # Prune, but never down to nothing: the newest dump stays whatever its age.
