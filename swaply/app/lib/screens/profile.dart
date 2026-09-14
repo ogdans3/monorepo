@@ -136,10 +136,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 4),
                       Text.rich(
                         TextSpan(children: [
-                          TextSpan(text: '${_stars(me.ratingAvg)} '),
                           if (me.ratingCount == 0)
                             const TextSpan(text: 'Ingen vurderinger ennå')
                           else ...[
+                            TextSpan(text: '${_stars(me.ratingAvg)} '),
                             TextSpan(
                                 text: me.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
                                 style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -410,11 +410,15 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                     const SizedBox(height: 4),
                     Text.rich(
                       TextSpan(children: [
-                        TextSpan(text: '${_stars(user.ratingAvg)} '),
-                        if (user.ratingAvg != null)
+                        // Five empty stars would say «rated badly»; no rating
+                        // yet says so in words.
+                        if (user.ratingAvg != null) ...[
+                          TextSpan(text: '${_stars(user.ratingAvg)} '),
                           TextSpan(
                               text: user.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
                               style: const TextStyle(fontWeight: FontWeight.w700)),
+                        ] else
+                          const TextSpan(text: 'Ingen vurderinger ennå'),
                         if (user.tradeCount != null)
                           TextSpan(text: ' · ${user.tradeCount} bytter'),
                       ]),

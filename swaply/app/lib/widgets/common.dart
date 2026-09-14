@@ -215,12 +215,25 @@ class ItemThumb extends StatelessWidget {
     return _placeholder(shape);
   }
 
-  Widget _placeholder(BorderRadius shape) => Container(
-        height: size,
-        width: size,
-        decoration: BoxDecoration(color: SwaplyColors.greenSoft, borderRadius: shape),
-        child: Icon(categoryIcons[item.category] ?? Icons.category_outlined,
-            color: SwaplyColors.greenDeep, size: size * 0.42),
+  /// The icon is sized by the box it actually gets, not by `size`: a card
+  /// hands this a tight 166×110 and the icon has to fit that, and stay
+  /// inside the corners.
+  Widget _placeholder(BorderRadius shape) => ClipRRect(
+        borderRadius: shape,
+        child: Container(
+          height: size,
+          width: size,
+          color: SwaplyColors.greenSoft,
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final side = c.maxWidth.isFinite && c.maxHeight.isFinite
+                  ? (c.maxWidth < c.maxHeight ? c.maxWidth : c.maxHeight)
+                  : size;
+              return Icon(categoryIcons[item.category] ?? Icons.category_outlined,
+                  color: SwaplyColors.greenDeep, size: side * 0.42);
+            },
+          ),
+        ),
       );
 }
 
