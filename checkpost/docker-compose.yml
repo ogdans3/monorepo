@@ -2,7 +2,9 @@ name: checkpost
 
 services:
   db:
-    image: postgres:17-alpine
+    # 18, not 17: the lists were moved here from a Postgres 18, and pg_restore
+    # will not read an 18 dump with a 17 binary.
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-checkpost}
@@ -13,7 +15,11 @@ services:
       # so ordering is byte-wise regardless of how this cluster was initialised.
       POSTGRES_INITDB_ARGS: '--encoding=UTF8'
     ports:
-      - '${POSTGRES_PORT:-5433}:5432'
+      # Bound to loopback on purpose. Published on 0.0.0.0 this was reachable
+      # from the internet with the default username and password, and it is now
+      # the only place the lists exist. Reach it from elsewhere with a tunnel:
+      # ssh -L 5433:127.0.0.1:5433 <server>.
+      - '${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5433}:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

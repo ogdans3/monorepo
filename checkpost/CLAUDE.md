@@ -53,6 +53,15 @@ revoked link that keeps working until the process restarts.
 **The cache is in-process, so more than one API container needs
 `CACHE_ENABLED=0`.** Same reasoning as `MIGRATE_ON_BOOT`. Unlike `RealtimeHub`,
 where a second instance only costs a beat of latency, here it costs correctness.
+This is not hypothetical: two instances ran against the same database for weeks
+on two machines, both with the cache on, and both running the reaper. Deploy
+this project to exactly one machine, and check the other one before assuming
+that is true.
+
+**The database is the `db` container, on a volume, on the server.** It is not
+hosted any more, so `ops/backup.sh` is the only thing standing between a bad day
+and the lists being gone. Its port is bound to loopback on purpose; see
+`docker-compose.yml`.
 
 **Anything that changes the database behind the API's back must clear the
 cache.** `test/helpers.ts` does it after its `truncate`, and a test that ages a
@@ -108,7 +117,8 @@ no buildx and falls back to the classic builder, which fails outright on
 
 **The test suite truncates every table.** `apps/api/test/guard.ts` refuses any
 database that is not local or whose name does not say "test". Do not weaken it.
-`DATABASE_URL` now points at a hosted database with real lists in it.
+`DATABASE_URL` now points at the `db` container on the server, which holds the
+real lists.
 
 **Correlated subqueries must be written as literal SQL.** Interpolating Drizzle
 columns into a `sql` template inside a subquery renders them unqualified, so

@@ -44,14 +44,37 @@ stack up and `npx playwright install webkit` once.
 
 The API applies its migrations at boot, so there is no separate setup step.
 
-`DATABASE_URL` is used by the host tools and by the API container alike, so a
-hosted database works for both unchanged and `pnpm db:up` is only needed for the
-tests. **The test suite refuses to run against anything that is not local, or
-whose name does not say "test"**, because it truncates every table between
-cases. See `apps/api/test/guard.ts`.
+`DATABASE_URL` is used by the host tools and by the API container alike, so one
+variable covers both and `pnpm db:up` is only needed for the tests. **The test
+suite refuses to run against anything that is not local, or whose name does not
+say "test"**, because it truncates every table between cases. See
+`apps/api/test/guard.ts`.
 `pnpm dev` builds `packages/contract` first and then watches it, because both
 the API and the web app import it and neither can start until it has been
 compiled once.
+
+## Where the data lives
+
+In the `db` container next to the API, on a named volume, on the machine that
+serves the site. Not in a hosted database.
+
+It used to be Neon, and the free tier's compute hours kept running out. The
+reason was not traffic: two API containers on two machines held pooled
+connections open against the same database and health-checked through it every
+fifteen seconds, so the compute never suspended and burned all 730 hours in a
+month against an allowance of fifty. The second machine was a leftover, and it
+was also a second writer running the reaper — which deletes — against
+production data.
+
+What follows from that:
+
+- **One API instance per database.** The read cache is in-process. `CLAUDE.md`
+  spells out why a second one costs correctness, not just latency.
+- **The published Postgres port binds to loopback** (`POSTGRES_BIND`). It was
+  on `0.0.0.0` with the development password and no firewall.
+- **Backups are ours now.** `ops/backup.sh` takes a nightly `pg_dump`, refuses
+  to write a dump that carries no rows for `lists`, `items` or `share_links`,
+  and keeps 30 days. A volume is not a backup.
 
 ## The three ideas the whole thing hangs on
 
