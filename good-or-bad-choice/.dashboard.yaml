@@ -1,0 +1,7 @@
+name: good or bad choice
+description: Two buttons. Green was a good call, red was a bad one. Tap, and once in a while watch the whole period rain down into a grid.
+
+# One service is the whole front door. It serves the Flutter build and the API
+# from the same origin, so there is nothing here that needs a second hostname.
+compose_service: web
+compose_port: 3000

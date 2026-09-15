@@ -1,0 +1,77 @@
+# One file for both jobs. `docker compose up -d db` is the development database;
+# the dashboard brings both services up for a deploy.
+#
+# Two services, and deliberately not three. The Flutter build is served by the
+# same Node process that serves the API, from the same origin, so there is no
+# CORS to configure, no second hostname to arrange in the proxy, and no way for
+# the two to be deployed at different versions. The client is local-first and
+# barely talks to the server anyway; splitting them would buy nothing and cost a
+# Caddy site block.
+name: good-or-bad-choice
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gobc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gobc}
+      POSTGRES_DB: ${POSTGRES_DB:-gobc}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8'
+    ports:
+      # Loopback only. Published on 0.0.0.0 this is a database on the public
+      # internet with a development password in front of it. 5435 because this
+      # host already has other projects' databases on 5432, 5433 and 5434.
+      - '${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5435}:5432'
+    volumes:
+      # Postgres 18 keeps its data in a major-version subdirectory, so the mount
+      # is one level up from where you would expect. Mounting
+      # /var/lib/postgresql/data instead makes the container refuse to start.
+      - gobc-db:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-gobc} -d ${POSTGRES_DB:-gobc}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Deliberately not ${DATABASE_URL}. Compose substitutes that from .env,
+      # which holds the *host's* URL — localhost:5435 — and inside a container
+      # localhost is the container. DATABASE_URL is for host tooling; this is
+      # for the container.
+      DATABASE_URL: ${WEB_DATABASE_URL:-postgres://${POSTGRES_USER:-gobc}:${POSTGRES_PASSWORD:-gobc}@db:5432/${POSTGRES_DB:-gobc}}
+      # The image carries the SQL that matches it, and nobody is going to run a
+      # migration by hand against a container.
+      MIGRATE_ON_BOOT: ${MIGRATE_ON_BOOT:-1}
+    ports:
+      # The dashboard reaches this over the aicentral network by container name
+      # rather than through a published port, so loopback is enough for a person
+      # who wants to look at it on the host.
+      - '${WEB_BIND:-127.0.0.1}:${WEB_PORT:-4003}:3000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+# Keeps the name it was created with. Renaming a volume does not move the data,
+# it orphans it.
+volumes:
+  gobc-db:

@@ -1,0 +1,24 @@
+name: good_or_bad_choice
+description: "Two buttons. Green was a good call, red was a bad one."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # The device's own copy of every tap, which is the only copy until somebody
+  # decides to make an account. A key-value store rather than sqlite because the
+  # whole history is one JSON array and the web build has no sqlite.
+  shared_preferences: ^2.5.3
+  http: ^1.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
