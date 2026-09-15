@@ -32,6 +32,13 @@
   /** A token is visible once, right after it is made, and never again. */
   let fresh = $state<{ url: string; access: Access } | null>(null);
   let links = $state<ShareLink[]>([]);
+  /**
+   * Set when the list of links could not be fetched. Worth its own state
+   * rather than a line in `status`: what is on screen when this happens is a
+   * list of links that may already have been retired, and a sheet that says
+   * nothing invites you to act on it.
+   */
+  let linksFailed = $state(false);
   let busy = $state(false);
   let confirming = $state<'rotate' | null>(null);
   let choosing = $state(false);
@@ -50,8 +57,12 @@
   async function refresh() {
     try {
       links = await onlinks();
+      linksFailed = false;
     } catch {
-      // Not being able to list links is not worth breaking the sheet over.
+      // Not worth breaking the sheet over, but not worth hiding either: the
+      // rows still on screen are now of unknown age, and one of them may be
+      // the link that was just replaced.
+      linksFailed = true;
     }
   }
 
@@ -186,8 +197,21 @@
       <button type="button" class="ghost" onclick={() => (choosing = true)}>Make a link</button>
     {/if}
 
+    {#if links.length || linksFailed}
+      <h3 class="spaced">
+        Live links
+        {#if links.length}<span class="count">{links.length}</span>{/if}
+      </h3>
+      {#if linksFailed}
+        <p class="fine">
+          {links.length
+            ? 'This list could not be checked just now, so it may be out of date.'
+            : 'The links on this list could not be loaded.'}
+        </p>
+        <button type="button" class="ghost" onclick={refresh} disabled={busy}>Try again</button>
+      {/if}
+    {/if}
     {#if links.length}
-      <h3 class="spaced">Live links <span class="count">{links.length}</span></h3>
       <ul class="links">
         {#each links as link (link.id)}
           <li>

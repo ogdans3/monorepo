@@ -43,6 +43,18 @@ async function addItem(page: Page, text: string) {
   await expect(page.getByText(text, { exact: true })).toBeVisible();
 }
 
+/**
+ * Ticks a row through its box, which is the only thing that ticks.
+ *
+ * DESIGN.md: the box ticks, the row opens. These tests used to click the text
+ * and expect a tick, so they went red the day that rule was implemented and
+ * stayed red — which is how the share-link bugs got past a suite that was
+ * already failing.
+ */
+async function tick(page: Page, text: string) {
+  await page.getByRole('button', { name: `Tick ${text}` }).click();
+}
+
 test('a list can be made, filled and ticked off from a browser', async ({ page }) => {
   await makeList(page);
 
@@ -51,7 +63,7 @@ test('a list can be made, filled and ticked off from a browser', async ({ page }
   // The field keeps focus so several items can be typed without stopping.
   await expect(page.getByLabel('Add an item')).toBeFocused();
 
-  await page.getByText('Firewood', { exact: true }).click();
+  await tick(page, 'Firewood');
 
   // A ticked row holds its place briefly so you can see what you did.
   await expect(page.locator('.shelf')).toBeHidden();
@@ -78,7 +90,7 @@ test('two tabs on one link see each other', async ({ page, context }) => {
   // has its own client id, or this would look like an echo of our own write.
   await expect(page.locator('li.row.washing')).toHaveCount(1);
 
-  await other.getByText('Firewood', { exact: true }).click();
+  await tick(other, 'Firewood');
   await expect(page.locator('.shelf')).toContainText('Done · 1');
 });
 
@@ -89,7 +101,7 @@ test('a tick lands before the network answers', async ({ page }) => {
   // Nothing can reach the API from here on.
   await page.route('**/v1/**', (route) => route.abort());
 
-  await page.getByText('Firewood', { exact: true }).click();
+  await tick(page, 'Firewood');
   // Still ticked, with no server involved at all.
   await expect(page.locator('li.row.done')).toHaveCount(1);
   // And the edit is kept rather than reverted, because it is still true here.
@@ -104,6 +116,23 @@ test('a replaced link is a plain sentence with a way out', async ({ page, contex
   await page.getByRole('button', { name: 'Replace my link' }).first().click();
   await page.getByRole('button', { name: 'Replace my link' }).last().click();
   await expect(page.getByText('Link replaced.')).toBeVisible();
+
+  // This tab is the only place the new link has ever existed, so the address
+  // bar has to be holding it. It used to keep the retired one, which meant a
+  // refresh sent the one person who still had access to the dead end.
+  await page.waitForURL(/\/l\/[A-Za-z0-9_-]{43}/);
+  const fresh = page.url();
+  expect(fresh).not.toBe(url);
+  made.push(fresh.split('/l/')[1]!);
+
+  // And the list is still a list. The server evicts every socket on the link it
+  // retires, and cannot tell this tab from anyone else holding that token, so
+  // the eviction lands here too. Acting on it put the tab holding the new link
+  // on the "this link was replaced" screen.
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByText('Firewood', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('Firewood', { exact: true })).toBeVisible();
 
   // Anyone still holding the old link is told what happened, not shown a shrug.
   const stale = await context.newPage();
@@ -173,7 +202,7 @@ test('a write link can tick but cannot manage links', async ({ page, context }) 
   await expect(writer.getByText('Firewood', { exact: true })).toBeVisible();
   await expect(writer.getByText('Read only')).toHaveCount(0);
 
-  await writer.getByText('Firewood', { exact: true }).click();
+  await tick(writer, 'Firewood');
   await expect(writer.locator('.shelf')).toContainText('Done · 1');
   // It reaches the other tab, so it really was written.
   await expect(page.locator('.shelf')).toContainText('Done · 1');
@@ -188,7 +217,7 @@ test('a copy link hands over a private copy and hides the original', async ({ pa
   await makeList(page);
   await addItem(page, 'Passport');
   await addItem(page, 'Charger');
-  await page.getByText('Passport', { exact: true }).click();
+  await tick(page, 'Passport');
   await expect(page.locator('.shelf')).toContainText('Done · 1');
 
   const copyUrl = await mintLink(page, 'Gets their own copy');
