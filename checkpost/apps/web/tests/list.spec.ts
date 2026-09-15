@@ -113,8 +113,8 @@ test('a replaced link is a plain sentence with a way out', async ({ page, contex
   await addItem(page, 'Firewood');
 
   await page.getByRole('button', { name: 'Share this list' }).click();
-  await page.getByRole('button', { name: 'Replace my link' }).first().click();
-  await page.getByRole('button', { name: 'Replace my link' }).last().click();
+  await page.getByRole('button', { name: 'Replace my link' }).click();
+  await page.getByRole('button', { name: 'Replace my link' }).click();
   await expect(page.getByText('Link replaced.')).toBeVisible();
 
   // This tab is the only place the new link has ever existed, so the address
@@ -156,24 +156,59 @@ test('a long list name never pushes the buttons off the screen', async ({ page }
   }
 });
 
-/** Mints a link at a level using the admin link that made the list. */
-async function mintLink(page: Page, label: string): Promise<string> {
+/**
+ * Mints a link at a level using the admin link that made the list.
+ *
+ * One tap on the level, which is the point of the share sheet: the QR, the
+ * address and the buttons all show whichever link is picked. This used to be
+ * four steps, and the level was behind a button called "Make a link".
+ */
+async function mintLink(page: Page, chip: string): Promise<string> {
   await page.getByRole('button', { name: 'Share this list' }).click();
-  await page.getByRole('button', { name: 'Make a link', exact: true }).click();
-  await page.getByText(label, { exact: true }).click();
-  await page.getByRole('button', { name: 'Make the link' }).click();
-  await expect(page.getByText('shown once', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: chip, exact: true }).click();
+  await expect(page.getByText('Link made.')).toBeVisible();
   const url = (await page.locator('code').innerText()).trim();
   made.push(url.split('/l/')[1]!);
   await page.getByRole('button', { name: 'Close' }).click();
   return url;
 }
 
+test('the share sheet offers every kind of link without being opened up', async ({ page }) => {
+  const own = await makeList(page);
+  await page.getByRole('button', { name: 'Share this list' }).click();
+
+  // All five choices are on the sheet the moment it opens. They used to be four
+  // rows behind a button behind a heading, which is why nobody found them.
+  for (const chip of ['Me', 'Look only', 'Tick and add', 'Everything', 'Own copy']) {
+    await expect(page.getByRole('button', { name: chip, exact: true })).toBeVisible();
+  }
+
+  await expect(page.locator('code')).toHaveText(own);
+
+  // One tap is the whole act, and the address on screen becomes the new link.
+  await page.getByRole('button', { name: 'Look only', exact: true }).click();
+  await expect(page.getByText('Link made.')).toBeVisible();
+  const read = (await page.locator('code').innerText()).trim();
+  made.push(read.split('/l/')[1]!);
+  expect(read).not.toBe(own);
+  await expect(page.getByText('Changes nothing.', { exact: false })).toBeVisible();
+
+  // And going back to your own is a tap, not a hunt.
+  await page.getByRole('button', { name: 'Me', exact: true }).click();
+  await expect(page.locator('code')).toHaveText(own);
+
+  // Picking the same level again reuses the link rather than minting a second.
+  await page.getByRole('button', { name: 'Look only', exact: true }).click();
+  await expect(page.locator('code')).toHaveText(read);
+  await expect(page.getByText('Links that work right now')).toBeVisible();
+  await expect(page.locator('ul.links li')).toHaveCount(2);
+});
+
 test('a read link can look and cannot touch', async ({ page, context }) => {
   await makeList(page);
   await addItem(page, 'Firewood');
 
-  const readUrl = await mintLink(page, 'Can look');
+  const readUrl = await mintLink(page, 'Look only');
 
   const reader = await context.newPage();
   await reader.goto(readUrl);
@@ -195,7 +230,7 @@ test('a write link can tick but cannot manage links', async ({ page, context }) 
   await makeList(page);
   await addItem(page, 'Firewood');
 
-  const writeUrl = await mintLink(page, 'Can tick and add');
+  const writeUrl = await mintLink(page, 'Tick and add');
 
   const writer = await context.newPage();
   await writer.goto(writeUrl);
@@ -220,7 +255,7 @@ test('a copy link hands over a private copy and hides the original', async ({ pa
   await tick(page, 'Passport');
   await expect(page.locator('.shelf')).toContainText('Done · 1');
 
-  const copyUrl = await mintLink(page, 'Gets their own copy');
+  const copyUrl = await mintLink(page, 'Own copy');
 
   const taker = await context.newPage();
   await taker.goto(copyUrl);

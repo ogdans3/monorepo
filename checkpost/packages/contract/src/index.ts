@@ -82,11 +82,16 @@ export const ACCESS_LABELS: Record<Access, string> = {
   copy: 'Gets their own copy',
 };
 
+/**
+ * One line each, because these sit on four choices in a row and the reader is
+ * picking, not studying. The long version is the product: a link that can look
+ * can look, and that is the whole of it.
+ */
 export const ACCESS_BLURBS: Record<Access, string> = {
-  read: 'Sees the list and every change to it, and cannot alter anything.',
-  write: 'Ticks things off, adds, edits and removes items, and renames the list.',
-  admin: 'Everything, including making and revoking links, and deleting the list.',
-  copy: 'Opening it makes them a private copy with nothing ticked off. They cannot see this list, or each other, and you never see theirs.',
+  read: 'Sees the list and every change. Changes nothing.',
+  write: 'Ticks, adds, edits, and can rename the list.',
+  admin: 'Everything you can do, links included.',
+  copy: 'Gets a private copy to tick off. Never sees this one.',
 };
 
 // ---------------------------------------------------------------------------
