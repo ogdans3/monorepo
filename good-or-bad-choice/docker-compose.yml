@@ -19,9 +19,15 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-gobc}
       POSTGRES_INITDB_ARGS: '--encoding=UTF8'
     ports:
-      # Loopback only. Published on 0.0.0.0 this is a database on the public
-      # internet with a development password in front of it. 5435 because this
-      # host already has other projects' databases on 5432, 5433 and 5434.
+      # The one `ports` here, and deliberate. The root README's rule is about the
+      # HTTP front door — a published one collides with Caddy and steps around
+      # the dashboard's auth — and neither applies to a database bound to
+      # loopback. Host tooling needs it: migrations, the test suite and psql all
+      # reach it this way, and checkpost and swaply publish theirs the same way.
+      #
+      # Loopback only. On 0.0.0.0 this is a database on the public internet with
+      # a development password in front of it. 5435 because this host already
+      # has other projects' databases on 5432, 5433 and 5434.
       - '${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5435}:5432'
     volumes:
       # Postgres 18 keeps its data in a major-version subdirectory, so the mount
@@ -53,11 +59,13 @@ services:
       # The image carries the SQL that matches it, and nobody is going to run a
       # migration by hand against a container.
       MIGRATE_ON_BOOT: ${MIGRATE_ON_BOOT:-1}
-    ports:
-      # The dashboard reaches this over the aicentral network by container name
-      # rather than through a published port, so loopback is enough for a person
-      # who wants to look at it on the host.
-      - '${WEB_BIND:-127.0.0.1}:${WEB_PORT:-4003}:3000'
+    # `expose`, never `ports`. The dashboard attaches the front-door service to
+    # the aicentral network and proxies to it by container name, so publishing
+    # to the host buys nothing and the repository root README says not to: a
+    # published front door collides with Caddy's 80/443 and steps around the
+    # dashboard's auth. Run `npm run dev` for a port on the host.
+    expose:
+      - '3000'
     healthcheck:
       test:
         [
