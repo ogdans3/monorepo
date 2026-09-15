@@ -91,6 +91,30 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
     maxAge: 86_400,
   });
 
+  /**
+   * Nothing this API returns may be stored by a cache.
+   *
+   * Every list in the product answers at the same address: `GET /v1/list` is
+   * the URL for all of them, and which list you get depends entirely on the
+   * bearer token. A cache keys on the URL, so one list's answer is served to
+   * the next link that asks. That is not theoretical. A single rotation put a
+   * `410 Gone` in one browser's cache and every list that browser opened
+   * afterwards reported "this link was replaced", because 410 is cacheable by
+   * default and carried no instruction saying otherwise. The same hole would
+   * hand one list's contents to a link for another.
+   *
+   * `Vary: authorization` is sent as well, for any cache that keeps the entry
+   * regardless, but it is the belt and `no-store` is the braces. A response
+   * whose whole meaning is a credential has no business being kept.
+   *
+   * Registered after the CORS plugin so this `vary` is the one that survives,
+   * and it deliberately still names `Origin` for the same reason CORS did.
+   */
+  app.addHook('onRequest', async (_request, reply) => {
+    reply.header('cache-control', 'no-store');
+    reply.header('vary', 'Origin, Authorization');
+  });
+
   await app.register(rateLimit, {
     global: true,
     max: env.RATE_LIMIT_MAX,
