@@ -64,9 +64,17 @@ export class RealtimeHub {
   }
 
   /**
-   * Disconnects everyone still holding a link that no longer works. The device
-   * that performed the rotation keeps its socket, because it already knows the
-   * new token. `revokedLinkId` is how we tell them apart.
+   * Disconnects everyone still holding a link that no longer works.
+   * `revokedLinkId` spares the sockets on this list's *other* links, which is
+   * what makes replacing one link a local act rather than a list-wide one.
+   *
+   * It cannot spare the device that did the rotating. That device is on the
+   * link being retired like everyone else, and one link can legitimately be
+   * open in several places at once, so there is nothing here to tell the
+   * rotator apart from anyone else holding the token it just killed. It is
+   * evicted too, and finds out it has a new one from the HTTP response. The
+   * client is therefore required to ignore frames from a socket it is in the
+   * middle of replacing — see `#connect` in the web and Flutter sessions.
    */
   evictLink(listId: string, revokedLinkId: string, reason: 'rotated' | 'deleted'): void {
     const room = this.#rooms.get(listId);

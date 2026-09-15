@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { SHARE_TOKEN_PATTERN, shareDeepLink } from '@checkpost/contract';
+import { SHARE_TOKEN_PATTERN } from '@checkpost/contract';
 import type { PageLoad } from './$types';
 
 /**
@@ -19,9 +19,10 @@ export const load: PageLoad = ({ params, url }) => {
   if (!SHARE_TOKEN_PATTERN.test(params.token)) {
     error(404, 'That does not look like a Checkpost link.');
   }
+  // No deep link here. Rotating replaces the token under the page without
+  // re-running this load, so the page derives that one from the live session.
   return {
     token: params.token,
-    deepLink: shareDeepLink(params.token),
     shareUrl: `${url.origin}/l/${params.token}`,
   };
 };

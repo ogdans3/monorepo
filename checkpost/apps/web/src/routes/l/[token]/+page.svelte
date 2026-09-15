@@ -9,7 +9,7 @@
   import { trackKeyboard } from '$lib/keyboard';
   import { untrack } from 'svelte';
   import { goto } from '$app/navigation';
-  import { ACCESS_LABELS } from '@checkpost/contract';
+  import { ACCESS_LABELS, shareDeepLink } from '@checkpost/contract';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -35,13 +35,37 @@
   let copying = $state(false);
   let copyFailed = $state<string | null>(null);
 
+  /**
+   * Which session the address bar is asking for. Deliberately separate from the
+   * one below that runs it.
+   *
+   * A session that already holds this token is kept. That is not an
+   * optimisation: rotating puts the new token in the address bar, so `load`
+   * reruns and lands here with the token this session is already live on. One
+   * effect that both rebuilt and tore down would stop that session in its
+   * cleanup and then hand the stopped object straight back — a list that drops
+   * its socket and refetches with a link the server has just retired.
+   */
   $effect(() => {
-    // Reruns when the token changes, and the cleanup stops the session it
-    // replaces. Everything below reads the local `current`, never the state
-    // variable, so the teardown can never stop the wrong one.
-    const current = untrack(() => session).token === data.token
-      ? untrack(() => session)
-      : (session = new ListSession(data.token));
+    const wanted = data.token;
+    // The whole comparison is untracked, including reading the token off the
+    // session. `untrack(() => session).token` reads the variable untracked and
+    // then the token inside the effect, which makes this depend on the very
+    // thing rotation changes: replacing a link fired it with the session on the
+    // new token and the address bar still on the old one, and it dutifully
+    // built a session on the link that had just been retired.
+    if (untrack(() => session.token) !== wanted) session = new ListSession(wanted);
+  });
+
+  /**
+   * Runs whichever session is current, and stops it when it is replaced.
+   *
+   * Depends on the session itself rather than on the token, so it fires exactly
+   * once per session: when the one above hands over a new one, and never when
+   * the same session simply changed the token it is holding.
+   */
+  $effect(() => {
+    const current = session;
     void current.open();
     const stopTrackingKeyboard = trackKeyboard();
     return () => {
@@ -53,6 +77,27 @@
   const shareUrl = $derived(
     session.token === data.token ? data.shareUrl : `${location.origin}/l/${session.token}`,
   );
+  /** Derived, not loaded, because rotating changes the token under the page. */
+  const deepLink = $derived(shareDeepLink(session.token));
+
+  /**
+   * Replace the link, then move the address bar onto the one we were handed.
+   *
+   * Without this the tab holds a live token that exists nowhere else: the URL,
+   * the history entry and any bookmark all still name the link the server just
+   * retired, so a refresh lands on "this link was replaced" while the tab doing
+   * the refreshing was the only place the new link had ever been.
+   *
+   * A real navigation, replacing the entry rather than adding one: the retired
+   * link has no business sitting in the back button. `load` reruns, the effects
+   * above see a session already on that token and keep it, so the socket this
+   * rotation just opened survives the trip.
+   */
+  async function rotate() {
+    const url = await session.rotate();
+    await goto(`/l/${session.token}`, { replaceState: true, noScroll: true, keepFocus: true });
+    return url;
+  }
 
   let openList = $state<HTMLElement | null>(null);
   /** One flag for the screen, so the done shelf reserves the same left column. */
@@ -153,7 +198,10 @@
 
   $effect(() => {
     // A new list means none of the previous list's sheets or drafts apply.
-    void data.token;
+    // Keyed on the session, not the token: replacing a link changes the token
+    // under the same list, and closing the share sheet at that moment would
+    // hide the new link at the one moment it is on screen.
+    void session;
     draft = '';
     openItem = null;
     sharing = false;
@@ -400,7 +448,7 @@
     title={session.list?.title ?? 'Checkpost list'}
     canAdmin={session.canAdmin}
     onclose={() => (sharing = false)}
-    onrotate={() => session.rotate()}
+    onrotate={rotate}
     onlinks={() => session.links()}
     oncreate={(access, label) => session.createLink(access, label)}
     onrevoke={(linkId) => session.revokeLink(linkId)}
@@ -449,7 +497,7 @@
           >
         </li>
       {/if}
-      <li><a href={data.deepLink} rel="external">Open in the app</a></li>
+      <li><a href={deepLink} rel="external">Open in the app</a></li>
       {#if session.canAdmin}
         <li>
           <button

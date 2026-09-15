@@ -58,6 +58,8 @@ export class ListSession {
 
   #token = $state('');
   #realtime: Realtime | null = null;
+  /** Bumped on every connect, so a superseded socket's frames are ignored. */
+  #generation = 0;
   #timers = new Map<string, ReturnType<typeof setTimeout>>();
   #stopped = false;
   #me = '';
@@ -157,15 +159,28 @@ export class ListSession {
   #connect() {
     if (this.status === 'copy') return;
     this.#realtime?.stop();
+    // Every callback checks it is still the live socket before it speaks.
+    //
+    // Rotation is why. The server evicts everyone on the link it retires, and
+    // it cannot tell this tab from anyone else holding that token, so the
+    // socket being replaced here has just been sent `revoked`. Acting on that
+    // would put the one tab that *does* have the new link on the "this link
+    // was replaced" dead end.
+    const generation = ++this.#generation;
+    const live = () => this.#generation === generation;
     this.#realtime = new Realtime(
       this.#token,
-      (frame) => this.#onFrame(frame),
+      (frame) => {
+        if (live()) this.#onFrame(frame);
+      },
       () => {
+        if (!live()) return;
         if (this.status === 'offline') this.status = 'ready';
         // A fresh socket proves nothing about what happened while it was down.
         void this.reconcile();
       },
       () => {
+        if (!live()) return;
         if (this.status === 'ready') this.status = 'offline';
       },
     );
@@ -365,7 +380,16 @@ export class ListSession {
     return api.revokeLink(this.#token, linkId);
   }
 
-  /** Replaces the link this tab is holding. Other links carry on. */
+  /**
+   * Replaces the link this tab is holding. Other links carry on.
+   *
+   * The order below is load-bearing. The server evicts the old socket while
+   * this request is in flight, so a `revoked` frame can land before the
+   * response does and set the status to `gone`; clearing it afterwards is what
+   * undoes that, and `#connect` then retires the generation that sent it. The
+   * caller is expected to put the new token in the address bar — this object
+   * holds it, the URL does not, and a refresh reads the URL.
+   */
   async rotate(): Promise<string> {
     const rotated = await api.rotateLink(this.#token);
     this.#token = rotated.token;
