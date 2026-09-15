@@ -1,0 +1,49 @@
+---
+import { getCollection } from 'astro:content';
+import { Picture } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import Hero from '../../components/Hero.astro';
+import BestillBand from '../../components/BestillBand.astro';
+import Ikon from '../../components/Ikon.astro';
+import { beskrivelseAv } from '../../lib/seo';
+
+const innlegg = (await getCollection('blogg')).sort((a, b) => (b.data.dato?.getTime() ?? 0) - (a.data.dato?.getTime() ?? 0));
+const dato = (d?: Date) => d ? d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+const hero = innlegg.find((i) => i.data.hero)?.data.hero;
+---
+<Base tittel="Blogg" beskrivelse="Historier fra Rondane Høyfjellshotell og fjellet rundt: berømte gjester, gamle postkort, turtips, bryllup og folk som har bodd her." bilde={hero} overHero={!!hero} aktivSeksjon="blogg">
+  <Hero bilde={hero} tittel="Historier fra fjellet" undertittel="Berømte gjester, gamle postkort, turtips og folk som har vært innom hotellet siden 1939." />
+  <section class="senter liste">
+    <ol class="liste__rute">
+      {innlegg.map((i) => (
+        <li>
+          <a class="innlegg" href={i.data.sti}>
+            <span class="innlegg__bilde">
+              {i.data.hero ? <Picture src={i.data.hero} widths={[400, 640, 900]} sizes="(min-width: 64rem) 30vw, (min-width: 40rem) 46vw, 92vw" formats={['avif', 'webp']} alt="" loading="lazy" decoding="async" /> : <span />}
+            </span>
+            <span class="innlegg__tekst">
+              <time datetime={i.data.dato?.toISOString().slice(0, 10)}>{dato(i.data.dato)}</time>
+              <span class="innlegg__tittel">{i.data.tittel}</span>
+              <span class="innlegg__ingress">{beskrivelseAv(i.body, '')}</span>
+              <span class="pillenke">Les innlegget <Ikon navn="pil" /></span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </section>
+  <BestillBand />
+</Base>
+<style>
+  .liste { padding-block: var(--rom-seksjon); }
+  .liste__rute { list-style: none; margin: 0; padding: 0; display: grid; gap: clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 2.5vw, 1.75rem); grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); }
+  .innlegg { display: grid; grid-template-rows: auto 1fr; text-decoration: none; color: inherit; }
+  .innlegg__bilde { display: block; aspect-ratio: 3 / 2; overflow: hidden; border-radius: var(--radius); background: var(--frost-3); }
+  .innlegg__bilde :global(img) { width: 100%; height: 100%; object-fit: cover; transition: transform 600ms var(--kurve); }
+  .innlegg:hover .innlegg__bilde :global(img) { transform: scale(1.03); }
+  .innlegg__tekst { display: grid; gap: 0.45rem; padding-top: 0.9rem; align-content: start; }
+  .innlegg time { font-size: 0.86rem; color: var(--blekk-dempet); letter-spacing: 0.04em; }
+  .innlegg__tittel { font-family: var(--skrift-display); font-weight: 600; font-size: 1.5rem; line-height: 1.05; }
+  .innlegg__ingress { color: var(--blekk-dempet); font-size: 0.97rem; }
+  .innlegg .pillenke { margin-top: 0.3rem; justify-self: start; font-size: 0.95rem; }
+</style>

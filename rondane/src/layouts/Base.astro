@@ -1,0 +1,71 @@
+---
+import '../styles/global.css';
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+import Topp from '../components/Topp.astro';
+import Bunn from '../components/Bunn.astro';
+import { hotell } from '../data/hotell';
+import { orgJsonLd } from '../lib/seo';
+
+interface Props {
+  tittel: string;
+  beskrivelse: string;
+  bilde?: ImageMetadata;
+  overHero?: boolean;
+  aktivSeksjon?: string;
+  jsonLd?: object[];
+  type?: 'website' | 'article';
+  noindex?: boolean;
+}
+const { tittel, beskrivelse, bilde, overHero = false, aktivSeksjon, jsonLd = [], type = 'website', noindex = false } = Astro.props;
+const site = Astro.site!.toString().replace(/\/$/, '');
+const kanonisk = new URL(Astro.url.pathname, Astro.site).toString();
+const fullTittel = Astro.url.pathname === '/' ? `${hotell.navn} – ${hotell.slagord}` : `${tittel} – ${hotell.navn}`;
+const og = bilde ? await getImage({ src: bilde, width: 1200, height: 630, fit: 'cover', format: 'jpg' }) : null;
+const ogUrl = og ? new URL(og.src, Astro.site).toString() : `${site}/bilder/delebilde.jpg`;
+const ld = [orgJsonLd(site), ...jsonLd];
+---
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTittel}</title>
+    <meta name="description" content={beskrivelse} />
+    <link rel="canonical" href={kanonisk} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <meta name="theme-color" content="#1c2128" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="preload" href="/fonts/barlow-semi-condensed-600.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={hotell.navn} />
+    <meta property="og:locale" content="nb_NO" />
+    <meta property="og:title" content={fullTittel} />
+    <meta property="og:description" content={beskrivelse} />
+    <meta property="og:url" content={kanonisk} />
+    <meta property="og:image" content={ogUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="geo.region" content="NO-34" />
+    <meta name="geo.placename" content="Mysuseter, Otta" />
+    <meta name="geo.position" content={`${hotell.koordinater.lat};${hotell.koordinater.lng}`} />
+    <meta name="ICBM" content={`${hotell.koordinater.lat}, ${hotell.koordinater.lng}`} />
+    {ld.map((o) => <script type="application/ld+json" set:html={JSON.stringify(o)} />)}
+  </head>
+  <body>
+    {hotell.varsel && <div class="varsel" role="status"><div class="senter">{hotell.varsel}</div></div>}
+    <Topp overHero={overHero && !hotell.varsel} aktivSeksjon={aktivSeksjon} />
+    <main id="innhold" tabindex="-1">
+      <slot />
+    </main>
+    <Bunn />
+  </body>
+</html>
+<style>
+  .varsel { background: var(--fjell); color: var(--kritt); font-weight: 500; padding: 0.6rem 0; text-align: center; position: relative; z-index: var(--lag-varsel); }
+  main:focus { outline: none; }
+</style>

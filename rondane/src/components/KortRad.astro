@@ -1,0 +1,17 @@
+---
+import Kort from './Kort.astro';
+interface Props { kort: { sti: string; tittel: string; under?: string | null; bilde?: string | null }[]; overskrift?: string; kicker?: string }
+const { kort, overskrift, kicker } = Astro.props;
+---
+{kort.length > 0 && (
+  <section class="kortrad">
+    {overskrift && <header class="kortrad__hode">{kicker && <span class="kicker">{kicker}</span>}<h2>{overskrift}</h2></header>}
+    <div class="kortrad__rute">
+      {kort.map((k) => <Kort sti={k.sti} tittel={k.tittel} under={k.under} bildeSti={k.bilde} />)}
+    </div>
+  </section>
+)}
+<style>
+  .kortrad__hode { margin-bottom: clamp(1.5rem, 3vw, 2.5rem); }
+  .kortrad__rute { display: grid; gap: clamp(1rem, 2.5vw, 1.75rem); grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); }
+</style>

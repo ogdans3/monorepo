@@ -1,0 +1,33 @@
+---
+import { Picture } from 'astro:assets';
+import { bilde } from '../lib/bilder';
+import Ikon from './Ikon.astro';
+interface Props { sti: string; tittel: string; under?: string | null; bildeSti?: string | null; alt?: string }
+const { sti, tittel, under, bildeSti, alt = '' } = Astro.props;
+const b = bilde(bildeSti);
+const ekstern = /^https?:/.test(sti);
+---
+<a class="kort" href={sti} target={ekstern ? '_blank' : undefined} rel={ekstern ? 'noopener' : undefined}>
+  <span class="kort__bilde">
+    {b ? <Picture src={b} widths={[400, 640, 900]} sizes="(min-width: 64rem) 30vw, (min-width: 40rem) 46vw, 92vw" formats={['avif', 'webp']} alt={alt} loading="lazy" decoding="async" /> : <span class="kort__tomt" aria-hidden="true" />}
+  </span>
+  <span class="kort__tekst">
+    <span class="kort__tittel">{tittel}</span>
+    {under && <span class="kort__under">{under}</span>}
+    <span class="kort__pil"><Ikon navn="pil" /></span>
+  </span>
+</a>
+<style>
+  .kort { display: grid; grid-template-rows: auto 1fr; text-decoration: none; color: inherit; border-radius: var(--radius); overflow: hidden; background: var(--frost-2); transition: transform var(--fart) var(--kurve), box-shadow var(--fart) var(--kurve); }
+  .kort:hover { transform: translateY(-3px); box-shadow: 0 14px 28px -18px oklch(0.25 0.03 240 / 0.6); }
+  @media (prefers-reduced-motion: reduce) { .kort:hover { transform: none; } }
+  .kort__bilde { display: block; aspect-ratio: 3 / 2; overflow: hidden; background: var(--frost-3); }
+  .kort__bilde :global(img) { width: 100%; height: 100%; object-fit: cover; transition: transform 600ms var(--kurve); }
+  .kort:hover .kort__bilde :global(img) { transform: scale(1.03); }
+  .kort__tomt { display: block; width: 100%; height: 100%; background: linear-gradient(160deg, var(--frost-3), var(--frost-2)); }
+  .kort__tekst { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 0.75rem; padding: 0.9rem 1rem 1rem; }
+  .kort__tittel { font-family: var(--skrift-display); font-weight: 600; font-size: 1.35rem; line-height: 1.05; letter-spacing: 0.01em; grid-column: 1; }
+  .kort__under { grid-column: 1; color: var(--blekk-dempet); font-size: 0.95rem; margin-top: 0.3rem; }
+  .kort__pil { grid-column: 2; grid-row: 1 / span 2; color: var(--fjell); transition: transform var(--fart) var(--kurve); }
+  .kort:hover .kort__pil { transform: translateX(4px); }
+</style>

@@ -1,0 +1,129 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
+import { meny, toppmeny } from '../data/meny';
+import { hotell } from '../data/hotell';
+import smiubelgen from '../assets/smiubelgen.png';
+import Ikon from './Ikon.astro';
+
+interface Props { overHero?: boolean; aktivSeksjon?: string }
+const { overHero = false, aktivSeksjon } = Astro.props;
+
+// Undersidene i menyen: alt som ligger rett under en seksjonsside.
+const sider = await getCollection('sider', ({ data }) => !data.skjul);
+const under = (seksjon: string, sti: string) =>
+  sider
+    .filter((s) => s.data.seksjon === seksjon && s.data.forelder === sti)
+    .sort((a, b) => a.data.rekkefolge - b.data.rekkefolge)
+    .map((s) => ({ tittel: s.data.tittel, sti: s.data.sti }));
+const tre = meny.map((m) => ({ ...m, under: m.seksjon === 'blogg' ? [] : under(m.seksjon, m.sti) }));
+---
+<a class="hopp" href="#innhold">Hopp til innholdet</a>
+<header class:list={['topp', { 'topp--over': overHero }]} data-topp>
+  <div class="senter topp__rad">
+    <a class="merke" href="/" aria-label={`${hotell.navn} – til forsiden`}>
+      <Image src={smiubelgen} alt="" width="123" height="19" class="merke__rygg" loading="eager" />
+      <span class="merke__navn">Rondane</span>
+      <span class="merke__under">Høyfjellshotell</span>
+    </a>
+    <nav class="topp__nav" aria-label="Hovedmeny">
+      {tre.filter((m) => toppmeny.includes(m.seksjon)).map((m) => (
+        <a href={m.sti} aria-current={m.seksjon === aktivSeksjon ? 'true' : undefined}>{m.tittel}</a>
+      ))}
+    </nav>
+    <div class="topp__handling">
+      <a class="topp__tlf" href={`tel:${hotell.telefon.replace(/\s/g, '')}`}><Ikon navn="telefon" /><span>{hotell.telefonVis}</span></a>
+      <a class="knapp knapp--fylt topp__bestill" href={hotell.booking} target="_blank" rel="noopener">Bestill</a>
+      <button type="button" class="topp__meny" aria-expanded="false" aria-controls="meny" data-meny-knapp>
+        <Ikon navn="meny" class="topp__ikon-meny" /><Ikon navn="lukk" class="topp__ikon-lukk" /><span>Meny</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="meny" id="meny" hidden data-meny>
+  <div class="senter meny__rute">
+    {tre.map((m) => (
+      <section class="meny__gruppe">
+        <h2><a href={m.sti} aria-current={m.seksjon === aktivSeksjon ? 'true' : undefined}>{m.tittel}</a></h2>
+        {m.under.length > 0 && (
+          <ul>
+            {m.under.map((u) => <li><a href={u.sti}>{u.tittel}</a></li>)}
+          </ul>
+        )}
+      </section>
+    ))}
+    <section class="meny__gruppe meny__kontakt">
+      <h2>Kontakt</h2>
+      <p><a href={`tel:${hotell.telefon.replace(/\s/g, '')}`}>{hotell.telefonVis}</a><br /><a href={`mailto:${hotell.epost}`}>{hotell.epost}</a></p>
+      <p>{hotell.adresse.gate}, {hotell.adresse.sted}<br />{hotell.adresse.postnr} {hotell.adresse.poststed}</p>
+      <a class="knapp knapp--fylt" href={hotell.booking} target="_blank" rel="noopener">Bestill overnatting <Ikon navn="pil" /></a>
+    </section>
+  </div>
+</div>
+
+<style>
+  .topp { position: sticky; top: 0; z-index: var(--lag-topp); background: var(--frost); color: var(--blekk); border-bottom: 1px solid var(--linje); transition: background-color var(--fart) var(--kurve), color var(--fart) var(--kurve), border-color var(--fart) var(--kurve); }
+  /* Over et hero-bilde ligger toppen gjennomsiktig og hvit, og blir frost når
+     man ruller. Ikke sticky-fast der: den flyter over bildet. */
+  .topp--over { position: absolute; left: 0; right: 0; background: transparent; color: var(--kritt); border-color: transparent; }
+  .topp--over[data-fast] { position: fixed; background: var(--frost); color: var(--blekk); border-color: var(--linje); }
+  .topp__rad { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem 2rem; min-height: 4.5rem; }
+  .merke { display: grid; grid-template-columns: auto; justify-items: start; text-decoration: none; color: inherit; line-height: 1; gap: 0.15rem; }
+  .merke__rygg { width: 7.7rem; height: auto; }
+  .merke__navn { font-family: var(--skrift-display); font-weight: 700; font-size: 1.55rem; letter-spacing: 0.22em; text-transform: uppercase; margin-top: 0.2rem; }
+  .merke__under { font-family: var(--skrift-display); font-weight: 500; font-size: 0.68rem; letter-spacing: 0.3em; text-transform: uppercase; opacity: 0.85; }
+  .topp__nav { display: none; gap: clamp(1rem, 2vw, 1.9rem); justify-content: center; }
+  .topp__nav a { font-family: var(--skrift-display); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.06em; text-transform: uppercase; text-decoration: none; color: inherit; padding: 0.5rem 0; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .topp__nav a:hover, .topp__nav a[aria-current] { border-bottom-color: currentColor; }
+  .topp__handling { display: flex; align-items: center; gap: 0.6rem; grid-column: 3; }
+  .topp__tlf { display: none; align-items: center; gap: 0.4rem; text-decoration: none; color: inherit; font-weight: 500; white-space: nowrap; }
+  .topp__bestill { display: none; }
+  .topp__meny { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.9rem; padding: 0.5rem 0.9rem; border: 1.5px solid currentColor; border-radius: var(--radius); background: transparent; color: inherit; cursor: pointer; font-family: var(--skrift-display); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .topp__meny .topp__ikon-lukk { display: none; }
+  .topp__meny[aria-expanded='true'] .topp__ikon-lukk { display: block; }
+  .topp__meny[aria-expanded='true'] .topp__ikon-meny { display: none; }
+  @media (min-width: 40rem) { .topp__bestill { display: inline-flex; } }
+  /* Menylinja får plass til fem punkter fra 72rem; telefonnummeret først fra 86rem.
+     Under det ligger alt i Meny-knappen, som alltid er der. */
+  @media (min-width: 72rem) { .topp__nav { display: flex; } }
+  @media (min-width: 86rem) { .topp__tlf { display: inline-flex; } }
+
+  .meny { position: fixed; inset: 0; z-index: var(--lag-meny); background: var(--granitt); color: var(--kritt); overflow-y: auto; padding-top: 5.5rem; padding-bottom: 3rem; }
+  .meny[hidden] { display: none; }
+  .meny__rute { display: grid; gap: 2rem 3rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); padding-top: 1.5rem; }
+  .meny__gruppe h2 { font-size: 1.5rem; margin-bottom: 0.6rem; }
+  .meny__gruppe h2 a { color: inherit; text-decoration: none; }
+  .meny__gruppe h2 a:hover, .meny__gruppe h2 a[aria-current] { color: var(--fjell-lys); }
+  .meny__gruppe ul { list-style: none; margin: 0; padding: 0; }
+  .meny__gruppe li { padding: 0.28rem 0; }
+  .meny__gruppe li a { color: var(--kritt-dempet); text-decoration: none; font-size: 1rem; }
+  .meny__gruppe li a:hover { color: var(--kritt); text-decoration: underline; }
+  .meny__kontakt p { color: var(--kritt-dempet); }
+  .meny__kontakt a { color: var(--kritt); }
+  .meny__kontakt .knapp { margin-top: 0.5rem; }
+  body:has(.meny:not([hidden])) { overflow: hidden; }
+  body:has(.meny:not([hidden])) .topp { position: fixed; background: var(--granitt); color: var(--kritt); border-color: var(--linje-mork); }
+</style>
+<script>
+  const topp = document.querySelector<HTMLElement>('[data-topp]');
+  const knapp = document.querySelector<HTMLButtonElement>('[data-meny-knapp]');
+  const meny = document.querySelector<HTMLElement>('[data-meny]');
+  if (topp && knapp && meny) {
+    const sett = (aapen: boolean) => {
+      knapp.setAttribute('aria-expanded', String(aapen));
+      meny.hidden = !aapen;
+      if (aapen) (meny.querySelector('a') as HTMLElement | null)?.focus();
+      else knapp.focus();
+    };
+    knapp.addEventListener('click', () => sett(meny.hidden));
+    if (location.hash === '#meny') sett(true);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !meny.hidden) sett(false); });
+
+    if (topp.classList.contains('topp--over')) {
+      const oppdater = () => { if (window.scrollY > 60) topp.setAttribute('data-fast', ''); else topp.removeAttribute('data-fast'); };
+      window.addEventListener('scroll', oppdater, { passive: true });
+      oppdater();
+    }
+  }
+</script>

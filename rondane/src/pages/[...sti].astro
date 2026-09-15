@@ -1,0 +1,102 @@
+---
+import { getCollection, render } from 'astro:content';
+import { Picture } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import Brodsmuler from '../components/Brodsmuler.astro';
+import KortRad from '../components/KortRad.astro';
+import Galleri from '../components/Galleri.astro';
+import BestillBand from '../components/BestillBand.astro';
+import Sidefelt from '../components/Sidefelt.astro';
+import Video from '../components/Video.astro';
+import { meny } from '../data/meny';
+import { beskrivelseAv, brodsmulerJsonLd } from '../lib/seo';
+
+export async function getStaticPaths() {
+  const sider = await getCollection('sider');
+  return sider.map((side) => ({ params: { sti: side.data.sti.replace(/^\/|\/$/g, '') }, props: { side } }));
+}
+const { side } = Astro.props;
+const alle = await getCollection('sider');
+const { Content } = await render(side);
+const d = side.data;
+const site = Astro.site!.toString().replace(/\/$/, '');
+
+// Brødsmuler fra stien: hvert ledd slås opp i innholdet.
+const ledd = d.sti.split('/').filter(Boolean);
+const smuler = [{ navn: 'Hjem', sti: '/' }];
+for (let i = 0; i < ledd.length; i++) {
+  const sti = '/' + ledd.slice(0, i + 1).join('/') + '/';
+  const treff = alle.find((s) => s.data.sti === sti);
+  smuler.push({ navn: treff?.data.tittel ?? meny.find((m) => m.sti === sti)?.tittel ?? ledd[i], sti });
+}
+const seksjonsnavn = meny.find((m) => m.seksjon === d.seksjon)?.tittel ?? '';
+const erSeksjonsside = d.sti === meny.find((m) => m.seksjon === d.seksjon)?.sti;
+
+// Søsken: det som ligger under samme forelder, minus denne. Kort på indekssider
+// kommer fra frontmatter (slik de sto på gamle rondane.no); her fylles
+// eventuelle undersider som ikke var listet der.
+const barnFraInnhold = alle
+  .filter((s) => s.data.forelder === d.sti && !d.barn.some((b) => b.sti === s.data.sti) && !s.data.skjul)
+  .sort((a, b) => a.data.rekkefolge - b.data.rekkefolge)
+  .map((s) => ({ sti: s.data.sti, tittel: s.data.tittel, under: s.data.undertittel ?? null, bilde: s.data.hero ? s.data.hero.src.replace(/.*\/src\/assets\/bilder\//, '').replace(/\?.*$/, '') : null }));
+const kort = [...d.barn.filter((b) => !b.sti.startsWith('http') || true), ...barnFraInnhold];
+const sosken = d.forelder
+  ? alle.filter((s) => s.data.forelder === d.forelder && s.data.sti !== d.sti && !s.data.skjul).sort((a, b) => a.data.rekkefolge - b.data.rekkefolge)
+  : [];
+const forelder = d.forelder ? alle.find((s) => s.data.sti === d.forelder) : undefined;
+const forelderNavn = forelder?.data.tittel ?? meny.find((m) => m.sti === d.forelder)?.tittel;
+
+const beskrivelse = d.beskrivelse ?? beskrivelseAv(side.body, `${d.tittel} på Rondane Høyfjellshotell, Mysuseter.`);
+const jsonLd: object[] = [brodsmulerJsonLd(site, smuler)];
+
+// Spørsmål og svar: strukturert data rett fra teksten, som er «**Spørsmål?**» + svar.
+if (d.sti === '/om-hotellet/sporsmal-og-svar/' && side.body) {
+  const par = [...side.body.matchAll(/\*\*([^*]+\?)\*\*\s*\n([\s\S]*?)(?=\n\s*\*\*|\n<Sidefelt>|$)/g)];
+  if (par.length) jsonLd.push({
+    '@context': 'https://schema.org', '@type': 'FAQPage',
+    mainEntity: par.map((m) => ({ '@type': 'Question', name: m[1].trim(), acceptedAnswer: { '@type': 'Answer', text: m[2].replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim() } })),
+  });
+}
+const erPersonvern = d.sti === '/om-hotellet/personvern/';
+---
+<Base tittel={d.tittel} beskrivelse={beskrivelse} bilde={d.hero} overHero={!!d.hero} aktivSeksjon={d.seksjon} jsonLd={jsonLd}>
+  <Hero bilde={d.hero} alt={d.heroAlt ?? ''} kicker={erSeksjonsside ? undefined : seksjonsnavn} tittel={d.tittel} undertittel={d.undertittel} />
+  <Brodsmuler smuler={smuler} />
+  <article class="side senter">
+    <div class="side__tekst innhold">
+      <Content components={{ Sidefelt, Video }} />
+    </div>
+    {kort.length > 0 && <div class="side__kort"><KortRad kort={kort} /></div>}
+    {d.galleri.length > 0 && <div class="side__galleri"><Galleri bilder={d.galleri} tittel={`Bilder: ${d.tittel}`} /></div>}
+    {sosken.length > 0 && (
+      <nav class="side__mer" aria-label={`Mer under ${forelderNavn ?? seksjonsnavn}`}>
+        <h2>Mer {forelderNavn ? `i ${forelderNavn.toLowerCase()}` : ''}</h2>
+        <ul>
+          {forelder && <li><a href={forelder.data.sti}>← {forelder.data.tittel}</a></li>}
+          {sosken.map((s) => <li><a href={s.data.sti}>{s.data.tittel}</a></li>)}
+        </ul>
+      </nav>
+    )}
+  </article>
+  {!erPersonvern && <BestillBand />}
+</Base>
+<style>
+  .side { padding-block: clamp(2rem, 4vw, 3.5rem) var(--rom-seksjon); }
+  /* Teksten i én spalte, sidefeltet ved siden av på brede skjermer. Alt i
+     .innhold legger seg i kolonne 1; sidefeltet tar kolonne 2 og starter på
+     rad 1, så det ligger øverst uansett hvor i teksten det står. */
+  .side__tekst { max-width: none; }
+  @media (min-width: 64rem) {
+    .side__tekst { display: grid; grid-template-columns: minmax(0, var(--bredde-tekst)) minmax(16rem, 20rem); column-gap: clamp(2rem, 5vw, 5rem); align-items: start; }
+    .side__tekst > :global(*) { grid-column: 1; margin-top: 0; }
+    .side__tekst > :global(* + *) { margin-top: 1.1em; }
+    .side__tekst > :global(.sidefelt) { grid-column: 2; grid-row: 1 / span 400; margin-top: 0; position: sticky; top: 6rem; }
+  }
+  .side__kort, .side__galleri { margin-top: var(--rom-blokk); }
+  .side__mer { margin-top: var(--rom-blokk); padding-top: 1.5rem; border-top: 1px solid var(--linje); }
+  .side__mer h2 { font-size: 1.1rem; letter-spacing: 0.1em; color: var(--blekk-dempet); margin-bottom: 0.75rem; }
+  .side__mer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .side__mer a { text-decoration: none; font-family: var(--skrift-display); font-weight: 600; font-size: 1.1rem; letter-spacing: 0.03em; }
+  .side__mer a:hover { text-decoration: underline; }
+</style>

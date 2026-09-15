@@ -1,0 +1,65 @@
+---
+import { getCollection, render } from 'astro:content';
+import { Picture } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import Hero from '../../components/Hero.astro';
+import Brodsmuler from '../../components/Brodsmuler.astro';
+import BestillBand from '../../components/BestillBand.astro';
+import Video from '../../components/Video.astro';
+import Sidefelt from '../../components/Sidefelt.astro';
+import { hotell } from '../../data/hotell';
+import { beskrivelseAv, brodsmulerJsonLd } from '../../lib/seo';
+
+export async function getStaticPaths() {
+  const innlegg = await getCollection('blogg');
+  return innlegg.map((i) => ({ params: { slug: i.data.sti.replace(/^\/blogg\/|\/$/g, '') }, props: { innlegg: i } }));
+}
+const { innlegg } = Astro.props;
+const { Content } = await render(innlegg);
+const d = innlegg.data;
+const site = Astro.site!.toString().replace(/\/$/, '');
+const beskrivelse = d.beskrivelse ?? beskrivelseAv(innlegg.body, d.tittel);
+const smuler = [{ navn: 'Hjem', sti: '/' }, { navn: 'Blogg', sti: '/blogg/' }, { navn: d.tittel, sti: d.sti }];
+const dato = d.dato?.toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
+const jsonLd = [
+  brodsmulerJsonLd(site, smuler),
+  {
+    '@context': 'https://schema.org', '@type': 'BlogPosting',
+    headline: d.tittel, description: beskrivelse, datePublished: d.dato?.toISOString(), inLanguage: 'nb',
+    author: { '@type': d.forfatter ? 'Person' : 'Organization', name: d.forfatter ?? hotell.navn },
+    publisher: { '@type': 'Organization', name: hotell.navn, url: `${site}/` },
+    mainEntityOfPage: `${site}${d.sti}`,
+    ...(d.hero ? { image: `${site}${d.hero.src}` } : {}),
+  },
+];
+const alle = (await getCollection('blogg')).sort((a, b) => (b.data.dato?.getTime() ?? 0) - (a.data.dato?.getTime() ?? 0));
+const idx = alle.findIndex((i) => i.id === innlegg.id);
+const nyere = alle[idx - 1]; const eldre = alle[idx + 1];
+---
+<Base tittel={d.tittel} beskrivelse={beskrivelse} bilde={d.hero} overHero={!!d.hero} aktivSeksjon="blogg" jsonLd={jsonLd} type="article">
+  <Hero bilde={d.hero} kicker="Blogg" tittel={d.tittel}>
+    {(dato || d.forfatter) && <p class="hero__meta">{dato}{d.forfatter && ` · ${d.forfatter}`}</p>}
+  </Hero>
+  <Brodsmuler smuler={smuler} />
+  <article class="senter innlegg">
+    <div class="innhold">
+      <Content components={{ Video, Sidefelt }} />
+    </div>
+    <nav class="innlegg__nabo" aria-label="Flere innlegg">
+      {eldre && <a href={eldre.data.sti}><span>Eldre</span>{eldre.data.tittel}</a>}
+      {nyere && <a href={nyere.data.sti} class="innlegg__nyere"><span>Nyere</span>{nyere.data.tittel}</a>}
+    </nav>
+  </article>
+  <BestillBand />
+</Base>
+<style>
+  .hero__meta { margin-top: 0.8rem; color: var(--kritt-dempet); font-size: 1rem; letter-spacing: 0.03em; }
+  .innlegg { padding-block: clamp(2rem, 4vw, 3.5rem) var(--rom-seksjon); }
+  .innlegg .innhold :global(p:has(> img)) + :global(p) { margin-top: 0.4em; font-size: 0.92rem; color: var(--blekk-dempet); }
+  .innlegg__nabo { margin-top: var(--rom-blokk); padding-top: 1.5rem; border-top: 1px solid var(--linje); display: grid; gap: 1rem; max-width: var(--bredde-tekst); }
+  @media (min-width: 40rem) { .innlegg__nabo { grid-template-columns: 1fr 1fr; } }
+  .innlegg__nabo a { text-decoration: none; font-family: var(--skrift-display); font-weight: 600; font-size: 1.2rem; line-height: 1.1; color: inherit; }
+  .innlegg__nabo a span { display: block; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blekk-dempet); margin-bottom: 0.3rem; }
+  .innlegg__nabo a:hover { color: var(--fjell); }
+  .innlegg__nyere { text-align: right; }
+</style>

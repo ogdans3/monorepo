@@ -1,0 +1,76 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
+import { hotell } from '../data/hotell';
+import logo from '../assets/logo-hvit.png';
+import kulinarisk from '../assets/de-kulinariske.png';
+import npr from '../assets/nasjonalparkriket.png';
+
+const sider = await getCollection('sider', ({ data }) => !data.skjul);
+const under = (seksjon: string, sti: string) =>
+  sider.filter((s) => s.data.seksjon === seksjon && s.data.forelder === sti).sort((a, b) => a.data.rekkefolge - b.data.rekkefolge);
+const kolonner = [
+  { tittel: 'Overnatting', sti: '/overnatting/', lenker: under('overnatting', '/overnatting/') },
+  { tittel: 'Kurs, konferanse og selskap', sti: '/selskap/', lenker: [...under('kurs-og-konferanse', '/kurs-og-konferanse/'), ...under('selskap', '/selskap/')] },
+  { tittel: 'Tur og aktiviteter', sti: '/tur-og-aktiviteter/', lenker: under('tur-og-aktiviteter', '/tur-og-aktiviteter/') },
+  { tittel: 'Om hotellet', sti: '/om-hotellet/', lenker: [...under('om-hotellet', '/om-hotellet/'), ...under('basseng', '/basseng/')] },
+];
+const aar = new Date().getFullYear();
+---
+<footer class="bunn morkt">
+  <div class="senter">
+    <div class="bunn__topp">
+      <div class="bunn__kontakt">
+        <Image src={logo} alt={hotell.navn} width="220" height="66" loading="lazy" class="bunn__logo" />
+        <p class="bunn__adresse">
+          {hotell.adresse.gate}, {hotell.adresse.sted}<br />
+          {hotell.adresse.postnr} {hotell.adresse.poststed}<br />
+          <span class="bunn__lite">{hotell.postboks} · 61°48'31.3"N 9°40'24.4"E</span>
+        </p>
+        <p>
+          <a href={`tel:${hotell.telefon.replace(/\s/g, '')}`}>{hotell.telefonVis}</a><br />
+          <a href={`mailto:${hotell.epost}`}>{hotell.epost}</a>
+        </p>
+        <p><a class="knapp" href={hotell.booking} target="_blank" rel="noopener">Bestill overnatting</a></p>
+      </div>
+      {kolonner.map((k) => (
+        <nav class="bunn__kol" aria-label={k.tittel}>
+          <h2><a href={k.sti}>{k.tittel}</a></h2>
+          <ul>{k.lenker.map((l) => <li><a href={l.data.sti}>{l.data.tittel}</a></li>)}</ul>
+        </nav>
+      ))}
+    </div>
+    <div class="bunn__linje">
+      <div class="bunn__partnere">
+        <a href="https://www.nasjonalparkriket.no/" rel="noopener" target="_blank"><Image src={npr} alt="En del av Nasjonalparkriket" width="70" height="70" loading="lazy" /></a>
+        <a href="https://www.dekulinariske.no/" rel="noopener" target="_blank"><Image src={kulinarisk} alt="Medlem av De kulinariske spisesteder" width="130" height="70" loading="lazy" /></a>
+      </div>
+      <p class="bunn__lite">
+        © {aar} {hotell.navn} AS · Org.nr. {hotell.orgnr} ·
+        <a href="/om-hotellet/personvern/">Personvern</a> ·
+        <a href="/guide/">Gjesteguide</a> ·
+        <a href="/blogg/">Blogg</a> ·
+        <a href={hotell.facebook} rel="noopener" target="_blank">Facebook</a> ·
+        <a href={hotell.instagram} rel="noopener" target="_blank">Instagram</a>
+      </p>
+    </div>
+  </div>
+</footer>
+<style>
+  .bunn { padding-block: clamp(3rem, 6vw, 5rem) 2rem; border-top: 4px solid var(--fjell-lys); }
+  .bunn__topp { display: grid; gap: 2.5rem 2rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
+  .bunn__kontakt { grid-column: span 1; }
+  @media (min-width: 64rem) { .bunn__topp { grid-template-columns: 1.4fr repeat(4, 1fr); } }
+  .bunn__logo { width: 13rem; height: auto; margin-bottom: 1.25rem; }
+  .bunn__adresse { color: var(--kritt-dempet); }
+  .bunn__lite { font-size: 0.86rem; color: var(--kritt-dempet); }
+  .bunn__kol h2 { font-size: 1.05rem; letter-spacing: 0.1em; margin-bottom: 0.7rem; }
+  .bunn__kol h2 a { color: var(--kritt); text-decoration: none; }
+  .bunn__kol ul { list-style: none; margin: 0; padding: 0; }
+  .bunn__kol li { padding: 0.22rem 0; font-size: 0.95rem; }
+  .bunn__kol li a { color: var(--kritt-dempet); text-decoration: none; }
+  .bunn__kol li a:hover { color: var(--kritt); text-decoration: underline; }
+  .bunn__linje { margin-top: clamp(2.5rem, 5vw, 4rem); padding-top: 1.5rem; border-top: 1px solid var(--linje-mork); display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; justify-content: space-between; }
+  .bunn__partnere { display: flex; gap: 1.5rem; align-items: center; }
+  .bunn__partnere img { height: 3.5rem; width: auto; background: var(--frost); padding: 0.35rem; border-radius: var(--radius); }
+</style>

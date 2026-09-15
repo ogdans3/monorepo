@@ -1,0 +1,16 @@
+---
+// Faktafeltet ved siden av teksten: priser, «ting å se og gjøre», ekstra
+// bilder. På gamle rondane.no sto dette i høyre spalte; her ligger det ved
+// siden av på brede skjermer og under på smale.
+---
+<aside class="sidefelt">
+  <slot />
+</aside>
+<style is:global>
+  .sidefelt { background: var(--frost-2); border-radius: var(--radius); padding: clamp(1.25rem, 3vw, 1.75rem); font-size: 0.97rem; line-height: 1.55; }
+  .sidefelt > * + * { margin-top: 0.9em; }
+  .sidefelt p:first-child { font-family: var(--skrift-display); font-weight: 600; font-size: 1.15rem; letter-spacing: 0.02em; }
+  .sidefelt ul { padding-left: 1.1rem; }
+  .sidefelt li { margin-bottom: 0.35em; }
+  .sidefelt img { border-radius: var(--radius); margin-block: 0.6em; }
+</style>

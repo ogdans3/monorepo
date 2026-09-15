@@ -1,0 +1,3 @@
+name: Rondane Høyfjellshotell
+description: Nettstedet til Rondane Høyfjellshotell på Mysuseter. Statisk Astro-side med alt innholdet fra gamle rondane.no, bygget for mobil og søkemotorer.
+http_port: 3000

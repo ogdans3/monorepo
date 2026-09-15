@@ -1,0 +1,215 @@
+---
+import { getCollection } from 'astro:content';
+import { Picture, Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import BestillBand from '../components/BestillBand.astro';
+import Ikon from '../components/Ikon.astro';
+import { hotell } from '../data/hotell';
+import { beskrivelseAv } from '../lib/seo';
+import logo from '../assets/logo-hvit.png';
+import heroBilde from '../assets/bilder/bg/bg-spring.jpg';
+import panorama from '../assets/bilder/naturbilder/rondane.jpg';
+import basseng from '../assets/bilder/box/basseng-oppusset2.jpg';
+import dessert from '../assets/bilder/restaurant/dessert-sjokoladedrue-is.jpg';
+import bryllup from '../assets/bilder/event/bryllup/even-karoline-2018/dsc-8248-2.jpg';
+import hotellet from '../assets/bilder/box/rondane-hotell-440.jpg';
+import foss from '../assets/bilder/box/fossbilde-mari.jpg';
+import vinter from '../assets/bilder/box/vinterbryllup-santa-boks.jpg';
+import sykkel from '../assets/bilder/box/sykkel-bru-sommer.jpg';
+
+const innlegg = (await getCollection('blogg')).sort((a, b) => (b.data.dato?.getTime() ?? 0) - (a.data.dato?.getTime() ?? 0)).slice(0, 3);
+const dato = (d?: Date) => d ? d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+const beskrivelse = 'Rondane Høyfjellshotell på Mysuseter ligger nærmest Rondane nasjonalpark av alle hoteller, 13 km fra E6 ved Otta. Hotellrom, hytter og leiligheter, svømmebasseng, restaurant med lokalmat, og fjellturer rett fra døra.';
+---
+<Base tittel={hotell.navn} beskrivelse={beskrivelse} bilde={heroBilde} overHero>
+  <Hero bilde={heroBilde} alt="Sommer på Mysuseter: hotellets flagg mot furuskog og Rondane-toppene bak" tittel="Porten til Rondane nasjonalpark" undertittel="Et tradisjonsrikt høyfjellshotell med områdets beste beliggenhet, siden 1939." storrelse="full" senter>
+    <Image src={logo} alt="" width="330" height="99" class="forside__logo" loading="eager" fetchpriority="high" />
+    <div class="forside__knapper">
+      <a class="knapp knapp--fylt" href={hotell.booking} target="_blank" rel="noopener">Se ledige rom <Ikon navn="pil" /></a>
+      <a class="knapp" href="/tur-og-aktiviteter/">Turene fra døra</a>
+    </div>
+  </Hero>
+
+  <section class="senter velkommen seksjon">
+    <div class="velkommen__hode">
+      <h2>Velkommen til Rondane</h2>
+      <p class="stemme">«Det er som om man er hjemme hos noen.»</p>
+    </div>
+    <div class="velkommen__tekst">
+      <p>Vi er hotellet som ligger nærmest Rondane nasjonalpark, samtidig som det bare er 13 kilometer ned til E6 i Gudbrandsdalen. Velg overnatting i singelrom, dobbeltrom, familierom og suiter, eller i hytter og leiligheter med selvhushold. Hotellet har restaurant, bar, svømmebasseng med badstue og boblebad, treningsrom og stuer med servering.</p>
+      <p>Stikkordet for Rondane er tilgjengelige fjellturer, selv for lite fjellvante. Alle de ti toppene over 2000 meter kan bestiges uten annet utstyr enn fjellstøvler, og seks av dem rekker du på dagstur fra hotellet.</p>
+    </div>
+    <ul class="tre">
+      <li>
+        <h3>Finn ditt rom</h3>
+        <p>Femti rom fordelt på tre etasjer, fra økonomi-enkeltrom til juniorsuiter og familierom. Alle med eget bad, alle med frokost.</p>
+        <a class="knapp" href="/overnatting/hotellrom/">Rom og priser</a>
+      </li>
+      <li>
+        <h3>Smaken av Gudbrandsdalen</h3>
+        <p>Mat laget fra bunnen av, av lokale råvarer og etter sesong. Medlem av De kulinariske spisesteder siden 2016.</p>
+        <a class="knapp" href="/om-hotellet/restaurant/">Restaurant og bar</a>
+      </li>
+      <li>
+        <h3>Ut fra døra</h3>
+        <p>Fossturen tar en time. Brudesløret en formiddag. Storronden en hel dag. Om vinteren starter skisporet rett utenfor.</p>
+        <a class="knapp" href="/tur-og-aktiviteter/">Tur og aktiviteter</a>
+      </li>
+    </ul>
+  </section>
+
+  <section class="senter seksjon splitt">
+    <div class="splitt__bilde">
+      <Picture src={panorama} widths={[640, 1024, 1440]} sizes="(min-width: 64rem) 58vw, 100vw" formats={['avif', 'webp']} alt="Vinterpanorama mot Rondslottet, Vinjeronden og Storronden fra Mysuseter" loading="lazy" decoding="async" />
+    </div>
+    <div class="splitt__tekst">
+      <span class="kicker">Om hotellet</span>
+      <h2>Nærmest nasjonalparken</h2>
+      <p>Hotellet ligger nærmest Rondane nasjonalpark av samtlige hoteller i området, kun tre kilometer fra grensen. Rondane var Norges første nasjonalpark, fredet i 1962 for villreinstammen som fortsatt lever her, og hele området er lett tilgjengelig for vanlige fjellvandrere.</p>
+      <p>Rondane Høyfjellshotell har tatt imot fjellturister siden 1939, overlevd en brann og hatt fire eiere. Fellesarealene og bassenget ble pusset opp i 2016.</p>
+      <a class="pillenke" href="/om-hotellet/">Les mer om hotellet <Ikon navn="pil" /></a>
+    </div>
+  </section>
+
+  <section class="senter seksjon splitt splitt--speil">
+    <div class="splitt__bilde">
+      <Picture src={basseng} widths={[640, 1024, 1440]} sizes="(min-width: 64rem) 58vw, 100vw" formats={['avif', 'webp']} alt="Det oppussede svømmebassenget, 14 ganger 7 meter, med vinduer mot fjellet" loading="lazy" decoding="async" />
+    </div>
+    <div class="splitt__tekst">
+      <span class="kicker">Svømmebasseng</span>
+      <h2>29 grader når det uler og regner utenfor</h2>
+      <p>Bassenget måler 14 × 7 meter og ble pusset opp i 2016. Vi kan unne oss en så høy temperatur fordi vi produserer vår egen strøm i hotellets eget vannkraftverk. Badstue og boblebad hører til, og alt er gratis for gjester på hotellet, i hyttene og i leilighetene.</p>
+      <a class="pillenke" href="/basseng/">Basseng, badstue og boblebad <Ikon navn="pil" /></a>
+    </div>
+  </section>
+
+  <section class="furu">
+    <div class="senter seksjon splitt">
+      <div class="splitt__bilde">
+        <Picture src={dessert} widths={[640, 1024, 1440]} sizes="(min-width: 64rem) 58vw, 100vw" formats={['avif', 'webp']} alt="Dessert fra kjøkkenet: is med sjokoladetrukne druer" loading="lazy" decoding="async" />
+      </div>
+      <div class="splitt__tekst">
+        <span class="kicker">Restaurant og bar</span>
+        <h2>Fra jord til bord</h2>
+        <p>Kjøkkenet tar utgangspunkt i råvaretilgang og sesong, med egenprodusert granskuddsirup til noen retter og egen leverpostei til frokost. Vi er blitt kortreistmatbedriften Gudbrandsdalsmats største kunde, og det er ikke tilfeldig: som gjest skal du både føle og smake at du er i Gudbrandsdalen.</p>
+        <p>Frokost 08–10, lunsj 13–15, middag 18–20. Bestill bord på <a href={`tel:${hotell.telefon.replace(/\s/g, '')}`}>{hotell.telefonVis}</a>.</p>
+        <a class="pillenke" href="/om-hotellet/restaurant/">Restauranten <Ikon navn="pil" /></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="senter seksjon sesong">
+    <header class="sesong__hode">
+      <h2>Året rundt på Mysuseter</h2>
+      <p>Skisporet er kjørt opp fra november. Sykkelsesongen går fra juni til oktober. Og et vinterbryllup i Rondane ligner ikke noe annet.</p>
+    </header>
+    <div class="sesong__rute">
+      <a class="sesong__kort" href="/tur-og-aktiviteter/vinter/">
+        <Picture src={vinter} widths={[480, 800]} sizes="(min-width: 48rem) 31vw, 92vw" formats={['avif', 'webp']} alt="Brud i snøen mellom granene" loading="lazy" decoding="async" />
+        <span><span class="kicker">Vinter</span><h3>Over hundre kilometer oppkjørte løyper</h3></span>
+      </a>
+      <a class="sesong__kort" href="/tur-og-aktiviteter/fotturer/">
+        <Picture src={foss} widths={[480, 800]} sizes="(min-width: 48rem) 31vw, 92vw" formats={['avif', 'webp']} alt="Ung kvinne med armene ut foran Ulafossene" loading="lazy" decoding="async" />
+        <span><span class="kicker">Sommer og høst</span><h3>Fosser, topper og fangstgraver</h3></span>
+      </a>
+      <a class="sesong__kort" href="/selskap/bryllup/">
+        <Picture src={bryllup} widths={[480, 800]} sizes="(min-width: 48rem) 31vw, 92vw" formats={['avif', 'webp']} alt="Festdekket langbord i spisesalen" loading="lazy" decoding="async" />
+        <span><span class="kicker">Selskap</span><h3>Fjellbryllup og feiringer for hele familien</h3></span>
+      </a>
+    </div>
+  </section>
+
+  <section class="morkt">
+    <div class="senter seksjon kurs">
+      <div class="kurs__bilde">
+        <Picture src={hotellet} widths={[480, 800, 1000]} sizes="(min-width: 64rem) 40vw, 100vw" formats={['avif', 'webp']} alt="Hotellet en sommerdag, sett fra plenen" loading="lazy" decoding="async" />
+      </div>
+      <div>
+        <span class="kicker">Kurs og konferanse</span>
+        <h2>Møter uten støy</h2>
+        <p>Konferanserom med plass til 120 i kinooppsett, velutstyrt og med fjellet utenfor vinduet. Fossturen tar en halvtime mellom øktene, og dagpakken starter på 395 kroner eks. mva. Vi tilbyr også noe så uvanlig som toghøyfjellskonferanser: møtet starter på toget fra Oslo S eller Trondheim S.</p>
+        <div class="kurs__lenker">
+          <a class="knapp" href="/kurs-og-konferanse/">Kurs og konferanse</a>
+          <a class="knapp" href="/selskap/">Selskap og arrangement</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="senter seksjon bloggteaser">
+    <header class="bloggteaser__hode">
+      <div><span class="kicker">Blogg</span><h2>Historier fra fjellet</h2></div>
+      <a class="pillenke" href="/blogg/">Alle innleggene <Ikon navn="pil" /></a>
+    </header>
+    <ul class="bloggteaser__rute">
+      {innlegg.map((i) => (
+        <li>
+          <a href={i.data.sti} class="bloggteaser__kort">
+            <span class="bloggteaser__bilde">{i.data.hero && <Picture src={i.data.hero} widths={[400, 640]} sizes="(min-width: 48rem) 31vw, 92vw" formats={['avif', 'webp']} alt="" loading="lazy" decoding="async" />}</span>
+            <time datetime={i.data.dato?.toISOString().slice(0, 10)}>{dato(i.data.dato)}</time>
+            <h3>{i.data.tittel}</h3>
+            <p>{beskrivelseAv(i.body, '')}</p>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <BestillBand tittel="Bestill direkte, få fordeler" />
+</Base>
+
+<style>
+  .forside__logo { width: min(20rem, 70vw); height: auto; margin: 0 auto 1.5rem; order: -1; }
+  :global(.hero--full .hero__tekst) { display: flex; flex-direction: column; align-items: center; padding-bottom: clamp(3rem, 9vh, 6rem); }
+  .forside__knapper { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-top: 1.75rem; }
+
+  /* Velkommen: overskrift med loddrett strek, som malens, og tre spalter under. */
+  .velkommen { display: grid; gap: clamp(2rem, 5vw, 4rem); }
+  .velkommen__hode { border-left: 2px solid var(--fjell); padding-left: clamp(1.25rem, 3vw, 2.5rem); }
+  .velkommen__hode .stemme { margin-top: 0.6rem; }
+  .velkommen__tekst { max-width: 62ch; }
+  .velkommen__tekst p { font-size: 1.15rem; color: var(--blekk-dempet); }
+  @media (min-width: 64rem) { .velkommen { grid-template-columns: 1fr 1.3fr; } .tre { grid-column: 1 / -1; } }
+  .tre { list-style: none; margin: 0; padding: 0; display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); border-top: 1px solid var(--linje); padding-top: clamp(2rem, 4vw, 3rem); }
+  .tre h3 { text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.6rem; }
+  .tre p { color: var(--blekk-dempet); max-width: 38ch; margin-bottom: 1.1rem; }
+
+  .splitt { display: grid; gap: clamp(1.5rem, 4vw, 4rem); align-items: center; }
+  .splitt__bilde :global(img) { width: 100%; height: auto; border-radius: var(--radius); }
+  .splitt__tekst { max-width: 46ch; }
+  .splitt__tekst h2 { margin-bottom: 1rem; }
+  .splitt__tekst p { color: var(--blekk-dempet); }
+  .furu .splitt__tekst p { color: var(--furu-lys); }
+  .splitt .pillenke { margin-top: 0.75rem; }
+  @media (min-width: 64rem) {
+    .splitt { grid-template-columns: 1.45fr 1fr; }
+    .splitt--speil .splitt__bilde { order: 2; }
+    .splitt--speil .splitt__tekst { justify-self: end; }
+  }
+
+  .sesong__hode { max-width: 60ch; margin-bottom: clamp(1.75rem, 4vw, 3rem); }
+  .sesong__hode p { color: var(--blekk-dempet); font-size: 1.15rem; margin-top: 0.8rem; }
+  .sesong__rute { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+  .sesong__kort { display: grid; gap: 0.9rem; text-decoration: none; color: inherit; }
+  .sesong__kort :global(img) { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); transition: transform 600ms var(--kurve); }
+  .sesong__kort:hover :global(img) { transform: scale(1.02); }
+  .sesong__kort h3 { font-size: 1.5rem; line-height: 1.05; }
+  .sesong__kort .kicker { margin-bottom: 0.4rem; }
+
+  .kurs { display: grid; gap: clamp(1.5rem, 4vw, 4rem); align-items: center; }
+  .kurs p { color: var(--kritt-dempet); max-width: 56ch; margin-top: 1rem; }
+  .kurs h2 { margin-top: 0.2rem; }
+  .kurs__bilde :global(img) { width: 100%; border-radius: var(--radius); }
+  .kurs__lenker { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+  @media (min-width: 64rem) { .kurs { grid-template-columns: 1fr 1.2fr; } }
+
+  .bloggteaser__hode { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 1rem; margin-bottom: clamp(1.75rem, 4vw, 3rem); }
+  .bloggteaser__rute { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+  .bloggteaser__kort { display: grid; gap: 0.5rem; text-decoration: none; color: inherit; align-content: start; }
+  .bloggteaser__bilde { display: block; aspect-ratio: 3 / 2; overflow: hidden; border-radius: var(--radius); background: var(--frost-3); margin-bottom: 0.4rem; }
+  .bloggteaser__bilde :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  .bloggteaser time { font-size: 0.86rem; color: var(--blekk-dempet); letter-spacing: 0.04em; }
+  .bloggteaser h3 { font-size: 1.45rem; line-height: 1.05; }
+  .bloggteaser p { color: var(--blekk-dempet); font-size: 0.97rem; }
+</style>
