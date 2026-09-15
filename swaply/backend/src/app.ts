@@ -5,7 +5,7 @@ import { ZodError } from 'zod'
 
 import type { Database } from './db/index.js'
 import { env } from './env.js'
-import { ApiError } from './lib/errors.js'
+import { ApiError, uniqueViolation } from './lib/errors.js'
 import authPlugin from './plugins/auth.js'
 import authRoutes from './routes/auth.js'
 import chatRoutes from './routes/chat.js'
@@ -69,6 +69,21 @@ export async function buildApp(
     },
   )
 
+  /**
+   * The unique indexes a person can walk into by typing, and what to say when
+   * they do. Norwegian, because it is shown to them.
+   */
+  const uniqueMessages: Record<string, { code: string; message: string }> = {
+    users_email_unique: {
+      code: 'email_taken',
+      message: 'Det finnes allerede en konto med denne e-posten.',
+    },
+    users_phone_unique: {
+      code: 'phone_taken',
+      message: 'Det finnes allerede en konto med dette telefonnummeret.',
+    },
+  }
+
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
       return reply.code(error.statusCode).send({ code: error.code, message: error.message })
@@ -92,6 +107,16 @@ export async function buildApp(
         code: 'invalid_request',
         message: 'Forespørselen var ikke gyldig.',
       })
+    }
+
+    // A unique index is a rule the product has, so breaking one is the
+    // caller's answer to fix, not our failure. Anything not named here is
+    // still a 500 — a surprise collision is a bug, and should read like one.
+    const violated = uniqueViolation(error)
+    if (violated && violated in uniqueMessages) {
+      const { code, message } = uniqueMessages[violated]!
+      request.log.warn({ err: error, constraint: violated }, 'unique violation')
+      return reply.code(409).send({ code, message })
     }
 
     request.log.error(error)

@@ -17,3 +17,20 @@ export const forbidden = (message = 'Du har ikke tilgang til dette.') =>
 export const notFound = (message = 'Fant ikke det du ba om.') =>
   new ApiError(404, 'not_found', message)
 export const conflict = (code: string, message: string) => new ApiError(409, code, message)
+
+/**
+ * The name of the unique index a failed query walked into, or null.
+ *
+ * Checking a column is free of a value and then inserting it is two statements,
+ * and the database is the only place that can decide the race between them. So
+ * the check gives the good message in the ordinary case, and this gives the
+ * same message when two requests arrive together — rather than a 500 that tells
+ * the person nothing. Drizzle wraps the driver's error, so the chain is walked.
+ */
+export function uniqueViolation(error: unknown): string | null {
+  for (let e: unknown = error, depth = 0; e && depth < 5; e = (e as { cause?: unknown }).cause, depth++) {
+    const it = e as { code?: string; constraint_name?: string }
+    if (it.code === '23505') return it.constraint_name ?? 'unknown'
+  }
+  return null
+}

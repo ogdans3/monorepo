@@ -80,14 +80,29 @@ export default async function authRoutes(app: FastifyInstance) {
     // account, not starting a second one.
     const claiming = request.userId && !request.userClaimed ? request.userId : null
 
+    // `is distinct from` rather than `<>`: with nobody being claimed the
+    // comparison is against null, and `id <> null` is null, which is not false.
     const taken = await one(
       app.db,
-      // `is distinct from` rather than `<>`: with nobody being claimed the
-      // comparison is against null, and `id <> null` is null, which is not false.
-      sql`select 1 from users where email = ${body.email}
-            and id is distinct from ${claiming}::uuid`,
+      sql`select email = ${body.email} as email_taken,
+                 phone is not null and phone = ${body.phone ?? null} as phone_taken
+            from users
+           where id is distinct from ${claiming}::uuid
+             and (email = ${body.email}
+                  or (phone is not null and phone = ${body.phone ?? null}))
+           limit 1`,
     )
-    if (taken) throw conflict('email_taken', 'Det finnes allerede en konto med denne e-posten.')
+    if (taken?.['email_taken']) {
+      throw conflict('email_taken', 'Det finnes allerede en konto med denne e-posten.')
+    }
+    if (taken?.['phone_taken']) {
+      // Both columns are unique, and a person who reuses a number has almost
+      // always forgotten the account it belongs to.
+      throw conflict(
+        'phone_taken',
+        'Det finnes allerede en konto med dette telefonnummeret.',
+      )
+    }
 
     const passwordHash = await hashPassword(body.password)
 
