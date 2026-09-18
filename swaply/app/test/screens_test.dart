@@ -483,6 +483,20 @@ void main() {
       expect(find.textContaining('har allerede sendt sin ting'), findsOneWidget);
     });
 
+    testWidgets('07i a three-way match offers the chat, and opens it', (tester) async {
+      // «Dette byttet kan ikke Swaply fasilitere, men vi kan starte en chat så
+      // dere avtaler det selv.» The button said «Start chat» and opened an
+      // overview of the trade instead.
+      server.overrides['GET /trades/trade-chain'] = chainTrade();
+      await mount(tester, const MatchScreen(tradeId: 'trade-chain'));
+
+      expect(find.text('Dere kan gjøre en treveis-swap!'), findsOneWidget);
+      await tester.tap(find.text('Start chat'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ThreadScreen), findsOneWidget);
+    });
+
     testWidgets('07j chain: the third leg is shown, and it is agreed in the chat',
         (tester) async {
       server.overrides['GET /trades/trade-chain'] = chainTrade();

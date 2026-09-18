@@ -138,9 +138,17 @@ class _MatchScreenState extends State<MatchScreen> {
                     children: [
                       PrimaryButton(
                         chain ? 'Start chat' : 'Se byttet',
+                        // 07i offers a chat, and means it: the three of them
+                        // arrange this one themselves, so the button goes to
+                        // the conversation rather than to an overview of a
+                        // trade nobody is facilitating.
                         onPressed: () => Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                                builder: (_) => TradeDetailScreen(tradeId: trade.id))),
+                          MaterialPageRoute(
+                            builder: (_) => chain && trade.threadId != null
+                                ? ThreadScreen(threadId: trade.threadId!)
+                                : TradeDetailScreen(tradeId: trade.id),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       GestureDetector(
