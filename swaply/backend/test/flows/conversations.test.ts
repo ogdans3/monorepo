@@ -143,6 +143,27 @@ describe('a conversation and the trade it belongs to', () => {
     expect(row['others'][0]['displayName']).toBe('Ola N.')
   })
 
+  test('7b. it is not your turn on a deal that still has an empty side', async () => {
+    // Kari puts the drill back on the table and nothing of her own with it —
+    // a real move in a negotiation, and one the other side cannot answer yes
+    // to. «Din tur» and the badge on Bytter both mean «somebody is waiting for
+    // you to say yes», so counting this sends Ola to a screen with nothing to
+    // press.
+    const view = await call('GET', `/trades/${tradeId}`, { token: kari })
+    const theirs = view.body!['receivingFrom']['position']
+
+    const countered = await call('POST', `/trades/${tradeId}/counter`, {
+      token: kari, body: { items: [{ itemId: drill, giverPosition: theirs }] },
+    })
+    expect(countered.status).toBe(200)
+    expect(countered.body!['state']).toBe('countered')
+
+    const list = await call('GET', '/trades', { token: ola })
+    expect(list.body!['waiting']).toHaveLength(1)
+    expect(list.body!['yourTurn']).toBe(0)
+    expect((await call('GET', '/me', { token: ola })).body!['tradesNeedingYou']).toBe(0)
+  })
+
   test('8. ending the trade keeps the conversation, which 09g promises in writing',
     async () => {
       // «Ola får beskjed, samtalen beholdes.» A thread that dies with its trade

@@ -32,6 +32,9 @@ export default async function profileRoutes(app: FastifyInstance) {
             and (tp.last_read_message_id is null
                  or m.created_at > (select created_at from messages where id = tp.last_read_message_id))`,
     )
+    // The badge on Bytter. The same rule as «Din tur» on screen 11, and it has
+    // to be the same number: a trade you have not answered, on an offer that
+    // has something from everybody. See `tradeList` in trades/view.ts.
     const yourTurn = await one(
       app.db,
       sql`select count(*) as n from trades t
@@ -41,7 +44,16 @@ export default async function profileRoutes(app: FastifyInstance) {
               select 1 from trade_acceptances a
               join trade_offers o on o.id = a.offer_id
               where o.trade_id = t.id and a.user_id = ${userId} and a.revoked_at is null
-                and o.seq = (select max(seq) from trade_offers where trade_id = t.id))`,
+                and o.seq = (select max(seq) from trade_offers where trade_id = t.id))
+            and not exists (
+              select 1 from trade_participants empty
+              where empty.trade_id = t.id
+                and not exists (
+                  select 1 from trade_offer_items oi
+                  join trade_offers o on o.id = oi.offer_id
+                  where o.trade_id = t.id
+                    and o.seq = (select max(seq) from trade_offers where trade_id = t.id)
+                    and oi.giver_position = empty.position))`,
     )
 
     return {

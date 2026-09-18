@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { blockedBetween } from '../lib/blocks.js'
 import { CATEGORIES, CONDITIONS } from '../lib/constants.js'
 import { badRequest, forbidden, notFound } from '../lib/errors.js'
+import { toStoredPath } from '../lib/media.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
 
@@ -67,7 +68,7 @@ export default async function itemRoutes(app: FastifyInstance) {
     for (const [position, url] of body.media.entries()) {
       await app.db.execute(
         sql`insert into item_media (item_id, url, position)
-            values (${item!['id']}, ${url}, ${position})`,
+            values (${item!['id']}, ${toStoredPath(url)}, ${position})`,
       )
     }
 
@@ -143,7 +144,8 @@ export default async function itemRoutes(app: FastifyInstance) {
       await app.db.execute(sql`delete from item_media where item_id = ${id}`)
       for (const [position, url] of body.media.entries()) {
         await app.db.execute(
-          sql`insert into item_media (item_id, url, position) values (${id}, ${url}, ${position})`,
+          sql`insert into item_media (item_id, url, position)
+              values (${id}, ${toStoredPath(url)}, ${position})`,
         )
       }
     }

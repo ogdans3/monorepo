@@ -9,6 +9,7 @@ import '../widgets/share_sheet.dart';
 import '../widgets/shell.dart';
 import '../state/session.dart';
 import 'chat.dart';
+import 'discover.dart';
 import 'onboarding.dart';
 import 'post_item.dart';
 import 'profile.dart';
@@ -60,22 +61,31 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     if (item == null || _liking) return;
     setState(() => _liking = true);
     final api = context.read<SwaplyApi>();
+
+    // What comes after a wish — the match screen, or 10a — is a screen on top
+    // of this one, and the heart underneath must not still be spinning while
+    // it is up. So the call finishes first and the follow-up comes after.
+    ({String? tradeId, bool promptToList, int likedCount})? wished;
     try {
       if (item.likedByMe) {
         await api.unlike(item.id);
       } else {
-        final result = await api.like(item.id);
-        if (!mounted) return;
-        if (result.tradeId != null) {
-          await Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => MatchScreen(tradeId: result.tradeId!)));
-        }
+        wished = await api.like(item.id);
       }
       await _load();
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _liking = false);
+    }
+
+    if (wished == null || !mounted) return;
+    if (wished.tradeId != null) {
+      await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => MatchScreen(tradeId: wished!.tradeId!)));
+    } else if (wished.promptToList) {
+      // 10a fires on the tenth wish, and the heart here is the same heart.
+      await showListingPrompt(context, wished.likedCount);
     }
   }
 

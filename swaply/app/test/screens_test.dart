@@ -280,6 +280,21 @@ void main() {
       expect(find.text('Meldingen er sendt. Samtalen ligger under Chats.'), findsOneWidget);
     });
 
+    testWidgets('04 the tenth wish says what to do next, here as on the collage',
+        (tester) async {
+      // 10a lived on the discovery card only, so reaching ten hearts from a
+      // listing was the one way to get there and never be told.
+      server.overrides['POST /items/item-console/like'] =
+          {'liked': true, 'tradeId': null, 'promptToList': true, 'likedCount': 10};
+      await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
+
+      await tester.tap(find.byIcon(Icons.favorite_border).last);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Du har likt 10 ting'), findsOneWidget);
+      expect(find.text('Legg ut en gjenstand'), findsOneWidget);
+    });
+
     testWidgets('a listing with no photo gets a card, not a hole', (tester) async {
       await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
       expect(find.byIcon(Icons.sports_esports_outlined), findsWidgets);

@@ -178,6 +178,45 @@ describe('a photograph on a listing', () => {
     expect(page.json()['item']['media']).toEqual([`http://test.local${path}`])
   })
 
+  test('5b. and a URL handed back to us is stored as the path it came from', async () => {
+    // «A photo row holds a path, never a URL» — CLAUDE.md, and it is what makes
+    // the move to the OVH bucket a migration rather than a rewrite. A client
+    // that reads a listing and writes it back sends what it was given, which is
+    // the absolute URL; the row must not learn a hostname from that.
+    const listed = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${ola}` },
+      payload: { title: 'Sykkelhjelm', category: 'sykling', condition: 'good' },
+    })
+    const itemId = listed.json()['id']
+
+    const edited = await app.inject({
+      method: 'PATCH',
+      url: `/items/${itemId}`,
+      headers: { authorization: `Bearer ${ola}` },
+      payload: { media: [`http://test.local${path}`] },
+    })
+    expect(edited.statusCode).toBe(200)
+
+    const stored = await db.execute<{ url: string }>(
+      sql`select url from item_media where item_id = ${itemId}`,
+    )
+    expect(stored[0]!.url).toBe(path)
+    // A picture that genuinely lives somewhere else is still left alone: the
+    // seed's made-up URLs are not ours to rewrite.
+    await app.inject({
+      method: 'PATCH',
+      url: `/items/${itemId}`,
+      headers: { authorization: `Bearer ${ola}` },
+      payload: { media: ['https://img.example/annet.webp'] },
+    })
+    const other = await db.execute<{ url: string }>(
+      sql`select url from item_media where item_id = ${itemId}`,
+    )
+    expect(other[0]!.url).toBe('https://img.example/annet.webp')
+  })
+
   test('6. the share button sends a content type and no body, and is answered', async () => {
     const listed = await app.inject({
       method: 'POST',

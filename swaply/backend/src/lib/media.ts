@@ -92,6 +92,21 @@ export async function storeImage(bytes: Buffer): Promise<{ path: string; bytes: 
 }
 
 /**
+ * Take a URL we handed out back to the path behind it.
+ *
+ * «A photo row holds a path, never a URL», and a client that reads a listing
+ * and writes it back sends what it was given — the absolute URL. Left alone,
+ * an ordinary edit teaches the row a hostname and the move to the bucket stops
+ * being a migration. Anything that is not one of our own stored names is left
+ * exactly as it came: a picture that genuinely lives somewhere else is not
+ * ours to rewrite.
+ */
+export function toStoredPath(value: string): string {
+  const match = /^https?:\/\/[^/]+(\/media\/[0-9a-f]{32}\.(?:jpg|png|webp))$/.exec(value)
+  return match ? match[1]! : value
+}
+
+/**
  * Remove the bytes behind a stored path. Quiet when the file is already gone:
  * the row is the record, and a missing file is not a reason to fail whatever
  * was deleting it.

@@ -338,41 +338,9 @@ class _ItemCardState extends State<ItemCard> {
     }
   }
 
-  /// 10a. Ten wishes and nothing to give is a dead end, so we say so once.
-  Future<void> _showListingPrompt(int likedCount) async {
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
-      builder: (sheet) => Padding(
-        padding: const EdgeInsets.all(Insets.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Du har likt $likedCount ting. På tide å legge ut noe selv',
-                style: Type.title),
-            const SizedBox(height: Insets.sm),
-            const Text(
-              'Bytter skjer først når du har noe å gi. Legg ut én ting, så kan vi begynne '
-              'å lete etter swaps for deg.',
-              style: Type.secondary,
-            ),
-            const SizedBox(height: Insets.lg),
-            PrimaryButton('Legg ut en gjenstand', onPressed: () {
-              Navigator.of(sheet).pop();
-              Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const PostItemScreen()));
-            }),
-            const SizedBox(height: Insets.sm),
-            SecondaryButton('Senere', onPressed: () => Navigator.of(sheet).pop()),
-          ],
-        ),
-      ),
-    );
-  }
+  /// 10a, wherever the tenth heart was tapped.
+  Future<void> _showListingPrompt(int likedCount) =>
+      showListingPrompt(context, likedCount);
 
   @override
   Widget build(BuildContext context) {
@@ -814,4 +782,43 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   /// The chips on 05: filled green when chosen, the chip grey otherwise.
   Widget _choice(String label, bool selected, VoidCallback onTap) =>
       GestureDetector(onTap: onTap, child: Pill(label, selected: selected));
+}
+
+/// 10a. Ten wishes and nothing to give is a dead end, so we say so — from the
+/// collage and from a listing alike. It used to live on the discovery card
+/// only, so reaching ten hearts from an item page was the one way to get there
+/// and never be told.
+Future<void> showListingPrompt(BuildContext context, int likedCount) async {
+if (!context.mounted) return;
+  await showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+    builder: (sheet) => Padding(
+      padding: const EdgeInsets.all(Insets.lg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Du har likt $likedCount ting. På tide å legge ut noe selv',
+              style: Type.title),
+          const SizedBox(height: Insets.sm),
+          const Text(
+            'Bytter skjer først når du har noe å gi. Legg ut én ting, så kan vi begynne '
+            'å lete etter swaps for deg.',
+            style: Type.secondary,
+          ),
+          const SizedBox(height: Insets.lg),
+          PrimaryButton('Legg ut en gjenstand', onPressed: () {
+            Navigator.of(sheet).pop();
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const PostItemScreen()));
+          }),
+          const SizedBox(height: Insets.sm),
+          SecondaryButton('Senere', onPressed: () => Navigator.of(sheet).pop()),
+        ],
+      ),
+    ),
+  );
 }

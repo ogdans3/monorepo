@@ -215,7 +215,15 @@ export async function tradeList(db: Database, viewerId: string) {
     waiting,
     active: views.filter((v) => ['accepted', 'paused'].includes(v.state)),
     done: views.filter((v) => ['completed', 'cancelled'].includes(v.state)),
-    // «Din tur» on screen 11: pending, and you have not answered yet.
-    yourTurn: waiting.filter((v) => !v.you.accepted && v.state !== 'talking').length,
+    // «Din tur» on screen 11: a deal you could say yes to, and have not. Both
+    // sides have to hold something — an offer with an empty side has no yes in
+    // it, and counting one sends a person to a screen with nothing to press.
+    yourTurn: waiting.filter(
+      (v) =>
+        !v.you.accepted &&
+        v.state !== 'talking' &&
+        v.youGive.length > 0 &&
+        v.youGet.length > 0,
+    ).length,
   }
 }
