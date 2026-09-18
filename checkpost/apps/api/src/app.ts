@@ -10,10 +10,12 @@ import { ApiError } from './lib/errors.js';
 import { registerContext } from './plugins/context.js';
 import { RealtimeHub } from './realtime/hub.js';
 import { adminRoutes } from './routes/admin.js';
+import { demoRoutes } from './routes/demo.js';
 import { itemRoutes } from './routes/items.js';
 import { listRoutes } from './routes/lists.js';
 import { metaRoutes } from './routes/meta.js';
 import { realtimeRoutes } from './routes/realtime.js';
+import { DemoService } from './services/demo-service.js';
 import { ListCache } from './services/list-cache.js';
 import { ListService } from './services/list-service.js';
 
@@ -23,6 +25,7 @@ declare module 'fastify' {
     hub: RealtimeHub;
     cache: ListCache;
     listService: ListService;
+    demoService: DemoService;
     rateLimits: { create: number; rotate: number };
     adminConfig: {
       adminUser: string;
@@ -35,6 +38,7 @@ declare module 'fastify' {
 
 export interface BuiltApp {
   app: FastifyInstance;
+  demoService: DemoService;
   close(): Promise<void>;
 }
 
@@ -59,6 +63,8 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
     cache,
   );
 
+  const demoService = new DemoService(db, listService, cache);
+
   const app = Fastify({
     logger: buildLogger(env),
     trustProxy: true,
@@ -81,6 +87,7 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
   app.decorate('hub', hub);
   app.decorate('cache', cache);
   app.decorate('listService', listService);
+  app.decorate('demoService', demoService);
   registerContext(app);
 
   await app.register(cors, {
@@ -165,6 +172,7 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
       await scope.register(listRoutes);
       await scope.register(itemRoutes);
       await scope.register(realtimeRoutes);
+      await scope.register(demoRoutes);
       await scope.register(adminRoutes);
     },
     { prefix: `/${API_VERSION}` },
@@ -172,6 +180,7 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
 
   return {
     app,
+    demoService,
     async close() {
       cache.clear();
       hub.closeAll();

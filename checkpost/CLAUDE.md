@@ -82,6 +82,20 @@ event at or below the revision the list has already reached, so a reconcile can
 overtake the queue and what it left behind is ignored rather than replayed over
 the top of a newer answer. Keep that guard if you touch either.
 
+**The landing page's list is real, and it is the one write in the product
+that needs no link.** `DemoService` is what keeps that from being a liability,
+and it rests on two things that must stay true together: the token the page
+publishes is **`read`**, and `POST /demo/tick` is the **entire** write surface
+for that list — one boolean on one row, scoped to the demo's list id. Add a
+second demo route, or widen the published link to `write`, and the front page
+becomes something anybody can rewrite. The five rows live in
+`packages/contract` because the API seeds from them and the page renders them
+before it has heard back; their ids are fixed so a restart keeps whatever
+people had ticked, and so the rows do not remount under the browser when the
+live state arrives. The link is reissued every boot, because no raw token is
+ever stored — which is why `ListSession` has a demo mode that asks for a new
+one instead of showing the dead end an ordinary list would.
+
 **The database is the `db` container, on a volume, on the server.** It is not
 hosted any more, so `ops/backup.sh` is the only thing standing between a bad day
 and the lists being gone. Its port is bound to loopback on purpose; see
@@ -232,13 +246,15 @@ pnpm dev && pnpm test:e2e  # the browser client, against the running stack
   POSTGRES_PORT=5436 POSTGRES_PASSWORD=localdev docker compose -p checkpost-e2e up -d db
   DATABASE_URL=postgres://checkpost:localdev@localhost:5436/checkpost \
     API_PORT=4001 API_HOST=127.0.0.1 CORS_ORIGINS=http://localhost:5180 \
-    RUN_REAPER=0 pnpm --filter @checkpost/api dev
+    RUN_REAPER=0 RATE_LIMIT_CREATE_MAX=1000 pnpm --filter @checkpost/api dev
   PUBLIC_API_ORIGIN=http://localhost:4001 pnpm --filter @checkpost/web build
   WEB_ORIGIN=http://localhost:5180 API_ORIGIN=http://localhost:4001 pnpm test:e2e
   ```
 
-  `CORS_ORIGINS` and `PUBLIC_API_ORIGIN` have to name each other or every
-  request dies in a preflight, and the web app has to be **built** with that
+  `RATE_LIMIT_CREATE_MAX` is raised because the limit catches up with a local
+  stack too, on the third run of the suite rather than the second pass against
+  production. `CORS_ORIGINS` and `PUBLIC_API_ORIGIN` have to name each other or
+  every request dies in a preflight, and the web app has to be **built** with that
   origin rather than handed it at run time: it is baked into the client and
   into the Content Security Policy together, on purpose.
 

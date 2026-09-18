@@ -76,6 +76,13 @@ export class ListSession {
   #pendingOrder = $state<string[] | null>(null);
 
   #token = $state('');
+  /**
+   * The landing page's list, which is the same list for everybody and takes
+   * exactly one kind of change. See `DemoService` on the API side.
+   */
+  #demo = false;
+  /** Guards the one thing a demo session does that an ordinary one cannot. */
+  #reopening = false;
   #realtime: Realtime | null = null;
   /** Bumped on every connect, so a superseded socket's frames are ignored. */
   #generation = 0;
@@ -89,8 +96,9 @@ export class ListSession {
   /** The earliest moment the next fold may happen. */
   #foldAt = 0;
 
-  constructor(token: string) {
+  constructor(token: string, options: { demo?: boolean } = {}) {
     this.#token = token;
+    this.#demo = options.demo ?? false;
   }
 
   get token() {
@@ -165,6 +173,7 @@ export class ListSession {
   };
 
   async load() {
+    if (this.#demo) return this.#openDemo(false);
     try {
       this.#apply(await api.snapshot(this.#token));
       this.status = 'ready';
@@ -184,6 +193,36 @@ export class ListSession {
       this.status = 'copy';
     } catch (error) {
       this.#handle(error);
+    }
+  }
+
+  /**
+   * Puts this session on the landing page's list, whatever link it is on today.
+   *
+   * The demo's link is reissued every time the API restarts, because only the
+   * hash of a token is ever stored and so no raw one survives to be handed out
+   * again. A page left open across a deploy is therefore holding a link that
+   * has just been retired, and the right answer for somebody who came to read
+   * about the product is to quietly ask for the current one — not to show them
+   * the dead end an ordinary list would.
+   */
+  async #openDemo(reconnect: boolean): Promise<void> {
+    if (this.#reopening || this.#stopped) return;
+    this.#reopening = true;
+    try {
+      const intro = await api.demo();
+      if (this.#stopped) return;
+      this.#token = intro.token;
+      this.#apply(intro.snapshot);
+      this.status = 'ready';
+      this.goneReason = null;
+      if (reconnect) this.#connect();
+    } catch (error) {
+      if (error instanceof OfflineError) this.status = 'offline';
+      // Anything else leaves what is on screen and waits for the next poll.
+      // The landing page showing a slightly stale list is not worth an error.
+    } finally {
+      this.#reopening = false;
     }
   }
 
@@ -246,6 +285,10 @@ export class ListSession {
         this.#collect(frame.event);
         break;
       case 'revoked':
+        if (this.#demo) {
+          void this.#openDemo(true);
+          break;
+        }
         this.status = 'gone';
         this.goneReason = frame.reason;
         break;
@@ -281,7 +324,10 @@ export class ListSession {
     this.#replace({ ...item, checked: next, checkedAt: next ? new Date().toISOString() : null });
     this.#hold(item.id);
     await this.#write(
-      () => api.updateItem(this.#token, item.id, { checked: next }),
+      () =>
+        this.#demo
+          ? api.demoTick(item.id, next)
+          : api.updateItem(this.#token, item.id, { checked: next }),
       (fresh) => this.#replace(fresh),
       () => this.#replace(item),
     );
@@ -484,6 +530,11 @@ export class ListSession {
       return;
     }
     if (error instanceof ApiError) {
+      // The demo's link goes stale by design rather than by accident.
+      if (this.#demo && (error.isGone || error.isInvalidLink)) {
+        void this.#openDemo(true);
+        return;
+      }
       if (error.isGone) {
         this.status = 'gone';
         this.goneReason ??= 'rotated';

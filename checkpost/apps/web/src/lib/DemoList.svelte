@@ -1,32 +1,47 @@
 <script lang="ts">
+  import { DEMO_LIST_TITLE, DEMO_ROWS } from '@checkpost/contract';
+  import { ListSession } from './list-session.svelte';
+
   /**
-   * The product, running. Not a screenshot, but the same row anatomy the app
-   * ships (checkbox, text, right-edge affordance) so the landing page teaches
-   * the gesture before anyone installs anything.
+   * The product, running. Not a screenshot and no longer a mock either: this is
+   * a real list on the real API, and everyone who has the front page open is on
+   * it at the same time. A landing page for a shared list that did not actually
+   * share anything was a lie about the only thing the product does.
+   *
+   * The only thing it offers is the checkbox, and the only change the API takes
+   * for this list is a tick, so there is nothing here for anyone to spoil.
    */
-  type Row = { id: number; text: string; done: boolean };
+  const session = new ListSession('', { demo: true });
 
-  let rows = $state<Row[]>([
-    { id: 3, text: 'Firewood', done: false },
-    { id: 4, text: 'Coffee, and the good one', done: false },
-    { id: 5, text: 'Someone remember the cards', done: false },
-    { id: 1, text: 'Book the ferry', done: true },
-    { id: 2, text: 'Cabin key from Marit', done: true }
-  ]);
+  /**
+   * What is on screen before the browser has heard back, and what the server
+   * renders. It has to match what the API seeds, which is why both read the
+   * same five rows out of the contract.
+   */
+  const rows = $derived(
+    session.items.length > 0
+      ? session.items.map((item) => ({ id: item.id, text: item.text, done: item.checked }))
+      : DEMO_ROWS.map((row) => ({ id: row.id, text: row.text, done: row.checked })),
+  );
 
-  let lastToggled = $state<number | null>(null);
+  const done = $derived(rows.filter((row) => row.done).length);
 
-  const done = $derived(rows.filter((r) => r.done).length);
+  $effect(() => {
+    void session.open();
+    return () => session.stop();
+  });
 
-  function toggle(row: Row) {
-    row.done = !row.done;
-    lastToggled = row.id;
+  function toggle(id: string) {
+    const item = session.items.find((candidate) => candidate.id === id);
+    // Nothing to tick until the list has arrived, which is a few hundred
+    // milliseconds at the top of the page and never again.
+    if (item) void session.toggle(item);
   }
 </script>
 
-<div class="sheet" aria-label="A Checkpost list, live">
+<div class="sheet" aria-label="A Checkpost list, shared with everyone on this page">
   <header>
-    <h3>Cabin, Friday</h3>
+    <h3>{DEMO_LIST_TITLE}</h3>
     <p class="count" aria-live="polite">{done} of {rows.length} done</p>
   </header>
 
@@ -37,8 +52,8 @@
           type="button"
           class="row"
           class:done={row.done}
-          class:just={lastToggled === row.id}
-          onclick={() => toggle(row)}
+          class:just={session.isWashing(row.id)}
+          onclick={() => toggle(row.id)}
           aria-pressed={row.done}
         >
           <span class="box" aria-hidden="true">
@@ -73,7 +88,9 @@
 
   <footer>
     <span class="dot" aria-hidden="true"></span>
-    <span>2 here</span>
+    <!-- A real count now, and it is the point of the page: the number goes up
+         when somebody else opens it, and their ticks arrive while you watch. -->
+    <span>{session.presence > 1 ? `${session.presence} here` : 'Just you here'}</span>
   </footer>
 </div>
 

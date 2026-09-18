@@ -55,6 +55,33 @@ async function tick(page: Page, text: string) {
   await page.getByRole('button', { name: `Tick ${text}` }).click();
 }
 
+test('the landing page is a real list, shared with whoever else is reading it', async ({
+  page,
+  context,
+}) => {
+  // The front page used to hold a mock with local state, which made the one
+  // claim the product exists to make into the one thing the page did not do.
+  await page.goto('/');
+  const other = await context.newPage();
+  await other.goto('/');
+
+  const row = 'Someone remember the cards';
+  const here = page.locator('.sheet footer');
+  const box = (on: Page) => on.getByRole('button', { name: row });
+
+  // Each page can see it is not alone. The exact number is not asserted: any
+  // other browser open on the landing page is legitimately part of this count.
+  await expect(here).not.toContainText('Just you here');
+
+  await box(page).click();
+  await expect(box(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect(box(other)).toHaveAttribute('aria-pressed', 'true');
+
+  // Put it back, which is also the other direction through the same path.
+  await box(page).click();
+  await expect(box(other)).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('a list can be made, filled and ticked off from a browser', async ({ page }) => {
   await makeList(page);
 

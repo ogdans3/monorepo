@@ -3,6 +3,7 @@ import type {
   Access,
   ChangesResponse,
   CopyPreview,
+  DemoIntro,
   Item,
   List,
   NewLinkResponse,
@@ -169,6 +170,15 @@ export const api = {
 
   revokeLink: (token: string, linkId: string) =>
     send<void>('DELETE', `/list/links/${linkId}`, { token }),
+
+  // The list on the landing page. No token going in: the front page is for
+  // people who have never seen a share link, and the whole of what comes back
+  // is a `read` one. See `DemoService` on the API side.
+  demo: () => send<DemoIntro>('GET', '/demo'),
+
+  /** The only change that list accepts, from anyone. */
+  demoTick: (itemId: string, checked: boolean) =>
+    send<Item>('POST', '/demo/tick', { body: { id: itemId, checked } }),
 
   // Copy links.
   copyPreview: (token: string) => send<CopyPreview>('GET', '/list/copy', { token }),

@@ -1,9 +1,10 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEMO_QUIET_MS } from '@checkpost/contract';
 import { buildApp } from './app.js';
 import { runMigrations } from './db/migrate.js';
 import { loadEnv } from './env.js';
-import { startReaper } from './reaper.js';
+import { startDemoKeeper, startReaper } from './reaper.js';
 import { VERSION } from './version.js';
 
 /**
@@ -39,12 +40,19 @@ const stopReaper = env.RUN_REAPER
     })
   : () => {};
 
+// Same switch as the reaper, and for the same reason: both of these write on a
+// timer, and a one-off script sharing the database wants neither.
+const stopDemoKeeper = env.RUN_REAPER
+  ? startDemoKeeper(app.demoService, app.log, { quietMs: DEMO_QUIET_MS })
+  : () => {};
+
 let shuttingDown = false;
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   app.log.info({ signal }, 'shutting down');
   stopReaper();
+  stopDemoKeeper();
   try {
     await close();
     process.exit(0);

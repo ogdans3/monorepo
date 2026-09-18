@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
+import type { DemoService } from './services/demo-service.js';
 import type { ListService } from './services/list-service.js';
 
 const HOUR = 60 * 60 * 1000;
@@ -49,4 +50,34 @@ export function startReaper(
     clearTimeout(kickoff);
     clearInterval(timer);
   };
+}
+
+/**
+ * Puts the landing page's list back the way it was found, once nobody has
+ * touched it for a while.
+ *
+ * Its own timer rather than a job inside the reaper above: that one sweeps
+ * every six hours, which is the right beat for a year-old list and the wrong
+ * one for a front page that should have something left to do on it. This does
+ * nothing at all until somebody has actually opened the landing page.
+ */
+export function startDemoKeeper(
+  demo: DemoService,
+  log: FastifyBaseLogger,
+  options: { quietMs: number; intervalMs?: number },
+): () => void {
+  const interval = options.intervalMs ?? 60_000;
+
+  const run = async () => {
+    try {
+      const restored = await demo.resetIfQuiet(options.quietMs);
+      if (restored > 0) log.info({ restored }, 'demo list tidied');
+    } catch (error) {
+      log.error({ error }, 'demo keeper failed');
+    }
+  };
+
+  const timer = setInterval(() => void run(), interval);
+  timer.unref?.();
+  return () => clearInterval(timer);
 }

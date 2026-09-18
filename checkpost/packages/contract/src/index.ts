@@ -341,3 +341,63 @@ export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 export const AUTH_HEADER = 'authorization';
 /** Ephemeral per-device id used to suppress a client's echo of its own writes. */
 export const CLIENT_ID_HEADER = 'x-checkpost-client';
+
+// ---------------------------------------------------------------------------
+// The list on the landing page
+// ---------------------------------------------------------------------------
+
+/**
+ * The list the front page shows, which is a real list on the real API.
+ *
+ * It used to be a mock with local state, which made the landing page a lie in
+ * the one respect the product is entirely about: two people, one list, at the
+ * same time. Now everyone who opens the front page is on the same list and
+ * sees each other tick things off, and nothing else on it moves — the only
+ * thing the demo offers is the checkbox, and the only write the API accepts
+ * for this list is a tick. Nobody can add to it, rename it, reorder it or
+ * empty it, so the page cannot be vandalised into something else.
+ *
+ * Fixed ids because the rows have to survive a restart with their state, and
+ * live here rather than in the API or the component because both of those need
+ * them: the API seeds from this and the page renders it before it has heard
+ * from anyone.
+ */
+export const DEMO_LIST_ID = '00000000-0000-4000-8000-00000000d000';
+export const DEMO_LIST_TITLE = 'Cabin, Friday';
+
+export const DEMO_ROWS = [
+  { id: '00000000-0000-4000-8000-00000000d001', text: 'Firewood', checked: false },
+  { id: '00000000-0000-4000-8000-00000000d002', text: 'Coffee, and the good one', checked: false },
+  { id: '00000000-0000-4000-8000-00000000d003', text: 'Someone remember the cards', checked: false },
+  { id: '00000000-0000-4000-8000-00000000d004', text: 'Book the ferry', checked: true },
+  { id: '00000000-0000-4000-8000-00000000d005', text: 'Cabin key from Marit', checked: true },
+] as const;
+
+/**
+ * How long the demo has to be left alone before it tidies itself back up.
+ *
+ * Long enough that a room of people ticking things stays ticked while they are
+ * there, short enough that the next person to arrive meets a list with
+ * something left to do on it rather than a finished one.
+ */
+export const DEMO_QUIET_MS = 10 * 60 * 1000;
+
+/**
+ * What the page is handed when it asks for the demo: the list, and the link to
+ * watch it with. The token is `read`, which is the whole reason it can be
+ * published in a page that anybody can view source on.
+ */
+export const demoIntroSchema = z.object({
+  token: shareTokenSchema,
+  snapshot: snapshotSchema,
+});
+export type DemoIntro = z.infer<typeof demoIntroSchema>;
+
+/** The only change the demo list accepts, from anyone, with no credential. */
+export const demoToggleBodySchema = z
+  .object({
+    id: z.string().uuid(),
+    checked: z.boolean(),
+  })
+  .strict();
+export type DemoToggleBody = z.infer<typeof demoToggleBodySchema>;

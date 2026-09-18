@@ -85,7 +85,7 @@
 
     <div class="demo">
       <DemoList />
-      <p class="hint">Go on. Tick something.</p>
+      <p class="hint">Go on, tick something. Everyone else reading this sees it.</p>
     </div>
   </section>
 

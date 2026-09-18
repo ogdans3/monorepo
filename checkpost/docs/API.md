@@ -208,6 +208,38 @@ what makes optimistic UI safe on a flaky connection.
 **Deleting twice is fine.** Two people tapping the same row both get `204`.
 The end state is what matters.
 
+## The list on the landing page
+
+The front page shows a real list, not a mock, and everyone reading the page is
+on it at once. It is the only part of the API that takes a write with no
+credential, so it is also the only part with a write surface small enough to
+name in full: one boolean, on one row, on one list.
+
+### `GET /v1/demo`
+
+`200` `{ token, snapshot }`. The token is a **`read`** link on the demo list,
+published on purpose — it is meant for everybody, and read is all it can do.
+Everything else the page needs (`GET /list`, `GET /list/changes`, the socket)
+is the ordinary API with that token.
+
+The link is reissued whenever the API restarts, because only the SHA-256 of a
+token is ever stored and so no raw one survives. A client holding a retired
+demo token gets `410` and is expected to ask here again rather than to show
+somebody a message about a replaced link.
+
+### `POST /v1/demo/tick`
+
+`{ id, checked }` → `200` `Item`. No credential. The id must be a row of the
+demo list; anything else is `404`, so an item id from a real list is not a way
+to reach it. Rate limited harder than the shared bucket, at 60 a minute.
+
+There is no demo equivalent of anything else. Adding, renaming, reordering,
+clearing and deleting all refuse the published link with `403`, which is what
+keeps the front page the front page.
+
+Left alone for `DEMO_QUIET_MS`, the list puts itself back the way it was found,
+as an ordinary change that everyone still watching sees happen.
+
 ### `GET /v1/health` · `GET /v1/ready`
 
 Liveness (no database) and readiness (`select 1`).

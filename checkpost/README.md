@@ -76,6 +76,17 @@ What follows from that:
   to write a dump that carries no rows for `lists`, `items` or `share_links`,
   and keeps 30 days. A volume is not a backup.
 
+## The front page is the product
+
+The list on the landing page is a real list on the real API, and everyone who
+has the page open is on it together: tick something and it appears on the other
+people's screens while they are reading about it. It used to be a mock with
+local state, which made the page a claim rather than a demonstration.
+
+Nobody can do anything to it except tick. It takes no link to write to, so the
+write is exactly one boolean on one row and nothing else exists, and the link
+it publishes is read-only. Left alone for ten minutes it tidies itself back up.
+
 ## The three ideas the whole thing hangs on
 
 **1. The link is the credential.** A share token is 32 random bytes, base64url,

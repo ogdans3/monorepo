@@ -22,6 +22,9 @@ export async function createHarness(overrides: Record<string, string> = {}): Pro
       // The API did not make that happen, so nothing invalidated the read
       // cache. Every other way rows disappear goes through a service that does.
       built.app.cache.clear();
+      // Same reason: the demo service is holding a list id and a link it minted
+      // for rows that have just been truncated out from under it.
+      built.app.demoService.forget();
     },
   };
 }
