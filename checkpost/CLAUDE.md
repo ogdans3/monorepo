@@ -220,6 +220,27 @@ pnpm dev && pnpm test:e2e  # the browser client, against the running stack
   the engine iOS uses and it is where the keyboard and viewport bugs live. It
   needs the real stack up. Every case in it broke at least once during the
   build, which is why each one is written down.
+- **Point the e2e suite at a stack of its own, never at production.** Creating
+  a list is limited to `RATE_LIMIT_CREATE_MAX` an hour per address, and a suite
+  that makes one per case runs that down in a couple of passes. What it looks
+  like from the outside is every test failing in `makeList` with no navigation
+  and no error, which reads like a hydration race and is not one. A throwaway
+  stack is four commands, and the database it stands up must not be the one on
+  `POSTGRES_PORT`, which on the server is the real lists:
+
+  ```bash
+  POSTGRES_PORT=5436 POSTGRES_PASSWORD=localdev docker compose -p checkpost-e2e up -d db
+  DATABASE_URL=postgres://checkpost:localdev@localhost:5436/checkpost \
+    API_PORT=4001 API_HOST=127.0.0.1 CORS_ORIGINS=http://localhost:5180 \
+    RUN_REAPER=0 pnpm --filter @checkpost/api dev
+  PUBLIC_API_ORIGIN=http://localhost:4001 pnpm --filter @checkpost/web build
+  WEB_ORIGIN=http://localhost:5180 API_ORIGIN=http://localhost:4001 pnpm test:e2e
+  ```
+
+  `CORS_ORIGINS` and `PUBLIC_API_ORIGIN` have to name each other or every
+  request dies in a preflight, and the web app has to be **built** with that
+  origin rather than handed it at run time: it is baked into the client and
+  into the Content Security Policy together, on purpose.
 
 ## Conventions
 
