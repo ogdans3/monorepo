@@ -22,3 +22,9 @@ export const LIKES_BEFORE_LISTING_PROMPT = 10
 
 /** «Svarer ikke Ola innen fristen, fortsetter byttet som vanlig.» */
 export const WITHDRAWAL_RESPONSE_HOURS = 72
+
+/**
+ * «Each side of a hop is a list of 1–3 items» — `docs/DESIGN.md`. The cap is
+ * what the counter-offer screens are drawn for, not a storage limit.
+ */
+export const MAX_ITEMS_PER_SIDE = 3

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
+import { blockedBetween } from '../lib/blocks.js'
 import { CATEGORIES } from '../lib/constants.js'
 import { badRequest, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
@@ -111,16 +112,21 @@ export default async function profileRoutes(app: FastifyInstance) {
     )
     if (!user) throw notFound('Fant ikke brukeren.')
 
-    const items = await many(
-      app.db,
-      sql`select i.*, ${coverSql('i')} as cover,
-                 exists (select 1 from likes l where l.target_item = i.id
-                         and l.from_user = ${viewer ?? null}) as liked_by_me
-          from items i
-          where i.owner_id = ${id} and i.deleted_at is null and i.status <> 'traded'
-          order by i.created_at desc`,
-    )
-    const blocked = viewer
+    // The profile itself stays readable — you have to be able to find the
+    // person in order to unblock them — but their things do not come with it.
+    const hidden = await blockedBetween(app.db, viewer ?? null, id)
+    const items = hidden
+      ? []
+      : await many(
+          app.db,
+          sql`select i.*, ${coverSql('i')} as cover,
+                     exists (select 1 from likes l where l.target_item = i.id
+                             and l.from_user = ${viewer ?? null}) as liked_by_me
+              from items i
+              where i.owner_id = ${id} and i.deleted_at is null and i.status <> 'traded'
+              order by i.created_at desc`,
+        )
+    const byYou = viewer
       ? await one(app.db, sql`select 1 from blocks where blocker = ${viewer} and blocked = ${id}`)
       : null
 
@@ -128,7 +134,7 @@ export default async function profileRoutes(app: FastifyInstance) {
       ...publicUser(user),
       interests: user['interests'] ?? [],
       items: items.map(publicItem),
-      blockedByYou: Boolean(blocked),
+      blockedByYou: Boolean(byYou),
     }
   })
 }

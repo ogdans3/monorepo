@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
+import { blocked, blockedBetween } from '../lib/blocks.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import {
@@ -14,6 +15,7 @@ import {
   respondToWithdrawal,
   withdrawEarly,
 } from '../trades/actions.js'
+import { validateOffer } from '../trades/offer.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import {
   acceptOffer,
@@ -50,6 +52,9 @@ export default async function tradeRoutes(app: FastifyInstance) {
     const item = await one(app.db, sql`select owner_id from items where id = ${id} and deleted_at is null`)
     if (!item) throw notFound('Fant ikke gjenstanden.')
     if (item['owner_id'] === userId) throw badRequest('own_item', 'Dette er din egen gjenstand.')
+    // Writing the first message opens a negotiation, which is the one thing a
+    // block is for stopping.
+    if (await blockedBetween(app.db, userId, item['owner_id'])) throw blocked()
 
     // One conversation per pair per listing: a second message goes to the same
     // place rather than opening a second trade.
@@ -198,6 +203,7 @@ export default async function tradeRoutes(app: FastifyInstance) {
           : 'Byttet er avsluttet.',
       )
     }
+    await validateOffer(app.db, id, body.items, body.cash ?? undefined)
     await proposeCounterOffer(app.db, id, userId, body.items, body.cash ?? undefined)
 
     await app.db.execute(sql`

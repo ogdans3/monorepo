@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
+import { blockedBetween } from '../lib/blocks.js'
 import { CATEGORIES, CONDITIONS } from '../lib/constants.js'
 import { badRequest, forbidden, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
@@ -85,6 +86,11 @@ export default async function itemRoutes(app: FastifyInstance) {
           from items i where i.id = ${id} and i.deleted_at is null`,
     )
     if (!item) throw notFound('Fant ikke gjenstanden.')
+    // Hidden on Oppdag and openable by id is not hidden. 04 is one tap from a
+    // notification, a chat row or a link somebody kept.
+    if (await blockedBetween(app.db, viewer ?? null, item['owner_id'])) {
+      throw notFound('Fant ikke gjenstanden.')
+    }
 
     const media = await many(
       app.db,

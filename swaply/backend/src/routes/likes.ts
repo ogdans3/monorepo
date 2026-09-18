@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { findCyclesThrough } from '../trades/cycles.js'
 import { openTradeFromCycle } from '../trades/trades.js'
+import { blocked, blockedBetween } from '../lib/blocks.js'
 import { LIKES_BEFORE_LISTING_PROMPT } from '../lib/constants.js'
 import { badRequest, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
@@ -19,6 +20,10 @@ export default async function likeRoutes(app: FastifyInstance) {
     const item = await one(app.db, sql`select owner_id from items where id = ${id} and deleted_at is null`)
     if (!item) throw notFound('Fant ikke gjenstanden.')
     if (item['owner_id'] === userId) throw badRequest('own_item', 'Du kan ikke like din egen ting.')
+    // The heart is the directed edge, so a wish that reaches somebody a block
+    // stands between is a match waiting to be found. The cycle search already
+    // refuses it; nothing refused the edge.
+    if (await blockedBetween(app.db, userId, item['owner_id'])) throw blocked()
 
     await app.db.execute(
       sql`insert into likes (from_user, target_item) values (${userId}, ${id})

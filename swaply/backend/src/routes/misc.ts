@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { badRequest, notFound } from '../lib/errors.js'
+import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { iso, many, one, textArray } from '../lib/rows.js'
 import { participantOf } from '../trades/actions.js'
 
@@ -67,6 +67,15 @@ export default async function miscRoutes(app: FastifyInstance) {
     await participantOf(app.db, id, userId)
     await participantOf(app.db, id, body.ratee)
     if (body.ratee === userId) throw badRequest('self_review', 'Du kan ikke vurdere deg selv.')
+
+    // Both kinds of feedback come after a completed trade — 06h off 09h, 07l
+    // for the chain we were not part of. A rating given before anything
+    // happened is a rating of nothing, and it moves the number the whole trust
+    // model leans on.
+    const trade = await one(app.db, sql`select state from trades where id = ${id}`)
+    if (trade?.['state'] !== 'completed') {
+      throw conflict('not_completed', 'Du kan vurdere når byttet er gjennomført.')
+    }
 
     // The chips are the person's own words on the way in — «Møtte ikke opp» —
     // so they travel as a parameter. Building the array literal by hand put a
