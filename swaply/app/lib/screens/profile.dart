@@ -465,10 +465,17 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
           // A 44-tall «Send melding» between the chips and the things.
           SizedBox(
             height: 44,
+            // Every conversation belongs to a trade and every trade starts on a
+            // listing, so this opens one of theirs rather than a chat window
+            // there is nothing to put in. A grey button that explains nothing
+            // is worse than the sentence.
             child: PrimaryButton('Send melding',
-                onPressed: user.items.isEmpty
-                    ? null
-                    : () => Navigator.of(context).push(MaterialPageRoute(
+                onPressed: () => user.items.isEmpty
+                    ? ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                            '${user.displayName.split(' ').first} har ingenting ute '
+                            'akkurat nå. En samtale starter alltid på en gjenstand.')))
+                    : Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => ItemDetailScreen(itemId: user.items.first.id)))),
           ),
           const SizedBox(height: 12),

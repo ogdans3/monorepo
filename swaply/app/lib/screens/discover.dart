@@ -83,7 +83,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       ),
     );
     if (result != null) {
-      setState(() => _filters = result);
+      setState(() {
+        _filters = result;
+        // The sheet's «Vis 24 treff» counted with the category chosen in it,
+        // and the chip above the grid used to win afterwards — so the button
+        // promised one number and the page showed another. Whichever was
+        // touched last is the one that means something.
+        _chip = result.category;
+      });
       if (result.query != null) _search.text = result.query!;
       await _load();
     }
