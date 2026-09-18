@@ -100,6 +100,18 @@ describe('sharing a listing with someone who is not here yet', () => {
     })
     expect(page.body!['inviter']).toMatchObject({ displayName: 'Ola N.' })
     expect(page.body!['used']).toBe(false)
+    // Nothing that would let a listing be walked by guessing: the page a
+    // stranger reads carries the thing and not its id.
+    expect(page.body!['itemId']).toBeNull()
+  })
+
+  test('3b. somebody already signed in gets the id, so the app can open it', async () => {
+    // The same link is an invitation to one person and a listing to another,
+    // and the second one used to land on Oppdag with no sign of what was
+    // shared. Holding the token is still what gets you this.
+    const page = await call(app, 'GET', `/invites/${shared}`, { token: ola })
+
+    expect(page.body!['itemId']).toBe(drill)
   })
 
   test('4. reading it does not spend it', async () => {

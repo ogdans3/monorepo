@@ -100,6 +100,11 @@ export default async function inviteRoutes(app: FastifyInstance) {
       token,
       url: inviteUrl(token),
       used: Boolean(invite['used_at']),
+      // Only for somebody already signed in, and only so the app can open the
+      // listing that was shared with them. Listings still cannot be walked by
+      // guessing ids — holding the token is what gets you this, the same as it
+      // is what gets you the page.
+      itemId: request.userId && item ? item['id'] : null,
       inviter: inviter?.['display_name']
         ? { displayName: inviter['display_name'], town: inviter['town'] }
         : null,

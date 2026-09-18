@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/api/models.dart';
+import 'package:swaply_app/main.dart';
 import 'package:swaply_app/screens/agreement.dart';
 import 'package:swaply_app/screens/chat.dart';
 import 'package:swaply_app/screens/counter_offer.dart';
@@ -929,6 +930,30 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Ola N. inviterer deg til Swaply'), findsOneWidget);
+    });
+
+    testWidgets('a link opened by somebody already signed in shows the listing',
+        (tester) async {
+      // The same link is an invitation to one person and a listing to another.
+      // The second one landed on Oppdag with no sign of what their friend had
+      // sent them, which is the dead end the token exists to remove.
+      await session.login('ola@epost.no', 'passord');
+      session.pendingInvite = FakeServer.shareToken;
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            Provider<SwaplyApi>.value(value: api),
+            ChangeNotifierProvider<Session>.value(value: session),
+          ],
+          child: const MaterialApp(home: RootGate()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ItemDetailScreen), findsOneWidget);
+      expect(find.text('Bosch drill 18V'), findsWidgets);
+      expect(session.pendingInvite, isNull);
     });
 
     testWidgets('a link names who sent it, and looking around makes no profile',

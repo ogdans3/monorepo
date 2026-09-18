@@ -5,6 +5,7 @@ import 'api/client.dart';
 import 'design/tokens.dart';
 import 'screens/chat.dart';
 import 'screens/discover.dart';
+import 'screens/item_detail.dart';
 import 'screens/liked.dart';
 import 'screens/notifications.dart';
 import 'screens/onboarding.dart';
@@ -71,8 +72,15 @@ class SwaplyApp extends StatelessWidget {
 
 /// Screen 01 while the saved token is checked, then either the sign-in screen
 /// or the interest picker or the app.
-class RootGate extends StatelessWidget {
+class RootGate extends StatefulWidget {
   const RootGate({super.key});
+
+  @override
+  State<RootGate> createState() => _RootGateState();
+}
+
+class _RootGateState extends State<RootGate> {
+  bool _followed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +92,29 @@ class RootGate extends StatelessWidget {
       return invite == null ? const LoginScreen() : InviteScreen(token: invite);
     }
     if (session.interestsPending) return const InterestsScreen();
+
+    // A shared link is an invitation to somebody who is not here yet and a
+    // listing to everybody else, and it is the same link. Landing on Oppdag
+    // with no sign of what your friend sent is the dead end the token was
+    // supposed to remove.
+    if (session.pendingInvite != null && !_followed) {
+      _followed = true;
+      _openSharedListing(session.pendingInvite!);
+      session.pendingInvite = null;
+    }
     return const DiscoverScreen();
+  }
+
+  Future<void> _openSharedListing(String token) async {
+    try {
+      final invite = await context.read<SwaplyApi>().invite(token);
+      // A listing can be retired after the link went out, and a plain
+      // invitation carries none at all. Then there is simply nothing to open.
+      if (!mounted || invite.itemId == null) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ItemDetailScreen(itemId: invite.itemId!)));
+    } on ApiException {
+      // A link that no longer resolves is not worth interrupting anyone over.
+    }
   }
 }

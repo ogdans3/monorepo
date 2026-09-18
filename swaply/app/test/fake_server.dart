@@ -85,6 +85,7 @@ class FakeServer {
             'token': shareToken,
             'url': 'http://web/i/$shareToken',
             'used': false,
+            'itemId': 'item-drill',
             'inviter': {'displayName': 'Ola N.', 'town': 'Trondheim'},
             'item': {'title': 'Bosch drill 18V', 'media': <String>[]},
             'shareText': 'Se denne på Swaply: Bosch drill 18V, verdi 600 kr.',

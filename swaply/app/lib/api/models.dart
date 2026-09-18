@@ -69,11 +69,16 @@ class InvitePreview {
       : token = j['token'] as String,
         used = j['used'] as bool? ?? false,
         inviterName = (j['inviter'] as Map<String, dynamic>?)?['displayName'] as String?,
-        itemTitle = (j['item'] as Map<String, dynamic>?)?['title'] as String?;
+        itemTitle = (j['item'] as Map<String, dynamic>?)?['title'] as String?,
+        itemId = j['itemId'] as String?;
 
   final String token;
   final bool used;
   final String? inviterName, itemTitle;
+
+  /// The listing behind the link, for somebody who is already signed in and can
+  /// simply be shown it. Null for the page a stranger reads.
+  final String? itemId;
 }
 
 class UserRef {
