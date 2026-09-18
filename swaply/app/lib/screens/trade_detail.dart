@@ -396,6 +396,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
               .firstWhere((p) => p.position == trade.youPosition, orElse: () => trade.receivingFrom).id)
         _noticeCard('Nytt forslag fra ${trade.receivingFrom.displayName.split(' ').first}. '
             'Godta, avslå eller foreslå noe annet.'),
+      // Nothing to accept yet: one side of the offer is still empty.
+      if (['talking', 'pending', 'countered'].contains(trade.state) &&
+          (trade.youGive.isEmpty || trade.youGet.isEmpty))
+        _noticeCard(trade.youGive.isEmpty
+            ? 'Du har ikke lagt noe i byttet ennå. Velg hva du vil gi, så kan '
+                '${trade.receivingFrom.displayName.split(' ').first} godta.'
+            : '${trade.receivingFrom.displayName.split(' ').first} har ikke lagt noe i '
+                'byttet ennå. Foreslå hva dere skal bytte.'),
       // 09f: it ended.
       if (trade.state == 'cancelled') _cancelledCard(trade),
       if (trade.state == 'completed') _completedHeader(trade),
@@ -1048,7 +1056,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     final children = <Widget>[];
 
     if (['talking', 'pending', 'countered'].contains(trade.state)) {
-      if (!trade.youAccepted) {
+      // «Jeg vil ha» opens the trade with their listing on the table and
+      // nothing back. There is nothing to accept there yet — offering it as
+      // one tap was offering to give a thing away for nothing — so the whole
+      // action is «Foreslå motbytte» until both sides have something in it.
+      final halfFilled = trade.youGive.isEmpty || trade.youGet.isEmpty;
+      if (!trade.youAccepted && !halfFilled) {
         children.add(Row(
           children: [
             SizedBox(
@@ -1075,7 +1088,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
         children.add(const SizedBox(height: 6));
       }
       if (!trade.isChain) {
-        children.add(SecondaryButton('Foreslå motbytte',
+        children.add(SecondaryButton(
+            halfFilled ? 'Sett sammen byttet' : 'Foreslå motbytte',
             accent: true,
             height: 42,
             onPressed: _busy ? null : () => _openCounterOffer(trade)));

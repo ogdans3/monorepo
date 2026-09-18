@@ -85,6 +85,16 @@ the strip draws the **URL**. iOS asks for permission with the sentence in
 `ios/Runner/Info.plist`; the browser build uses a file input and cannot resize,
 which is what the server's ceiling is for.
 
+## Three rows the export does not draw
+
+The share sheet behind the button on 04 and «Inviter en venn» on 16b: round 5
+drew the invitation as a link somebody already had, not as one you make.
+
+And **«Se alle varsler» on 16b**, which opens 12a. The export drew 12a as a lock
+screen — a push notification, not a screen with a back button — so it never drew
+a door into the list of them inside the app. The screen was built anyway, and
+without that row nothing could open it.
+
 ## Two things that are honest about being unfinished
 
 **Sign-in with Google, Facebook and Apple** is drawn, and says so when tapped:

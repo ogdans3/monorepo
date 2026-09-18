@@ -182,6 +182,20 @@ describe('the whole journey over HTTP', () => {
     expect(thread.body!['banner']).toBeNull()
   })
 
+  test('04 — a half-filled offer is not something to accept', async () => {
+    // «Jeg vil ha» puts their listing on the table and nothing back. Accepting
+    // that was one tap that handed a drill over for nothing, and the button
+    // was right there on the trade screen.
+    const talking = await call('GET', '/trades', { token: kari })
+    const opened = talking.body!['waiting'].find((t: Json) => t['state'] === 'talking')
+    expect(opened['youGive']).toHaveLength(1)
+    expect(opened['youGet']).toHaveLength(0)
+
+    const res = await call('POST', `/trades/${opened['id']}/accept`, { token: kari })
+    expect(res.status).toBe(409)
+    expect(res.body!['code']).toBe('incomplete_offer')
+  })
+
   test('04 — the heart is what closes a loop', async () => {
     const first = await call('POST', `/items/${console_}/like`, { token: ola })
     expect(first.body!['tradeId']).toBeNull()

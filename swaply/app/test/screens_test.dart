@@ -329,6 +329,22 @@ void main() {
       expect(find.text('Trekk deg fra byttet'), findsOneWidget);
     });
 
+    testWidgets('a half-filled offer offers no way to accept it', (tester) async {
+      // The trade behind «Jeg vil ha» names their listing and nothing back.
+      // «Godta byttet» there was a one-tap way to give a thing away for
+      // nothing, and the server now refuses it too.
+      server.overrides['GET /trades/trade-1'] = {
+        ...FakeServer.trade,
+        'state': 'talking',
+        'youGet': const [],
+      };
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      expect(find.text('Godta byttet'), findsNothing);
+      expect(find.text('Sett sammen byttet'), findsOneWidget);
+      expect(find.textContaining('har ikke lagt noe i byttet ennå'), findsOneWidget);
+    });
+
     testWidgets('06e a yes can be taken back without ending the trade', (tester) async {
       // The lifecycle goes backwards as well as forwards, and until now
       // nothing in the app called the endpoint that does it: the only way out
@@ -750,6 +766,19 @@ void main() {
       expect(find.text('Verifisert'), findsOneWidget);
       expect(find.text('VARSLER'), findsOneWidget);
       expect(find.text('Logg ut'), findsOneWidget);
+    });
+
+    testWidgets('16b the list of notifications has a way in', (tester) async {
+      // 12a is a lock screen, so round 5 never drew a door to the list inside
+      // the app. It was built, registered as a route, and reachable from
+      // nowhere.
+      await mount(tester, const SettingsScreen());
+
+      await tester.tap(find.text('Se alle varsler'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationsScreen), findsOneWidget);
+      expect(find.textContaining('Kari likte Bosch drill 18V'), findsOneWidget);
     });
 
     testWidgets('16a reporting can block in the same gesture', (tester) async {

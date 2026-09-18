@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
@@ -10,6 +11,7 @@ import '../widgets/share_sheet.dart';
 import '../widgets/shell.dart';
 import 'item_detail.dart';
 import 'liked.dart';
+import 'notifications.dart';
 import 'onboarding.dart';
 import 'post_item.dart';
 
@@ -552,6 +554,13 @@ class SettingsScreen extends StatelessWidget {
           const Kicker('Varsler'),
           const SizedBox(height: 7),
           _group([
+            // Round 5 draws this group as three switches, because 12a is a
+            // lock screen: it never drew a way into the list of them inside
+            // the app. The screen exists and was built, and until now nothing
+            // in the app could open it.
+            _tile(context, 'Se alle varsler', null,
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
             const _NotificationToggle(label: 'Swaps og bytter'),
             const _NotificationToggle(label: 'Meldinger'),
             const _NotificationToggle(label: 'Likes på tingene mine'),
@@ -660,11 +669,33 @@ class _NotificationToggleState extends State<_NotificationToggle> {
   bool _on = true;
 
   @override
+  void initState() {
+    super.initState();
+    _restore();
+  }
+
+  // On the phone, not the server: there is no push yet — FCM and APNs both
+  // need accounts we do not have — so these are a preference this device
+  // holds until there is something to tell. Forgetting them the moment the
+  // screen closed made three switches that did nothing at all.
+  String get _key => 'notify:${widget.label}';
+
+  Future<void> _restore() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _on = prefs.getBool(_key) ?? true);
+  }
+
+  Future<void> _toggle() async {
+    setState(() => _on = !_on);
+    (await SharedPreferences.getInstance()).setBool(_key, _on);
+  }
+
+  @override
   // A 58-tall row with the export's own switch: 50×31, green when on, the
   // field-line grey when off, a 23px white thumb.
   Widget build(BuildContext context) => GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _on = !_on),
+        onTap: _toggle,
         child: SizedBox(
           height: 58,
           child: Row(

@@ -102,6 +102,24 @@ export default async function tradeRoutes(app: FastifyInstance) {
       throw conflict('trade_paused', 'Byttet er pauset mens noen svarer på en forespørsel.')
     }
 
+    // «Each side of a hop is a list of 1–3 items.» The opening offer behind
+    // «Jeg vil ha» names their listing and nothing back, and accepting that
+    // was one tap that gave your drill away for nothing.
+    const emptyHanded = await one(
+      app.db,
+      sql`select 1 from trade_participants p
+          where p.trade_id = ${id}
+            and not exists (
+              select 1 from trade_offer_items oi
+              where oi.offer_id = ${view.offerId}::uuid and oi.giver_position = p.position)`,
+    )
+    if (emptyHanded) {
+      throw conflict(
+        'incomplete_offer',
+        'Forslaget er ikke ferdig — alle må legge noe i byttet. Foreslå et motbytte.',
+      )
+    }
+
     const result = await acceptOffer(app.db, view.offerId, userId, body.termsVersion)
     await app.db.execute(sql`
       insert into notifications (user_id, type, payload)
