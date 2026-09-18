@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import {
+  NEGOTIABLE,
   cancelWithdrawalRequest,
   declineTrade,
   markHandover,
@@ -14,7 +15,13 @@ import {
   withdrawEarly,
 } from '../trades/actions.js'
 import { sweepForCycles } from '../trades/sweep.js'
-import { acceptOffer, completeTrade, proposeCounterOffer, startTalking } from '../trades/trades.js'
+import {
+  acceptOffer,
+  completeTrade,
+  proposeCounterOffer,
+  revokeAcceptance,
+  startTalking,
+} from '../trades/trades.js'
 import { tradeList, tradeView } from '../trades/view.js'
 import { publicItem } from './serialize.js'
 
@@ -89,6 +96,11 @@ export default async function tradeRoutes(app: FastifyInstance) {
     if (['completed', 'cancelled'].includes(view.state)) {
       throw conflict('trade_closed', 'Byttet er avsluttet.')
     }
+    if (view.state === 'paused') {
+      // 08b: somebody has asked to get out and the others are answering.
+      // Accepting again here would quietly overwrite that question.
+      throw conflict('trade_paused', 'Byttet er pauset mens noen svarer på en forespørsel.')
+    }
 
     const result = await acceptOffer(app.db, view.offerId, userId, body.termsVersion)
     await app.db.execute(sql`
@@ -97,7 +109,45 @@ export default async function tradeRoutes(app: FastifyInstance) {
              jsonb_build_object('tradeId', ${id}::text)
       from trade_participants p where p.trade_id = ${id} and p.user_id <> ${userId}
     `)
+    // Displacing a trade puts whatever it was holding back on the market, and
+    // an item becoming available again is one of the three triggers.
+    await sweepForCycles(app.db, result.freed)
     return { ...result, trade: await tradeView(app.db, id, userId) }
+  })
+
+  // De-accept — the lifecycle in `docs/DESIGN.md` has it, and until now nothing
+  // called it. Your yes is what reserved your things, so taking it back frees
+  // them and drops the trade out of `accepted` again.
+  app.delete('/trades/:id/accept', async (request) => {
+    const userId = app.requireUser(request)
+    const { id } = idParam.parse(request.params)
+
+    const view = await tradeView(app.db, id, userId)
+    if (!view) throw notFound('Fant ikke byttet.')
+    if (!view.offerId) throw conflict('no_offer', 'Det finnes ikke noe forslag å angre.')
+    if (!view.you.accepted) throw conflict('not_accepted', 'Du har ikke godtatt dette byttet.')
+    if (['completed', 'cancelled'].includes(view.state)) {
+      throw conflict('trade_closed', 'Byttet er avsluttet.')
+    }
+    // Once something has been handed over, undoing the yes it was handed over
+    // on is the withdrawal negotiation on 08a, not a button.
+    const handed = await one(
+      app.db,
+      sql`select 1 from trade_participants
+          where trade_id = ${id} and (sent_at is not null or received_at is not null)`,
+    )
+    if (handed) {
+      throw conflict('already_sent', 'Noe er allerede sendt. Be de andre om å avslutte byttet.')
+    }
+
+    const { freed } = await revokeAcceptance(app.db, view.offerId, userId)
+    await app.db.execute(sql`
+      insert into notifications (user_id, type, payload)
+      select p.user_id, 'acceptance_revoked', jsonb_build_object('tradeId', ${id}::text)
+      from trade_participants p where p.trade_id = ${id} and p.user_id <> ${userId}
+    `)
+    await sweepForCycles(app.db, freed)
+    return tradeView(app.db, id, userId)
   })
 
   app.post('/trades/:id/counter', async (request) => {
@@ -117,6 +167,19 @@ export default async function tradeRoutes(app: FastifyInstance) {
       .parse(request.body)
 
     await participantOf(app.db, id, userId)
+    const trade = await one(app.db, sql`select state from trades where id = ${id}`)
+    if (!trade) throw notFound('Fant ikke byttet.')
+    // A counter-offer is a move inside a negotiation. On an accepted trade it
+    // would silently undo everybody's acceptance, and on a closed one it would
+    // reopen something that is over.
+    if (!NEGOTIABLE.includes(trade['state'])) {
+      throw conflict(
+        'not_negotiable',
+        trade['state'] === 'accepted'
+          ? 'Byttet er allerede godtatt. Angre godkjenningen først.'
+          : 'Byttet er avsluttet.',
+      )
+    }
     await proposeCounterOffer(app.db, id, userId, body.items, body.cash ?? undefined)
 
     await app.db.execute(sql`
@@ -140,7 +203,8 @@ export default async function tradeRoutes(app: FastifyInstance) {
   app.post('/trades/:id/withdraw-early', async (request) => {
     const userId = app.requireUser(request)
     const { id } = idParam.parse(request.params)
-    await withdrawEarly(app.db, id, userId)
+    const freed = await withdrawEarly(app.db, id, userId)
+    await sweepForCycles(app.db, freed)
     return tradeView(app.db, id, userId)
   })
 
@@ -156,6 +220,9 @@ export default async function tradeRoutes(app: FastifyInstance) {
     const { id } = idParam.parse(request.params)
     const { approve } = z.object({ approve: z.boolean() }).parse(request.body)
     const result = await respondToWithdrawal(app.db, id, userId, approve)
+    // Saying yes ends the trade, which puts both sides' things back on the
+    // market — the second of the three search triggers.
+    await sweepForCycles(app.db, result.freed)
     return { ...result, trade: await tradeView(app.db, id, userId) }
   })
 

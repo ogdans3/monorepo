@@ -139,6 +139,25 @@ describe('the whole journey over HTTP', () => {
     expect(mine.body!['total']).toBe(0)
   })
 
+  test('05 — with nothing searched for, your interests come first', async () => {
+    // The only personalisation in the product, and it had none: the categories
+    // chosen on 02 were written down and then never read. Ola's are Verktøy,
+    // Gaming and Sykling; Kari's newest listing is a gaming console, so it
+    // sorts above the things that are neither.
+    await call('POST', '/items', {
+      token: kari,
+      body: { title: 'Sofabord i eik', category: 'hjem', condition: 'good',
+              estimatedValueNok: 900 },
+    })
+
+    const res = await call('GET', '/discover', { token: ola })
+    expect(res.body!['items'][0]['title']).toBe('Retro spillkonsoll')
+
+    // Ask for something, and it is the plain newest-first list again.
+    const searched = await call('GET', '/discover?q=sofabord', { token: ola })
+    expect(searched.body!['items'][0]['title']).toBe('Sofabord i eik')
+  })
+
   test('05 — the rows before a search come from your interests', async () => {
     const res = await call('GET', '/discover/rows', { token: ola })
     const gaming = res.body!['rows'].find((r: Json) => r['category'] === 'gaming')

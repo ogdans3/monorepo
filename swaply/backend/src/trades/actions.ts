@@ -15,13 +15,25 @@ export async function participantOf(db: Database, tradeId: string, userId: strin
   return row
 }
 
-/** «Avslå» — screen 09f. Ends it for everyone and frees what was held. */
+/** The states in which a trade is still being negotiated rather than carried out. */
+export const NEGOTIABLE = ['talking', 'pending', 'countered']
+
+/**
+ * «Avslå» — screen 09f. Ends it for everyone and frees what was held.
+ *
+ * Only while it is still a negotiation. Once everybody has accepted, backing
+ * out is the withdrawal flow on 08a–08c and needs the other side's yes; a
+ * decline here would be a way around the one screen that exists to stop it.
+ */
 export async function declineTrade(db: Database, tradeId: string, userId: string) {
   await participantOf(db, tradeId, userId)
   const trade = await one(db, sql`select state from trades where id = ${tradeId}`)
   if (!trade) throw notFound('Fant ikke byttet.')
   if (['completed', 'cancelled'].includes(trade['state'])) {
     throw conflict('trade_closed', 'Byttet er allerede avsluttet.')
+  }
+  if (!NEGOTIABLE.includes(trade['state'])) {
+    throw conflict('needs_permission', 'Alle har godtatt. Du må spørre de andre først.')
   }
   return cancelTrade(db, tradeId, 'Byttet ble avslått')
 }
@@ -35,10 +47,16 @@ export async function declineTrade(db: Database, tradeId: string, userId: string
 export async function withdrawEarly(db: Database, tradeId: string, userId: string) {
   await participantOf(db, tradeId, userId)
   const trade = await one(db, sql`select state from trades where id = ${tradeId}`)
-  if (trade?.['state'] === 'accepted') {
+  if (!trade) throw notFound('Fant ikke byttet.')
+  if (['completed', 'cancelled'].includes(trade['state'])) {
+    // Cancelling a closed trade a second time would overwrite the reason the
+    // first one is showing on 09f.
+    throw conflict('trade_closed', 'Byttet er allerede avsluttet.')
+  }
+  if (!NEGOTIABLE.includes(trade['state'])) {
     throw conflict('needs_permission', 'Alle har godtatt. Du må spørre de andre først.')
   }
-  await cancelTrade(db, tradeId, 'Den andre parten trakk seg før byttet var godtatt')
+  return cancelTrade(db, tradeId, 'Den andre parten trakk seg før byttet var godtatt')
 }
 
 /**
@@ -124,7 +142,7 @@ export async function respondToWithdrawal(
                  blocked_by_sent = true where id = ${req['id']}`,
     )
     await db.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
-    return { state: 'rejected', blockedBySent: true }
+    return { state: 'rejected', blockedBySent: true, freed: [] as string[] }
   }
 
   if (approve) {
@@ -132,8 +150,8 @@ export async function respondToWithdrawal(
       sql`update trade_withdrawals set state = 'approved', resolved_at = now()
           where id = ${req['id']}`,
     )
-    await cancelTrade(db, tradeId, 'Byttet ble avbrutt etter avtale mellom partene')
-    return { state: 'approved', blockedBySent: false }
+    const freed = await cancelTrade(db, tradeId, 'Byttet ble avbrutt etter avtale mellom partene')
+    return { state: 'approved', blockedBySent: false, freed }
   }
 
   await db.execute(
@@ -141,7 +159,7 @@ export async function respondToWithdrawal(
         where id = ${req['id']}`,
   )
   await db.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
-  return { state: 'rejected', blockedBySent: false }
+  return { state: 'rejected', blockedBySent: false, freed: [] as string[] }
 }
 
 /** «Angre forespørselen» on screen 08b. */
@@ -191,6 +209,16 @@ export async function markHandover(
   value = true,
 ) {
   await participantOf(db, tradeId, userId)
+
+  // 06f is the screen behind these, and it only exists once everybody has
+  // accepted. Marking a thing sent in a trade still being negotiated would
+  // close the door on withdrawing from something nobody has agreed to.
+  const trade = await one(db, sql`select state from trades where id = ${tradeId}`)
+  if (!trade) throw notFound('Fant ikke byttet.')
+  if (!['accepted', 'paused', 'completed'].includes(trade['state'])) {
+    throw conflict('not_accepted', 'Byttet er ikke godtatt ennå.')
+  }
+
   const column = { sent: 'sent_at', received: 'received_at', paid: 'paid_at' }[marker]
 
   await db.execute(

@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { badRequest, notFound } from '../lib/errors.js'
-import { iso, many, one } from '../lib/rows.js'
+import { iso, many, one, textArray } from '../lib/rows.js'
 import { participantOf } from '../trades/actions.js'
 
 export default async function miscRoutes(app: FastifyInstance) {
@@ -68,10 +68,13 @@ export default async function miscRoutes(app: FastifyInstance) {
     await participantOf(app.db, id, body.ratee)
     if (body.ratee === userId) throw badRequest('self_review', 'Du kan ikke vurdere deg selv.')
 
+    // The chips are the person's own words on the way in — «Møtte ikke opp» —
+    // so they travel as a parameter. Building the array literal by hand put a
+    // quote from a user straight into the statement.
     await app.db.execute(sql`
       insert into reviews (trade_id, rater, ratee, score, comment, chips)
       values (${id}, ${userId}, ${body.ratee}, ${body.score}, ${body.comment ?? null},
-              ${sql.raw(`'{${body.chips.map((c) => `"${c.replace(/"/g, '')}"`).join(',')}}'`)})
+              ${textArray(body.chips)})
       on conflict (trade_id, rater, ratee)
       do update set score = excluded.score, comment = excluded.comment, chips = excluded.chips
     `)
@@ -102,9 +105,7 @@ export default async function miscRoutes(app: FastifyInstance) {
 
     await app.db.execute(sql`
       insert into app_feedback (user_id, score, chips, comment)
-      values (${userId}, ${body.score},
-              ${sql.raw(`'{${body.chips.map((c) => `"${c.replace(/"/g, '')}"`).join(',')}}'`)},
-              ${body.comment ?? null})
+      values (${userId}, ${body.score}, ${textArray(body.chips)}, ${body.comment ?? null})
     `)
     reply.code(201)
     return { ok: true }

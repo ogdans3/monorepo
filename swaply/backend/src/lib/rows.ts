@@ -22,3 +22,14 @@ export const iso = (v: unknown): string | null => (v ? new Date(v as string).toI
 /** The cover is the lowest-positioned photo, and a listing may have none. */
 export const coverSql = (alias: string) =>
   sql.raw(`(select url from item_media m where m.item_id = ${alias}.id order by m.position limit 1)`)
+
+/**
+ * A `text[]` parameter, rather than an array literal pasted into the statement.
+ *
+ * Chips come from a person — «Møtte ikke opp» — and one apostrophe in a string
+ * built with `sql.raw` ends the literal and starts something else. The escaping
+ * here is the array literal's own: a backslash and a double quote are the only
+ * two characters it reads.
+ */
+export const textArray = (values: string[]) =>
+  sql`${`{${values.map((v) => `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')}}`}::text[]`

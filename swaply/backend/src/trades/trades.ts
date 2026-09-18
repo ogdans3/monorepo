@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
+import { conflict } from '../lib/errors.js'
 import type { Cycle } from './cycles.js'
 
 type Row = Record<string, string | null>
@@ -124,7 +125,14 @@ export async function proposeCounterOffer(
     )
     const offerId = offer!['id']!
 
+    // One row per listing: an offer holds a set of things, and proposing
+    // something already on the table is a person pressing the same button
+    // twice, not a new deal with two of it. The primary key would refuse it
+    // and the screen would show a 500.
+    const seen = new Set<string>()
     for (const item of items) {
+      if (seen.has(item.itemId)) continue
+      seen.add(item.itemId)
       await tx.execute(
         sql`insert into trade_offer_items (offer_id, item_id, giver_position)
             values (${offerId}, ${item.itemId}, ${item.giverPosition})`,
@@ -147,6 +155,12 @@ export type AcceptResult = {
   reserved: string[]
   /** Trades closed because this acceptance took a listing they were counting on. */
   displaced: string[]
+  /**
+   * Listings that went back on the market because the trades holding them were
+   * displaced. Their owners' wishes were dead while those trades held them, so
+   * the caller has to run the cycle search over them again.
+   */
+  freed: string[]
   everyoneAccepted: boolean
 }
 
@@ -182,12 +196,18 @@ export async function acceptOffer(
     for (const row of mine) {
       const held = row['active_trade_id']
       if (held && held !== tradeId) {
-        throw new Error(`item ${row['id']} is already reserved by trade ${held}`)
+        // A refusal a person can read, not a 500. The race is ordinary: two
+        // trades wanted the same drill and the other one got there first.
+        throw conflict(
+          'item_reserved',
+          'En av tingene dine er allerede reservert i et annet bytte.',
+        )
       }
     }
 
     const reserved: string[] = []
     const displaced = new Set<string>()
+    const freed = new Set<string>()
 
     for (const row of mine) {
       // A service is never exclusive: one person can paint three living rooms.
@@ -214,6 +234,19 @@ export async function acceptOffer(
         returning id
       `)
       for (const row of closed) displaced.add(row['id']!)
+
+      // A displaced trade may have been holding things of its own — whoever
+      // else had already accepted in it locked theirs. Closing the trade
+      // without letting go of them would leave a listing reserved by a trade
+      // that no longer exists, and nothing would ever free it.
+      for (const row of closed) {
+        const released = await tx.execute<Row>(
+          sql`update items set active_trade_id = null, status = 'available'
+              where active_trade_id = ${row['id']!}
+              returning id`,
+        )
+        for (const item of released) freed.add(item['id']!)
+      }
     }
 
     await tx.execute(
@@ -238,22 +271,50 @@ export async function acceptOffer(
       await tx.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
     }
 
-    return { reserved, displaced: [...displaced], everyoneAccepted }
+    return { reserved, displaced: [...displaced], freed: [...freed], everyoneAccepted }
   })
 }
 
-/** Undo your acceptance. The row stays: deleting it would hide that it happened. */
-export async function revokeAcceptance(db: Database, offerId: string, userId: string) {
-  await db.transaction(async (tx) => {
+/**
+ * Undo your acceptance — the de-accept in `docs/DESIGN.md`'s lifecycle.
+ *
+ * The row stays: deleting it would hide that it happened. What does go is the
+ * reservation, because the reservation *is* the acceptance — an owner's yes is
+ * what locks their things, so taking the yes back has to unlock them or they
+ * are frozen by a promise nobody is making any more.
+ *
+ * Any single de-accept holds the whole trade, which is why an accepted trade
+ * drops back to `pending` rather than staying agreed with a gap in it.
+ */
+export async function revokeAcceptance(
+  db: Database,
+  offerId: string,
+  userId: string,
+): Promise<{ freed: string[] }> {
+  return db.transaction(async (tx) => {
+    const [offer] = await tx.execute<Row>(
+      sql`select trade_id from trade_offers where id = ${offerId}`,
+    )
+    const tradeId = offer!['trade_id']!
+
     await tx.execute(
       sql`update trade_acceptances set revoked_at = now()
-          where offer_id = ${offerId} and user_id = ${userId}`,
+          where offer_id = ${offerId} and user_id = ${userId} and revoked_at is null`,
     )
+
+    const released = await tx.execute<Row>(
+      sql`update items set active_trade_id = null, status = 'available'
+          where active_trade_id = ${tradeId} and owner_id = ${userId}
+          returning id`,
+    )
+
+    // Only out of `accepted`. `countered` says a newer offer is on the table,
+    // which is a different fact about the trade and not one this undoes.
     await tx.execute(sql`
-      update trades set state = 'pending'
-      where id = (select trade_id from trade_offers where id = ${offerId})
-        and state = 'accepted'
+      update trades set state = 'pending' where id = ${tradeId} and state = 'accepted'
     `)
+
+    return { freed: released.map((row) => row['id']!) }
   })
 }
 

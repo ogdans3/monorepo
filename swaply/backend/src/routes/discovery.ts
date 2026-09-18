@@ -50,12 +50,27 @@ export default async function discoveryRoutes(app: FastifyInstance) {
         and (${args.condition ?? null}::condition is null or i.condition = ${args.condition ?? null}::condition)
     `
 
+    // The first personalisation in the product, and the only one: with nothing
+    // searched for and no category picked, the categories chosen on screen 02
+    // come first. Not a ranking model — a boolean on a column, and the rest of
+    // the page is the same collage for everybody.
+    //
+    // It sits here rather than in the chip row above it because round 5 draws
+    // that row in a fixed order for somebody whose interests are a different
+    // three, and the export is the authority for what a screen says.
+    const personal =
+      viewer && !args.q && !args.category && args.sort === 'newest'
+        ? sql`(i.category = any (coalesce(
+             (select u2.interests from users u2 where u2.id = ${viewer}::uuid),
+             '{}'::category[]))) desc,`
+        : sql``
+
+    // «Nærmest» needs the viewer's town, so it is written out below with the
+    // rest of the query rather than as a fragment with a placeholder in it.
     const order =
       args.sort === 'value'
-        ? sql.raw('order by i.estimated_value_nok asc nulls last')
-        : args.sort === 'nearest'
-          ? sql.raw('order by (i.town is distinct from (select town from users where id = $viewer)) asc, i.created_at desc')
-          : sql.raw('order by i.created_at desc')
+        ? sql`order by i.estimated_value_nok asc nulls last`
+        : sql`order by ${personal} i.created_at desc`
 
     const counted = await one<{ n: string }>(app.db, sql`select count(*) as n ${base}`)
     const n = counted?.['n'] ?? '0'

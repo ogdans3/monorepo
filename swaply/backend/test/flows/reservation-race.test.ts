@@ -71,15 +71,21 @@ describe('two trades wanting the same drill', () => {
     )
   })
 
-  test('5. a locked item cannot be taken by a second trade', async () => {
+  test('5. a locked item cannot be taken by a second trade, and it says so in Norwegian', async () => {
     const revived = await openTradeFromCycle(db, [
       { userId: per, givesItemId: bike },
       { userId: ola, givesItemId: drill },
     ])
 
+    // Two people wanting the same drill is ordinary, so the refusal is a 409
+    // with something a person can read — not a 500 and «Noe gikk galt».
     await expect(
       acceptOffer(db, await currentOffer(revived), ola, 'terms-2026-09'),
-    ).rejects.toThrow(/already reserved/)
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'item_reserved',
+      message: 'En av tingene dine er allerede reservert i et annet bytte.',
+    })
   })
 
   test('6. cancelling the winner puts the drill back on the market', async () => {
