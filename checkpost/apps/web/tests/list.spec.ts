@@ -94,6 +94,105 @@ test('two tabs on one link see each other', async ({ page, context }) => {
   await expect(page.locator('.shelf')).toContainText('Done · 1');
 });
 
+test('a list catches up when its socket stops carrying traffic', async ({ page, context }) => {
+  // The poll this leans on is deliberately slower than the rest of the suite.
+  test.setTimeout(60_000);
+  const url = await makeList(page);
+  await addItem(page, 'Firewood');
+
+  /**
+   * A socket that is open and silent, which is the state a phone is left in
+   * when it changes network or sits behind a NAT that forgot the mapping.
+   * There is no close, no error and no event of any kind: the browser goes on
+   * reporting `OPEN` and nothing will ever arrive again. This is the failure
+   * that had a list ticked off on one device sit there unchanged on another
+   * for as long as anyone cared to watch.
+   */
+  let carrying = true;
+  const watcher = await context.newPage();
+  await watcher.routeWebSocket('**/v1/list/socket', (ws) => {
+    const server = ws.connectToServer();
+    ws.onMessage((message) => {
+      if (carrying) server.send(message);
+    });
+    server.onMessage((message) => {
+      if (carrying) ws.send(message);
+    });
+  });
+  await watcher.goto(url);
+  await expect(watcher.getByText('Firewood', { exact: true })).toBeVisible();
+  carrying = false;
+
+  await tick(page, 'Firewood');
+
+  // Nothing can reach the watcher down that socket, so this can only be the
+  // client asking. It is allowed a beat: the poll runs every POLL_MS.
+  await expect(watcher.locator('.shelf')).toContainText('Done · 1', { timeout: 30_000 });
+});
+
+test('a burst of changes arrives folded, not one redraw each', async ({ page, request }) => {
+  const url = await makeList(page);
+  await addItem(page, 'Firewood');
+
+  // The burst comes from another device rather than from a second tab: ten
+  // clicks driven through the UI are ten seconds apart by the time Playwright
+  // has checked each one is clickable, and that is not a burst. This is what a
+  // finger leaning on a box on somebody else's phone actually looks like here.
+  const token = url.split('/l/')[1]!;
+  const elsewhere = {
+    authorization: `Bearer ${token}`,
+    'x-checkpost-client': 'someone-elses-phone',
+  };
+  const apiOrigin = process.env.API_ORIGIN ?? 'http://localhost:4000';
+
+  // The row above is on screen before the server has answered for it, which is
+  // the whole point of the optimistic write. Wait for the id to exist.
+  let itemId: string | undefined;
+  await expect
+    .poll(async () => {
+      const snapshot = await (
+        await request.get(`${apiOrigin}/v1/list`, { headers: elsewhere })
+      ).json();
+      itemId = (snapshot.items as { id: string }[] | undefined)?.[0]?.id;
+      return itemId;
+    })
+    .toBeTruthy();
+
+  // Record every time the row actually changes, rather than every frame that
+  // arrives: what matters is how much the screen moves.
+  await page.evaluate(() => {
+    const flips: boolean[] = [];
+    const read = () => document.querySelector('li.row')?.className.includes('done') ?? false;
+    let last = read();
+    new MutationObserver(() => {
+      const now = read();
+      if (now !== last) {
+        flips.push(now);
+        last = now;
+      }
+    }).observe(document.querySelector('main')!, { subtree: true, childList: true, attributes: true });
+    (window as unknown as { flips: boolean[] }).flips = flips;
+  });
+
+  for (let i = 0; i < 10; i++) {
+    await request.patch(`${apiOrigin}/v1/list/items/${itemId}`, {
+      headers: elsewhere,
+      data: { checked: i % 2 === 0 },
+    });
+  }
+
+  // An even number of changes ends where it started, and the tab agrees.
+  await expect(page.locator('li.row.done')).toHaveCount(0);
+  await expect(page.getByText('Firewood', { exact: true })).toBeVisible();
+
+  // The point: the tab was not dragged through all ten. Before the fold this
+  // was one flip per frame and the row strobed for as long as the burst.
+  const flips = await page.evaluate(
+    () => (window as unknown as { flips: boolean[] }).flips.length,
+  );
+  expect(flips).toBeLessThanOrEqual(4);
+});
+
 test('a tick lands before the network answers', async ({ page }) => {
   await makeList(page);
   await addItem(page, 'Firewood');

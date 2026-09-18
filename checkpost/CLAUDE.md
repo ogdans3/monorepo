@@ -58,6 +58,30 @@ on two machines, both with the cache on, and both running the reaper. Deploy
 this project to exactly one machine, and check the other one before assuming
 that is true.
 
+**A socket that has stopped working does not say so.** A browser goes on
+reporting `OPEN` for a connection whose network is gone — no close, no error,
+no event of any kind — and a list watched in that state quietly stops moving
+while looking perfectly healthy. This is what "I ticked it on my laptop and my
+phone never noticed" actually is. So `realtime.ts` treats every frame as a sign
+of life, asks for one every `PING_MS`, and retires a socket that has produced
+nothing for `SILENT_MS` itself instead of waiting for `onclose`, which on a
+dead connection can be minutes away. Under that, `ListSession` asks
+`GET /changes?since=` every `POLL_MS` while the tab is visible. Neither is
+redundant with the other and neither is redundant with the socket: the socket
+is the fast path, the poll is the bound on how stale a visible list can get,
+and it costs almost nothing because the usual answer is "nothing since your
+revision" from a cached number. The Flutter client gets the same guarantee from
+`pingInterval` on its socket, which Dart enforces itself.
+
+**Remote changes are folded into the screen, not applied one per frame.** A
+burst — two people working down a list, or one finger on a box — arrives as a
+burst of frames, and redrawing on each one makes the row strobe. `#collect`
+applies the first change after a quiet moment at once and gathers the rest into
+one update per `FOLD_MS`. That is safe only because `#applyEvent` drops any
+event at or below the revision the list has already reached, so a reconcile can
+overtake the queue and what it left behind is ignored rather than replayed over
+the top of a newer answer. Keep that guard if you touch either.
+
 **The database is the `db` container, on a volume, on the server.** It is not
 hosted any more, so `ops/backup.sh` is the only thing standing between a bad day
 and the lists being gone. Its port is bound to loopback on purpose; see

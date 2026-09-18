@@ -17,6 +17,25 @@ export type Status = 'loading' | 'ready' | 'offline' | 'gone' | 'invalid' | 'cop
 const SETTLE_MS = 400;
 /** How long a change somebody else made stays highlighted. */
 const WASH_MS = 900;
+/**
+ * The most often the screen is allowed to move for a change from elsewhere.
+ *
+ * Two people working through a list, or one finger tapping a box on and off,
+ * arrive here as a burst of frames, and redrawing on every one of them makes
+ * the screen twitch for as long as the burst lasts. The first change after a
+ * quiet moment still lands at once, because that is the one being waited for.
+ * Anything following within the second is collected and folded in together.
+ */
+const FOLD_MS = 1000;
+/**
+ * How often an open list asks what it missed.
+ *
+ * The socket is the fast path and not the only one, because a socket can stop
+ * working without anything saying so. This is the floor under it, and it is
+ * close to free: the usual answer is "nothing since your revision", which the
+ * API gives from a number it already has without reading the list.
+ */
+const POLL_MS = 15_000;
 
 /**
  * One open list, and the same rules the Flutter client follows.
@@ -61,8 +80,14 @@ export class ListSession {
   /** Bumped on every connect, so a superseded socket's frames are ignored. */
   #generation = 0;
   #timers = new Map<string, ReturnType<typeof setTimeout>>();
+  #poll: ReturnType<typeof setInterval> | null = null;
   #stopped = false;
   #me = '';
+
+  /** Changes that have arrived and are waiting for the next fold. */
+  #incoming: ChangeEvent[] = [];
+  /** The earliest moment the next fold may happen. */
+  #foldAt = 0;
 
   constructor(token: string) {
     this.#token = token;
@@ -121,6 +146,18 @@ export class ListSession {
     // Coming back to a backgrounded tab is exactly when the socket is most
     // likely to have died quietly, so this is where we ask what we missed.
     document.addEventListener('visibilitychange', this.#onVisible);
+
+    // And while the list is being watched, ask anyway.
+    //
+    // `Realtime` notices a socket that has gone silent, but not for the best
+    // part of a minute, and a list somebody is looking at should not be able
+    // to be that far behind. This is the beat that bounds it. It runs only
+    // while the tab is visible: a backgrounded one has the line above.
+    this.#poll = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      if (this.status !== 'ready' && this.status !== 'offline') return;
+      void this.reconcile();
+    }, POLL_MS);
   }
 
   #onVisible = () => {
@@ -181,7 +218,16 @@ export class ListSession {
       },
       () => {
         if (!live()) return;
-        if (this.status === 'ready') this.status = 'offline';
+        // A socket that goes is not by itself evidence of being offline. It
+        // happens on a perfectly good network — a phone changing cell, a proxy
+        // giving up on an idle connection, the watchdog above retiring one that
+        // went quiet — and the banner is about whether this device can reach
+        // the list at all. So ask, and let the answer say it: `reconcile` marks
+        // us offline when the request cannot leave the device, and clears it
+        // when one lands. Saying it on the drop alone made the banner flash on
+        // every reconnect.
+        if (this.list) void this.reconcile();
+        else if (this.status === 'ready') this.status = 'offline';
       },
     );
     this.#realtime.start();
@@ -197,7 +243,7 @@ export class ListSession {
         this.presence = frame.presence;
         break;
       case 'change':
-        this.#applyEvent(frame.event, frame.event.actor !== this.#me);
+        this.#collect(frame.event);
         break;
       case 'revoked':
         this.status = 'gone';
@@ -208,6 +254,9 @@ export class ListSession {
 
   async reconcile() {
     if (this.#stopped || !this.list) return;
+    // Anything already in hand is applied before asking for more, so that the
+    // revision we ask from is the one we have actually caught up to.
+    this.#fold();
     try {
       const changes = await api.changesSince(this.#token, this.list.revision);
       if (changes.kind === 'resync') {
@@ -454,8 +503,49 @@ export class ListSession {
     this.access = snapshot.access;
   }
 
+  /**
+   * Takes a change off the socket and decides when to show it.
+   *
+   * Leading edge, then a trailing fold: the first arrival after a quiet moment
+   * is applied immediately, and a burst behind it is collected and applied in
+   * one go a beat later. Nothing is dropped and the order is kept, so the fold
+   * is only ever about how often the screen moves.
+   */
+  #collect(event: ChangeEvent) {
+    this.#incoming.push(event);
+    const now = Date.now();
+    // A list that has just been deleted has nothing to wait for.
+    if (event.type === 'list.deleted' || now >= this.#foldAt) {
+      this.#fold();
+      return;
+    }
+    this.#restart('fold', this.#foldAt - now, () => this.#fold());
+  }
+
+  #fold() {
+    const pending = this.#timers.get('fold');
+    if (pending) {
+      clearTimeout(pending);
+      this.#timers.delete('fold');
+    }
+    // Only a fold that had something to show starts a new quiet window. A
+    // reconcile draining an empty queue must not delay the next arrival.
+    if (!this.#incoming.length) return;
+    this.#foldAt = Date.now() + FOLD_MS;
+    const events = this.#incoming;
+    this.#incoming = [];
+    for (const event of events) this.#applyEvent(event, event.actor !== this.#me);
+  }
+
   #applyEvent(event: ChangeEvent, remote: boolean) {
-    if (this.list && event.revision > this.list.revision) {
+    if (this.list) {
+      // Already seen. Revisions are one per change and strictly increasing, so
+      // anything at or below where the list has reached has been applied
+      // already, by an earlier frame or by a reconcile that overtook it. This
+      // is what makes holding events back safe: a reconcile can pass the queue
+      // at any moment, and what it leaves behind is dropped rather than
+      // replayed over the top of a newer answer.
+      if (event.revision <= this.list.revision) return;
       this.list = { ...this.list, revision: event.revision };
     }
     switch (event.type) {
@@ -540,6 +630,8 @@ export class ListSession {
   stop() {
     this.#stopped = true;
     document.removeEventListener('visibilitychange', this.#onVisible);
+    if (this.#poll) clearInterval(this.#poll);
+    this.#poll = null;
     for (const timer of this.#timers.values()) clearTimeout(timer);
     this.#timers.clear();
     this.#realtime?.stop();
