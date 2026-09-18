@@ -127,7 +127,9 @@ export default async function chatRoutes(app: FastifyInstance) {
   app.post('/threads/:id/messages', async (request, reply) => {
     const userId = app.requireUser(request)
     const { id } = idParam.parse(request.params)
-    const body = z.object({ body: z.string().min(1).max(2000) }).parse(request.body)
+    // Trimmed before the length is judged: `min(1)` is happy with a space, and
+    // what lands in the thread is an empty bubble.
+    const body = z.object({ body: z.string().trim().min(1).max(2000) }).parse(request.body)
     await seatIn(app, id, userId)
 
     const message = await one(

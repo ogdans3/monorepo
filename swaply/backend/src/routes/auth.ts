@@ -12,7 +12,7 @@ import { publicMe } from './serialize.js'
 // Screen 10c asks for name, e-mail, phone and a password in one go, because it
 // only appears when you are already trying to list something.
 const registerBody = z.object({
-  displayName: z.string().min(1).max(60),
+  displayName: z.string().trim().min(1).max(60),
   email: z.string().email(),
   phone: z.string().min(6).max(20).optional(),
   password: z.string().min(8, 'Passordet må ha minst 8 tegn.'),

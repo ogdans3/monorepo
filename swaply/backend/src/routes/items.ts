@@ -10,14 +10,16 @@ import { publicItem, publicUser } from './serialize.js'
 
 const itemBody = z.object({
   kind: z.enum(['item', 'service']).default('item'),
-  title: z.string().min(1).max(80),
-  description: z.string().max(2000).optional(),
+  // Trimmed first, everywhere a person types: `min(1)` accepts a space, and
+  // the collage would draw a card with nothing written on it.
+  title: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(2000).optional(),
   category: z.enum(CATEGORIES),
-  subcategory: z.string().max(60).optional(),
+  subcategory: z.string().trim().max(60).optional(),
   condition: z.enum(CONDITIONS).optional(),
   estimatedValueNok: z.number().int().min(0).max(10_000_000).optional(),
   postalCode: z.string().regex(/^\d{4}$/).optional(),
-  town: z.string().max(60).optional(),
+  town: z.string().trim().max(60).optional(),
   // Up to ten, first is the cover. A listing with none is allowed: services
   // usually have none, and discovery draws a generated card instead.
   //

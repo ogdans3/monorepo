@@ -47,7 +47,7 @@ export default async function tradeRoutes(app: FastifyInstance) {
     // anonymous device has to become a person the other side can hold to it.
     const userId = app.requireClaimedUser(request)
     const { id } = idParam.parse(request.params)
-    const body = z.object({ body: z.string().min(1).max(2000) }).parse(request.body)
+    const body = z.object({ body: z.string().trim().min(1).max(2000) }).parse(request.body)
 
     const item = await one(app.db, sql`select owner_id from items where id = ${id} and deleted_at is null`)
     if (!item) throw notFound('Fant ikke gjenstanden.')

@@ -57,7 +57,7 @@ export default async function profileRoutes(app: FastifyInstance) {
     const userId = app.requireUser(request)
     const body = z
       .object({
-        displayName: z.string().min(1).max(60).optional(),
+        displayName: z.string().trim().min(1).max(60).optional(),
         email: z.string().email().optional(),
         phone: z.string().min(6).max(20).nullish(),
         town: z.string().max(60).optional(),
