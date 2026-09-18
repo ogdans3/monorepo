@@ -10,6 +10,7 @@ import '../widgets/shell.dart';
 import '../state/session.dart';
 import 'chat.dart';
 import 'onboarding.dart';
+import 'post_item.dart';
 import 'profile.dart';
 import 'trade_detail.dart';
 
@@ -245,8 +246,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     }),
                     const SizedBox(width: 8),
                     _round(Icons.more_horiz, () {
-                      showReportSheet(context,
-                          itemId: item.id, personName: item.owner?.displayName);
+                      // Your own listing is not something to report. It is the
+                      // one thing you can change and take down, and until now
+                      // the app could do neither.
+                      final mine = item.owner?.id == context.read<Session>().me?.id;
+                      if (mine) {
+                        _ownItemMenu(item);
+                      } else {
+                        showReportSheet(context,
+                            itemId: item.id, personName: item.owner?.displayName);
+                      }
                     }),
                   ],
                 ),
@@ -277,6 +286,94 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         ],
       ),
     );
+  }
+
+  /// «⋯» on a listing of your own: the U and the D of the CRUD the API has
+  /// always had and no screen reached.
+  Future<void> _ownItemMenu(Item item) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Rediger annonsen'),
+              onTap: () async {
+                Navigator.of(sheet).pop();
+                final changed = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(builder: (_) => PostItemScreen(editing: item)));
+                if (changed == true) await _load();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: SwaplyColors.red),
+              title: const Text('Fjern annonsen', style: TextStyle(color: SwaplyColors.red)),
+              onTap: () {
+                Navigator.of(sheet).pop();
+                _confirmRemove(item);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmRemove(Item item) async {
+    final yes = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(Insets.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Fjerne ${item.title}?', style: Type.title),
+              const SizedBox(height: Insets.sm),
+              const Text(
+                'Den forsvinner fra Oppdag og fra søk. Bytter den allerede har vært '
+                'med i beholder sin egen historikk.',
+                style: Type.secondary,
+              ),
+              const SizedBox(height: Insets.lg),
+              SizedBox(
+                height: 54,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: SwaplyColors.red,
+                    shape:
+                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+                  ),
+                  onPressed: () => Navigator.of(sheet).pop(true),
+                  child: const Text('Fjern annonsen',
+                      style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(height: Insets.sm),
+              SecondaryButton('Avbryt', onPressed: () => Navigator.of(sheet).pop(false)),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (yes != true || !mounted) return;
+
+    try {
+      await context.read<SwaplyApi>().deleteItem(item.id);
+      if (mounted) Navigator.of(context).maybePop();
+    } on ApiException catch (e) {
+      // «Gjenstanden er reservert i et bytte» is the one refusal worth reading.
+      if (mounted) showError(context, e);
+    }
   }
 
   Widget _round(IconData icon, VoidCallback onTap) => Material(

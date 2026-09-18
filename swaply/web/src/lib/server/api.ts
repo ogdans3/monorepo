@@ -28,6 +28,8 @@ export type Invite = {
   token: string
   url: string
   used: boolean
+  /** The link came from a listing that has since been taken down. */
+  itemRetired: boolean
   inviter: { displayName: string; town: string | null } | null
   item: SharedItem | null
   shareText: string

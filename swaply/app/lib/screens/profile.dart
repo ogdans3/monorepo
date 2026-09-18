@@ -350,6 +350,54 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     }
   }
 
+  /// «⋯» on 13b. Reporting is what the export draws behind it; unblocking has
+  /// to live here too, because blocking was a tick inside a report and there
+  /// was no way back from it anywhere in the app.
+  Future<void> _menu(UserRef user) async {
+    if (!user.blockedByYou) {
+      showReportSheet(context, userId: user.id, personName: user.displayName);
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.lock_open_outlined),
+              title: const Text('Opphev blokkeringen'),
+              subtitle: Text('${user.displayName.split(' ').first} kan se tingene dine igjen, '
+                  'og dere kan matche.'),
+              onTap: () async {
+                Navigator.of(sheet).pop();
+                try {
+                  await context.read<SwaplyApi>().unblock(user.id);
+                  await _load();
+                } on ApiException catch (e) {
+                  if (mounted) showError(context, e);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.flag_outlined, color: SwaplyColors.red),
+              title: const Text('Rapporter', style: TextStyle(color: SwaplyColors.red)),
+              onTap: () {
+                Navigator.of(sheet).pop();
+                showReportSheet(context,
+                    userId: user.id, personName: user.displayName, alreadyBlocked: true);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = _user;
@@ -368,10 +416,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       currentTab: 0,
       // «‹» and «⋯» and nothing between them: the name is in the body.
       appBar: swaplyAppBar(context, '', actions: [
-        headerAction(
-            Icons.more_horiz,
-            () => showReportSheet(context,
-                userId: user.id, personName: user.displayName, alreadyBlocked: user.blockedByYou)),
+        headerAction(Icons.more_horiz, () => _menu(user)),
       ]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(22, 6, 22, Insets.xl),
@@ -440,6 +485,16 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               ),
             ],
           ),
+          if (user.blockedByYou) ...[
+            const SizedBox(height: 12),
+            SectionCard(
+              child: Text(
+                'Du har blokkert ${user.displayName.split(' ').first}. Tingene deres er '
+                'skjult for deg, og dere kan ikke matche.',
+                style: Type.secondary,
+              ),
+            ),
+          ],
           if (user.interests.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(

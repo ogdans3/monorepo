@@ -44,7 +44,7 @@ describe('sharing a listing with someone who is not here yet', () => {
   let ola = '', kari = ''
   let kariId = ''
   let drill = '', board = ''
-  let shared = '', plain = ''
+  let shared = '', plain = '', retiredLink = ''
 
   const kariDevice = 'device-kari-0123456789abcdef'
 
@@ -236,13 +236,31 @@ describe('sharing a listing with someone who is not here yet', () => {
     board = listing.body!['id']
 
     const link = await call(app, 'POST', `/items/${board}/share`, { token: ola })
+    retiredLink = link.body!['token']
     expect((await call(app, 'DELETE', `/items/${board}`, { token: ola })).status).toBe(204)
 
-    const page = await call(app, 'GET', `/invites/${link.body!['token']}`)
+    const page = await call(app, 'GET', `/invites/${retiredLink}`)
     expect(page.status).toBe(200)
     expect(page.body!['item']).toBe(null)
     expect(page.body!['shareText']).toContain('inviterer deg til Swaply')
   })
+
+  test('13b. and the page can say so, rather than quietly becoming a different page',
+    async () => {
+      // «The page says there is nothing to show rather than 404-ing on somebody
+      // who did nothing wrong» — docs/DESIGN.md. Somebody who tapped «Se denne
+      // på Swaply: Skateboard» arrives at a page that does not mention a
+      // skateboard, and nothing in the answer lets it tell them why.
+      const link = await call(app, 'POST', `/items/${drill}/share`, { token: ola })
+      const live = await call(app, 'GET', `/invites/${link.body!['token']}`)
+      expect(live.body!['itemRetired']).toBe(false)
+
+      const retired = await call(app, 'GET', `/invites/${plain}`)
+      expect(retired.body!['itemRetired']).toBe(false)
+
+      const page = await call(app, 'GET', `/invites/${retiredLink}`)
+      expect(page.body!['itemRetired']).toBe(true)
+    })
 
   test('14. with the wall up there is no way in without a link', async () => {
     const refused = await call(closedApp, 'POST', '/auth/register', {

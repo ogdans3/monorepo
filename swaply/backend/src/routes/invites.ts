@@ -100,6 +100,11 @@ export default async function inviteRoutes(app: FastifyInstance) {
       token,
       url: inviteUrl(token),
       used: Boolean(invite['used_at']),
+      // A link minted from a listing that has since been taken down. Without
+      // this the page behind it quietly becomes a plain invitation, and
+      // somebody who tapped «Se denne på Swaply: Skateboard» is shown a page
+      // that never mentions a skateboard.
+      itemRetired: Boolean(invite['item_id']) && !item,
       // Only for somebody already signed in, and only so the app can open the
       // listing that was shared with them. Listings still cannot be walked by
       // guessing ids — holding the token is what gets you this, the same as it

@@ -758,6 +758,32 @@ void main() {
       expect(find.textContaining('Gode bilder og ærlig tilstand'), findsOneWidget);
     });
 
+    testWidgets('12a a new message opens the conversation it is about', (tester) async {
+      // The chat route's notification carries a threadId, and the screen only
+      // knew how to open a trade or a listing — so the one notification people
+      // get most often did nothing at all when tapped.
+      server.overrides['GET /notifications'] = {
+        'notifications': [
+          {
+            'id': 'n3',
+            'type': 'message',
+            'payload': {'threadId': 'thread-1'},
+            'actorName': null,
+            'itemTitle': null,
+            'readAt': null,
+            'createdAt': '2026-09-09T08:55:00Z',
+          },
+        ],
+        'unread': 1,
+      };
+      await mount(tester, const NotificationsScreen());
+
+      await tester.tap(find.text('Ny melding'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ThreadScreen), findsOneWidget);
+    });
+
     testWidgets('12a the words are assembled here, from ids', (tester) async {
       await mount(tester, const NotificationsScreen());
 
@@ -822,6 +848,28 @@ void main() {
 
       expect(find.byType(NotificationsScreen), findsOneWidget);
       expect(find.textContaining('Kari likte Bosch drill 18V'), findsOneWidget);
+    });
+
+    testWidgets('16a a block can be taken back, from the same menu that set it',
+        (tester) async {
+      // Blocking was one tick inside a report and there was no way back: the
+      // endpoint existed and nothing in the app called it.
+      server.overrides['GET /users/kari-1'] = {
+        ...FakeServer.kari,
+        'items': const [],
+        'interests': const [],
+        'blockedByYou': true,
+      };
+      await mount(tester, const OtherProfileScreen(userId: 'kari-1'));
+
+      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.pumpAndSettle();
+      expect(find.text('Opphev blokkeringen'), findsOneWidget);
+
+      await tester.tap(find.text('Opphev blokkeringen'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('DELETE /blocks/kari-1'));
     });
 
     testWidgets('16a reporting can block in the same gesture', (tester) async {
@@ -1098,6 +1146,46 @@ void main() {
   });
 
   group('04 your own listing', () {
+    testWidgets('can be edited and taken down, which is the rest of the CRUD',
+        (tester) async {
+      // A listing could be posted and then never touched again: no edit, no
+      // remove, and the «⋯» offered to report your own thing.
+      server.overrides['PATCH /items/item-mine'] = {...FakeServer.drill, 'id': 'item-mine'};
+      await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
+
+      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.pumpAndSettle();
+      expect(find.text('Rapporter'), findsNothing);
+      expect(find.text('Fjern annonsen'), findsOneWidget);
+
+      await tester.tap(find.text('Rediger annonsen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Lagre endringene'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).first, 'Bosch drill 18V med koffert');
+      await tester.tap(find.text('Lagre endringene'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['PATCH /items/item-mine']!['title'],
+          'Bosch drill 18V med koffert');
+    });
+
+    testWidgets('and taking it down asks first', (tester) async {
+      server.overrides['DELETE /items/item-mine'] = <String, Object?>{};
+      await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
+
+      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Fjern annonsen'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Den forsvinner fra Oppdag'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Fjern annonsen'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('DELETE /items/item-mine'));
+    });
+
     testWidgets('offers nothing the server would refuse', (tester) async {
       await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
 

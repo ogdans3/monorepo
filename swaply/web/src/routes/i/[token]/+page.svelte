@@ -127,13 +127,22 @@
     <section class="plain">
       <div class="plain-copy">
         <h1>
-          {#if inviterName}{inviterName} inviterer deg til Swaply.{:else}Du er invitert til
-            Swaply.{/if}
+          {#if invite.itemRetired}Tingen er ikke lenger tilgjengelig.{:else if inviterName}{inviterName}
+            inviterer deg til Swaply.{:else}Du er invitert til Swaply.{/if}
         </h1>
         <p class="lead">
           Si hva du vil ha. Når ønskene lukker en sirkel — direkte, eller gjennom en kjede
           på tre — bytter dere.
         </p>
+
+        {#if invite.itemRetired}
+          <!-- The link was sent for a thing that is no longer there. The
+               invitation still works, and saying so is better than handing
+               somebody a page that never mentions what they tapped. -->
+          <p class="notice" role="status">
+            Tingen som ble delt med deg er ikke lenger ute. Invitasjonen virker fortsatt.
+          </p>
+        {/if}
 
         {#if invite.used}
           <p class="notice" role="status">

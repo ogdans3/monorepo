@@ -21,12 +21,19 @@ class PickedPhoto {
 
 /// 10b Legg ut gjenstand. Step one of two: if there is no profile yet, step two
 /// is screen 10c, which is why the header counts.
+///
+/// The same form edits a listing that already exists. Round 5 drew posting and
+/// nothing else, but a thing you can put on the market and then never correct
+/// or take down is not a listing, it is a commitment.
 class PostItemScreen extends StatefulWidget {
-  const PostItemScreen({super.key, this.pickImage});
+  const PostItemScreen({super.key, this.pickImage, this.editing});
 
   /// Injected by the widget tests, which have no camera roll. Null everywhere
   /// else, and then the system picker is used.
   final Future<PickedPhoto?> Function()? pickImage;
+
+  /// The listing being corrected, or null when this is a new one.
+  final Item? editing;
 
   @override
   State<PostItemScreen> createState() => _PostItemScreenState();
@@ -47,6 +54,27 @@ class _PostItemScreenState extends State<PostItemScreen> {
   bool _busy = false;
   String? _error;
 
+  Item? get _editing => widget.editing;
+
+  @override
+  void initState() {
+    super.initState();
+    final item = _editing;
+    if (item == null) return;
+    _title.text = item.title;
+    _description.text = item.description ?? '';
+    _value.text = item.estimatedValueNok?.toString() ?? '';
+    _subcategory.text = item.subcategory ?? '';
+    _kind = item.kind;
+    _category = item.category;
+    _condition = item.condition ?? (item.kind == 'item' ? 'good' : null);
+    // The photographs are already the server's, and it takes the same paths
+    // back. A URL it handed out is one it accepts.
+    for (final url in item.media) {
+      _photos.add(UploadedImage.fromJson({'path': url, 'url': url, 'bytes': 0}));
+    }
+  }
+
   @override
   void dispose() {
     for (final c in [_title, _description, _value, _postal, _subcategory]) {
@@ -56,6 +84,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
   }
 
   Future<void> _submit() async {
+    final editing = _editing;
+    if (editing != null) return _save(editing);
+
     final session = context.read<Session>();
     // Looking around on a device counts as no account here: a thing on the
     // market has to belong to somebody with a name, so 10c comes first and the
@@ -94,6 +125,33 @@ class _PostItemScreenState extends State<PostItemScreen> {
       Navigator.of(context).pushNamedAndRemoveUntil('/profile', (r) => false);
     } on ApiException catch (e) {
       setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// The same fields, sent as a correction. A listing a trade is holding is
+  /// refused by the server, and that message is the one worth showing.
+  Future<void> _save(Item item) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await context.read<SwaplyApi>().updateItem(item.id, {
+        'kind': _kind,
+        'title': _title.text.trim(),
+        'description': _description.text.trim(),
+        'category': _category,
+        'subcategory': _subcategory.text.trim(),
+        if (_kind == 'item') 'condition': _condition,
+        if (_value.text.trim().isNotEmpty) 'estimatedValueNok': int.tryParse(_value.text.trim()),
+        'media': [for (final photo in _photos) photo.path],
+      });
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -147,8 +205,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
               children: [
                 // «Legg ut en gjenstand» and «1/2» do not both fit on a narrow
                 // phone, and the heading is the one that may give way.
-                const Flexible(child: Text('Legg ut en gjenstand', style: Type.screen)),
-                if (!signedIn)
+                Flexible(
+                    child: Text(_editing == null ? 'Legg ut en gjenstand' : 'Rediger annonsen',
+                        style: Type.screen)),
+                if (!signedIn && _editing == null)
                   const Text('1/2',
                       style: TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.grey)),
@@ -322,7 +382,11 @@ class _PostItemScreenState extends State<PostItemScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 12, 22, 30),
             child: PrimaryButton(
-              signedIn ? 'Legg ut' : 'Neste',
+              _editing != null
+                  ? 'Lagre endringene'
+                  : signedIn
+                      ? 'Legg ut'
+                      : 'Neste',
               busy: _busy,
               // Enabled either way: a disabled button explains nothing, and
               // an empty title should be told, not silently refused.

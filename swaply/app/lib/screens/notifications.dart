@@ -7,6 +7,7 @@ import '../design/tokens.dart';
 import '../util/clock.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
+import 'chat.dart';
 import 'item_detail.dart';
 import 'liked.dart';
 import 'trade_detail.dart';
@@ -131,9 +132,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _open(AppNotification n) {
     final tradeId = n.payload['tradeId'] as String?;
     final itemId = n.payload['itemId'] as String?;
+    // A message notification carries the thread it was written in, not the
+    // trade around it — so «Ny melding», the one people get most often, used
+    // to fall past every branch below and do nothing.
+    final threadId = n.payload['threadId'] as String?;
 
     if (n.type == 'item_liked') {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LikedScreen()));
+    } else if (threadId != null) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => ThreadScreen(threadId: threadId)));
     } else if (tradeId != null) {
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: tradeId)));

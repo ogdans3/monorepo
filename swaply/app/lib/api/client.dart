@@ -167,6 +167,11 @@ class SwaplyApi {
 
   Future<Item> item(String id) async => Item.fromJson(await _get('/items/$id'));
 
+  /// 10b again, on a listing that already exists. The server refuses it while
+  /// a trade is holding the thing, which is the one case worth a message.
+  Future<Item> updateItem(String id, Map<String, dynamic> body) async =>
+      Item.fromJson((await _send('PATCH', '/items/$id', body)) as Map<String, dynamic>);
+
   Future<void> deleteItem(String id) async => _send('DELETE', '/items/$id');
 
   // --- discovery ------------------------------------------------------------
