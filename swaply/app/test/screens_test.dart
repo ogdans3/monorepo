@@ -548,6 +548,48 @@ void main() {
       expect(find.text('Send motbytte'), findsOneWidget);
     });
 
+    testWidgets('09a three a side is the cap, and both sides must have something',
+        (tester) async {
+      // «Each side of a hop is a list of 1–3 items», and a deal where one side
+      // gives nothing is not one the other can accept — the server refuses
+      // both, so the screen should never compose either.
+      server.overrides['GET /trades/trade-1/candidates'] = {
+        'yours': [
+          FakeServer.drill,
+          {...FakeServer.drill, 'id': 'a', 'title': 'Sykkelhjelm'},
+          {...FakeServer.drill, 'id': 'b', 'title': 'Skateboard'},
+          {...FakeServer.drill, 'id': 'c', 'title': 'Ullgenser M'},
+        ],
+        'theirs': [FakeServer.console],
+        'counterparty': FakeServer.kari,
+      };
+      await mount(tester, CounterOfferScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      // The drill and the console arrive picked, from the offer on the table.
+      await tester.tap(find.text('Sykkelhjelm'));
+      await tester.pump();
+      await tester.tap(find.text('Skateboard'));
+      await tester.pump();
+      expect(find.text('Tre ting er nok på hver side.'), findsOneWidget);
+
+      // A fourth is no longer something the row answers to.
+      await tester.tap(find.text('Ullgenser M'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Send motbytte'));
+      await tester.pumpAndSettle();
+      expect(server.bodies['POST /trades/trade-1/counter']!['items'], hasLength(4));
+    });
+
+    testWidgets('09a with nothing of theirs there is nothing to send', (tester) async {
+      await mount(tester, CounterOfferScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      await tester.tap(find.text('Retro spillkonsoll'));
+      await tester.pump();
+
+      final send = find.widgetWithText(FilledButton, 'Send motbytte');
+      expect(tester.widget<FilledButton>(send).onPressed, isNull);
+    });
+
     testWidgets('09b a thing another trade is holding is shown, and locked',
         (tester) async {
       await mount(tester, CounterOfferScreen(trade: Trade.fromJson(FakeServer.trade)));

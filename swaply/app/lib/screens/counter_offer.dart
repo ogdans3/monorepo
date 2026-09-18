@@ -63,6 +63,11 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
     }
   }
 
+  /// «Each side of a hop is a list of 1–3 items» — docs/DESIGN.md. At three the
+  /// rest of that side go quiet, the way the interest picker does at five,
+  /// rather than letting the screen compose something the server refuses.
+  static const maxPerSide = 3;
+
   int _sum(Iterable<Item> items) =>
       items.fold(0, (total, i) => total + (i.estimatedValueNok ?? 0));
 
@@ -70,7 +75,7 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
   List<Item> get _selectedTheirs => _theirs.where((i) => _chosenTheirs.contains(i.id)).toList();
 
   Future<void> _send() async {
-    if (_selectedMine.isEmpty && _selectedTheirs.isEmpty) return;
+    if (_selectedMine.isEmpty || _selectedTheirs.isEmpty) return;
     setState(() => _busy = true);
     try {
       await context.read<SwaplyApi>().counter(
@@ -150,7 +155,9 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                       children: [
                         PrimaryButton('Send motbytte',
                             busy: _busy,
-                            enabled: _selectedMine.isNotEmpty || _selectedTheirs.isNotEmpty,
+                            // Both sides, because a deal where one of them
+                            // gives nothing is not one the other can accept.
+                            enabled: _selectedMine.isNotEmpty && _selectedTheirs.isNotEmpty,
                             onPressed: _send),
                         const SizedBox(height: 8),
                         GestureDetector(
@@ -201,6 +208,10 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
               if (i > 0) const SizedBox(height: 9),
               _pickRow(item, selection),
             ],
+            if (selection.length >= maxPerSide) ...[
+              const SizedBox(height: 8),
+              const Text('Tre ting er nok på hver side.', style: Type.small),
+            ],
           ],
         ),
       );
@@ -210,14 +221,16 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
   Widget _pickRow(Item item, Set<String> selection) {
     final locked = item.lockedByOtherTrade;
     final selected = selection.contains(item.id);
+    // At three, the unpicked ones on that side stop answering.
+    final full = !selected && selection.length >= maxPerSide;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: locked
+      onTap: locked || full
           ? null
           : () => setState(() => selected ? selection.remove(item.id) : selection.add(item.id)),
       child: Opacity(
-        opacity: locked ? 0.55 : 1,
+        opacity: locked || full ? 0.55 : 1,
         child: Row(
           children: [
             ItemThumb(item, size: 44, radius: 11),
