@@ -61,7 +61,7 @@ const drill = await item(ola, 'Bosch drill 18V', 'verktoy', 600, {
   subcategory: 'Elektroverktøy',
 })
 await item(ola, 'Sykkelhjelm', 'sykling', 250)
-await item(ola, 'Skateboard', 'sport', 450)
+const board = await item(ola, 'Skateboard', 'sport', 450)
 const console_ = await item(kari, 'Retro spillkonsoll', 'gaming', 1200, {
   description: 'To kontrollere og ni spill.',
 })
@@ -69,7 +69,7 @@ const rod = await item(kari, 'Fiskestang med snelle', 'friluft', 850, {
   description: 'Shimano-stang, 2,7 m, brukt to somre.',
   subcategory: 'Fiske',
 })
-await item(kari, 'Kajakk med åre', 'bat', 2400)
+const kayak = await item(kari, 'Kajakk med åre', 'bat', 2400)
 const bike = await item(per, 'Bysykkel, dame', 'sykling', 1100)
 await item(per, 'Snømåking en vinter', 'hjem', 1500, { kind: 'service' })
 
@@ -82,11 +82,24 @@ if (cycle) await openTradeFromCycle(db, cycle)
 
 await startTalking(db, per, rod, 'Hei! Er fiskestangen fortsatt ledig?')
 
-// A three-way ring: Ola wants the rod, Kari wants the bike, Per wants the drill.
-await db.execute(sql`insert into likes (from_user, target_item) values (${ola}, ${rod})`)
+// A three-way ring, on listings the two-way trade is not already holding: Ola
+// wants the kayak, Kari wants the bicycle, Per wants the skateboard. Goods go
+// the other way round — Ola gives the skateboard to Per, Per the bicycle to
+// Kari, Kari the kayak to Ola.
+//
+// Opened here rather than left for the nightly sweep. Writing the likes
+// straight into the table skips the search that the heart runs, and the ring
+// the seed advertised was one nothing would ever find: it went through the
+// drill, which the two-way trade above already has on its table.
+await db.execute(sql`insert into likes (from_user, target_item) values (${ola}, ${kayak})`)
 await db.execute(sql`insert into likes (from_user, target_item) values (${kari}, ${bike})`)
-await db.execute(sql`insert into likes (from_user, target_item) values (${per}, ${drill})
-                     on conflict do nothing`)
+await db.execute(sql`insert into likes (from_user, target_item) values (${per}, ${board})`)
+const [ring] = await findCyclesThrough(db, per, board)
+if (ring) await openTradeFromCycle(db, ring)
+
+// And one wish pointing at the rod, so the fishing rod has a like on it for
+// screen 12 to show.
+await db.execute(sql`insert into likes (from_user, target_item) values (${ola}, ${rod})`)
 
 // Two links to open the closed door with: one that carries a listing, the way
 // the share button makes them, and one that carries only an invitation.
