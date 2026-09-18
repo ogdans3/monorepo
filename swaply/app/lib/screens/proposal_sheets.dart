@@ -72,9 +72,13 @@ class _ProposalSheetState extends State<_ProposalSheet> {
     try {
       final result = await widget.api.candidates(widget.trade.id);
       if (!mounted) return;
+      // Things another trade is holding cannot go in, and things already in
+      // this one are not a proposal — picking one sent an offer identical to
+      // the one on the table, which the offer's own key refuses.
+      bool offerable(Item i) => !i.lockedByOtherTrade && !i.inOffer;
       setState(() {
-        _mine = result.yours.where((i) => !i.lockedByOtherTrade).toList();
-        _theirs = result.theirs.where((i) => !i.lockedByOtherTrade).toList();
+        _mine = result.yours.where(offerable).toList();
+        _theirs = result.theirs.where(offerable).toList();
         _loading = false;
       });
     } on ApiException catch (e) {

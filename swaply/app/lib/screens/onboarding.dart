@@ -471,8 +471,26 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       // Commits the autofill form: the browser may now offer to save it.
       TextInput.finishAutofillContext();
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const InterestsScreen()), (r) => false);
+
+      final session = context.read<Session>();
+      // 10c is step two of something — of listing a thing, or of writing the
+      // first message — far more often than it is a screen of its own. Wiping
+      // the stack here threw away the half-filled listing behind it, so «Lag
+      // profil og legg ut» made the profile and never listed anything.
+      final returning = Navigator.of(context).canPop();
+
+      if (session.interestsPending) {
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => InterestsScreen(asStep: returning)));
+      }
+      if (!mounted) return;
+
+      if (returning) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+      }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -600,7 +618,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
 /// 02 Interesser. Three to five, and the counter says which.
 class InterestsScreen extends StatefulWidget {
-  const InterestsScreen({super.key});
+  const InterestsScreen({super.key, this.asStep = false});
+
+  /// Shown inside another flow — 10b's «Lag profil og legg ut» — rather than as
+  /// the first thing a new account sees. Then it hands control back to whoever
+  /// pushed it instead of taking over the stack.
+  final bool asStep;
 
   @override
   State<InterestsScreen> createState() => _InterestsScreenState();
@@ -616,22 +639,30 @@ class _InterestsScreenState extends State<InterestsScreen> {
     _chosen.addAll(context.read<Session>().me?.interests ?? const []);
   }
 
-  Future<void> _continue() async {
-    // Three to five is advice, not a gate: with nothing chosen «Fortsett» is
-    // the same door as «Hopp over».
-    if (_chosen.isEmpty) {
-      context.read<Session>().dismissInterests();
+  /// On to the app, or back to whatever pushed this.
+  void _leave() {
+    if (widget.asStep) {
+      Navigator.of(context).pop();
+    } else {
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+    }
+  }
+
+  Future<void> _continue() async {
+    // Nothing chosen is «Hopp over» by another name, and it is allowed: the
+    // picker is advice. One or two is not, though — the column holds three to
+    // five or none at all — so the button waits rather than sending something
+    // the server has to refuse.
+    if (_chosen.isEmpty) {
+      context.read<Session>().dismissInterests();
+      _leave();
       return;
     }
     setState(() => _busy = true);
     try {
       await context.read<Session>().setInterests(_chosen.toList());
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
-      }
+      if (mounted) _leave();
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -642,6 +673,9 @@ class _InterestsScreenState extends State<InterestsScreen> {
   @override
   Widget build(BuildContext context) {
     final full = _chosen.length >= 5;
+    // Below three, «Fortsett» has nothing to send: the users table holds three
+    // to five interests or none, so one or two came back as a bare 400.
+    final short = _chosen.isNotEmpty && _chosen.length < 3;
 
     return Scaffold(
       body: SafeArea(
@@ -655,8 +689,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
                     context.read<Session>().dismissInterests();
-                    Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+                    _leave();
                   },
                   child: const SizedBox(
                     height: 21,
@@ -759,14 +792,19 @@ class _InterestsScreenState extends State<InterestsScreen> {
                   Text(
                     full
                         ? 'Fem er nok. Du kan endre dette senere.'
-                        : _chosen.isEmpty
-                            ? 'Anbefalt, ikke påkrevd. Du kan endre dette senere.'
-                            : '${_chosen.length} av 5 valgt',
-                    style: const TextStyle(
-                        fontSize: 12.5, fontWeight: FontWeight.w700, color: SwaplyColors.greenText),
+                        : short
+                            ? 'Velg ${3 - _chosen.length} til, eller ingen for å hoppe over.'
+                            : _chosen.isEmpty
+                                ? 'Anbefalt, ikke påkrevd. Du kan endre dette senere.'
+                                : '${_chosen.length} av 5 valgt',
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: short ? SwaplyColors.grey : SwaplyColors.greenText),
                   ),
                   const SizedBox(height: 12),
-                  PrimaryButton('Fortsett', busy: _busy, onPressed: _continue),
+                  PrimaryButton('Fortsett',
+                      busy: _busy, enabled: !short, onPressed: _continue),
                 ],
               ),
             ),

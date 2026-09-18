@@ -540,9 +540,7 @@ class SettingsScreen extends StatelessWidget {
             'BankID-verifisering',
             me?.bankidVerified == true ? 'Verifisert' : 'Ikke verifisert',
             good: me?.bankidVerified == true,
-            onTap: me?.bankidVerified == true
-                ? null
-                : () => _verifyBankid(context),
+            onTap: me?.bankidVerified == true ? null : () => promptBankid(context),
           ),
           // Round 5 took the colour off this row: an invitation is an ordinary
           // thing you do, not a promotion.
@@ -625,43 +623,6 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       );
-
-  Future<void> _verifyBankid(BuildContext context) async {
-    // A real BankID check goes through a provider we do not have a contract
-    // with yet. What we store either way is a pseudonym, never a fødselsnummer.
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: const Text('BankID-verifisering', style: Type.heading),
-        content: const Text(
-          'Vi har ikke avtale med en BankID-leverandør ennå. Denne knappen '
-          'markerer kontoen som verifisert med en pseudonym referanse, slik '
-          'flyten vil fungere når avtalen er på plass. Vi lagrer aldri '
-          'fødselsnummer.',
-          style: Type.body,
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(dialog).pop(false),
-              child: const Text('Avbryt')),
-          TextButton(
-              onPressed: () => Navigator.of(dialog).pop(true),
-              child: const Text('Verifiser')),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-
-    final session = context.read<Session>();
-    try {
-      await context
-          .read<SwaplyApi>()
-          .verifyBankid('dev-${session.me!.id}');
-      await session.refresh();
-    } on ApiException catch (e) {
-      if (context.mounted) showError(context, e);
-    }
-  }
 
   void _showLegal(BuildContext context) => showDialog<void>(
         context: context,
@@ -975,3 +936,47 @@ const _months = [
 ];
 
 String _month(DateTime date) => _months[date.month - 1];
+
+/// BankID, which `docs/DESIGN.md` asks for at the first accept and again from
+/// the settings. A trust marker, never a login method: what we store is a
+/// pseudonymous subject and a timestamp, and never a fødselsnummer.
+///
+/// Returns true when the account came back verified.
+Future<bool> promptBankid(BuildContext context, {String? because}) async {
+  final session = context.read<Session>();
+  if (session.me?.bankidVerified == true) return true;
+
+  // A real check goes through a provider we have no contract with yet, so the
+  // screen says so rather than pretending.
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      title: const Text('BankID-verifisering', style: Type.heading),
+      content: Text(
+        '${because ?? ''}Vi har ikke avtale med en BankID-leverandør ennå. Denne '
+        'knappen markerer kontoen som verifisert med en pseudonym referanse, slik '
+        'flyten vil fungere når avtalen er på plass. Vi lagrer aldri '
+        'fødselsnummer.',
+        style: Type.body,
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: const Text('Senere')),
+        TextButton(
+            onPressed: () => Navigator.of(dialog).pop(true),
+            child: const Text('Verifiser')),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return false;
+
+  try {
+    await context.read<SwaplyApi>().verifyBankid('dev-${session.me!.id}');
+    await session.refresh();
+    return true;
+  } on ApiException catch (e) {
+    if (context.mounted) showError(context, e);
+    return false;
+  }
+}

@@ -112,6 +112,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'Noen godtok byttet',
             'Nå er det din tur. Sveip for å godta avtalen.',
           ),
+        'acceptance_revoked' => (
+            'Noen angret godkjenningen',
+            'Byttet står fortsatt, men det er ikke godtatt av alle lenger.',
+          ),
         'counter_offer' => (
             'Nytt forslag i byttet',
             'Motparten har foreslått noe annet. Godta, avslå eller foreslå på nytt.',

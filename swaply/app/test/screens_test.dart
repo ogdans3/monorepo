@@ -48,6 +48,12 @@ Future<void> mount(WidgetTester tester, Widget screen, {bool signedIn = true}) a
       ],
       child: MaterialApp(
         home: screen,
+        // The app's own tab routes. A screen that finishes by going somewhere
+        // named — 10b ends on the profile — would otherwise throw at the last
+        // step and hide whether it got that far.
+        onGenerateRoute: (settings) => MaterialPageRoute(
+            settings: settings,
+            builder: (_) => Scaffold(body: Center(child: Text(settings.name ?? '')))),
         // pumpAndSettle waits for every animation to end, and the confetti
         // never does; it holds still when the phone asks for less motion.
         builder: (context, child) => MediaQuery(
@@ -132,21 +138,30 @@ void main() {
       }
     });
 
-    testWidgets('choosing is advised, never required', (tester) async {
+    testWidgets('choosing is advised, but one or two is not a choice', (tester) async {
       final fresh = {...FakeServer.me, 'interests': const []};
       server.overrides['POST /auth/login'] = {'token': 'tok', 'user': fresh};
       server.overrides['GET /me'] = fresh;
       await mount(tester, const InterestsScreen());
 
-      // Alive from the first frame, and honest about it.
+      // Alive from the first frame, and honest about it: nothing chosen is the
+      // same door as «Hopp over».
       final button = find.widgetWithText(FilledButton, 'Fortsett');
       expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
       expect(find.text('Anbefalt, ikke påkrevd. Du kan endre dette senere.'), findsOneWidget);
 
+      // Three to five or none is the shape of the column, so below three the
+      // button waits and says what it is waiting for. It used to stay lit and
+      // hand the server something it could only refuse.
       await tester.tap(find.text('Sykling'));
       await tester.tap(find.text('Gaming'));
       await tester.pump();
-      expect(find.text('2 av 5 valgt'), findsOneWidget);
+      expect(find.text('Velg 1 til, eller ingen for å hoppe over.'), findsOneWidget);
+      expect(tester.widget<FilledButton>(button).onPressed, isNull);
+
+      await tester.tap(find.text('Verktøy'));
+      await tester.pump();
+      expect(find.text('3 av 5 valgt'), findsOneWidget);
       expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
     });
 
@@ -314,6 +329,27 @@ void main() {
       expect(find.text('Trekk deg fra byttet'), findsOneWidget);
     });
 
+    testWidgets('06e a yes can be taken back without ending the trade', (tester) async {
+      // The lifecycle goes backwards as well as forwards, and until now
+      // nothing in the app called the endpoint that does it: the only way out
+      // of your own acceptance was cancelling the whole trade.
+      server.overrides['GET /trades/trade-1'] = {
+        ...FakeServer.trade,
+        'you': {...FakeServer.trade['you'] as Map, 'accepted': true},
+      };
+      server.overrides['DELETE /trades/trade-1/accept'] = FakeServer.trade;
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      await tester.tap(find.text('Angre godkjenningen'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Byttet står fortsatt'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Angre godkjenningen'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('DELETE /trades/trade-1/accept'));
+    });
+
     testWidgets('06f accepted: the handover markers are yours to set', (tester) async {
       server.overrides['GET /trades/trade-1'] = {...FakeServer.trade, 'state': 'accepted'};
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
@@ -462,6 +498,25 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.requests, contains('POST /trades/trade-1/accept'));
+    });
+
+    testWidgets('BankID is asked for at the first accept, and only then',
+        (tester) async {
+      // «BankID bekreftes ved ditt første bytte» is the promise 10c makes, and
+      // the settings row was the only place that kept it.
+      final unverified = {...FakeServer.me, 'bankidVerified': false};
+      server.overrides['POST /auth/login'] = {'token': 'tok', 'user': unverified};
+      server.overrides['GET /me'] = unverified;
+      await mount(tester, AgreementScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      await tester.tap(find.text('Jeg har lest og godtar vilkårene'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.text('›'), const Offset(400, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.text('BankID-verifisering'), findsOneWidget);
+      expect(find.textContaining('ditt første bytte'), findsOneWidget);
+      expect(find.textContaining('aldri fødselsnummer'), findsOneWidget);
     });
   });
 
@@ -913,6 +968,36 @@ void main() {
       expect(
           find.textContaining('kontoen du allerede ser deg rundt med'), findsOneWidget);
       expect(server.requests, isNot(contains('POST /items')));
+    });
+
+    testWidgets('…and then actually lists it', (tester) async {
+      // «Lag profil og legg ut» is a promise about two things. Making the
+      // profile used to replace the whole stack, which threw away the
+      // half-filled listing behind it: the account was made and nothing was
+      // ever listed.
+      await session.lookAround();
+      server.overrides['POST /items'] = {...FakeServer.drill, 'title': 'Fiskestang'};
+      await mount(tester, const PostItemScreen(), signedIn: false);
+
+      await tester.enterText(find.byType(TextField).first, 'Fiskestang');
+      await tester.pump();
+      await tester.tap(find.text('Neste'));
+      await tester.pumpAndSettle();
+
+      for (final (field, text) in [
+        (0, 'Ola N.'),
+        (1, 'ola@epost.no'),
+        (2, '412 34 567'),
+        (3, 'drillbits123'),
+      ]) {
+        await tester.enterText(find.byType(TextField).at(field), text);
+      }
+      await tester.tap(find.text('Lag profil og legg ut'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('POST /auth/register'));
+      expect(server.requests, contains('POST /items'));
+      expect(server.bodies['POST /items']!['title'], 'Fiskestang');
     });
   });
 

@@ -1081,11 +1081,21 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
             onPressed: _busy ? null : () => _openCounterOffer(trade)));
       }
       if (trade.youAccepted) {
+        // De-accept: the lifecycle goes backwards as well as forwards, and your
+        // yes is what reserved your things. Undoing it leaves the trade
+        // standing, which is what makes it different from withdrawing.
+        children.add(const SizedBox(height: Insets.sm));
+        children.add(SecondaryButton('Angre godkjenningen',
+            onPressed: _busy ? null : () => _confirmRevoke(trade)));
         children.add(const SizedBox(height: Insets.sm));
         children.add(SecondaryButton('Trekk deg fra byttet',
             destructive: true, onPressed: _busy ? null : () => _confirmWithdrawEarly(trade)));
       }
     } else if (trade.state == 'accepted') {
+      // No «Angre godkjenningen» here: once everyone has accepted, 06f gives
+      // one way out and it is the negotiation on 08a. The endpoint still
+      // exists — the lifecycle reverses — but this screen is not where the
+      // export offers it.
       if (trade.isChain) {
         children.add(PrimaryButton('Marker byttet som gjennomført',
             busy: _busy,
@@ -1126,6 +1136,23 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     final changed = await Navigator.of(context)
         .push<bool>(MaterialPageRoute(builder: (_) => CounterOfferScreen(trade: trade)));
     if (changed == true) await _load();
+  }
+
+  /// Undoing your own acceptance, which is not the same as ending the trade:
+  /// the offer stays on the table and it is somebody's turn again.
+  Future<void> _confirmRevoke(Trade trade) async {
+    final other = trade.receivingFrom.displayName.split(' ').first;
+    final yes = await _confirm(
+      title: 'Angre godkjenningen?',
+      body: 'Byttet står fortsatt, men du har ikke godtatt det lenger. '
+          '$other får beskjed.',
+      bullets: const [
+        'Tingene dine blir tilgjengelige for andre igjen',
+        'Du kan godta på nytt, eller foreslå noe annet',
+      ],
+      confirm: 'Angre godkjenningen',
+    );
+    if (yes == true) await _run((api) => api.revokeAcceptance(trade.id));
   }
 
   Future<void> _confirmDecline(Trade trade) async {

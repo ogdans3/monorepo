@@ -149,6 +149,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     'barn', 'hjem', 'sport', 'musikk', 'boker', 'diverse',
   ];
 
+  // The chip row keeps the export's order rather than leading with the
+  // interests: round 5 draws «Alt · Gaming · Klær · Verktøy · Sykling · Båt»
+  // for somebody whose interests are Sykling, Gaming and Verktøy, so that row
+  // is deliberately not personalised. The personalisation DESIGN.md asks for
+  // sits in what the grid shows first, which the export does not draw — see
+  // `/discover` in the backend.
+
   Widget _categoryChips() => SizedBox(
         height: 41,
         child: ListView(

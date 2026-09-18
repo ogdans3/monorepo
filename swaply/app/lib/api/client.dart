@@ -257,6 +257,13 @@ class SwaplyApi {
     return Trade.fromJson(json['trade'] as Map<String, dynamic>);
   }
 
+  /// De-accept — the lifecycle in `docs/DESIGN.md` reverses an acceptance
+  /// rather than only moving forward. Your yes is what reserved your things, so
+  /// taking it back is also what frees them.
+  Future<Trade> revokeAcceptance(String tradeId) async =>
+      Trade.fromJson((await _send('DELETE', '/trades/$tradeId/accept'))
+          as Map<String, dynamic>);
+
   Future<Trade> counter(
     String tradeId,
     List<Map<String, dynamic>> items,

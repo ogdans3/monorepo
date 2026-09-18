@@ -93,6 +93,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
   final _chips = <String>{};
   bool _busy = false;
 
+  // `docs/DESIGN.md` gives this screen quick chips — «Kom som avtalt», «God
+  // kommunikasjon», «Møtte ikke opp» — and round 5 does not draw them. The
+  // export wins, which is the rule at the top of that file, so the set travels
+  // empty and the column is there for when a round puts them back.
+
 
   List<UserRef> get _others =>
       widget.trade.participants.where((p) => p.position != widget.trade.youPosition).toList();
