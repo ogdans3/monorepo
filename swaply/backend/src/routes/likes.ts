@@ -2,70 +2,21 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { findCyclesThrough } from '../trades/cycles.js'
-import { openTradeFromCycle } from '../trades/trades.js'
-import { blocked, blockedBetween } from '../lib/blocks.js'
-import { LIKES_BEFORE_LISTING_PROMPT } from '../lib/constants.js'
-import { badRequest, notFound } from '../lib/errors.js'
-import { coverSql, many, one } from '../lib/rows.js'
+import { expressWish } from '../trades/wish.js'
+import { coverSql, many } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
 
 export default async function likeRoutes(app: FastifyInstance) {
   // The heart. This is the directed edge, and the only thing that can close a
   // loop, so it runs the cycle search on the spot rather than on a schedule.
+  // The work itself is in `trades/wish.ts`, because the test tooling presses
+  // the same button and there must be exactly one path from a wish to a trade.
   app.post('/items/:id/like', async (request) => {
     const userId = app.requireUser(request)
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
 
-    const item = await one(app.db, sql`select owner_id from items where id = ${id} and deleted_at is null`)
-    if (!item) throw notFound('Fant ikke gjenstanden.')
-    if (item['owner_id'] === userId) throw badRequest('own_item', 'Du kan ikke like din egen ting.')
-    // The heart is the directed edge, so a wish that reaches somebody a block
-    // stands between is a match waiting to be found. The cycle search already
-    // refuses it; nothing refused the edge.
-    if (await blockedBetween(app.db, userId, item['owner_id'])) throw blocked()
-
-    await app.db.execute(
-      sql`insert into likes (from_user, target_item) values (${userId}, ${id})
-          on conflict do nothing`,
-    )
-
-    const cycles = await findCyclesThrough(app.db, userId, id)
-    const opened: string[] = []
-    for (const cycle of cycles) {
-      // One is enough to celebrate; the rest would fight over the same items.
-      opened.push(await openTradeFromCycle(app.db, cycle))
-      for (const hop of cycle) {
-        await app.db.execute(
-          sql`insert into notifications (user_id, type, payload)
-              values (${hop.userId}, 'trade_opened',
-                      jsonb_build_object('tradeId', ${opened.at(-1)!}::text))`,
-        )
-      }
-      break
-    }
-
-    await app.db.execute(sql`
-      insert into notifications (user_id, type, payload)
-      values (${item['owner_id']}, 'item_liked',
-              jsonb_build_object('itemId', ${id}::text, 'byUserId', ${userId}::text))
-    `)
-
-    const counts = await one(
-      app.db,
-      sql`select (select count(*) from likes where from_user = ${userId}) as liked,
-                 (select count(*) from items where owner_id = ${userId} and deleted_at is null) as listed`,
-    )
-
-    return {
-      liked: true,
-      tradeId: opened[0] ?? null,
-      // Screen 10a: ten wishes and nothing to give is a dead end, so we say so.
-      promptToList:
-        Number(counts!['listed']) === 0 &&
-        Number(counts!['liked']) >= LIKES_BEFORE_LISTING_PROMPT,
-      likedCount: Number(counts!['liked']),
-    }
+    const wish = await expressWish(app.db, userId, id)
+    return { liked: true, ...wish }
   })
 
   app.delete('/items/:id/like', async (request, reply) => {

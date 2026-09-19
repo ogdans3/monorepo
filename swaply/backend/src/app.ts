@@ -7,6 +7,7 @@ import type { Database } from './db/index.js'
 import { env } from './env.js'
 import { ApiError, uniqueViolation } from './lib/errors.js'
 import authPlugin from './plugins/auth.js'
+import adminRoutes from './routes/admin.js'
 import authRoutes from './routes/auth.js'
 import chatRoutes from './routes/chat.js'
 import discoveryRoutes from './routes/discovery.js'
@@ -135,6 +136,8 @@ export async function buildApp(
   await app.register(tradeRoutes)
   await app.register(chatRoutes)
   await app.register(miscRoutes)
+  // Last, and behind `requireAdmin`, which answers 404 for everybody else.
+  await app.register(adminRoutes)
 
   return app
 }

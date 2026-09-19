@@ -17,7 +17,11 @@ type Row = Record<string, string | null>
  * period in foreldelsesloven § 2. Once a claim can no longer be brought, the
  * purpose is spent and the purge job takes the row.
  */
-export async function anonymiseUser(db: Database, userId: string) {
+export async function anonymiseUser(
+  db: Database,
+  userId: string,
+  opts: { reason?: string } = {},
+) {
   // Filled inside the transaction, spent after it: unlinking a file cannot be
   // rolled back, so it does not happen until the rows are certainly gone.
   let orphaned: string[] = []
@@ -45,8 +49,9 @@ export async function anonymiseUser(db: Database, userId: string) {
 
     await tx.execute(sql`
       insert into retained.identities
-        (user_id, bankid_subject, email, phone, display_name, purge_after)
+        (user_id, bankid_subject, email, phone, display_name, reason, purge_after)
       select u.id, u.bankid_subject, u.email, u.phone, u.display_name,
+             ${opts.reason ?? 'legal_claims'},
              (coalesce(
                 (select max(t.closed_at)::date from trades t
                  join trade_participants p on p.trade_id = t.id

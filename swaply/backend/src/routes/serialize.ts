@@ -17,6 +17,12 @@ export const publicMe = (u: Row) => ({
   // Looking around on a device, with no profile yet. An account always has an
   // e-mail — 10c demands one — so there is nothing else to store for this.
   anonymous: u['email'] === null,
+  // The test tooling's key, and the only place it crosses the wire. `publicUser`
+  // deliberately does not carry it: whether somebody is an admin is not another
+  // person's business.
+  isAdmin: Boolean(u['is_admin']),
+  /** «This account exists so an admin can test» — drawn as a badge, never hidden. */
+  testAccount: Boolean(u['test_account_of']),
 })
 
 /** Somebody else: no e-mail, and the phone only where a trade needs it. */

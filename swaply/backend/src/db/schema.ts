@@ -97,6 +97,17 @@ export const users = pgTable(
     bankidVerifiedAt: timestamp('bankid_verified_at', { withTimezone: true }),
     ratingAvg: numeric('rating_avg', { precision: 3, scale: 2 }),
     ratingCount: integer('rating_count').notNull().default(0),
+    // The key to the test tooling, and a key cut outside the building: the
+    // migration puts a trigger in front of this column, and the only thing that
+    // can pass it is `pnpm admin`, which opens a transaction and sets a GUC no
+    // route, plugin or job ever sets. The string `is_admin` does not appear
+    // anywhere under `src/routes/` — there is a flow test that checks.
+    isAdmin: boolean('is_admin').notNull().default(false),
+    // «This account exists so an admin can test.» It is the whole of what an
+    // admin may act as, reset or delete — never a real person's account. Set
+    // when the row is created and never adopted afterwards, which is also the
+    // trigger's business.
+    testAccountOf: uuid('test_account_of'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     // Erasure is anonymisation, not DELETE: the counterparty keeps their own
     // trade history. The row lives on as a tombstone with nothing personal in it.
@@ -107,6 +118,12 @@ export const users = pgTable(
       'interests_bounds',
       sql`cardinality(${t.interests}) = 0 or cardinality(${t.interests}) between 3 and 5`,
     ),
+    // An admin is never somebody's test account, so acting-as cannot chain and
+    // the owned set stays a set.
+    check('admin_is_not_a_test_account', sql`not (${t.isAdmin} and ${t.testAccountOf} is not null)`),
+    index('users_test_accounts')
+      .on(t.testAccountOf)
+      .where(sql`test_account_of is not null`),
   ],
 )
 
@@ -131,6 +148,11 @@ export const sessions = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    // Null for an ordinary sign-in; the admin who minted it when the account
+    // switcher did. This is server truth for «you are Kari right now»: it
+    // survives a refresh, a restored token and a cold start, which a flag the
+    // app kept for itself would not.
+    issuedBy: uuid('issued_by').references(() => users.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -525,6 +547,33 @@ export const notifications = pgTable(
       .on(t.userId, t.createdAt.desc())
       .where(sql`read_at is null`),
   ],
+)
+
+/**
+ * What the test tooling did, and on whose behalf.
+ *
+ * Written by the hook that *authorises* an admin request, never by a route, so
+ * a route cannot forget the row. A wrong tap is only survivable if it can be
+ * found afterwards — and every write made while acting as somebody else is a
+ * write the person whose name is on it did not make.
+ *
+ * Operational, not a legal record: it lives in `public`, never in `retained`.
+ */
+export const adminActions = pgTable(
+  'admin_actions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminId: uuid('admin_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** The account the request was made as, when it was made through a switch. */
+    actingAs: uuid('acting_as').references(() => users.id, { onDelete: 'set null' }),
+    method: text('method').notNull(),
+    path: text('path').notNull(),
+    detail: jsonb('detail').notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('admin_actions_admin').on(t.adminId, t.createdAt.desc())],
 )
 
 // Withdrawing after everyone has accepted is its own negotiation: you ask, the

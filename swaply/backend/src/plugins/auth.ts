@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import fp from 'fastify-plugin'
 
@@ -10,6 +11,13 @@ declare module 'fastify' {
     userId: string | null
     /** False for a device-scoped account that has not been claimed on 10c. */
     userClaimed: boolean
+    /** The test tooling's key. Never settable through this API — see 0004. */
+    userIsAdmin: boolean
+    /**
+     * The admin who minted this session through the account switcher, and null
+     * for every ordinary sign-in. Server truth for «you are Kari right now».
+     */
+    sessionIssuedBy: string | null
   }
   interface FastifyInstance {
     db: Database
@@ -23,6 +31,16 @@ declare module 'fastify' {
      * puts you in front of another person needs a name they can hold you to.
      */
     requireClaimedUser(request: FastifyRequest): string
+    /**
+     * The door to the test tooling. Answers 404 rather than 403 for an ordinary
+     * account: whether this deployment has an admin section is not something
+     * the API volunteers.
+     *
+     * A session the switcher minted is never admin, whoever it belongs to —
+     * acting as somebody must not carry the key along, or one forgotten switch
+     * turns into a tool acting on a tool.
+     */
+    requireAdmin(request: FastifyRequest): string
   }
 }
 
@@ -36,6 +54,8 @@ export default fp(async function auth(
   app.decorate('inviteOnly', opts.inviteOnly)
   app.decorateRequest('userId', null)
   app.decorateRequest('userClaimed', false)
+  app.decorateRequest('userIsAdmin', false)
+  app.decorateRequest('sessionIssuedBy', null)
 
   app.addHook('onRequest', async (request) => {
     const header = request.headers.authorization
@@ -43,10 +63,45 @@ export default fp(async function auth(
     const session = await resolveSession(opts.db, header.slice('Bearer '.length))
     request.userId = session?.userId ?? null
     request.userClaimed = session?.claimed ?? false
+    request.userIsAdmin = session?.isAdmin ?? false
+    request.sessionIssuedBy = session?.issuedBy ?? null
+  })
+
+  /**
+   * What the tooling did, and on whose behalf.
+   *
+   * On the hook that runs after routing and before the handler, so a route
+   * cannot forget the row: every admin call and every write made while acting
+   * as somebody else lands here whether or not the handler remembers it
+   * exists. A wrong tap is only survivable if it can be found afterwards.
+   */
+  app.addHook('preHandler', async (request) => {
+    const admin = request.userIsAdmin ? request.userId : request.sessionIssuedBy
+    if (!admin) return
+    const isAdminRoute = request.url.startsWith('/admin')
+    if (!isAdminRoute && request.method === 'GET') return
+    if (!isAdminRoute && !request.sessionIssuedBy) return
+
+    await opts.db
+      .execute(
+        sql`insert into admin_actions (admin_id, acting_as, method, path)
+            values (${admin}, ${request.sessionIssuedBy ? request.userId : null},
+                    ${request.method}, ${request.url.slice(0, 200)})`,
+      )
+      // A log that can fail the request it logs is worse than no log.
+      .catch((err) => request.log.warn({ err }, 'could not write admin_actions'))
   })
 
   app.decorate('requireUser', (request: FastifyRequest) => {
     if (!request.userId) throw unauthorized()
+    return request.userId
+  })
+
+  app.decorate('requireAdmin', (request: FastifyRequest) => {
+    if (!request.userId) throw unauthorized()
+    if (!request.userIsAdmin || request.sessionIssuedBy) {
+      throw new ApiError(404, 'not_found', 'Fant ikke det du ba om.')
+    }
     return request.userId
   })
 

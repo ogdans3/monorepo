@@ -56,8 +56,21 @@ export default async function profileRoutes(app: FastifyInstance) {
                     and oi.giver_position = empty.position))`,
     )
 
+    // Who minted this session, when the account switcher did. A fact about the
+    // session and not about the row, which is why it is assembled here and not
+    // in `publicMe`: a fresh sign-in is never an impersonation.
+    const actingAs = request.sessionIssuedBy
+      ? await one(
+          app.db,
+          sql`select id, display_name from users where id = ${request.sessionIssuedBy}`,
+        )
+      : null
+
     return {
       ...publicMe(user!),
+      actingAs: actingAs
+        ? { adminId: actingAs['id'], adminName: actingAs['display_name'] }
+        : null,
       items: items.map(publicItem),
       likedByCount: Number(likedBy!['n']),
       unreadMessages: Number(unread!['n']),

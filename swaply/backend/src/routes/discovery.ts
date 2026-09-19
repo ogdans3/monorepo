@@ -26,12 +26,23 @@ export default async function discoveryRoutes(app: FastifyInstance) {
     const viewer = request.userId
     const args = query.parse(request.query)
 
+    // What an account may see of the test tooling's accounts: its own admin's
+    // set, or nothing. Test accounts are real rows in the same database a
+    // deployment serves, so without this a stranger hearts a test drill, a real
+    // trade opens between them, and from that moment neither reset nor delete
+    // may touch it — it is somebody's history. Written once here and once in
+    // the rows below, and nowhere else: `/items/:id` and `/users/:id` are
+    // reached by a link or an id somebody already has.
+    const scope = sql`(select case when x.is_admin then x.id else x.test_account_of end
+                       from users x where x.id = ${viewer ?? null})`
+
     // Your own things never appear, and neither does anything held by a trade,
     // anything already traded, or anything from someone either of you blocked.
     const base = sql`
       from items i
       join users u on u.id = i.owner_id
       where i.deleted_at is null
+        and (u.test_account_of is null or u.test_account_of = ${scope})
         and i.status = 'available'
         and i.active_trade_id is null
         and (${viewer ?? null}::uuid is null or i.owner_id <> ${viewer ?? null})
@@ -113,8 +124,13 @@ export default async function discoveryRoutes(app: FastifyInstance) {
                    exists (select 1 from likes l where l.target_item = i.id
                            and l.from_user = ${viewer}) as liked_by_me
             from items i
+            join users u on u.id = i.owner_id
             where i.deleted_at is null and i.status = 'available' and i.active_trade_id is null
               and i.category = ${c}::category and i.owner_id <> ${viewer}
+              and (u.test_account_of is null
+                   or u.test_account_of = (select case when x.is_admin then x.id
+                                                       else x.test_account_of end
+                                           from users x where x.id = ${viewer}))
               and not exists (select 1 from blocks b
                 where (b.blocker = ${viewer} and b.blocked = i.owner_id)
                    or (b.blocker = i.owner_id and b.blocked = ${viewer}))
