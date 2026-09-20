@@ -49,7 +49,7 @@ void main() {
 
     final decoration = _decoration(tester);
     expect(decoration.color, Colors.white);
-    expect(decoration.borderRadius, BorderRadius.circular(Radii.card));
+    expect(decoration.borderRadius, BorderRadius.circular(18));
     expect(decoration.boxShadow, isNotEmpty);
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
   });

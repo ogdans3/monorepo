@@ -53,15 +53,20 @@ class SwaplyToast extends StatelessWidget {
   Widget build(BuildContext context) {
     final marks = _marks[tone]!;
     return Container(
-      padding: const EdgeInsets.fromLTRB(11, 11, 14, 11),
+      padding: const EdgeInsets.fromLTRB(12, 11, 14, 11),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(Radii.card),
+        // 18, which is the radius of every card in the export.
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: marks.edge),
-        // The shadow is what makes it read as floating above the screen rather
-        // than as a band the screen grew.
+        // The one shadow in the app: nothing else here casts one, and a toast
+        // is the only thing that lies on top of a screen rather than in it.
+        // Pulled in by a negative spread and barely offset — a wide, dropped
+        // shadow under a card this wide draws a grey band under the whole
+        // width instead of lifting it.
         boxShadow: const [
-          BoxShadow(color: Color(0x1A064E3B), blurRadius: 20, offset: Offset(0, 6)),
+          BoxShadow(
+              color: Color(0x22064E3B), blurRadius: 18, spreadRadius: -6, offset: Offset(0, 4)),
         ],
       ),
       child: Row(

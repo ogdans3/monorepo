@@ -44,6 +44,7 @@ class FakeServer {
           // is tested against the message a person would actually read.
           final error = switch (body) {
             401 => {'code': 'unauthorized', 'message': 'Feil e-post eller passord.'},
+            409 => {'code': 'not_completed', 'message': 'Du kan vurdere når byttet er gjennomført.'},
             413 => {'code': 'file_too_large', 'message': 'Bildet er for stort. Grensen er 10 MB.'},
             _ => {'code': 'error', 'message': 'Noe gikk galt hos oss.'},
           };

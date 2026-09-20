@@ -232,6 +232,16 @@ void main() {
   testWidgets('06h-vurdering',
       (t) => shoot(t, '06h-vurdering', ReviewScreen(trade: _trade()),
           act: (t) => t.tap(find.text('★').at(3))));
+  // Not a screen the export draws: the toast, on the screen the complaint
+  // about it came from. It lies on top of every screen in the app, so this is
+  // the one picture of it there is.
+  testWidgets('06h-vurdering-avvist',
+      (t) => shoot(t, '06h-vurdering-avvist', ReviewScreen(trade: _trade()), act: (t) async {
+            server.overrides['POST /trades/trade-1/reviews'] = 409;
+            await t.tap(find.text('★').at(3));
+            await t.pump();
+            await t.tap(find.text('Send vurdering'));
+          }));
   testWidgets('09a-motbytte',
       (t) => shoot(t, '09a-motbytte', CounterOfferScreen(trade: _trade())));
   // Step one of two, as a device that has not made a profile yet.
