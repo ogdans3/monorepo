@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -119,9 +120,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
       if (!mounted) return;
       await context.read<Session>().refresh();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lagt ut. Nå kan folk like den.')),
-      );
+      showDone(context, 'Lagt ut. Nå kan folk like den.');
       Navigator.of(context).pushNamedAndRemoveUntil('/profile', (r) => false);
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -248,6 +247,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
                       child: TextField(
                         controller: _value,
                         keyboardType: TextInputType.number,
+                        // A price typed with a space — «1 500» — parses to
+                        // nothing, and a value the server is willing to ignore
+                        // is a listing that quietly loses its price.
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         style: _fieldText,
                         // suffixText hides until the field has focus; the
                         // export shows «kr» from the start.
@@ -357,6 +360,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           TextField(
                             controller: _postal,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                             maxLength: 4,
                             style: _fieldText,
                             decoration: _field('7030').copyWith(counterText: ''),

@@ -77,13 +77,7 @@ class _ShareSheetState extends State<_ShareSheet> {
     await Clipboard.setData(ClipboardData(text: link.text));
     if (!mounted) return;
     Navigator.of(context).pop();
-    widget.messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Lenken er kopiert. Nå kan du lime den inn hvor du vil.'),
-        backgroundColor: SwaplyColors.ink,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    showDoneOn(widget.messenger, 'Lenken er kopiert. Nå kan du lime den inn hvor du vil.');
   }
 
   @override

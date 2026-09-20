@@ -950,6 +950,36 @@ void main() {
       expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
     });
 
+    // Stars and nothing written is the ordinary review. The server refused it
+    // — `comment: null` against an `.optional()` string — and answered
+    // «Expected string, received null» in a black bar over the button.
+    testWidgets('06h stars alone are a whole review, with no words at all',
+        (tester) async {
+      await mount(tester, ReviewScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      await tester.tap(find.text('★').last);
+      await tester.pump();
+      await tester.tap(find.text('Send vurdering'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /trades/trade-1/reviews']!['comment'], isNull);
+      expect(server.bodies['POST /trades/trade-1/reviews']!['score'], 5);
+      // Straight on to 06i rather than stopping on an error.
+      expect(find.text('Hvordan var det å bytte med Swaply?'), findsOneWidget);
+    });
+
+    testWidgets('06i and so is a score with nothing said about it', (tester) async {
+      await mount(tester, AppFeedbackScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      await tester.tap(find.text('5'));
+      await tester.pump();
+      await tester.tap(find.text('Send tilbakemelding'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /feedback']!['comment'], isNull);
+      expect(server.bodies['POST /feedback']!['score'], 5);
+    });
+
     testWidgets('07l a chain asks about both people separately', (tester) async {
       await mount(tester, ReviewScreen(trade: Trade.fromJson(chainTrade())));
 

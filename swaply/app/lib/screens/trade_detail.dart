@@ -890,8 +890,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                         tooltip: 'Kopiér',
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: cash.payeePhone!));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Nummeret er kopiert')));
+                          showNote(context, 'Nummeret er kopiert');
                         },
                       ),
                   ],

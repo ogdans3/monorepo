@@ -307,16 +307,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   Navigator.of(sheet).pop();
                   try {
                     final tradeId = await api.adminWant(item.id, as: account.id);
-                    messenger.showSnackBar(SnackBar(
-                      content: Text(tradeId == null
-                          ? '${account.displayName} vil ha den. Ingen sirkel ennå.'
-                          : '${account.displayName} vil ha den — og sirkelen lukket seg!'),
-                      backgroundColor: SwaplyColors.ink,
-                      behavior: SnackBarBehavior.floating,
-                    ));
+                    if (tradeId == null) {
+                      showNoteOn(messenger, '${account.displayName} vil ha den. Ingen sirkel ennå.');
+                    } else {
+                      showDoneOn(messenger,
+                          '${account.displayName} vil ha den — og sirkelen lukket seg!');
+                    }
                     await _load();
                   } on ApiException catch (e) {
-                    messenger.showSnackBar(SnackBar(content: Text('$e')));
+                    showErrorOn(messenger, e);
                   }
                 },
               ),

@@ -105,6 +105,19 @@ screen — a push notification, not a screen with a back button — so it never 
 a door into the list of them inside the app. The screen was built anyway, and
 without that row nothing could open it.
 
+## What the app says in passing
+
+`widgets/toast.dart` is the only way the app says something without taking over
+the screen: a refusal, something that landed, something worth knowing. One card
+in three tones, in the palette the rest of the app is drawn in — the plain
+`SnackBar` it replaced was a black rectangle with square corners glued across
+the button that had just been pressed.
+
+The error tone is **coral**, which is the «no» colour. Not
+`SwaplyColors.red`, which belongs to report and block: an error toast is the
+most tempting place in the app to reach for the stronger red, and the two must
+not collapse into one meaning.
+
 ## Two things that are honest about being unfinished
 
 **Sign-in with Google, Facebook and Apple** is drawn, and says so when tapped:

@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
 
+// Handed on rather than re-exported by hand: every screen that shows an error
+// already imports this file, and the toast itself is its own thing.
+export 'toast.dart';
+
 /// The pill button every screen ends with.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton(this.label,
@@ -419,15 +423,4 @@ class EmptyState extends StatelessWidget {
           ),
         ),
       );
-}
-
-Future<void> showError(BuildContext context, Object error) async {
-  if (!context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('$error'),
-      backgroundColor: SwaplyColors.ink,
-      behavior: SnackBarBehavior.floating,
-    ),
-  );
 }

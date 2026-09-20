@@ -536,14 +536,17 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
             // listing, so this opens one of theirs rather than a chat window
             // there is nothing to put in. A grey button that explains nothing
             // is worse than the sentence.
-            child: PrimaryButton('Send melding',
-                onPressed: () => user.items.isEmpty
-                    ? ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(
-                            '${user.displayName.split(' ').first} har ingenting ute '
-                            'akkurat nå. En samtale starter alltid på en gjenstand.')))
-                    : Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => ItemDetailScreen(itemId: user.items.first.id)))),
+            child: PrimaryButton('Send melding', onPressed: () {
+              if (user.items.isEmpty) {
+                showNote(
+                    context,
+                    '${user.displayName.split(' ').first} har ingenting ute '
+                    'akkurat nå. En samtale starter alltid på en gjenstand.');
+                return;
+              }
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ItemDetailScreen(itemId: user.items.first.id)));
+            }),
           ),
           const SizedBox(height: 12),
           Text('${user.displayName.split(' ').first} sine gjenstander · ${user.items.length}',
@@ -1030,10 +1033,9 @@ class _ReportSheetState extends State<_ReportSheet> {
         detail: _detail.text.trim().isEmpty ? null : _detail.text.trim(),
         block: _block,
       );
-      widget.messenger
-          .showSnackBar(const SnackBar(content: Text('Takk. Vi ser på rapporten.')));
+      showDoneOn(widget.messenger, 'Takk. Vi ser på rapporten.');
     } on ApiException catch (e) {
-      widget.messenger.showSnackBar(SnackBar(content: Text('$e')));
+      showErrorOn(widget.messenger, e);
     }
   }
 
