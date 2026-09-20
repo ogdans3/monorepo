@@ -204,7 +204,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       // whole product, and this presses it on your own real
                       // listing from somebody else's hand. If it closes a loop,
                       // a real trade opens and a real notification lands.
-                      if (context.watch<Session>().isAdmin &&
+                      //
+                      // Your own listing only. The server refuses the rest —
+                      // a test account wanting a stranger's thing is exactly
+                      // what hiding test listings exists to prevent, arriving
+                      // from the other direction — and a button that is always
+                      // refused is not a button.
+                      if (mine &&
+                          context.watch<Session>().isAdmin &&
                           !context.watch<Session>().actingAs) ...[
                         const SizedBox(height: 11),
                         _adminWant(item),

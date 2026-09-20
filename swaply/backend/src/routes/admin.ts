@@ -8,6 +8,7 @@ import {
   ownedTestAccount,
   resetAccount,
   ring,
+  strangerIn,
 } from '../admin/accounts.js'
 import { SCENARIO_STATES, buildScenario } from '../admin/scenarios.js'
 import { issueSession } from '../auth/sessions.js'
@@ -24,7 +25,8 @@ import {
 import { expireWithdrawals } from '../trades/actions.js'
 import { validateOffer } from '../trades/offer.js'
 import { sweepForCycles } from '../trades/sweep.js'
-import { acceptOffer, proposeCounterOffer } from '../trades/trades.js'
+import { acceptTrade } from '../trades/accept.js'
+import { completeTrade, proposeCounterOffer } from '../trades/trades.js'
 import { expressWish } from '../trades/wish.js'
 import { publicItem } from './serialize.js'
 
@@ -43,6 +45,22 @@ const idParam = z.object({ id: z.string().uuid() })
  * it holds because `test_account_of` can only be set when a row is born (the
  * trigger in drizzle/0004_admin.sql), so the set cannot grow sideways.
  */
+/**
+ * Refuse, by name and in words, any trade a real person is standing in.
+ *
+ * The tool may move a negotiation without asking. The one thing it must never
+ * move without asking is somebody else's.
+ */
+async function refuseRealPeople(db: FastifyInstance['db'], adminId: string, tradeId: string) {
+  const stranger = await strangerIn(db, adminId, tradeId)
+  if (stranger) {
+    throw conflict(
+      'real_person',
+      `${stranger} er med i dette byttet. Testverktøyet rører ikke andres bytter.`,
+    )
+  }
+}
+
 export default async function adminRoutes(app: FastifyInstance) {
   /** Everything the tool screen draws, in one call. */
   app.get('/admin/overview', async (request) => {
@@ -137,7 +155,7 @@ export default async function adminRoutes(app: FastifyInstance) {
       .parse(request.body)
     await ownedTestAccount(app.db, adminId, id)
 
-    const result = await resetAccount(app.db, id, parts)
+    const result = await resetAccount(app.db, adminId, id, parts)
     // Listings back on the market are the second matching trigger.
     await sweepForCycles(app.db, result.freed)
     return result
@@ -199,7 +217,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await ownedTestAccount(app.db, adminId, body.as)
     // Whose trade it is comes before who is sitting in it: «En Fremmed er med i
     // dette byttet» is the answer a person needs, and «du er ikke med» is not.
-    await refuseRealPeople(app, adminId, id)
+    await refuseRealPeople(app.db, adminId, id)
     await participantOf(app.db, id, body.as)
 
     const offer = await one(
@@ -209,8 +227,9 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     switch (body.action) {
       case 'accept': {
-        if (!offer) throw conflict('no_offer', 'Det finnes ikke noe forslag å godta.')
-        await acceptOffer(app.db, offer['id'], body.as, '2026-09-06')
+        // Through the same function `/trades/:id/accept` calls, so the guards
+        // and the notification that follows are the product's, not a copy.
+        await acceptTrade(app.db, id, body.as, '2026-09-06')
         break
       }
       case 'counter': {
@@ -236,11 +255,18 @@ export default async function adminRoutes(app: FastifyInstance) {
         }
         await validateOffer(app.db, id, composition, cash)
         await proposeCounterOffer(app.db, id, body.as, composition, cash)
+        await app.db.execute(sql`
+          insert into notifications (user_id, type, payload)
+          select p.user_id, 'counter_offer', jsonb_build_object('tradeId', ${id}::text)
+          from trade_participants p where p.trade_id = ${id} and p.user_id <> ${body.as}
+        `)
         break
       }
-      case 'decline':
-        await declineTrade(app.db, id, body.as)
+      case 'decline': {
+        const freed = await declineTrade(app.db, id, body.as)
+        await sweepForCycles(app.db, freed)
         break
+      }
       case 'message': {
         const thread = await one(app.db, sql`select id from threads where trade_id = ${id}`)
         if (!thread) throw notFound('Fant ikke samtalen.')
@@ -248,34 +274,70 @@ export default async function adminRoutes(app: FastifyInstance) {
           sql`insert into messages (thread_id, sender_id, body)
               values (${thread['id']}, ${body.as}, 'Hei! Dette er en testmelding.')`,
         )
+        // The same row `/threads/:id/messages` writes: without it the unread
+        // badge and screen 12a are being tested against a message the product
+        // would never have sent silently.
+        await app.db.execute(sql`
+          insert into notifications (user_id, type, payload)
+          select tp.user_id, 'message', jsonb_build_object('threadId', ${thread['id']}::text)
+          from thread_participants tp
+          where tp.thread_id = ${thread['id']} and tp.user_id <> ${body.as}
+        `)
         break
       }
       case 'mark-sent':
         await markHandover(app.db, id, body.as, 'sent')
         break
-      case 'mark-received':
-        await markHandover(app.db, id, body.as, 'received')
+      case 'mark-received': {
+        // «When everybody has both sent and received, the trade is done without
+        // anyone having to press a separate button» — and the route that says
+        // so is the one this has to behave like.
+        const marked = await markHandover(app.db, id, body.as, 'received')
+        if (marked.complete) await completeTrade(app.db, id)
         break
+      }
       case 'request-withdrawal':
         await requestWithdrawal(app.db, id, body.as)
         break
     }
 
-    await app.db.execute(sql`
-      insert into notifications (user_id, type, payload)
-      select p.user_id, 'trade_partly_accepted', jsonb_build_object('tradeId', ${id}::text)
-      from trade_participants p where p.trade_id = ${id} and p.user_id <> ${body.as}
-        and ${body.action === 'accept'}
-    `)
     return { ok: true }
   })
 
-  /** «Få noen til å ville ha denne» — one directed edge, through the real heart. */
+  /**
+   * «Få noen til å ville ha denne» — one directed edge, through the real heart.
+   *
+   * Only onto a listing inside the ring. Pressed on a stranger's listing it is
+   * the very thing the hidden-listings rule exists to prevent, arriving from
+   * the other direction: a test account and a real person in one trade, one
+   * chat and one handover, and from that moment the account can neither be
+   * reset nor deleted because it is somebody's history.
+   */
   app.post('/admin/items/:id/want', async (request) => {
     const adminId = app.requireAdmin(request)
     const { id } = idParam.parse(request.params)
     const { as } = z.object({ as: z.string().uuid() }).parse(request.body)
     await ownedTestAccount(app.db, adminId, as)
+
+    const item = await one(
+      app.db,
+      sql`select u.display_name, u.id as owner_id from items i
+          join users u on u.id = i.owner_id
+          where i.id = ${id} and i.deleted_at is null`,
+    )
+    if (!item) throw notFound('Fant ikke gjenstanden.')
+    const inTheRing = await one(
+      app.db,
+      sql`select 1 from users
+          where id = ${item['owner_id']} and (id = ${adminId} or test_account_of = ${adminId})`,
+    )
+    if (!inTheRing) {
+      throw conflict(
+        'real_person',
+        `${item['display_name'] ?? 'En ekte bruker'} eier denne. Testkontoene dine ` +
+          'vil bare ha ting fra deg eller fra hverandre.',
+      )
+    }
 
     const wish = await expressWish(app.db, as, id)
     return wish
@@ -292,7 +354,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.post('/admin/trades/:id/expire-withdrawal', async (request) => {
     const adminId = app.requireAdmin(request)
     const { id } = idParam.parse(request.params)
-    await refuseRealPeople(app, adminId, id)
+    await refuseRealPeople(app.db, adminId, id)
 
     const open = await one(
       app.db,
@@ -388,28 +450,4 @@ export default async function adminRoutes(app: FastifyInstance) {
       trades: detailed,
     }
   })
-}
-
-/**
- * Refuse, by name and in words, any trade a real person is standing in.
- *
- * The tool may move a negotiation forward without asking, and the one thing
- * that must never be moved without asking is somebody else's.
- */
-async function refuseRealPeople(app: FastifyInstance, adminId: string, tradeId: string) {
-  const stranger = await one(
-    app.db,
-    sql`select u.display_name from trade_participants p
-        join users u on u.id = p.user_id
-        where p.trade_id = ${tradeId}
-          and u.id <> ${adminId}
-          and u.test_account_of is distinct from ${adminId}
-        limit 1`,
-  )
-  if (stranger) {
-    throw conflict(
-      'real_person',
-      `${stranger['display_name'] ?? 'En ekte bruker'} er med i dette byttet. Testverktøyet rører ikke andres bytter.`,
-    )
-  }
 }

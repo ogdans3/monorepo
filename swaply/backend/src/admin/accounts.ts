@@ -80,7 +80,14 @@ export async function createTestAccount(
   adminId: string,
   opts: NewAccount,
 ): Promise<Row> {
-  const made = await many(db, sql`select count(*) as n from users where test_account_of = ${adminId}`)
+  // Retired accounts are gone from the ring, so they must be gone from the cap
+  // too — otherwise the error tells you to delete something, and deleting does
+  // not help.
+  const made = await many(
+    db,
+    sql`select count(*) as n from users
+        where test_account_of = ${adminId} and anonymised_at is null`,
+  )
   const n = Number(made[0]?.['n'] ?? 0)
   if (n >= 20) {
     throw conflict('too_many_test_accounts', 'Du har 20 testkontoer. Slett noen først.')
@@ -127,6 +134,31 @@ export async function createTestAccount(
   return user!
 }
 
+/**
+ * Whose trade it is.
+ *
+ * The tool may move a negotiation without asking, and the one thing it must
+ * never move without asking is somebody else's. Returns the stranger's name
+ * when there is one, so the refusal can say it rather than being a code.
+ */
+export async function strangerIn(
+  db: Database,
+  adminId: string,
+  tradeId: string,
+): Promise<string | null> {
+  const row = await one(
+    db,
+    sql`select coalesce(u.display_name, 'En annen bruker') as name
+        from trade_participants p
+        join users u on u.id = p.user_id
+        where p.trade_id = ${tradeId}
+          and u.id <> ${adminId}
+          and u.test_account_of is distinct from ${adminId}
+        limit 1`,
+  )
+  return row ? (row['name'] as string) : null
+}
+
 export type ResetPart = 'likes' | 'items' | 'trades' | 'interests' | 'bankid' | 'notifications'
 
 /**
@@ -141,6 +173,7 @@ export type ResetPart = 'likes' | 'items' | 'trades' | 'interests' | 'bankid' | 
  */
 export async function resetAccount(
   db: Database,
+  adminId: string,
   userId: string,
   parts: ResetPart[],
 ): Promise<{ done: string[]; freed: string[] }> {
@@ -155,12 +188,30 @@ export async function resetAccount(
           where p.user_id = ${userId}
             and t.state in ('talking','pending','countered','accepted','paused')`,
     )
+    let ended = 0
+    const spared: string[] = []
     for (const row of live) {
+      // Ending a negotiation is the largest move there is, so a trade with
+      // somebody real in it is left exactly where it stands — and said out
+      // loud, because a lever that silently does less than it says is worse
+      // than one that refuses.
+      const stranger = await strangerIn(db, adminId, row['id'])
+      if (stranger) {
+        spared.push(stranger)
+        continue
+      }
       // Through cancelTrade, so the counterparty gets a reason in words and the
       // listings are released rather than left locked to a dead trade.
       freed.push(...(await cancelTrade(db, row['id'], 'Byttet ble avsluttet fra testverktøyet')))
+      ended++
     }
-    done.push(`${live.length} bytter avsluttet`)
+    done.push(`${ended} bytter avsluttet`)
+    if (spared.length > 0) {
+      done.push(
+        `${spared.length} bytte${spared.length === 1 ? '' : 'r'} med ` +
+          `${[...new Set(spared)].join(', ')} ble ikke rørt`,
+      )
+    }
   }
 
   if (parts.includes('items')) {
@@ -213,22 +264,26 @@ export async function deleteTestAccount(db: Database, adminId: string, targetId:
   }
   const target = await ownedTestAccount(db, adminId, targetId)
 
-  // A completed trade with somebody who is not one of mine is another person's
-  // history, and anonymising half of it is not the tool's business.
+  // Any trade with somebody who is not one of mine — finished or still being
+  // negotiated. A completed one is their history; a live one is a negotiation
+  // they are standing in, and `anonymiseUser` would cancel it out from under
+  // them with «Den andre parten slettet kontoen sin».
   const real = await one(
     db,
-    sql`select 1 from trade_participants mine
+    sql`select coalesce(u.display_name, 'En annen bruker') as name
+        from trade_participants mine
         join trade_participants theirs on theirs.trade_id = mine.trade_id
         join trades t on t.id = mine.trade_id
         join users u on u.id = theirs.user_id
         where mine.user_id = ${targetId} and theirs.user_id <> ${targetId}
-          and t.state = 'completed'
-          and (u.test_account_of is distinct from ${adminId}) and u.id <> ${adminId}`,
+          and t.state in ('talking','pending','countered','accepted','paused','completed')
+          and (u.test_account_of is distinct from ${adminId}) and u.id <> ${adminId}
+        limit 1`,
   )
   if (real) {
     throw conflict(
-      'real_history',
-      'Kontoen har et gjennomført bytte med en ekte bruker. Det er deres historikk.',
+      'real_person',
+      `${real['name']} er med i et bytte med denne kontoen. Testverktøyet rører ikke andres bytter.`,
     )
   }
 

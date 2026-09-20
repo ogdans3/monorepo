@@ -15,10 +15,10 @@ import {
   respondToWithdrawal,
   withdrawEarly,
 } from '../trades/actions.js'
+import { acceptTrade } from '../trades/accept.js'
 import { validateOffer } from '../trades/offer.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import {
-  acceptOffer,
   completeTrade,
   proposeCounterOffer,
   revokeAcceptance,
@@ -95,46 +95,10 @@ export default async function tradeRoutes(app: FastifyInstance) {
     const { id } = idParam.parse(request.params)
     const body = z.object({ termsVersion: z.string().default('2026-09-06') }).parse(request.body ?? {})
 
-    const view = await tradeView(app.db, id, userId)
-    if (!view) throw notFound('Fant ikke byttet.')
-    if (!view.offerId) throw conflict('no_offer', 'Det finnes ikke noe forslag å godta.')
-    if (['completed', 'cancelled'].includes(view.state)) {
-      throw conflict('trade_closed', 'Byttet er avsluttet.')
-    }
-    if (view.state === 'paused') {
-      // 08b: somebody has asked to get out and the others are answering.
-      // Accepting again here would quietly overwrite that question.
-      throw conflict('trade_paused', 'Byttet er pauset mens noen svarer på en forespørsel.')
-    }
-
-    // «Each side of a hop is a list of 1–3 items.» The opening offer behind
-    // «Jeg vil ha» names their listing and nothing back, and accepting that
-    // was one tap that gave your drill away for nothing.
-    const emptyHanded = await one(
-      app.db,
-      sql`select 1 from trade_participants p
-          where p.trade_id = ${id}
-            and not exists (
-              select 1 from trade_offer_items oi
-              where oi.offer_id = ${view.offerId}::uuid and oi.giver_position = p.position)`,
-    )
-    if (emptyHanded) {
-      throw conflict(
-        'incomplete_offer',
-        'Forslaget er ikke ferdig — alle må legge noe i byttet. Foreslå et motbytte.',
-      )
-    }
-
-    const result = await acceptOffer(app.db, view.offerId, userId, body.termsVersion)
-    await app.db.execute(sql`
-      insert into notifications (user_id, type, payload)
-      select p.user_id, ${result.everyoneAccepted ? 'trade_accepted' : 'trade_partly_accepted'},
-             jsonb_build_object('tradeId', ${id}::text)
-      from trade_participants p where p.trade_id = ${id} and p.user_id <> ${userId}
-    `)
-    // Displacing a trade puts whatever it was holding back on the market, and
-    // an item becoming available again is one of the three triggers.
-    await sweepForCycles(app.db, result.freed)
+    // The guards, the acceptance and everything that follows it are in
+    // `trades/accept.ts`, because the test tooling says yes on somebody else's
+    // behalf and a second copy of them is a second copy that drifts.
+    const result = await acceptTrade(app.db, id, userId, body.termsVersion)
     return { ...result, trade: await tradeView(app.db, id, userId) }
   })
 

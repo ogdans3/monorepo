@@ -66,7 +66,7 @@ class AdminFloor extends StatelessWidget {
                       await session.returnToAdmin();
                       if (context.mounted) {
                         Navigator.of(context)
-                            .pushNamedAndRemoveUntil('/discover', (route) => false);
+                            .pushNamedAndRemoveUntil('/', (route) => false);
                       }
                     },
                     child: Text(

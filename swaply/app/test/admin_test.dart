@@ -187,6 +187,18 @@ void main() {
       });
     });
 
+    testWidgets('«Få noen til å ville ha denne» is offered on your own listing only',
+        (tester) async {
+      // A test account wanting a stranger's thing puts the two of them in one
+      // trade, one chat and one handover — the same failure hiding test
+      // listings exists to prevent, arriving from the other direction. The
+      // server refuses it, and a button that is always refused is not a button.
+      asAdmin();
+      await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
+
+      expect(find.text('Få noen til å ville ha denne'), findsNothing);
+    });
+
     testWidgets('«Få noen til å ville ha denne» presses the real heart', (tester) async {
       asAdmin();
       await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
@@ -236,6 +248,21 @@ void main() {
       await mount(tester, const ProfileScreen());
 
       expect(find.text('TESTKONTO'), findsOneWidget);
+    });
+
+    testWidgets('becoming an account that has never picked interests shows 02',
+        (tester) async {
+      // «Nullstill interesser — skjerm 02 kommer igjen» is what the lever
+      // promises. Emptying the column is half of it; the other half is that
+      // somebody has to walk through the gate again to see the picker.
+      asAdmin();
+      await mount(tester, const AdminScreen());
+
+      server.overrides['GET /me'] = {...FakeServer.actingAsTest, 'interests': const []};
+      await tester.tap(find.text('Bli denne'));
+      await tester.pumpAndSettle();
+
+      expect(session.interestsPending, isTrue);
     });
 
     testWidgets('switching parks your own token and the floor gets you back',

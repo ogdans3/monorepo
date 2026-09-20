@@ -90,6 +90,11 @@ class Session extends ChangeNotifier {
     api.token = session.token;
     await _persist();
     await refresh();
+    // Their first run, not yours. «Nullstill interesser» is sold as bringing
+    // screen 02 back, and emptying the column is only half of that — somebody
+    // has to walk through the gate again for anybody to see the picker.
+    interestsPending = me!.interests.isEmpty;
+    notifyListeners();
   }
 
   /// Back to your own account. The test account's session is left standing —
@@ -102,6 +107,8 @@ class Session extends ChangeNotifier {
     api.token = parked;
     await _persist();
     await refresh();
+    interestsPending = me!.interests.isEmpty;
+    notifyListeners();
   }
 
   /// Look around without making anything. The device id is a secret this app

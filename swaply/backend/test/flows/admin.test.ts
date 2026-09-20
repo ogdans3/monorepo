@@ -301,6 +301,64 @@ describe('the test tooling', () => {
     expect(overview.body!['accounts'].some((a: Json) => a['id'] === id)).toBe(false)
   })
 
+  test('15b. and the cap counts the ones that are left, not the ones ever made', async () => {
+    // The cap told you to delete something; deleting did not help, because the
+    // retired rows kept counting. That is a tool that locks itself out.
+    const before = (await call('GET', '/admin/overview', { token: gabriel })).body!['accounts']
+        .length
+    const made = await call('POST', '/admin/accounts', {
+      token: gabriel, body: { displayName: 'Kommer og går', withItems: 0 },
+    })
+    await call('DELETE', `/admin/accounts/${made.body!['id']}`, { token: gabriel })
+
+    const after = (await call('GET', '/admin/overview', { token: gabriel })).body!['accounts'].length
+    expect(after).toBe(before)
+
+    const counted = await db.execute<Json>(
+      sql`select count(*) as n from users
+          where test_account_of = ${gabrielId} and anonymised_at is null`,
+    )
+    expect(Number(counted[0]!['n'])).toBe(after)
+  })
+
+  test('15c. claiming a switched session keeps who is acting', async () => {
+    // The 10c path is exactly what an unclaimed test account is for, and the
+    // reissue there used to drop `issued_by` — the floor stopped being drawn,
+    // «Tilbake til …» went with it, and every later write stopped being logged.
+    const device = await call('POST', '/admin/accounts', {
+      token: gabriel, body: { claimed: false, withItems: 0 },
+    })
+    const switched = await call('POST', `/admin/accounts/${device.body!['id']}/session`, {
+      token: gabriel,
+    })
+    const looking = switched.body!['token']
+    expect((await call('GET', '/me', { token: looking })).body!['actingAs']).not.toBeNull()
+
+    const claimed = await call('POST', '/auth/register', {
+      token: looking,
+      body: {
+        displayName: 'Ble til en person',
+        email: 'ble-til@swaply.test',
+        password: 'byttehandel1',
+      },
+    })
+    expect(claimed.status).toBe(201)
+
+    const me = await call('GET', '/me', { token: claimed.body!['token'] })
+    expect(me.body!['actingAs']).toMatchObject({ adminId: gabrielId })
+    // And the writes it makes afterwards are still findable.
+    await call('PUT', '/me/interests', {
+      token: claimed.body!['token'],
+      body: { interests: ['verktoy', 'gaming', 'sykling'] },
+    })
+    const logged = await db.execute<Json>(
+      sql`select 1 from admin_actions
+          where admin_id = ${gabrielId} and acting_as = ${device.body!['id']}
+            and path = '/me/interests'`,
+    )
+    expect(logged).toHaveLength(1)
+  })
+
   test('16. no route writes to `is_admin`, and one reads it', () => {
     // The cheapest possible guard against the next person adding a convenient
     // `update users set is_admin = …` to a handler. The trigger refuses it at

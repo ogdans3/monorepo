@@ -56,25 +56,36 @@ type Built = { tradeId: string | null; steps: string[]; participants: string[] }
 
 const firstName = (row: Row) => String(row['display_name'] ?? 'Testbruker').split(' ')[0]
 
-/** An available listing of theirs, or a new one from the catalogue. */
+/**
+ * A listing for this scenario to spend, made for it.
+ *
+ * Never one that is already there. An `accepted` scenario reserves what it is
+ * given and a `completed` one marks it `traded` for good, so reaching for the
+ * nearest available listing spends the owner's real inventory — and if that
+ * listing is sitting in somebody else's open offer, accepting here displaces
+ * their trade. Both are the tool reaching outside the ring through the front
+ * door.
+ *
+ * The «[test]» in the title is what makes them findable afterwards;
+ * Nullstill → gjenstander clears them.
+ */
 async function somethingToGive(db: Database, owner: Row, steps: string[]): Promise<string> {
-  const existing = await one(
-    db,
-    sql`select id, title from items
-        where owner_id = ${owner['id']} and deleted_at is null
-          and status = 'available' and active_trade_id is null
-        order by created_at limit 1`,
-  )
-  if (existing) return existing['id']
-
   const used = await many(db, sql`select title from items where owner_id = ${owner['id']}`)
   const taken = new Set(used.map((r) => r['title']))
-  const fixture = CATALOGUE.find((f) => !taken.has(f.title)) ?? CATALOGUE[0]!
+  // Never a service. «A service is never exclusive» — one person can paint
+  // three living rooms — so it never holds a reservation, and a scenario built
+  // on one silently means something else: `accepted` reserves nothing and
+  // nothing can be displaced. The catalogue has one, and after enough
+  // scenarios the titles ran out and reached it.
+  const things = CATALOGUE.filter((f) => f.kind !== 'service')
+  const fixture =
+    things.find((f) => !taken.has(`[test] ${f.title}`)) ?? things[used.length % things.length]!
+  const title = `[test] ${fixture.title}`
   const made = await one(
     db,
     sql`insert into items (owner_id, kind, title, description, category, subcategory,
                            condition, estimated_value_nok, town)
-        values (${owner['id']}, ${fixture.kind ?? 'item'}, ${fixture.title},
+        values (${owner['id']}, ${fixture.kind ?? 'item'}, ${title},
                 ${fixture.description ?? null}, ${fixture.category}::category,
                 ${fixture.subcategory ?? null},
                 ${fixture.kind === 'service' ? null : (fixture.condition ?? 'good')},
@@ -189,6 +200,47 @@ export async function buildScenario(
     return { tradeId, steps, participants: ring.map((p) => p['id']) }
   }
 
+  if (scenario.state === 'displaced') {
+    // 09f's other half: two trades want the same listing, and the owner's
+    // acceptance in one closes the other with a reason in words.
+    //
+    // It has to happen *before* the ring is agreed — once the contested thing
+    // is reserved it is no longer available and no competitor can form. The
+    // first version of this ran after, and quietly built an ordinary accepted
+    // trade while reporting a displaced one.
+    //
+    // The competitor is a conversation rather than a second cycle, and that is
+    // deliberate: «several people can be in a talking trade about the same
+    // item at once, which is correct — three people may want the same drill».
+    // A second cycle would have to be *found*, and which one the search
+    // returns depends on every wish those two people have ever expressed.
+    if (people.length < 3) {
+      throw badRequest('need_more_accounts', 'Et fortrengt bytte trenger tre kontoer.')
+    }
+    const third = people[2]!
+    const contested = gives[0]!
+    const rival = await startTalking(
+      db,
+      third['id'],
+      contested,
+      'Hei! Jeg vil gjerne ha denne — er den ledig?',
+    )
+    steps.push(`${firstName(third)} spurte om det samme som ${firstName(other)}`)
+
+    const offer = await currentOffer(db, tradeId)
+    const owner = participants.find((p) => p['id'] === ring[0]!['id'])!
+    const result = await acceptOffer(db, offer['id'], owner['id'], '2026-09-06')
+    if (!result.displaced.includes(rival.tradeId)) {
+      throw conflict('not_displaced', 'Det andre byttet ble ikke fortrengt.')
+    }
+    steps.push('Du godtok her, og samtalen med den tredje ble avsluttet automatisk')
+    return {
+      tradeId: rival.tradeId,
+      steps,
+      participants: [...ring.map((p) => p['id']), third['id']],
+    }
+  }
+
   // Everything below is agreed first.
   const offer = await currentOffer(db, tradeId)
   for (const person of participants) {
@@ -218,27 +270,6 @@ export async function buildScenario(
     await completeTrade(db, tradeId)
     steps.push('Alle sendte og mottok — byttet er gjennomført')
     return { tradeId, steps, participants: ring.map((p) => p['id']) }
-  }
-
-  if (scenario.state === 'displaced') {
-    // 09f's other half: a second trade wanting one of the same listings, closed
-    // the moment the owner's acceptance lands elsewhere. Needs a third person,
-    // which is why the shape is forced.
-    if (people.length < 3) {
-      throw badRequest('need_more_accounts', 'Fortrengt bytte trenger tre kontoer.')
-    }
-    const third = people[2]!
-    const theirs = await somethingToGive(db, third, steps)
-    const contested = gives[0]!
-    await expressWish(db, third['id'], contested)
-    const closing = await expressWish(db, ring[0]!['id'], theirs)
-    steps.push(`${firstName(third)} ville også ha den samme tingen`)
-    if (closing.tradeId) {
-      const second = await currentOffer(db, closing.tradeId)
-      await acceptOffer(db, second['id'], ring[0]!['id'], '2026-09-06')
-      steps.push('Det andre byttet ble avslått fordi tingen ble reservert her')
-    }
-    return { tradeId, steps, participants: [...ring.map((p) => p['id']), third['id']] }
   }
 
   return { tradeId, steps, participants: ring.map((p) => p['id']) }

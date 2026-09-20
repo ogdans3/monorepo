@@ -95,6 +95,12 @@ Beyond the ring, three things:
 
 1. **Every lever that moves a negotiation refuses a trade a real person is
    standing in**, by name and in words: «En Fremmed er med i dette byttet.»
+   «Som motparten» and «Forfall fristen nå» refuse outright; «Nullstill →
+   avslutt bytter» leaves those trades standing and says which ones it left;
+   «Slett testkonto» refuses an account somebody real has ever traded or
+   negotiated with. And «Få noen til å ville ha denne» only works on a listing
+   inside the ring — pressed on a stranger's it is bound #2 arriving from the
+   other direction.
 2. **A test account's listings are invisible on Oppdag to everybody outside its
    own admin's ring.** They are real rows in the database a deployment serves —
    without this a stranger hearts a test drill, a real trade opens, and from
@@ -109,6 +115,13 @@ Beyond the ring, three things:
 
 ## What it does not do
 
+- **A scenario spends listings it made, never the ones already there.** An
+  `accepted` scenario reserves what it is given and a `completed` one marks it
+  `traded` for good, so reaching for the nearest available listing would spend
+  the owner's real inventory — and displace anybody whose open offer happened
+  to hold it. They are titled «[test] …»; Nullstill → gjenstander clears them.
+  Never a service, either: a service is never exclusive, so a scenario built on
+  one silently means something else.
 - **No scenario writes a trade, a like, an offer or an acceptance directly.**
   Everything is built by pressing the product's own buttons in order —
   `expressWish`, `acceptOffer`, `proposeCounterOffer`, `declineTrade`,

@@ -193,7 +193,7 @@ class _AdminScreenState extends State<AdminScreen> {
                   await context.read<Session>().switchTo(account.id);
                   if (mounted) {
                     Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/discover', (route) => false);
+                        .pushNamedAndRemoveUntil('/', (route) => false);
                   }
                 } on ApiException catch (e) {
                   if (mounted) showError(context, e);

@@ -537,6 +537,21 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
               ],
             ),
             const SizedBox(height: 10),
+            // «Forfall fristen nå». WITHDRAWAL_RESPONSE_HOURS is 72, so 08b's
+            // expiry branch — nobody answered and the trade carries on — is
+            // otherwise three days away. The lever was documented and shipped
+            // with no control anywhere in the app.
+            if (trade.withdrawal?.state == 'waiting') ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: AdminButton('Forfall svarfristen nå',
+                    busy: _busy,
+                    onPressed: () => _run((api) async {
+                          await api.adminExpireWithdrawal(trade.id);
+                          return api.trade(trade.id);
+                        })),
+              ),
+            ],
             for (final person in others)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),

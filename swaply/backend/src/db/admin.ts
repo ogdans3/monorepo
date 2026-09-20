@@ -36,13 +36,36 @@ const args = rest.filter((a) => !a.startsWith('--'))
 const ownerFlag = rest.indexOf('--owner')
 const owner = ownerFlag === -1 ? null : (rest[ownerFlag + 1] ?? null)
 
+/**
+ * The account behind an address, or a refusal.
+ *
+ * `users.email` is unique case-*sensitively*, so `Eier@x.no` and `eier@x.no`
+ * can both exist — and an ordinary signed-in person chooses their own address.
+ * Matching with `lower(email)` and taking the first row would let somebody
+ * register a case-variant of the owner's address and receive the key when the
+ * owner types their own, lowercase, and reads «… is an admin.» as success.
+ *
+ * So: exact match wins, and anything ambiguous is refused with the candidates
+ * named. This is the one thing in the system that can cut a key; it does not
+ * guess.
+ */
 async function byEmail(email: string): Promise<Row> {
-  const [row] = await db.execute<Row>(
+  const rows = await db.execute<Row>(
     sql`select id, display_name, email, is_admin, test_account_of
-        from users where lower(email) = lower(${email}) and anonymised_at is null`,
+        from users where lower(email) = lower(${email}) and anonymised_at is null
+        order by created_at`,
   )
-  if (!row) throw new Error(`No account with the e-mail ${email}.`)
-  return row
+  if (rows.length === 0) throw new Error(`No account with the e-mail ${email}.`)
+
+  const exact = rows.filter((row) => row['email'] === email)
+  if (exact.length === 1) return exact[0]!
+  if (rows.length > 1) {
+    throw new Error(
+      `${rows.length} accounts match ${email} (${rows.map((r) => r['email']).join(', ')}). ` +
+        'Refusing to guess. Type the address exactly as it is stored.',
+    )
+  }
+  return rows[0]!
 }
 
 /** The one statement in the codebase that opens the guard, and it closes with the transaction. */
@@ -102,7 +125,7 @@ try {
     case 'list':
     case undefined: {
       const admins = await db.execute<Row>(
-        sql`select email, display_name from users where is_admin and anonymised_at is null
+        sql`select id, email, display_name from users where is_admin and anonymised_at is null
             order by email`,
       )
       if (admins.length === 0) console.log('No admins.')
@@ -110,8 +133,7 @@ try {
         console.log(`${admin['email']}  (${admin['display_name'] ?? 'uten navn'})`)
         const owned = await db.execute<Row>(
           sql`select u.email, u.display_name from users u
-              join users a on a.id = u.test_account_of
-              where lower(a.email) = lower(${admin['email']}) and u.anonymised_at is null
+              where u.test_account_of = ${admin['id']} and u.anonymised_at is null
               order by u.created_at`,
         )
         for (const test of owned) {

@@ -79,6 +79,12 @@ export default async function authRoutes(app: FastifyInstance) {
     // with it every wish they have expressed. Making a profile is claiming the
     // account, not starting a second one.
     const claiming = request.userId && !request.userClaimed ? request.userId : null
+    // Who is acting, captured before the old token is revoked below. Claiming
+    // is exactly the path an unclaimed test account exists for, and reissuing
+    // without this dropped `issued_by`: the floor stopped being drawn, «Tilbake
+    // til …» went with it, and every later write stopped reaching
+    // `admin_actions`. An ordinary device has null here and is unaffected.
+    const issuedBy = claiming ? request.sessionIssuedBy : null
 
     // `is distinct from` rather than `<>`: with nobody being claimed the
     // comparison is against null, and `id <> null` is null, which is not false.
@@ -144,7 +150,10 @@ export default async function authRoutes(app: FastifyInstance) {
 
     const user = await one(app.db, sql`select * from users where id = ${userId}`)
     reply.code(201)
-    return { token: await issueSession(app.db, userId), user: publicMe(user!) }
+    return {
+      token: await issueSession(app.db, userId, issuedBy ? { issuedBy } : {}),
+      user: publicMe(user!),
+    }
   })
 
   app.post('/auth/login', async (request) => {

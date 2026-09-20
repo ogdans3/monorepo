@@ -57,8 +57,13 @@ class SwaplyApp extends StatelessWidget {
         // not inside a screen, so that «you are Kari right now» is drawn on
         // every route including the ones with no bottom nav.
         builder: (context, child) => Desk(child: AdminFloor(child: child!)),
-        home: const RootGate(),
+        // `/` rather than `home:` so that anything can send a person back
+        // through the gate — which is what decides between the interest
+        // picker, the sign-in screen and the app. Switching accounts has to:
+        // the account you become may never have seen screen 02.
+        initialRoute: '/',
         routes: {
+          '/': (_) => const RootGate(),
           '/discover': (_) => const DiscoverScreen(),
           '/post': (_) => const PostItemScreen(),
           '/trades': (_) => const TradesScreen(),

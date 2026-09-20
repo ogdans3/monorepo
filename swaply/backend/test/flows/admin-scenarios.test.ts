@@ -281,6 +281,136 @@ describe('building a trade in a named state', () => {
       expect(told.body!['notifications'].some((n: Json) => n['type'] === 'item_liked')).toBe(true)
     })
 
+  test('14b. «displaced» actually displaces, rather than reporting that it did',
+    async () => {
+      // It used to run after the ring was agreed, by which time the contested
+      // listing was reserved, no second cycle could form and the lever quietly
+      // built an ordinary accepted trade — and said it had built a displaced
+      // one. A scenario that reports a state it did not reach is worse than a
+      // scenario that fails.
+      const res = await call('POST', '/admin/scenarios', {
+        token: gabriel, body: { state: 'displaced' },
+      })
+      expect(res.status).toBe(200)
+
+      const loser = await call('GET', `/trades/${res.body!['tradeId']}`, { token: gabriel })
+      expect(loser.body!['state']).toBe('cancelled')
+      expect(loser.body!['closeReason']).toBe(
+        'En gjenstand i byttet ble reservert av et annet bytte',
+      )
+    })
+
+  test('14c. a scenario spends listings it made, never the ones already there',
+    async () => {
+      // An accepted scenario reserves what it is given and a completed one
+      // marks it traded for good. Reaching for the nearest available listing
+      // spent the owner's real inventory — and displaced anybody whose open
+      // offer happened to hold it.
+      const before = await call('GET', '/me', { token: gabriel })
+      const real = before.body!['items'].filter((i: Json) => !i['title'].startsWith('[test]'))
+
+      await call('POST', '/admin/scenarios', { token: gabriel, body: { state: 'completed' } })
+
+      const after = await call('GET', '/me', { token: gabriel })
+      for (const item of real) {
+        const now = after.body!['items'].find((i: Json) => i['id'] === item['id'])
+        expect(now?.['status'], item['title']).toBe(item['status'])
+      }
+    })
+
+  test('14d. «Få noen til å ville ha denne» refuses a stranger’s listing', async () => {
+    // The same failure the hidden-listings rule exists to prevent, arriving
+    // from the other direction: a test account and a real person in one trade.
+    const theirs = await call('POST', '/items', {
+      token: stranger,
+      body: { title: 'Fremmedes ting', category: 'verktoy', condition: 'good' },
+    })
+
+    const res = await call('POST', `/admin/items/${theirs.body!['id']}/want`, {
+      token: gabriel, body: { as: kariId },
+    })
+
+    expect(res.status).toBe(409)
+    expect(res.body!['code']).toBe('real_person')
+    expect(res.body!['message']).toContain('En Fremmed')
+  })
+
+  test('14e. «Som motparten» is refused where the product would refuse it', async () => {
+    // «Jeg vil ha» opens a trade with their listing and nothing back, and the
+    // accept route refuses that. Through the tool it did not: it called
+    // `acceptOffer` directly and reached a state the product cannot produce.
+    const talking = await call('POST', '/admin/scenarios', {
+      token: gabriel, body: { state: 'talking' },
+    })
+    const view = await call('GET', `/trades/${talking.body!['tradeId']}`, { token: gabriel })
+    const other = view.body!['receivingFrom']['id']
+
+    const res = await call('POST', `/admin/trades/${talking.body!['tradeId']}/act`, {
+      token: gabriel, body: { as: other, action: 'accept' },
+    })
+
+    expect(res.status).toBe(409)
+    expect(res.body!['code']).toBe('incomplete_offer')
+  })
+
+  test('14f. and «markerer som mottatt» finishes the trade, as the product’s own does',
+    async () => {
+      const built = await call('POST', '/admin/scenarios', {
+        token: gabriel, body: { state: 'accepted' },
+      })
+      const tradeId = built.body!['tradeId']
+      const view = await call('GET', `/trades/${tradeId}`, { token: gabriel })
+      const other = view.body!['receivingFrom']['id']
+
+      for (const marker of ['sent', 'received']) {
+        await call('POST', `/trades/${tradeId}/mark`, { token: gabriel, body: { marker } })
+      }
+      await call('POST', `/admin/trades/${tradeId}/act`, {
+        token: gabriel, body: { as: other, action: 'mark-sent' },
+      })
+      await call('POST', `/admin/trades/${tradeId}/act`, {
+        token: gabriel, body: { as: other, action: 'mark-received' },
+      })
+
+      const after = await call('GET', `/trades/${tradeId}`, { token: gabriel })
+      expect(after.body!['state']).toBe('completed')
+      expect(after.body!['snapshots'].length).toBeGreaterThan(0)
+    })
+
+  test('14g. «Nullstill → avslutt bytter» leaves a real person’s trade standing',
+    async () => {
+      const mine = await call('GET', '/me', { token: gabriel })
+      const item = mine.body!['items'].find((i: Json) => i['status'] === 'available')
+      const opened = await call('POST', `/items/${item['id']}/message`, {
+        token: stranger, body: { body: 'Er denne ledig?' },
+      })
+
+      const res = await call('POST', `/admin/accounts/${gabrielId}/reset`, {
+        token: gabriel, body: { parts: ['trades'] },
+      })
+      expect(res.status).toBe(200)
+      expect(res.body!['done'].join(' ')).toContain('En Fremmed')
+
+      const still = await call('GET', `/trades/${opened.body!['tradeId']}`, { token: gabriel })
+      expect(still.body!['state']).toBe('talking')
+    })
+
+  test('14h. and a test account in one cannot be deleted out from under them',
+    async () => {
+      const kariItems = await call('GET', `/users/${kariId}`, { token: gabriel })
+      // The stranger writes to a test account — reachable by id, which is
+      // deliberate: a link somebody was handed still opens.
+      const opened = await call('POST', `/items/${kariItems.body!['items'][0]['id']}/message`, {
+        token: stranger, body: { body: 'Hei!' },
+      })
+      expect(opened.status).toBe(201)
+
+      const res = await call('DELETE', `/admin/accounts/${kariId}`, { token: gabriel })
+      expect(res.status).toBe(409)
+      expect(res.body!['code']).toBe('real_person')
+      expect(res.body!['message']).toContain('En Fremmed')
+    })
+
   test('15. and a stranger can reach none of it', async () => {
     for (const [method, url] of [
       ['POST', '/admin/scenarios'],

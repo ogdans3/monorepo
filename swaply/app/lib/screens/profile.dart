@@ -709,7 +709,7 @@ class SettingsScreen extends StatelessWidget {
                               await context.read<Session>().returnToAdmin();
                               if (context.mounted) {
                                 Navigator.of(context)
-                                    .pushNamedAndRemoveUntil('/discover', (route) => false);
+                                    .pushNamedAndRemoveUntil('/', (route) => false);
                               }
                             },
                             child: const Text('Tilbake ↩',
