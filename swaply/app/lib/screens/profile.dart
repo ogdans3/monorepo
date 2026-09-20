@@ -6,10 +6,12 @@ import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
+import '../widgets/admin_chrome.dart';
 import '../widgets/common.dart';
 import '../widgets/share_sheet.dart';
 import '../widgets/shell.dart';
 import 'item_detail.dart';
+import 'admin.dart';
 import 'liked.dart';
 import 'notifications.dart';
 import 'onboarding.dart';
@@ -132,6 +134,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
                                     color: SwaplyColors.greenText)),
+                          ],
+                          // Whoever holds the key should never be able to
+                          // forget they are holding it.
+                          if (me.isAdmin) ...[
+                            const SizedBox(width: 8),
+                            const AdminBadge('admin'),
+                          ],
+                          if (me.testAccount) ...[
+                            const SizedBox(width: 8),
+                            const AdminBadge('testkonto'),
                           ],
                         ],
                       ),
@@ -627,6 +639,92 @@ class SettingsScreen extends StatelessWidget {
             const _NotificationToggle(label: 'Meldinger'),
             const _NotificationToggle(label: 'Likes på tingene mine'),
           ]),
+          if (session.isAdmin) ...[
+            const SizedBox(height: 16),
+            const Row(
+              children: [
+                Kicker('Admin'),
+                SizedBox(width: 8),
+                AdminBadge('kun for deg'),
+              ],
+            ),
+            const SizedBox(height: 7),
+            // The one card in the settings that is not the product: dark, so it
+            // cannot be mistaken for one of the rows above it even at a glance.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AdminColors.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AdminColors.accent),
+              ),
+              child: Column(
+                children: [
+                  InkWell(
+                    onTap: () => Navigator.of(context)
+                        .push(MaterialPageRoute(builder: (_) => const AdminScreen())),
+                    child: SizedBox(
+                      // Two lines of type rather than the product rows' one,
+                      // which is four pixels more than 48 and the reason this
+                      // is not `_tile`.
+                      height: 58,
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('Testverktøy',
+                                    style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: AdminColors.ink)),
+                                Text('Kontoer · bygg et bytte · tilstand',
+                                    style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, size: 20, color: AdminColors.accent),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, color: AdminColors.hairline),
+                  SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            session.actingAs
+                                ? 'Du er ${me?.displayName ?? 'en testkonto'} — ikke deg selv'
+                                : 'Du er ${me?.displayName ?? 'deg selv'}',
+                            style: const TextStyle(fontSize: 12.5, color: AdminColors.muted),
+                          ),
+                        ),
+                        if (session.actingAs)
+                          GestureDetector(
+                            onTap: () async {
+                              await context.read<Session>().returnToAdmin();
+                              if (context.mounted) {
+                                Navigator.of(context)
+                                    .pushNamedAndRemoveUntil('/discover', (route) => false);
+                              }
+                            },
+                            child: const Text('Tilbake ↩',
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AdminColors.accent)),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _group([
             _tile(context, 'Juridisk og personvern', null, onTap: () => _showLegal(context)),

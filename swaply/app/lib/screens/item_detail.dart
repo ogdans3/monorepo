@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
+import '../widgets/admin_chrome.dart';
 import '../widgets/common.dart';
 import '../widgets/share_sheet.dart';
 import '../widgets/shell.dart';
@@ -199,6 +200,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         )
                       else
                         _conversationBox(owner),
+                      // The cheapest lever in the tooling: the heart is the
+                      // whole product, and this presses it on your own real
+                      // listing from somebody else's hand. If it closes a loop,
+                      // a real trade opens and a real notification lands.
+                      if (context.watch<Session>().isAdmin &&
+                          !context.watch<Session>().actingAs) ...[
+                        const SizedBox(height: 11),
+                        _adminWant(item),
+                      ],
                       const SizedBox(height: Insets.lg),
                     ],
                   ),
@@ -208,6 +218,104 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           ),
           if (!mine) _actionBar(item),
         ],
+      ),
+    );
+  }
+
+  Widget _adminWant(Item item) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: AdminColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AdminColors.accent),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                AdminBadge('admin'),
+                SizedBox(width: 8),
+                // Norwegian runs long and this sits inside a card: the title
+                // wraps rather than running off the edge of it.
+                Expanded(
+                  child: Text('Få noen til å ville ha denne',
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w800, color: AdminColors.ink)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text('Trykker hjertet som en av testkontoene dine, gjennom den ekte veien.',
+                style: TextStyle(fontSize: 11.5, height: 1.4, color: AdminColors.muted)),
+            const SizedBox(height: 10),
+            AdminButton('Velg konto', onPressed: () => _pickWanter(item)),
+          ],
+        ),
+      );
+
+  Future<void> _pickWanter(Item item) async {
+    final api = context.read<SwaplyApi>();
+    final messenger = ScaffoldMessenger.of(context);
+    List<TestAccount> accounts;
+    try {
+      accounts = (await api.adminOverview()).accounts.where((a) => a.claimed).toList();
+    } on ApiException catch (e) {
+      if (mounted) showError(context, e);
+      return;
+    }
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AdminColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
+              child: Text('Hvem vil ha den?',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800, color: AdminColors.ink)),
+            ),
+            if (accounts.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Text('Du har ingen testkontoer ennå. Lag en i Testverktøy.',
+                    style: TextStyle(fontSize: 13, color: AdminColors.muted)),
+              ),
+            for (final account in accounts)
+              ListTile(
+                dense: true,
+                title: Text(account.displayName,
+                    style: const TextStyle(fontSize: 14, color: AdminColors.ink)),
+                subtitle: Text('${account.itemCount} ting · ${account.likeCount} likes',
+                    style: const TextStyle(fontSize: 11.5, color: AdminColors.muted)),
+                onTap: () async {
+                  Navigator.of(sheet).pop();
+                  try {
+                    final tradeId = await api.adminWant(item.id, as: account.id);
+                    messenger.showSnackBar(SnackBar(
+                      content: Text(tradeId == null
+                          ? '${account.displayName} vil ha den. Ingen sirkel ennå.'
+                          : '${account.displayName} vil ha den — og sirkelen lukket seg!'),
+                      backgroundColor: SwaplyColors.ink,
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                    await _load();
+                  } on ApiException catch (e) {
+                    messenger.showSnackBar(SnackBar(content: Text('$e')));
+                  }
+                },
+              ),
+            const SizedBox(height: 12),
+          ],
+        ),
       ),
     );
   }

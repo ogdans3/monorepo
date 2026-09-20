@@ -85,6 +85,16 @@ the strip draws the **URL**. iOS asks for permission with the sentence in
 `ios/Runner/Info.plist`; the browser build uses a file input and cannot resize,
 which is what the server's ceiling is for.
 
+## The section the export does not draw at all
+
+`screens/admin.dart` is Testverktøy, reached from a dark card on 16b and drawn
+only for an account holding `is_admin`. It is deliberately not dressed as the
+product — `AdminColors` in `design/tokens.dart` inverts the app's own two ends
+and borrows the one avatar colour that has never been chrome — and
+`widgets/admin_chrome.dart` puts «Du er Kari N. — ikke deg selv» under every
+screen on every route while you are somebody else. `../docs/ADMIN.md` is the
+whole of it.
+
 ## Three rows the export does not draw
 
 The share sheet behind the button on 04 and «Inviter en venn» on 16b: round 5

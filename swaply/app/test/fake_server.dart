@@ -188,6 +188,33 @@ class FakeServer {
           },
         'POST /notifications/read' => {},
         'GET /users/kari-1' => {...kari, 'items': [console], 'interests': ['friluft', 'bat']},
+        // The test tooling. The real API answers 404 on every one of these for
+        // an account without the flag, which is why the widget tests drive the
+        // flag and not these.
+        'GET /admin/overview' => {
+            'you': {'id': me['id'], 'displayName': 'Ola N.', 'email': 'ola@epost.no'},
+            'accounts': [testAccount],
+            'diagnostics': {'nodeEnv': 'test', 'inviteOnly': false, 'yourId': me['id']},
+            'recent': const [],
+          },
+        'POST /admin/accounts' => {
+            'id': 'test-2',
+            'displayName': 'Testbruker To',
+            'email': 'testkonto-abc@swaply.test',
+          },
+        'POST /admin/accounts/test-1/session' =>
+          {'token': 'tok-test-1', 'displayName': 'Testbruker Én', 'id': 'test-1'},
+        'POST /admin/accounts/test-1/reset' => {'done': ['interesser tømt'], 'freed': const []},
+        'POST /admin/scenarios' => {
+            'tradeId': trade['id'],
+            'steps': ['Kari likte en ting', 'Sirkelen lukket seg — toveis'],
+            'participants': const [],
+          },
+        'POST /admin/trades/trade-1/act' => {'ok': true},
+        'POST /admin/items/item-mine/want' =>
+          {'tradeId': null, 'promptToList': false, 'likedCount': 1},
+        'POST /admin/jobs/sweep-cycles/run' => {'opened': 0, 'tradeIds': const []},
+        'GET /admin/state' => {'items': const [], 'trades': const []},
         _ => null,
       };
   }
@@ -210,6 +237,36 @@ class FakeServer {
     'likedByCount': 4,
     'unreadMessages': 2,
     'tradesNeedingYou': 1,
+  };
+
+  /// An account the tooling made. Drawn with a badge, never hidden.
+  static const testAccount = {
+    'id': 'test-1',
+    'displayName': 'Testbruker Én',
+    'email': 'testkonto-abc@swaply.test',
+    'town': 'Trondheim',
+    'claimed': true,
+    'bankid': false,
+    'itemCount': 2,
+    'likeCount': 0,
+    'openTrades': 0,
+  };
+
+  /// The same person as [me], holding the key. `is_admin` is set by the CLI and
+  /// by nothing the API can reach, so a test drives it by handing back a row
+  /// that already has it.
+  static const admin = {...me, 'isAdmin': true};
+
+  /// Acting as somebody: what `GET /me` says once the switcher has minted a
+  /// session. `actingAs` is server truth, drawn off the session row.
+  static const actingAsTest = {
+    ...testAccount,
+    'interests': <String>[],
+    'items': <Object>[],
+    'unreadMessages': 0,
+    'tradesNeedingYou': 0,
+    'testAccount': true,
+    'actingAs': {'adminId': 'me-1', 'adminName': 'Ola N.'},
   };
 
   /// Long enough to pass the client's own idea of a token.

@@ -24,6 +24,20 @@ class Session extends ChangeNotifier {
   /// Signed in as a device, with no profile behind it yet.
   bool get anonymous => me?.anonymous ?? false;
 
+  /// The test tooling's key. The server answers 404 on every admin route
+  /// without it, so this only decides whether the app draws the section.
+  bool get isAdmin => me?.isAdmin ?? false;
+
+  /// «You are Kari right now.» Read off the session row rather than kept here,
+  /// so a refresh, a restored token or a cold start cannot lose it.
+  bool get actingAs => me?.actingAs ?? false;
+  String? get actingAsAdminName => me?.actingAsAdminName;
+
+  /// The admin's own token, parked while acting as somebody else. Kept next to
+  /// the live one so «Tilbake til …» survives closing the app.
+  String? _adminToken;
+  bool get canReturnToAdmin => _adminToken != null;
+
   /// The token from the link that brought you here, kept until an account is
   /// made with it. Set before [restore] runs.
   String? pendingInvite;
@@ -34,6 +48,7 @@ class Session extends ChangeNotifier {
 
   Future<void> restore() async {
     final prefs = await SharedPreferences.getInstance();
+    _adminToken = prefs.getString('adminToken');
     final saved = prefs.getString('token');
     if (saved != null) {
       api.token = saved;
@@ -56,6 +71,37 @@ class Session extends ChangeNotifier {
     } else {
       await prefs.setString('token', api.token!);
     }
+    if (_adminToken == null) {
+      await prefs.remove('adminToken');
+    } else {
+      await prefs.setString('adminToken', _adminToken!);
+    }
+  }
+
+  /// Become one of your test accounts.
+  ///
+  /// The token comes from the server and carries who asked for it, so the floor
+  /// is drawn from the session and not from anything this object remembers.
+  /// What is remembered here is only the way back.
+  Future<void> switchTo(String accountId) async {
+    final mine = api.token;
+    final session = await api.adminSession(accountId);
+    _adminToken ??= mine;
+    api.token = session.token;
+    await _persist();
+    await refresh();
+  }
+
+  /// Back to your own account. The test account's session is left standing —
+  /// it is not a credential anybody else holds, and dropping it would only
+  /// cost the next switch a round trip.
+  Future<void> returnToAdmin() async {
+    final parked = _adminToken;
+    if (parked == null) return logout();
+    _adminToken = null;
+    api.token = parked;
+    await _persist();
+    await refresh();
   }
 
   /// Look around without making anything. The device id is a secret this app
@@ -116,6 +162,7 @@ class Session extends ChangeNotifier {
     }
     me = null;
     api.token = null;
+    _adminToken = null;
     unreadChats = 0;
     tradesNeedingYou = 0;
     await _persist();

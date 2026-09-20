@@ -59,6 +59,13 @@ a shared listing gets, and `?invitasjon=<token>` on the app to see what it opens
 `INVITE_ONLY=0` in development, so an account can be made without a link; a
 launch sets it to `1`.
 
+Testing it by hand needs a second person, and there is only one of you. Cut the
+key once and the app grows a section that lets you be several:
+
+```sh
+pnpm admin grant <din e-post>     # the only thing that can; see docs/ADMIN.md
+```
+
 Checks:
 
 ```sh

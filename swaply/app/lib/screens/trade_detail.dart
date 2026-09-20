@@ -9,6 +9,7 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../util/clock.dart';
 import '../state/session.dart';
+import '../widgets/admin_chrome.dart';
 import '../widgets/common.dart';
 import '../widgets/confetti.dart';
 import '../widgets/shell.dart';
@@ -470,11 +471,109 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
       ],
       const SizedBox(height: 7),
       _conversationSection(trade),
+      // The tooling, at the very bottom of the scroll and nowhere near the
+      // product's own buttons. Only for the admin, and never while being
+      // somebody else — a tool acting on a tool is how you lose the thread.
+      if (context.watch<Session>().isAdmin && !context.watch<Session>().actingAs)
+        _adminActions(trade),
       if (trade.state == 'completed') ...[
         const SizedBox(height: 7),
         _reviewSection(trade),
       ],
     ];
+  }
+
+  /// «Som motparten» — the other side's move, without leaving this screen.
+  ///
+  /// Even with an account switcher, walking a negotiation is switch, act,
+  /// switch back, look. Every chip goes through the same function the
+  /// product's own route calls, and the server refuses any trade a real person
+  /// is standing in — by name, so you can see whose it is.
+  Widget _adminActions(Trade trade) {
+    final others = trade.participants.where((p) => p.position != trade.youPosition).toList();
+    if (others.isEmpty) return const SizedBox.shrink();
+
+    const byState = {
+      'talking': [('message', 'skriver')],
+      'pending': [
+        ('accept', 'godtar'),
+        ('counter', 'foreslår motbytte'),
+        ('decline', 'avslår'),
+        ('message', 'skriver'),
+      ],
+      'countered': [('accept', 'godtar'), ('decline', 'avslår'), ('message', 'skriver')],
+      'accepted': [
+        ('mark-sent', 'markerer som sendt'),
+        ('mark-received', 'markerer som mottatt'),
+        ('request-withdrawal', 'vil trekke seg'),
+        ('message', 'skriver'),
+      ],
+    };
+    final actions = byState[trade.state] ?? const [('message', 'skriver')];
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Insets.lg),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        decoration: BoxDecoration(
+          color: AdminColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AdminColors.accent),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                AdminBadge('admin'),
+                SizedBox(width: 8),
+                // Norwegian runs long and this sits inside a card: the title
+                // wraps rather than running off the edge of it.
+                Expanded(
+                  child: Text('Som motparten',
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w800, color: AdminColors.ink)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            for (final person in others)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final action in actions)
+                      GestureDetector(
+                        onTap: _busy
+                            ? null
+                            : () => _run((api) async {
+                                  await api.adminAct(trade.id,
+                                      as: person.id, action: action.$1);
+                                  return api.trade(trade.id);
+                                }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: AdminColors.cardFill,
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            border: Border.all(color: AdminColors.hairline),
+                          ),
+                          child: Text(
+                            '${person.displayName.split(' ').first} ${action.$2}',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600, color: AdminColors.ink),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _noticeCard(String text) => Padding(

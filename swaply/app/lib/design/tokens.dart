@@ -208,6 +208,28 @@ const categoryIcons = <String, IconData>{
 
 const conditionLabels = <String, String>{'new': 'Ny', 'good': 'God', 'worn': 'Slitt'};
 
+/// The test tooling's chrome.
+///
+/// Aliases, and nothing else. Admin adds no hex to the product: it inverts the
+/// app's own two ends — ink as the fill, the background as the ink on it — and
+/// borrows the one avatar colour that has never been chrome. Nothing here
+/// belongs in `docs/DESIGN.md` or `web/src/app.css`; the three-file palette
+/// rule in CLAUDE.md is about the product's palette, and this is deliberately
+/// not part of it.
+///
+/// Amber is not used on purpose: the export spends it on «Din tur»,
+/// «Reservert» and «Ola får», so admin chrome in amber would wear a product
+/// state's colour.
+class AdminColors {
+  static const surface = SwaplyColors.ink;
+  static const ink = SwaplyColors.bg;
+  static const accent = SwaplyColors.avatarPurple;
+  /// Flutter values rather than palette values: a fill and a rule *on* the dark.
+  static const cardFill = Color(0x14FFFFFF);
+  static const hairline = Color(0x24FFFFFF);
+  static const muted = Color(0xB3FAFAF9);
+}
+
 /// «Verdi 2 500 kr». The export separates thousands with a plain space, not a
 /// thin one — checked against the file rather than guessed.
 String kr(num? value) {

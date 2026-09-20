@@ -375,4 +375,69 @@ class SwaplyApi {
 
   Future<void> block(String userId) async => _post('/blocks/$userId');
   Future<void> unblock(String userId) async => _send('DELETE', '/blocks/$userId');
+
+  // --- the test tooling -----------------------------------------------------
+  //
+  // Everything below answers 404 for an account without the flag, and for a
+  // session the switcher minted — so none of it is a door that being somebody
+  // else opens. The flag is set by `pnpm admin` and by nothing reachable from
+  // here; see backend/drizzle/0004_admin.sql.
+
+  Future<AdminOverview> adminOverview() async =>
+      AdminOverview.fromJson(await _get('/admin/overview'));
+
+  Future<TestAccount> createTestAccount({
+    String? displayName,
+    String? town,
+    int withItems = 2,
+    bool bankid = false,
+    bool claimed = true,
+  }) async =>
+      TestAccount.fromJson(await _post('/admin/accounts', {
+        if (displayName != null && displayName.isNotEmpty) 'displayName': displayName,
+        if (town != null && town.isNotEmpty) 'town': town,
+        'withItems': withItems,
+        'bankid': bankid,
+        'claimed': claimed,
+      }));
+
+  /// The switch. Comes back with a session for them, stamped with who asked.
+  Future<({String token, String displayName})> adminSession(String accountId) async {
+    final json = await _post('/admin/accounts/$accountId/session');
+    return (
+      token: json['token'] as String,
+      displayName: json['displayName'] as String? ?? 'Testkonto',
+    );
+  }
+
+  Future<List<String>> adminReset(String accountId, List<String> parts) async {
+    final json = await _post('/admin/accounts/$accountId/reset', {'parts': parts});
+    return ((json['done'] as List?) ?? const []).cast<String>();
+  }
+
+  Future<void> adminDeleteAccount(String accountId) async =>
+      _send('DELETE', '/admin/accounts/$accountId');
+
+  Future<BuiltScenario> adminScenario(String state, {String shape = 'two-way'}) async =>
+      BuiltScenario.fromJson(await _post('/admin/scenarios', {'state': state, 'shape': shape}));
+
+  /// «Som motparten» — the other side's move, from your own trade screen.
+  Future<void> adminAct(String tradeId, {required String as, required String action}) async =>
+      _post('/admin/trades/$tradeId/act', {'as': as, 'action': action});
+
+  /// «Få noen til å ville ha denne» — one directed edge, through the real heart.
+  Future<String?> adminWant(String itemId, {required String as}) async {
+    final json = await _post('/admin/items/$itemId/want', {'as': as});
+    return json['tradeId'] as String?;
+  }
+
+  Future<void> adminExpireWithdrawal(String tradeId) async =>
+      _post('/admin/trades/$tradeId/expire-withdrawal');
+
+  Future<int> adminRunSweep() async {
+    final json = await _post('/admin/jobs/sweep-cycles/run');
+    return (json['opened'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<AdminState> adminState() async => AdminState.fromJson(await _get('/admin/state'));
 }

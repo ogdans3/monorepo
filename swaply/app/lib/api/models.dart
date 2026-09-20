@@ -20,7 +20,11 @@ class Me {
         likedByCount = _int(j['likedByCount']) ?? 0,
         unreadMessages = _int(j['unreadMessages']) ?? 0,
         tradesNeedingYou = _int(j['tradesNeedingYou']) ?? 0,
-        anonymous = j['anonymous'] as bool? ?? false;
+        anonymous = j['anonymous'] as bool? ?? false,
+        isAdmin = j['isAdmin'] as bool? ?? false,
+        testAccount = j['testAccount'] as bool? ?? false,
+        actingAsAdminId = (j['actingAs'] as Map<String, dynamic>?)?['adminId'] as String?,
+        actingAsAdminName = (j['actingAs'] as Map<String, dynamic>?)?['adminName'] as String?;
 
   final String id;
   final String? displayName, email, phone, town;
@@ -35,6 +39,112 @@ class Me {
   /// you in front of another person — listing, writing, accepting — waits for
   /// 10c.
   final bool anonymous;
+
+  /// The test tooling's key. False for everybody, and the server answers 404 on
+  /// every admin route regardless — this only decides whether the app draws the
+  /// section at all.
+  final bool isAdmin;
+
+  /// «This account exists so an admin can test.» Drawn, never hidden.
+  final bool testAccount;
+
+  /// Who minted this session through the account switcher, when somebody did.
+  /// Server truth, so a refresh cannot lose it — this is what the floor above
+  /// the bottom nav draws itself from.
+  final String? actingAsAdminId, actingAsAdminName;
+
+  bool get actingAs => actingAsAdminId != null;
+}
+
+/// An account the test tooling made, as the switcher lists it.
+class TestAccount {
+  TestAccount.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as String,
+        displayName = j['displayName'] as String? ?? 'Uten navn',
+        email = j['email'] as String?,
+        town = j['town'] as String?,
+        claimed = j['claimed'] as bool? ?? true,
+        bankid = j['bankid'] as bool? ?? false,
+        itemCount = _int(j['itemCount']) ?? 0,
+        likeCount = _int(j['likeCount']) ?? 0,
+        openTrades = _int(j['openTrades']) ?? 0;
+
+  final String id, displayName;
+  final String? email, town;
+  final bool claimed, bankid;
+  final int itemCount, likeCount, openTrades;
+}
+
+class AdminOverview {
+  AdminOverview.fromJson(Map<String, dynamic> j)
+      : youId = (j['you'] as Map<String, dynamic>)['id'] as String,
+        youName = (j['you'] as Map<String, dynamic>)['displayName'] as String? ?? 'Deg',
+        accounts =
+            ((j['accounts'] as List?) ?? const []).map((e) => TestAccount.fromJson(e)).toList(),
+        diagnostics = ((j['diagnostics'] as Map?) ?? const {}).cast<String, dynamic>(),
+        recent = ((j['recent'] as List?) ?? const [])
+            .map((e) => (
+                  method: e['method'] as String? ?? '',
+                  path: e['path'] as String? ?? '',
+                  at: _date(e['at']),
+                ))
+            .toList();
+
+  final String youId, youName;
+  final List<TestAccount> accounts;
+  final Map<String, dynamic> diagnostics;
+  final List<({String method, String path, DateTime? at})> recent;
+}
+
+/// What «Bygg et bytte» did, in order, so the screen can say it.
+class BuiltScenario {
+  BuiltScenario.fromJson(Map<String, dynamic> j)
+      : tradeId = j['tradeId'] as String?,
+        steps = ((j['steps'] as List?) ?? const []).cast<String>();
+
+  final String? tradeId;
+  final List<String> steps;
+}
+
+/// Tilstand — what the product screens deliberately hide.
+class AdminState {
+  AdminState.fromJson(Map<String, dynamic> j)
+      : items = ((j['items'] as List?) ?? const [])
+            .map((e) => (
+                  title: e['title'] as String? ?? '',
+                  ownerName: e['ownerName'] as String? ?? '',
+                  status: e['status'] as String? ?? '',
+                  activeTradeState: e['activeTradeState'] as String?,
+                ))
+            .toList(),
+        trades = ((j['trades'] as List?) ?? const [])
+            .map((e) => (
+                  id: e['id'] as String,
+                  state: e['state'] as String? ?? '',
+                  kind: e['kind'] as String? ?? 'direct',
+                  offerSeq: _int(e['offerSeq']),
+                  participants: ((e['participants'] as List?) ?? const [])
+                      .map((p) => (
+                            displayName: p['displayName'] as String? ?? '',
+                            position: _int(p['position']) ?? 0,
+                            accepted: p['acceptedCurrentOffer'] as bool? ?? false,
+                            sent: p['sent'] as bool? ?? false,
+                            received: p['received'] as bool? ?? false,
+                          ))
+                      .toList(),
+                ))
+            .toList();
+
+  final List<({String title, String ownerName, String status, String? activeTradeState})> items;
+  final List<
+      ({
+        String id,
+        String state,
+        String kind,
+        int? offerSeq,
+        List<({String displayName, int position, bool accepted, bool sent, bool received})>
+            participants
+      })> trades;
 }
 
 /// A photograph the server has taken in. The listing is created with [path];

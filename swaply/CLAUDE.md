@@ -80,6 +80,15 @@ once; a minimal identity survives in the `retained` schema for the claim window
 `retained`. A trade owns a snapshot of what was traded, which is what lets a
 listing be deleted without erasing the counterparty's history.
 
+**Admin is a key cut outside the building.** `users.is_admin` has a trigger in
+front of it that only `pnpm admin` can pass, and what it opens is a ring of
+accounts that were *born* as somebody's test accounts — the same trigger refuses
+adoption, so the set cannot grow to include a real person. A session the
+switcher mints is never itself admin, and every lever that moves a negotiation
+refuses a trade a real person is standing in. `docs/ADMIN.md` has the rest. It
+is a tool, not a feature: it reaches the product's states and decides none of
+them.
+
 ## Open questions, which are open on purpose
 
 Do not resolve these in code and call it a decision. They are in `docs/DESIGN.md`
@@ -107,6 +116,9 @@ off.
 `backend/test/guard.ts` refuses to run against anything that is not a local host
 or a database whose name says test, because the suite truncates tables. Do not
 weaken it.
+
+Testing the product by hand is what `docs/ADMIN.md` is for: one person cannot be
+two sides of a trade without it, and the states that need three people are worse.
 
 ## The web
 

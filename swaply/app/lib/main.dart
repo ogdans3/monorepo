@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'api/client.dart';
 import 'design/tokens.dart';
+import 'screens/admin.dart';
 import 'screens/chat.dart';
 import 'screens/discover.dart';
 import 'screens/item_detail.dart';
@@ -13,6 +14,7 @@ import 'screens/post_item.dart';
 import 'screens/profile.dart';
 import 'screens/trades_list.dart';
 import 'state/session.dart';
+import 'widgets/admin_chrome.dart';
 import 'widgets/desk.dart';
 
 /// Points at the machine's own address in development so a phone on the same
@@ -51,8 +53,10 @@ class SwaplyApp extends StatelessWidget {
         title: 'Swaply',
         debugShowCheckedModeBanner: false,
         theme: swaplyTheme(),
-        // Phone-sized on a desk; see Desk.
-        builder: (context, child) => Desk(child: child!),
+        // Phone-sized on a desk; see Desk. The admin floor is wired here and
+        // not inside a screen, so that «you are Kari right now» is drawn on
+        // every route including the ones with no bottom nav.
+        builder: (context, child) => Desk(child: AdminFloor(child: child!)),
         home: const RootGate(),
         routes: {
           '/discover': (_) => const DiscoverScreen(),
@@ -62,6 +66,7 @@ class SwaplyApp extends StatelessWidget {
           '/profile': (_) => const ProfileScreen(),
           '/liked': (_) => const LikedScreen(),
           '/notifications': (_) => const NotificationsScreen(),
+          '/admin': (_) => const AdminScreen(),
           '/login': (_) => const LoginScreen(),
           '/register': (_) => const CreateProfileScreen(),
         },
