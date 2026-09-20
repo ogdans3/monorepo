@@ -100,10 +100,11 @@ Beyond the ring, three things:
    without this a stranger hearts a test drill, a real trade opens, and from
    that moment the account can neither be reset nor deleted, because it is
    somebody's history.
-3. **Every admin call and every write made while acting as somebody leaves a row
-   in `admin_actions`**, written by the hook that authorises the request rather
+3. **Every admin change and every write made while acting as somebody leaves a
+   row in `admin_actions`**, written by the hook that authorises the request rather
    than by a route, so a route cannot forget it. A wrong tap is only survivable
-   if it can be found afterwards. The last twenty show up on `GET
+   if it can be found afterwards. Reads are not logged — the tool screen loads
+   its own overview every time it opens. The last twenty show up on `GET
    /admin/overview`; there is no screen for the rest, on purpose.
 
 ## What it does not do

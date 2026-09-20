@@ -221,7 +221,7 @@ describe('the test tooling', () => {
     ).toMatch(/admin_is_not_a_test_account/)
   })
 
-  test('11. every admin call leaves a row somebody can find afterwards', async () => {
+  test('11. every admin change leaves a row somebody can find afterwards', async () => {
     const rows = await db.execute<Json>(
       sql`select method, path, acting_as from admin_actions
           where admin_id = ${gabrielId} order by created_at`,
@@ -232,6 +232,9 @@ describe('the test tooling', () => {
     // Written by the hook that authorises the request, not by a route, so a
     // route cannot forget it.
     expect(rows.some((r) => r['path'].includes('/session'))).toBe(true)
+    // Reading is not a change. The tool screen loads its own overview every
+    // time it opens, and twenty rows of that would bury the twenty it shows.
+    expect(rows.every((r) => r['method'] !== 'GET')).toBe(true)
   })
 
   test('12. and so does every write made while acting as somebody', async () => {

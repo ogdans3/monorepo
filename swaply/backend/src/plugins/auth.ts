@@ -78,9 +78,13 @@ export default fp(async function auth(
   app.addHook('preHandler', async (request) => {
     const admin = request.userIsAdmin ? request.userId : request.sessionIssuedBy
     if (!admin) return
-    const isAdminRoute = request.url.startsWith('/admin')
-    if (!isAdminRoute && request.method === 'GET') return
-    if (!isAdminRoute && !request.sessionIssuedBy) return
+    // Changes only. Reading is not a thing anybody needs to find afterwards,
+    // and the tool screen loads its own overview every time it opens — logging
+    // that would bury the twenty rows it shows under twenty of itself.
+    if (request.method === 'GET') return
+    // An admin's own ordinary writes are their own: the row is for what the
+    // tooling did, and for what was done under somebody else's name.
+    if (!request.url.startsWith('/admin') && !request.sessionIssuedBy) return
 
     await opts.db
       .execute(
