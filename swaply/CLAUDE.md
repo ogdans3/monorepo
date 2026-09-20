@@ -80,6 +80,18 @@ once; a minimal identity survives in the `retained` schema for the claim window
 `retained`. A trade owns a snapshot of what was traded, which is what lets a
 listing be deleted without erasing the counterparty's history.
 
+**Optional means «not given», and `null` is how a client says so.** Optional
+fields in a request body are `.nullish()`, never `.optional()`: a form encodes
+an empty text box as `null`, because that is what encoding an absent string
+produces. Refusing it turned four stars and no words into an error on 06h. The
+exception is a PATCH, where `null` is a value and not an absence — it is how
+`phone` is cleared on `PATCH /me`.
+
+**Nothing the API says is in English.** Zod writes its own messages and they are
+English and about types; `backend/src/lib/validation.ts` installs a Norwegian
+map globally, and a message written into a schema still wins over it. A refusal
+is read by a person, in a toast, under the button they just pressed.
+
 **Admin is a key cut outside the building.** `users.is_admin` has a trigger in
 front of it that only `pnpm admin` can pass, and what it opens is a ring of
 accounts that were *born* as somebody's test accounts — the same trigger refuses

@@ -55,14 +55,16 @@ export async function ring(db: Database, adminId: string) {
   )
 }
 
+// Every field is nullable as well as absent: a form that sends what it has
+// sends `null` for what it does not, and here the two mean the same thing.
 export type NewAccount = {
-  displayName?: string
-  town?: string
-  withItems?: number
-  bankid?: boolean
+  displayName?: string | null
+  town?: string | null
+  withItems?: number | null
+  bankid?: boolean | null
   /** Born without a profile: a device that is looking around, for the 10c path. */
-  claimed?: boolean
-  interests?: string[]
+  claimed?: boolean | null
+  interests?: string[] | null
 }
 
 /**

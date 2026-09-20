@@ -6,6 +6,7 @@ import { ZodError } from 'zod'
 import type { Database } from './db/index.js'
 import { env } from './env.js'
 import { ApiError, uniqueViolation } from './lib/errors.js'
+import { speakNorwegian } from './lib/validation.js'
 import authPlugin from './plugins/auth.js'
 import adminRoutes from './routes/admin.js'
 import authRoutes from './routes/auth.js'
@@ -27,6 +28,10 @@ export async function buildApp(
   // once at import, so this is an argument rather than a variable read.
   opts: { inviteOnly?: boolean } = {},
 ): Promise<FastifyInstance> {
+  // Before any schema is built, so that nothing the API refuses is refused in
+  // English. See lib/validation.ts.
+  speakNorwegian()
+
   const app = Fastify({
     logger:
       env.NODE_ENV === 'development'

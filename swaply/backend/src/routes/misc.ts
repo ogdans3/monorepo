@@ -59,7 +59,12 @@ export default async function miscRoutes(app: FastifyInstance) {
       .object({
         ratee: z.string().uuid(),
         score: z.number().int().min(1).max(5),
-        comment: z.string().max(1000).optional(),
+        // `.nullish()`, not `.optional()`: a person who gives four stars and no
+        // words is the ordinary case, and a client with nothing to put in a
+        // field sends `comment: null`, because that is what encoding an absent
+        // string produces. Refusing it made «Send vurdering» demand a sentence
+        // — and answer in English while it did.
+        comment: z.string().max(1000).nullish(),
         chips: z.array(z.string().max(40)).max(5).default([]),
       })
       .parse(request.body)
@@ -108,7 +113,7 @@ export default async function miscRoutes(app: FastifyInstance) {
       .object({
         score: z.number().int().min(1).max(5),
         chips: z.array(z.string().max(40)).max(6).default([]),
-        comment: z.string().max(1000).optional(),
+        comment: z.string().max(1000).nullish(),
       })
       .parse(request.body)
 
@@ -126,10 +131,10 @@ export default async function miscRoutes(app: FastifyInstance) {
     const userId = app.requireUser(request)
     const body = z
       .object({
-        targetUser: z.string().uuid().optional(),
-        targetItem: z.string().uuid().optional(),
+        targetUser: z.string().uuid().nullish(),
+        targetItem: z.string().uuid().nullish(),
         reason: z.enum(['spam', 'inappropriate', 'fraud', 'other']),
-        detail: z.string().max(1000).optional(),
+        detail: z.string().max(1000).nullish(),
         block: z.boolean().default(false),
       })
       .parse(request.body)

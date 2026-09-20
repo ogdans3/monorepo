@@ -14,13 +14,13 @@ import { publicMe } from './serialize.js'
 const registerBody = z.object({
   displayName: z.string().trim().min(1).max(60),
   email: z.string().email(),
-  phone: z.string().min(6).max(20).optional(),
+  phone: z.string().min(6).max(20).nullish(),
   password: z.string().min(8, 'Passordet må ha minst 8 tegn.'),
-  postalCode: z.string().regex(/^\d{4}$/).optional(),
-  town: z.string().optional(),
+  postalCode: z.string().regex(/^\d{4}$/).nullish(),
+  town: z.string().nullish(),
   // The link that let you in. Spent here unless it was already spent when this
   // device started looking around.
-  invite: z.string().min(16).max(64).optional(),
+  invite: z.string().min(16).max(64).nullish(),
 })
 
 export default async function authRoutes(app: FastifyInstance) {
@@ -36,7 +36,7 @@ export default async function authRoutes(app: FastifyInstance) {
    */
   app.post('/auth/anonymous', async (request, reply) => {
     const body = z
-      .object({ deviceId: z.string().min(16).max(200), invite: z.string().min(16).max(64).optional() })
+      .object({ deviceId: z.string().min(16).max(200), invite: z.string().min(16).max(64).nullish() })
       .parse(request.body)
 
     // An erased account has no device id left, so a device whose account was
@@ -63,7 +63,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const id = rows[0]!['id'] as string
       // Inside the transaction on purpose: if the invitation turns out to be
       // spent, the account it would have made goes away with it.
-      await admit(tx, body.invite, id, app.inviteOnly)
+      await admit(tx, body.invite ?? undefined, id, app.inviteOnly)
       return id
     })
 
@@ -133,7 +133,7 @@ export default async function authRoutes(app: FastifyInstance) {
             returning id`,
       )
       const id = rows[0]!['id'] as string
-      await admit(tx, body.invite, id, app.inviteOnly)
+      await admit(tx, body.invite ?? undefined, id, app.inviteOnly)
       return id
     })
 

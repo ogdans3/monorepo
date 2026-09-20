@@ -151,4 +151,48 @@ describe('rating the counterparty', () => {
     })
     expect(res.status).toBe(201)
   })
+
+  // Stars without words is the ordinary review, not the exception, and a
+  // client with nothing to put in a field sends `null` rather than leaving the
+  // key out — that is what encoding an absent string produces. Refusing it
+  // made both screens demand a sentence before they would go through.
+  test('8. four stars and not a word is a whole review', async () => {
+    const review = await call('POST', `/trades/${tradeId}/reviews`, {
+      token: kari, body: { ratee: olaId, score: 4, comment: null, chips: [] },
+    })
+    expect(review.status).toBe(201)
+
+    const feedback = await call('POST', '/feedback', {
+      token: kari, body: { score: 5, chips: [], comment: null },
+    })
+    expect(feedback.status).toBe(201)
+
+    // And the same for the report sheet, which has a detail box nobody has to
+    // fill in either.
+    const report = await call('POST', '/reports', {
+      token: kari, body: { targetItem: drill, targetUser: null, reason: 'spam', detail: null },
+    })
+    expect(report.status).toBe(201)
+  })
+
+  // Nothing in the product speaks English to anybody, and a request that does
+  // not fit a schema is not the one exception: «Expected string, received
+  // null» is what used to come back here. See backend/src/lib/validation.ts.
+  test('9. a refusal is written in Norwegian', async () => {
+    const res = await call('POST', '/feedback', {
+      token: ola, body: { score: 'fem' },
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body!['code']).toBe('invalid_request')
+    expect(res.body!['message']).not.toMatch(/[Ee]xpected|[Rr]eceived|[Ii]nvalid/)
+    expect(res.body!['field']).toBe('score')
+
+    // A message written into a schema still wins over the fallback, which is
+    // the whole reason this is a global map rather than a message per field.
+    const short = await call('POST', '/auth/register', {
+      body: { displayName: 'Nils N.', email: 'nils@epost.no', password: 'kort' },
+    })
+    expect(short.body!['message']).toBe('Passordet må ha minst 8 tegn.')
+  })
 })

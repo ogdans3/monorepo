@@ -109,12 +109,12 @@ export default async function adminRoutes(app: FastifyInstance) {
     const adminId = app.requireAdmin(request)
     const body = z
       .object({
-        displayName: z.string().trim().max(60).optional(),
-        town: z.string().trim().max(60).optional(),
-        withItems: z.number().int().min(0).max(5).optional(),
-        bankid: z.boolean().optional(),
-        claimed: z.boolean().optional(),
-        interests: z.array(z.enum(CATEGORIES)).min(3).max(5).optional(),
+        displayName: z.string().trim().max(60).nullish(),
+        town: z.string().trim().max(60).nullish(),
+        withItems: z.number().int().min(0).max(5).nullish(),
+        bankid: z.boolean().nullish(),
+        claimed: z.boolean().nullish(),
+        interests: z.array(z.enum(CATEGORIES)).min(3).max(5).nullish(),
       })
       .parse(request.body ?? {})
 
@@ -174,7 +174,7 @@ export default async function adminRoutes(app: FastifyInstance) {
       .object({
         shape: z.enum(['two-way', 'three-way']).default('two-way'),
         state: z.enum(SCENARIO_STATES),
-        with: z.array(z.string().uuid()).max(3).optional(),
+        with: z.array(z.string().uuid()).max(3).nullish(),
       })
       .parse(request.body)
 
@@ -192,7 +192,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     const built = await buildScenario(app.db, people, {
       shape: body.shape,
       state: body.state,
-      with: body.with,
+      with: body.with ?? undefined,
     })
     return built
   })
