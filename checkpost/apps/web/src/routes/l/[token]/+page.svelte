@@ -6,6 +6,7 @@
   import ShareSheet from '$lib/ShareSheet.svelte';
   import Sheet from '$lib/Sheet.svelte';
   import { ListSession } from '$lib/list-session.svelte';
+  import { library } from '$lib/library.svelte';
   import { trackKeyboard } from '$lib/keyboard';
   import { untrack } from 'svelte';
   import { goto } from '$app/navigation';
@@ -72,6 +73,64 @@
       current.stop();
       stopTrackingKeyboard();
     };
+  });
+
+  /**
+   * Files this list away in the browser's index, so it can be found again.
+   *
+   * An effect rather than a line in `open()`, so it follows the list rather
+   * than a moment in time: a rename, a tick, and replacing the link all arrive
+   * here on their own. The session is read out here and the index is written
+   * inside `untrack`, because `visit` reads the index to find the row it is
+   * updating, and an effect that reads and writes the same state runs until
+   * Svelte stops it.
+   */
+  $effect(() => {
+    const list = session.list;
+    const status = session.status;
+    // A copy link has no list of its own yet, and a link that has stopped
+    // working must not be filed away as a working one: the effect below is
+    // what marks those, and the two would undo each other for ever.
+    if (!list || status === 'copy' || status === 'gone' || status === 'invalid') return;
+    const entry = {
+      id: list.id,
+      token: session.token,
+      title: list.title,
+      done: session.doneCount,
+      total: session.items.length,
+      access: session.access,
+    };
+    untrack(() => library.visit(entry));
+  });
+
+  /**
+   * A link that has stopped working is worth saying so on the index, rather
+   * than leaving a row that quietly fails the next time it is tapped. Which
+   * way it stopped is the part that matters: replaced and deleted are
+   * different news.
+   *
+   * A replaced link is the one that has to wait. Replacing it takes this tab
+   * through `gone` on its way to the *new* link — the server evicts the old
+   * socket while the request is still in flight — so marking the row then
+   * would brand the link this tab had just been handed. A replacement that is
+   * still there a beat later is somebody else's, and real.
+   *
+   * Deleted and invalid never arrive that way round, and are marked at once:
+   * deleting a list is usually followed by leaving the page, and a mark that
+   * waited would be cancelled on the way out.
+   */
+  $effect(() => {
+    const status = session.status;
+    if (status !== 'gone' && status !== 'invalid') return;
+    const token = session.token;
+    const reason = status === 'invalid' ? 'invalid' : (session.goneReason ?? 'rotated');
+
+    if (reason !== 'rotated') {
+      untrack(() => library.markGone(token, reason));
+      return;
+    }
+    const timer = setTimeout(() => untrack(() => library.markGone(token, reason)), 1200);
+    return () => clearTimeout(timer);
   });
 
   const shareUrl = $derived(
@@ -497,6 +556,7 @@
           >
         </li>
       {/if}
+      <li><a href="/lists">Your lists</a></li>
       <li><a href={deepLink} rel="external">Open in the app</a></li>
       {#if session.canAdmin}
         <li>

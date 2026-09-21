@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import DemoList from '$lib/DemoList.svelte';
   import { api } from '$lib/api';
+  import { library } from '$lib/library.svelte';
   import { appStoreUrl, playStoreUrl, storesLive } from '$lib/config';
 
   let creating = $state(false);
@@ -50,6 +51,12 @@
     </svg>
     Checkpost
   </a>
+
+  <!-- Only for a browser that has been somewhere. A first visitor has nothing
+       to find, and a link to an empty page is a worse welcome than no link. -->
+  {#if library.lists.length > 0}
+    <a class="mine" href="/lists">Your lists</a>
+  {/if}
 </header>
 
 <main>
@@ -146,7 +153,21 @@
   .bar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     padding: 22px clamp(20px, 5vw, 56px);
+  }
+
+  .mine {
+    color: var(--ink-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 10px 4px;
+  }
+
+  .mine:hover {
+    color: var(--ink);
   }
 
   .wordmark {

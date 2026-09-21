@@ -3,3 +3,5 @@ Allow: /$
 # Share links are secrets. They must never end up in a search index, a cache,
 # or a crawler's log.
 Disallow: /l/
+# Somebody's own index of the links they hold. Nothing to crawl, and not ours.
+Disallow: /lists

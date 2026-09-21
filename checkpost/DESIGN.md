@@ -140,6 +140,17 @@ loading / error states.
   "Nothing here."
 - **Skeletons, not spinners**, for the first load of a list: three grey rows at
   the real row height.
+- **Your lists**, on the web at `/lists`, is the browser's own index and the
+  same anatomy as the app's home: hairline rows on the page background, title
+  over one muted line of `3 of 7 done · opened 2 hours ago`. No progress meter
+  here, unlike the app's home row — on a phone it pushed the timestamp into an
+  ellipsis to say what the words beside it already said. Favourites are a
+  filled star against an outline one, never colour alone, and they lift into
+  their own group above the rest rather than mixing in. The order is a
+  two-option segmented control, Last opened or Added, and the rows name the
+  stamp they are sorted by so the order is legible in them. A link that has
+  stopped working keeps its row, struck through and saying which way it went:
+  no dead ends, including here.
 
 ## Motion
 

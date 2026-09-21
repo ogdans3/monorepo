@@ -82,6 +82,26 @@ event at or below the revision the list has already reached, so a reconcile can
 overtake the queue and what it left behind is ignored rather than replayed over
 the top of a newer answer. Keep that guard if you touch either.
 
+**The browser's index of lists holds share tokens, and it is the only record
+they exist.** `library.svelte.ts` is the web's copy of what the Flutter app
+keeps on the device, and the same thing is true of both: losing it does not
+lose the list, it loses the way in. That is why forgetting one asks first and
+why `/lists` says out loud that anyone using this browser can open them. Two
+rules keep it from eating itself. **Whatever writes to it must not read it
+reactively**: `visit` looks up the row it is updating, so the effect on the
+list page reads the session, then writes inside `untrack` — an effect that did
+both ran until Svelte stopped it. And **a list is never filed away while its
+link is failing**, because the effect that marks a row dead and the effect that
+files it away as healthy would otherwise undo each other for ever.
+
+**A replaced link looks exactly like a revoked one for about a second.**
+Rotating takes the tab through `status === 'gone'` on its way to the new link:
+the server evicts the old socket while the rotate request is still in flight.
+Anything that reacts to `gone` has to let a `rotated` reason settle before
+believing it, or it will brand the link the tab was just handed. Deleted and
+invalid never arrive that way round and are acted on at once, which matters
+because deleting a list is usually followed by leaving the page.
+
 **The landing page's list is real, and it is the one write in the product
 that needs no link.** `DemoService` is what keeps that from being a liability,
 and it rests on two things that must stay true together: the token the page

@@ -55,6 +55,18 @@ async function tick(page: Page, text: string) {
   await page.getByRole('button', { name: `Tick ${text}` }).click();
 }
 
+async function rename(page: Page, title: string) {
+  await page.locator('header button.title').click();
+  await page.locator('input.rename').fill(title);
+  await page.getByRole('button', { name: 'Save name' }).click();
+  await expect(page.locator('header h1')).toHaveText(title);
+}
+
+/** One row of the browser's index, found the way a person finds it. */
+function saved(page: Page, title: string) {
+  return page.locator('li.row').filter({ hasText: title });
+}
+
 test('the landing page is a real list, shared with whoever else is reading it', async ({
   page,
   context,
@@ -218,6 +230,125 @@ test('a burst of changes arrives folded, not one redraw each', async ({ page, re
     () => (window as unknown as { flips: boolean[] }).flips.length,
   );
   expect(flips).toBeLessThanOrEqual(4);
+});
+
+
+test('a list opened in this browser can be found again', async ({ page }) => {
+  // There are no accounts, so this index is the only record that a list exists
+  // and it is worth as much as the link itself.
+  await makeList(page);
+  await rename(page, 'Cabin, Friday');
+  await addItem(page, 'Firewood');
+  await addItem(page, 'Coffee');
+  await tick(page, 'Firewood');
+
+  // The way there from a list you are already on.
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('link', { name: 'Your lists' }).click();
+  await page.waitForURL('**/lists');
+
+  const row = saved(page, 'Cabin, Friday');
+  await expect(row).toBeVisible();
+  // The name it has now, not the one it was made with, and what it looked like
+  // when this browser last saw it.
+  await expect(row.locator('.meta')).toContainText('1 of 2 done');
+  await expect(row.locator('.meta')).toContainText('opened');
+
+  // And back into the list, on the link the index kept.
+  await row.locator('a').click();
+  await page.waitForURL(/\/l\/[A-Za-z0-9_-]{43}/);
+  await expect(page.locator('header h1')).toHaveText('Cabin, Friday');
+});
+
+test('favourites rise to the top and the order is a choice', async ({ page }) => {
+  await makeList(page);
+  await rename(page, 'First');
+  await makeList(page);
+  await rename(page, 'Second');
+  await makeList(page);
+  await rename(page, 'Third');
+
+  await page.goto('/lists');
+  // Most recently opened first, which is almost always the one you want.
+  await expect(page.locator('li.row .name')).toHaveText(['Third', 'Second', 'First']);
+
+  await page.getByRole('button', { name: 'Added' }).click();
+  await expect(page.locator('li.row .name')).toHaveText(['Third', 'Second', 'First']);
+  await expect(page.locator('li.row .meta').first()).toContainText('added');
+
+  await saved(page, 'First').locator('button.star').click();
+  await expect(page.locator('h2.group')).toHaveText(['Favourites', 'Everything else']);
+  await expect(page.locator('li.row .name')).toHaveText(['First', 'Third', 'Second']);
+
+  // Both choices survive coming back to the page, because an order you had to
+  // pick twice is not a preference.
+  await page.reload();
+  await expect(page.locator('.sort button[aria-pressed="true"]')).toHaveText('Added');
+  await expect(page.locator('li.row .name')).toHaveText(['First', 'Third', 'Second']);
+});
+
+test('forgetting a list says what it costs first', async ({ page }) => {
+  await makeList(page);
+  await rename(page, 'Old plans');
+  await page.goto('/lists');
+
+  await saved(page, 'Old plans').locator('button.forget').click();
+  // Losing the link is the whole consequence, and it is spelled out in words.
+  await expect(page.locator('dialog')).toContainText('you will not get back in');
+
+  await page.getByRole('button', { name: 'Keep it' }).click();
+  await expect(saved(page, 'Old plans')).toBeVisible();
+
+  await saved(page, 'Old plans').locator('button.forget').click();
+  await page.getByRole('button', { name: 'Forget it' }).click();
+  await expect(saved(page, 'Old plans')).toHaveCount(0);
+
+  await page.reload();
+  await expect(saved(page, 'Old plans')).toHaveCount(0);
+  // Nothing was done to the list itself, only to what this browser knows.
+  await expect(page.locator('.empty')).toContainText('No lists yet');
+});
+
+test('a link that stops working says so on the index, and a replaced one does not', async ({
+  page,
+  context,
+}) => {
+  const url = await makeList(page);
+  await rename(page, 'Rotating');
+
+  // Replacing the link takes this tab through the same "gone" state a revoked
+  // link does, on its way to the new link. The row must follow it, not mark it.
+  await page.getByRole('button', { name: 'Share this list' }).click();
+  await page.getByRole('button', { name: 'Replace my link' }).click();
+  await page.getByRole('button', { name: 'Replace my link' }).click();
+  await expect(page.getByText('Link replaced.')).toBeVisible();
+  await page.waitForURL((current) => current.pathname !== new URL(url).pathname);
+  const replaced = page.url();
+  made.push(replaced.split('/l/')[1]!);
+  await page.getByRole('button', { name: 'Close' }).click();
+
+  await page.goto('/lists');
+  const row = saved(page, 'Rotating');
+  await expect(row).toHaveClass(/^(?!.*gone).*$/);
+  await expect(row.locator('a')).toHaveAttribute('href', new URL(replaced).pathname);
+
+  // A list somebody deleted is a different matter, and the row says which.
+  const second = await makeList(page);
+  await rename(page, 'Old plans');
+  const other = await context.newPage();
+  await other.goto(second);
+  await other.getByRole('button', { name: 'More' }).click();
+  await other.getByRole('button', { name: 'Delete list for everyone' }).click();
+  await other.getByRole('button', { name: 'Delete the list' }).click();
+  await expect(other.getByRole('heading', { name: 'This list was deleted' })).toBeVisible();
+
+  // The tab that was looking at it is told down the socket, and says which of
+  // the two things happened. A cold load could only report a 410, which is the
+  // same answer for both.
+  await expect(page.getByRole('heading', { name: 'This list was deleted' })).toBeVisible();
+  await page.goto('/lists');
+  await expect(saved(page, 'Old plans')).toHaveClass(/gone/);
+  await expect(saved(page, 'Old plans').locator('.meta')).toContainText('Deleted');
 });
 
 test('a tick lands before the network answers', async ({ page }) => {

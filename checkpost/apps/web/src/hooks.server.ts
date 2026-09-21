@@ -19,5 +19,12 @@ export const handle: Handle = async ({ event, resolve }) => {
     response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
   }
 
+  // The index of saved lists is built in the browser and this server renders
+  // nothing for it, so there is no secret in the response. It is still nobody
+  // else's page, and a crawler following it would only find an empty shell.
+  if (event.url.pathname === '/lists') {
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  }
+
   return response;
 };

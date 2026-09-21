@@ -76,6 +76,19 @@ What follows from that:
   to write a dump that carries no rows for `lists`, `items` or `share_links`,
   and keeps 30 days. A volume is not a backup.
 
+## Finding a list again
+
+There are no accounts, so nothing on the server knows which lists are yours.
+Every list you open in a browser is remembered by that browser instead, at
+`/lists`: titles, what they looked like when you last saw them, favourites, and
+an order by last opened or by when you added them. The Flutter app keeps the
+same index on the device.
+
+It holds the share tokens, because a token is the only way back into a list.
+That is the same trade the address bar and your browser history already make,
+and the page says so rather than leaving you to work it out: clearing your site
+data loses the links, and anyone else using the browser can open them.
+
 ## The front page is the product
 
 The list on the landing page is a real list on the real API, and everyone who
