@@ -90,6 +90,22 @@ export default async function profileRoutes(app: FastifyInstance) {
       })
       .parse(request.body)
 
+    // A name, an address and a number are what 10c asks for, and only 10c may
+    // set them on a device that has not made a profile. An e-mail is what makes
+    // an account count as claimed: written here it claimed the device with no
+    // password, so the person could list and write but never sign in again, and
+    // could never be merged into an account they have elsewhere. And both e-mail
+    // and phone are unique, so a device could hold somebody else's address or
+    // number and turn them away when they register. Where you are is about
+    // looking, and stays open.
+    if (
+      body.displayName !== undefined ||
+      body.email !== undefined ||
+      body.phone !== undefined
+    ) {
+      app.requireClaimedUser(request)
+    }
+
     const user = await one(
       app.db,
       sql`update users set

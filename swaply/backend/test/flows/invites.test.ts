@@ -161,6 +161,28 @@ describe('sharing a listing with someone who is not here yet', () => {
       .toBe(403)
   })
 
+  test('7b. nor give herself a name, an address or a number outside 10c', async () => {
+    // An e-mail written here would claim the device with no password behind
+    // it, and a phone number would be held against whoever owns it.
+    for (const patch of [
+      { email: 'kari@epost.no' },
+      { phone: '911 22 333' },
+      { displayName: 'Kari N.' },
+    ]) {
+      const res = await call(app, 'PATCH', '/me', { token: kari, body: patch })
+      expect(res.status, JSON.stringify(patch)).toBe(403)
+      expect(res.body!['code']).toBe('account_required')
+    }
+
+    // Still a device, with nothing written — and where she is stays open.
+    const moved = await call(app, 'PATCH', '/me', { token: kari, body: { town: 'Bergen' } })
+    expect(moved.status).toBe(200)
+    expect(moved.body!['anonymous']).toBe(true)
+    expect(moved.body!['email']).toBe(null)
+    expect(moved.body!['phone']).toBe(null)
+    expect(moved.body!['displayName']).toBe(null)
+  })
+
   test('8. making the profile claims the account rather than starting a second one', async () => {
     const res = await call(app, 'POST', '/auth/register', {
       token: kari,
