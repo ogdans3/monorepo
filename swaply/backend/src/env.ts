@@ -7,6 +7,13 @@ import './load-env.js'
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3001),
+  // Loopback unless told otherwise. On a machine with a public address, 0.0.0.0
+  // puts a development API — and whatever database is behind it — on the
+  // internet. `localhost` rather than 127.0.0.1 because Fastify then takes ::1
+  // as well, which is where a client that asks for localhost may go first. The
+  // image sets 0.0.0.0: inside a container loopback is out of reach of the
+  // published port, and the publish is where a deployment decides who connects.
+  HOST: z.string().min(1).default('localhost'),
   DATABASE_URL: z.string().url().optional(),
   // A container has nobody to run `pnpm db:migrate` for it, so the image
   // applies the migrations it carries. More than one replica would race here.

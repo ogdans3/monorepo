@@ -23,6 +23,10 @@ RUN pnpm --filter @swaply/shared build && pnpm --filter @swaply/backend build
 
 FROM base AS runtime
 ENV NODE_ENV=production
+# Every interface inside the container, because Docker's published port arrives
+# on one that is not loopback. Who can reach it is decided by the publish in
+# docker-compose.yml, not here.
+ENV HOST=0.0.0.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY shared/package.json shared/
 COPY backend/package.json backend/
