@@ -137,17 +137,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     // to fall past every branch below and do nothing.
     final threadId = n.payload['threadId'] as String?;
 
+    // What a notification opens is drawn with the bar, and it opens where it
+    // lives — Likt under Profil, a trade under Bytter, a thing under Oppdag —
+    // the way a push notification on the lock screen, which is what the export
+    // drew 12a as, would. A chat is drawn without it, and stays over this list.
     if (n.type == 'item_liked') {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LikedScreen()));
+      pushInTab<void>(context, const LikedScreen(), tab: 4);
     } else if (threadId != null) {
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => ThreadScreen(threadId: threadId)));
     } else if (tradeId != null) {
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: tradeId)));
+      pushInTab<void>(context, TradeDetailScreen(tradeId: tradeId), tab: 2);
     } else if (itemId != null) {
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: itemId)));
+      pushInTab<void>(context, ItemDetailScreen(itemId: itemId), tab: 0);
     }
   }
 

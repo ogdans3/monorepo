@@ -87,19 +87,23 @@ void main() {
       expect(find.text('E-post'), findsOneWidget);
       expect(find.text('Passord'), findsOneWidget);
       expect(find.text('Logg inn'), findsOneWidget);
-      expect(find.text('Fortsett med Google'), findsOneWidget);
-      expect(find.text('Fortsett med Facebook'), findsOneWidget);
-      expect(find.text('Fortsett med Apple'), findsOneWidget);
       expect(find.text('Opprett konto'), findsOneWidget);
     });
 
-    testWidgets('16c a social button says why it cannot sign you in yet', (tester) async {
-      await mount(tester, const LoginScreen(), signedIn: false);
-      await tester.tap(find.text('Fortsett med Apple'));
-      await tester.pumpAndSettle();
+    // The export draws three more ways in. None can work before there is an
+    // agreement with the provider, so neither screen offers them — see
+    // `socialSignIn`.
+    for (final (name, screen) in [
+      ('16c', const LoginScreen() as Widget),
+      ('10c', const CreateProfileScreen(continuingToListing: true)),
+    ]) {
+      testWidgets('$name offers no sign-in that cannot work yet', (tester) async {
+        await mount(tester, screen, signedIn: false);
 
-      expect(find.textContaining('krever en avtale med leverandøren'), findsOneWidget);
-    });
+        expect(find.textContaining('Fortsett med'), findsNothing);
+        expect(find.text('eller'), findsNothing);
+      });
+    }
 
     testWidgets('16c a wrong password says so and does not sign you in', (tester) async {
       server.overrides['POST /auth/login'] = 401;
@@ -1153,6 +1157,16 @@ void main() {
       expect(find.text('Du ser deg rundt'), findsOneWidget);
       expect(find.textContaining('du beholder alt du har likt'), findsOneWidget);
       expect(find.text('Lag profil'), findsOneWidget);
+      // The app starts as a stranger, so somebody with an account from another
+      // phone lands here first. The row is 10c's, word for word.
+      expect(find.text('Har du konto? '), findsOneWidget);
+      expect(find.text('Logg inn'), findsOneWidget);
+
+      await tester.tap(find.text('Logg inn'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginScreen), findsOneWidget);
+      // Pushed, so it has the way back the gate's own sign-in does not.
+      expect(find.text('‹'), findsOneWidget);
     });
 
     testWidgets('10b listing something asks for the profile first', (tester) async {

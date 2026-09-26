@@ -5,6 +5,7 @@ import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
 import '../widgets/common.dart';
+import '../widgets/shell.dart';
 
 /// 09h Fullført. The moment the trade lands, before anything is asked of you.
 class TradeCompletedScreen extends StatelessWidget {
@@ -329,9 +330,7 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
             _chips.toList(),
             _comment.text.trim().isEmpty ? null : _comment.text.trim(),
           );
-      if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/trades', (r) => false);
-      }
+      if (mounted) goToTab(context, 2);
     } on ApiException catch (e) {
       if (mounted) {
         showError(context, e);
@@ -352,7 +351,7 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
         automaticallyImplyLeading: false,
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/trades', (r) => false),
+            onPressed: () => goToTab(context, 2),
             child: const Text('Hopp over', style: TextStyle(color: SwaplyColors.greySoft)),
           ),
         ],

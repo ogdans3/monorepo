@@ -82,8 +82,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
     if (wished == null || !mounted) return;
     if (wished.tradeId != null) {
-      await Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => MatchScreen(tradeId: wished!.tradeId!)));
+      await pushOverBar<void>(context, MatchScreen(tradeId: wished.tradeId!));
     } else if (wished.promptToList) {
       // 10a fires on the tenth wish, and the heart here is the same heart.
       await showListingPrompt(context, wished.likedCount);
@@ -97,8 +96,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     // Writing the first message opens a trade, and a trade has two named people
     // in it. This is the moment a device becomes a person.
     if (context.read<Session>().anonymous) {
-      await Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => const CreateProfileScreen()));
+      await pushOverBar<bool>(context, const CreateProfileScreen());
       if (!mounted || context.read<Session>().anonymous) return;
     }
     setState(() => _sending = true);
@@ -276,6 +274,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: AdminColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
@@ -417,6 +416,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Future<void> _ownItemMenu(Item item) async {
     await showModalBottomSheet<void>(
       context: context,
+      // Over the bar, like every sheet: inside the tab it would stop at the
+      // bar and leave it tappable under the dimming.
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
@@ -429,8 +431,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               title: const Text('Rediger annonsen'),
               onTap: () async {
                 Navigator.of(sheet).pop();
-                final changed = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(builder: (_) => PostItemScreen(editing: item)));
+                // 10b is drawn without the bar, so the form covers it — here,
+                // where it is a correction, as much as where it is a new
+                // listing.
+                final changed =
+                    await pushOverBar<bool>(context, PostItemScreen(editing: item));
                 if (changed == true) await _load();
               },
             ),
@@ -451,6 +456,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Future<void> _confirmRemove(Item item) async {
     final yes = await showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
@@ -559,8 +565,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               Kicker('Samtale med $name'),
               if (_openedThreadId != null)
                 GestureDetector(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => ThreadScreen(threadId: _openedThreadId!))),
+                  onTap: () =>
+                      pushOverBar<void>(context, ThreadScreen(threadId: _openedThreadId!)),
                   child: const Text('Åpne ›', style: Type.link),
                 ),
             ],

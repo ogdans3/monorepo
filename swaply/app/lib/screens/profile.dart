@@ -25,12 +25,17 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => context.read<Session>().refresh());
   }
+
+  // Everything on 13 is the session's — the things, the likes, the rating —
+  // so asking again is asking who you are.
+  @override
+  void onTabReturn() => context.read<Session>().refresh();
 
   @override
   Widget build(BuildContext context) {
@@ -54,8 +59,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           body: 'Tingene du liker er lagret her på enheten din. Lag en profil når du '
               'vil legge ut noe eller snakke med noen — du beholder alt du har likt.',
           actionLabel: 'Lag profil',
-          onAction: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
+          onAction: () => pushOverBar<bool>(context, const CreateProfileScreen()),
+          // The app starts without asking, so somebody with an account from
+          // another phone is a stranger here first, and this is where they
+          // look for the way in. 16c is drawn without the bar, so it covers it.
+          footer: SignInRow(onTap: () => pushOverBar<void>(context, const LoginScreen())),
         ),
       );
     }
@@ -67,8 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(right: 4, bottom: 28),
         child: GestureDetector(
-          onTap: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
+          onTap: () => openListingForm(context),
           child: Container(
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -96,8 +103,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // Only «Innstillinger» up here; the list of notifications is
                 // reached from the settings, since the export draws no bell.
                 GestureDetector(
-                  onTap: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                  // 16b is drawn without the bar, so it covers it.
+                  onTap: () => pushOverBar<void>(context, const SettingsScreen()),
                   child: const Padding(
                     padding: EdgeInsets.zero,
                     child: Text('Innstillinger',
@@ -230,8 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: Type.section, overflow: TextOverflow.ellipsis),
                 ),
                 GestureDetector(
-                  onTap: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => const EditProfileScreen())),
+                  onTap: () => pushOverBar<void>(context, const EditProfileScreen()),
                   child: const Text('Rediger profil',
                       style: TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
@@ -245,8 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Du har ingen ting ute',
                 body: 'Legg ut den første tingen din. Det tar under et minutt.',
                 actionLabel: 'Legg ut',
-                onAction: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
+                onAction: () => openListingForm(context),
               )
             else
               GridView.builder(
@@ -373,6 +378,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
@@ -741,10 +747,9 @@ class SettingsScreen extends StatelessWidget {
                       fontSize: 14.5, fontWeight: FontWeight.w700, color: SwaplyColors.redText)),
               onTap: () async {
                 await context.read<Session>().logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
-                }
+                // Not to the sign-in: the gate makes whoever holds the phone
+                // next a new stranger, and 02 is the first thing they see.
+                if (context.mounted) backThroughGate(context);
               },
             ),
           ]),
@@ -974,6 +979,8 @@ Future<void> showReportSheet(
 }) =>
     showModalBottomSheet<void>(
       context: context,
+      // Over the bar, not inside the tab under it; see `pushOverBar`.
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(

@@ -75,8 +75,7 @@ class _LikedScreenState extends State<LikedScreen> {
                           : 'Ingen har likt tingene dine ennå. Gode bilder og ærlig '
                               'tilstand gir flest likes.',
                       actionLabel: 'Legg ut en ting',
-                      onAction: () => Navigator.of(context)
-                          .push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
+                      onAction: () => openListingForm(context),
                     )
                   : RefreshIndicator(
                       onRefresh: _load,

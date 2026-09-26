@@ -214,6 +214,7 @@ class _AdminScreenState extends State<AdminScreen> {
   Future<void> _accountMenu(TestAccount account) async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       backgroundColor: AdminColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
@@ -306,6 +307,8 @@ class _AdminScreenState extends State<AdminScreen> {
                   _run('sc-${state.$1}', (api) async {
                     final built = await api.adminScenario(state.$1);
                     if (built.tradeId != null && mounted) {
+                      // Over the tool rather than into Bytter, with no bar:
+                      // coming back here is how you read what the lever did.
                       await Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => TradeDetailScreen(tradeId: built.tradeId!)));
                     }

@@ -21,11 +21,21 @@ class FakeServer {
   /// What was sent, by request. JSON only — a multipart upload is bytes, and
   /// nothing here needs to read them back.
   final bodies = <String, Map<String, dynamic>>{};
+
+  /// The bearer each request carried, by request, and null for none. The
+  /// last one wins, as in [bodies].
+  final bearers = <String, String?>{};
+
+  /// Answers that replace the canned ones. Besides a body or a status there is
+  /// a [Refusal], [unreachable], and a function of the request — which may hand
+  /// back any of those, or a future of one — for an answer that changes
+  /// between calls.
   final Map<String, Object?> overrides = {};
 
   http.Client get client => MockClient((request) async {
         final key = '${request.method} ${request.url.path}';
         requests.add(key);
+        bearers[key] = request.headers['authorization'];
         // A multipart upload is bytes that are not text; reading `body` on
         // one throws before the request is even answered.
         final json = (request.headers['content-type'] ?? '').startsWith('application/json');
@@ -33,7 +43,19 @@ class FakeServer {
           bodies[key] = jsonDecode(request.body) as Map<String, dynamic>;
         }
 
-        final body = overrides.containsKey(key) ? overrides[key] : _canned(key, request);
+        var body = overrides.containsKey(key) ? overrides[key] : _canned(key, request);
+        if (body is Object? Function(http.Request)) body = body(request);
+        if (body is Future) body = await body;
+        if (identical(body, unreachable)) {
+          // What the http client throws when there is no network or no
+          // server: not an answer at all.
+          throw http.ClientException('Connection refused', request.url);
+        }
+        if (body is Refusal) {
+          return http.Response(jsonEncode({'code': body.code, 'message': body.message}),
+              body.status,
+              headers: {'content-type': 'application/json; charset=utf-8'});
+        }
         if (body == null) {
           return http.Response(
               jsonEncode({'code': 'not_found', 'message': 'Fant ikke det du ba om.'}), 404,
@@ -64,7 +86,7 @@ class FakeServer {
         'POST /auth/login' => {'token': 'tok', 'user': me},
         'POST /auth/register' => {'token': 'tok', 'user': me},
         'POST /auth/logout' => {},
-        'POST /auth/anonymous' => {'token': 'tok', 'user': lookingAround},
+        'POST /auth/anonymous' => {'token': deviceToken, 'user': lookingAround},
         'POST /media' => {
             'path': '/media/$storedPhoto',
             'url': 'http://test/media/$storedPhoto',
@@ -221,6 +243,10 @@ class FakeServer {
   }
 
   // --- fixtures -------------------------------------------------------------
+
+  /// The token a device gets for looking around. Not the one a sign-in gets,
+  /// so a test can tell which of the two a request carried.
+  static const deviceToken = 'tok-device';
 
   static const me = {
     'id': 'me-1',
@@ -429,6 +455,29 @@ class FakeServer {
       },
     ],
   };
+}
+
+/// A refusal with a code of its own, for the ones the status shorthand has no
+/// word for. The message is the server's own, as a person would read it.
+class Refusal {
+  const Refusal(this.status, this.code, this.message);
+  final int status;
+  final String code, message;
+
+  /// `/auth/anonymous` on a server that lets nobody in without a key.
+  static const inviteRequired = Refusal(403, 'invite_required',
+      'Swaply er invitasjonsbasert. Du trenger en invitasjon fra noen som allerede er med.');
+
+  /// `/auth/anonymous` for a device id whose account has since been claimed.
+  static const deviceClaimed = Refusal(409, 'device_claimed',
+      'Denne enheten hører allerede til en konto. Logg inn med e-post og passord.');
+}
+
+/// No answer: no network, or no server behind the address.
+const unreachable = _Unreachable();
+
+class _Unreachable {
+  const _Unreachable();
 }
 
 /// The chain variant, which is the one screen that has to make a three-person

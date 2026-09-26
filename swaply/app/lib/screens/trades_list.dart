@@ -17,7 +17,8 @@ class TradesScreen extends StatefulWidget {
   State<TradesScreen> createState() => _TradesScreenState();
 }
 
-class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderStateMixin {
+class _TradesScreenState extends State<TradesScreen>
+    with SingleTickerProviderStateMixin, RefetchOnTabReturn {
   // Created eagerly rather than `late final`: with nothing to show, the tab bar
   // is never built, and a lazy field would first run its initialiser inside
   // dispose() — building a ticker against an element that is already gone.
@@ -37,6 +38,9 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
     _tabs.dispose();
     super.dispose();
   }
+
+  @override
+  void onTabReturn() => _load();
 
   Future<void> _load() async {
     try {
@@ -116,8 +120,7 @@ class _TradesScreenState extends State<TradesScreen> with SingleTickerProviderSt
                             body: 'Lik noe på Oppdag, eller legg ut en ting. Når noen vil '
                                 'bytte, havner det her.',
                             actionLabel: 'Gå til Oppdag',
-                            onAction: () => Navigator.of(context)
-                                .pushNamedAndRemoveUntil('/discover', (r) => false),
+                            onAction: () => goToTab(context, 0),
                           )
                         : TabBarView(
                             controller: _tabs,

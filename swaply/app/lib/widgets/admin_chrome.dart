@@ -21,9 +21,14 @@ import '../state/session.dart';
 /// restored token or a cold start cannot lose it, and an admin's own session
 /// is pixel-identical to everybody else's.
 class AdminFloor extends StatelessWidget {
-  const AdminFloor({super.key, required this.child});
+  const AdminFloor({super.key, required this.child, this.navigator});
 
   final Widget child;
+
+  /// The app's navigator. The floor is drawn under it rather than inside it,
+  /// so it cannot find it by looking up the tree: asking that way threw, and
+  /// «Tilbake til …» changed accounts and left the last one's screens up.
+  final GlobalKey<NavigatorState>? navigator;
 
   @override
   Widget build(BuildContext context) {
@@ -64,10 +69,9 @@ class AdminFloor extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: () async {
                       await session.returnToAdmin();
-                      if (context.mounted) {
-                        Navigator.of(context)
-                            .pushNamedAndRemoveUntil('/', (route) => false);
-                      }
+                      if (!context.mounted) return;
+                      (navigator?.currentState ?? Navigator.maybeOf(context))
+                          ?.pushNamedAndRemoveUntil('/', (route) => false);
                     },
                     child: Text(
                       // Naming the admin makes it a door rather than a warning.

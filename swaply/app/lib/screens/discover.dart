@@ -21,7 +21,7 @@ class DiscoverScreen extends StatefulWidget {
   State<DiscoverScreen> createState() => _DiscoverScreenState();
 }
 
-class _DiscoverScreenState extends State<DiscoverScreen> {
+class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn {
   final _search = TextEditingController();
   SearchFilters _filters = const SearchFilters();
 
@@ -46,11 +46,22 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  // Behind the grid rather than instead of it: a spinner in its place would
+  // also throw away how far down it you were.
+  @override
+  void onTabReturn() => _load(quiet: true);
+
+  /// [quiet] keeps what is on screen while it asks, and keeps it if the asking
+  /// fails: coming back to the tab is not the moment to be told the network
+  /// dropped out a minute ago.
+  Future<void> _load({bool quiet = false}) async {
+    final behind = quiet && _results.isNotEmpty;
+    if (!behind) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     final api = context.read<SwaplyApi>();
     try {
       final res = await api.discover(
@@ -70,18 +81,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         _results = res.items;
       });
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted && !behind) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _openFilters() async {
-    final result = await Navigator.of(context).push<SearchFilters>(
-      MaterialPageRoute(
-        builder: (_) => AdvancedSearchScreen(initial: _filters, query: _search.text),
-      ),
-    );
+    // 05b is drawn without the bar, so it covers it.
+    final result = await pushOverBar<SearchFilters>(
+        context, AdvancedSearchScreen(initial: _filters, query: _search.text));
     if (result != null) {
       setState(() {
         _filters = result;
@@ -208,10 +217,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             ? 'Prøv et annet ord, eller løsne på filtrene.'
             : 'Søk etter noe du vil ha, eller legg ut en ting så folk finner deg.',
         actionLabel: filtered ? null : 'Legg ut en ting',
-        onAction: filtered
-            ? null
-            : () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const PostItemScreen())),
+        onAction: filtered ? null : () => openListingForm(context),
       );
     }
 
@@ -228,6 +234,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             children: [
               for (var i = 0; i < items.length; i++) ...[
                 ItemCard(
+                  key: ValueKey(items[i].id),
                   item: items[i],
                   onChanged: _load,
                   // Three heights, cycling: a collage is made of things that
@@ -307,6 +314,15 @@ class _ItemCardState extends State<ItemCard> {
   late bool _liked = widget.item.likedByMe;
   bool _busy = false;
 
+  @override
+  void didUpdateWidget(ItemCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The grid is fetched again behind the cards when the tab comes back, and
+    // a heart taken back somewhere else in the meantime is the server's to
+    // tell. Not while a tap here is still on its way.
+    if (!_busy && !identical(oldWidget.item, widget.item)) _liked = widget.item.likedByMe;
+  }
+
   Future<void> _toggle() async {
     if (_busy) return;
     setState(() {
@@ -319,8 +335,7 @@ class _ItemCardState extends State<ItemCard> {
         final result = await api.like(widget.item.id);
         if (!mounted) return;
         if (result.tradeId != null) {
-          await Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => MatchScreen(tradeId: result.tradeId!)));
+          await pushOverBar<void>(context, MatchScreen(tradeId: result.tradeId!));
         } else if (result.promptToList) {
           await _showListingPrompt(result.likedCount);
         }
@@ -445,6 +460,9 @@ class _ItemCardState extends State<ItemCard> {
 Future<void> _showContextMenu(BuildContext context, Item item, VoidCallback onChanged) async {
   await showModalBottomSheet<void>(
     context: context,
+    // Over the bar, like every sheet: a sheet inside a tab stops at the bar
+    // and leaves it tappable under the dimming.
+    useRootNavigator: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
@@ -792,6 +810,7 @@ Future<void> showListingPrompt(BuildContext context, int likedCount) async {
 if (!context.mounted) return;
   await showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
@@ -812,8 +831,7 @@ if (!context.mounted) return;
           const SizedBox(height: Insets.lg),
           PrimaryButton('Legg ut en gjenstand', onPressed: () {
             Navigator.of(sheet).pop();
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const PostItemScreen()));
+            openListingForm(context);
           }),
           const SizedBox(height: Insets.sm),
           SecondaryButton('Senere', onPressed: () => Navigator.of(sheet).pop()),

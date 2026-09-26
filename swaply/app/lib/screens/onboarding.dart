@@ -9,13 +9,22 @@ import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/confetti.dart';
 import '../widgets/shell.dart';
-import 'discover.dart';
+import 'tabs.dart';
 
 /// 01 Splash. Deep green, the wordmark, nothing else.
 /// 01. Deep green, two faint rings, the wordmark — and the same slow confetti
 /// as the match screen, because the two are the app's two moments.
+///
+/// It is also what stays up while the app gets going — the saved token
+/// checked, or the device made a stranger — so it is where a failure to get
+/// going is said. [onRetry] is that state: one plain line and one button, at
+/// the foot where the thumb is, and the wordmark left alone.
 class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({super.key, this.onRetry, this.retrying = false});
+
+  /// Set when the server could not be reached.
+  final VoidCallback? onRetry;
+  final bool retrying;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -34,6 +43,28 @@ class SplashScreen extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                       letterSpacing: -1.2)),
             ),
+            if (onRetry != null)
+              Positioned(
+                left: 28,
+                right: 28,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.only(bottom: 34),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        noContact,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xB8FFFFFF), fontSize: 15, height: 1.45),
+                      ),
+                      const SizedBox(height: Insets.md),
+                      PrimaryButton('Prøv igjen', busy: retrying, onPressed: onRetry),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       );
@@ -53,9 +84,14 @@ class SplashScreen extends StatelessWidget {
 /// Two ways in, and the order is the product's: looking around costs nothing
 /// and needs no account, and 10c waits until there is a reason for it.
 class InviteScreen extends StatefulWidget {
-  const InviteScreen({super.key, required this.token});
+  const InviteScreen({super.key, required this.token, this.atGate = false});
 
   final String token;
+
+  /// Shown by the gate in `main.dart` rather than pushed. The gate moves on by
+  /// itself once the device is somebody, so this screen does not go anywhere
+  /// as well: two ways forward from one tap is the app built twice.
+  final bool atGate;
 
   @override
   State<InviteScreen> createState() => _InviteScreenState();
@@ -79,28 +115,37 @@ class _InviteScreenState extends State<InviteScreen> {
       setState(() => _invite = invite);
       // A spent invitation is not ours to hold on to. Letting it sit in the
       // session would only turn every later attempt into the same refusal.
-      if (invite.used) context.read<Session>().pendingInvite = null;
+      // The listing behind it is still anybody's to look at.
+      if (invite.used) context.read<Session>().letGoOfInvite();
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      // No answer. The buttons still work once there is one.
+      if (mounted) setState(() => _error = noContact);
     }
   }
 
   Future<void> _lookAround() async {
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       final session = context.read<Session>();
       await session.lookAround();
-      if (!mounted) return;
+      if (!mounted || widget.atGate) return;
       // 02 first, the same as any new account gets: Oppdag is one row per
       // interest, so arriving there with none chosen is an empty screen. It is
       // skippable, as the export draws it.
       Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-              builder: (_) =>
-                  session.interestsPending ? const InterestsScreen() : const DiscoverScreen()),
+          session.interestsPending
+              ? MaterialPageRoute(builder: (_) => const InterestsScreen())
+              : appTabsRoute(),
           (r) => false);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = noContact);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -211,8 +256,19 @@ class _InviteScreenState extends State<InviteScreen> {
 
 /// 16c Logg inn. E-mail and a password, with the three social buttons the
 /// export draws beside them.
+///
+/// Rarely the first thing anybody sees now: the app starts as a stranger, and
+/// this is reached from «Logg inn» on that stranger's profile and on 10c, and
+/// from «Jeg har konto fra før» on the invitation. Signing in from there brings
+/// along what the stranger liked, and says so.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.overProfileForm = false});
+
+  /// Opened from 10c's «Logg inn», with that 10c still under it. «Opprett
+  /// konto» goes back down to it rather than opening another: a 10c that is
+  /// step two of a listing has to still be step two, and the screen that is
+  /// waiting for it to finish must not be told it has.
+  final bool overProfileForm;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -236,18 +292,39 @@ class _LoginScreenState extends State<LoginScreen> {
       _busy = true;
       _error = null;
     });
+    // Taken now: by the time there is something to say, this screen is on its
+    // way out, and the toast belongs to whatever comes after it.
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      await context.read<Session>().login(_email.text.trim(), _password.text);
+      final carried =
+          await context.read<Session>().login(_email.text.trim(), _password.text);
       // Commits the autofill form: the browser may now offer to save it.
       TextInput.finishAutofillContext();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+      // Down to the gate, which has already moved on: to a fresh app for the
+      // account signed in to, or to 02 if neither it nor this phone has been
+      // through it. Where the gate is showing this screen itself — a server
+      // that wants invitations — it is already on top, and nothing moves.
+      if (mounted) backThroughGate(context);
+      // Liking was the one thing the stranger could do. Said once, and only
+      // when there was something: signing in on a phone that had liked
+      // nothing is not news. Only a stranger brings anything, and a stranger
+      // has had its 02, so this lands on the app, above the bar, and not
+      // across the picker's «Fortsett».
+      if (carried > 0) {
+        showDoneOn(messenger,
+            carried == 1 ? 'Tingen du likte er tatt med.' : 'Tingene du likte er tatt med.');
       }
     } on ApiException catch (e) {
+      // The ‹ may have taken this screen down while the answer was on its way.
+      if (!mounted) return;
       setState(() => _error = e.code == 'unauthorized'
           ? 'Feil e-post eller passord.'
           : e.message);
+    } catch (_) {
+      // No answer, or none that could be read — a proxy's error page is not
+      // JSON. It used to say nothing: the spinner stopped and the fields sat
+      // there. The splash's words, since it is the same fault.
+      if (mounted) setState(() => _error = noContact);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -255,11 +332,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Pushed from somewhere, it needs a way back there. The export draws the
+    // sign-in as a first screen, with nowhere to go back to, and at the gate
+    // that is still what it is.
+    final back = ModalRoute.of(context)?.canPop ?? false;
+
     return Scaffold(
+      appBar: back ? swaplyAppBar(context, '', inset: 28) : null,
       body: SafeArea(
         child: SingleChildScrollView(
           // 28 at the sides and the wordmark 116 down: the export's sign-in.
-          padding: const EdgeInsets.fromLTRB(28, 116, 28, Insets.xl),
+          // With the chevron, its 21-tall row is the top of the 116.
+          padding: EdgeInsets.fromLTRB(28, back ? 116 - 21 : 116, 28, Insets.xl),
           // One group, so a password manager sees a form with a username and
           // a password in it rather than one lone field at a time — which is
           // what makes it offer anything at all, on the web as on a phone.
@@ -315,22 +399,39 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               if (_error != null) ...[
-                Text(_error!, style: const TextStyle(color: SwaplyColors.red, fontSize: 13)),
+                // Coral, the «no» colour: the other red is for reporting and
+                // blocking, and a wrong password is neither.
+                Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
                 const SizedBox(height: Insets.sm),
               ],
               PrimaryButton('Logg inn', busy: _busy, onPressed: _submit),
               const SizedBox(height: 16),
-              const _OrDivider(),
-              const SizedBox(height: 16),
-              const _SocialButtons(),
-              const SizedBox(height: 16),
+              if (socialSignIn) ...[
+                const _OrDivider(),
+                const SizedBox(height: 16),
+                const _SocialButtons(),
+                const SizedBox(height: 16),
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text('Ny her? ', style: Type.secondary),
                   GestureDetector(
-                    onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
+                    onTap: () {
+                      // Back and forth between the two must not stack them.
+                      // Over a 10c, that is back down to it. Otherwise 10c
+                      // takes this screen's place and goes back to whatever
+                      // was under it; with nothing under it, it goes on top.
+                      if (widget.overProfileForm) {
+                        Navigator.of(context).pop();
+                        return;
+                      }
+                      final profile =
+                          MaterialPageRoute<bool>(builder: (_) => const CreateProfileScreen());
+                      back
+                          ? Navigator.of(context).pushReplacement(profile)
+                          : Navigator.of(context).push(profile);
+                    },
                     child: const Text('Opprett konto', style: Type.link),
                   ),
                 ],
@@ -362,9 +463,17 @@ class _OrDivider extends StatelessWidget {
       );
 }
 
-/// The export draws Google, Facebook and Apple. They need provider credentials
-/// and a registered bundle id, neither of which exists yet, so they say so
-/// rather than failing silently or pretending to work.
+/// Whether 16c and 10c offer Google, Facebook and Apple. The export draws all
+/// three, and none of them can work yet: each needs an agreement with the
+/// provider. Drawn anyway, they were three buttons that led to an apology, and
+/// App Review turns down a build whose buttons do nothing. They come back
+/// together or not at all — Apple requires its own sign-in wherever another
+/// provider's is offered.
+const socialSignIn = false;
+
+/// The export draws Google, Facebook and Apple. Behind [socialSignIn] until the
+/// provider agreements exist; if it is switched on before they do, each button
+/// says so rather than failing silently or pretending to work.
 class _SocialButtons extends StatelessWidget {
   const _SocialButtons({this.compact = false});
 
@@ -429,6 +538,53 @@ class _ComingSoonDialog extends StatelessWidget {
       );
 }
 
+/// «Har du konto? Logg inn», as 10c draws it. Also under «Lag profil» on the
+/// profile of a device that is looking around: the app starts without asking,
+/// so somebody with an account from another phone arrives as a stranger, and
+/// that is where they go looking for the way in.
+class SignInRow extends StatelessWidget {
+  const SignInRow({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Har du konto? ', style: Type.secondary),
+          GestureDetector(
+            onTap: onTap,
+            child: const Text('Logg inn', style: Type.link),
+          ),
+        ],
+      );
+}
+
+/// What the splash says when the server does not answer, and what a form says
+/// for the same fault. Not «Ingen nettverk»: the phone may be online and the
+/// server not, and this cannot tell which.
+const noContact = 'Vi får ikke kontakt med Swaply akkurat nå.';
+
+/// Back to the gate in `main.dart`, which decides what comes next: 02, the
+/// app, or the splash while a new stranger is made.
+///
+/// The gate is almost always the first route, and it has already moved on by
+/// itself, because the session changed under it. So this goes back down to it
+/// rather than pushing a second one, which would build the app twice — two
+/// shells, and every first screen fetched twice. Where the first route is not
+/// the gate, a fresh one replaces everything.
+void backThroughGate(BuildContext context) {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  var found = false;
+  navigator.popUntil((route) {
+    found = route.settings.name == Navigator.defaultRouteName;
+    return found || route.isFirst;
+  });
+  if (!found) {
+    navigator.pushNamedAndRemoveUntil(Navigator.defaultRouteName, (_) => false);
+  }
+}
+
 /// 10c Lag profil. Reached from the listing flow, which is why the button says
 /// «Lag profil og legg ut».
 class CreateProfileScreen extends StatefulWidget {
@@ -488,11 +644,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       if (returning) {
         Navigator.of(context).pop(true);
       } else {
-        Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+        Navigator.of(context).pushAndRemoveUntil(appTabsRoute(), (r) => false);
       }
     } on ApiException catch (e) {
+      // The ‹ may have taken this screen down while the answer was on its way.
+      if (!mounted) return;
       setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = noContact);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -545,7 +704,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 ),
               ),
               if (_error != null) ...[
-                Text(_error!, style: const TextStyle(color: SwaplyColors.red, fontSize: 13)),
+                Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
                 const SizedBox(height: Insets.sm),
               ],
               PrimaryButton(
@@ -554,20 +713,18 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 onPressed: _submit,
               ),
               const SizedBox(height: 15),
-              const _OrDivider(),
-              const SizedBox(height: 15),
-              const _SocialButtons(compact: true),
-              const SizedBox(height: 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Har du konto? ', style: Type.secondary),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const LoginScreen())),
-                    child: const Text('Logg inn', style: Type.link),
-                  ),
-                ],
+              if (socialSignIn) ...[
+                const _OrDivider(),
+                const SizedBox(height: 15),
+                const _SocialButtons(compact: true),
+                const SizedBox(height: 15),
+              ],
+              // Over this screen rather than in its place: whoever opened 10c
+              // is waiting for it to finish, and a sign-in that turns back
+              // into «Opprett konto» comes back down to this one, 2/2 and all.
+              SignInRow(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const LoginScreen(overProfileForm: true))),
               ),
               const SizedBox(height: 12),
             ],
@@ -618,12 +775,17 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
 /// 02 Interesser. Three to five, and the counter says which.
 class InterestsScreen extends StatefulWidget {
-  const InterestsScreen({super.key, this.asStep = false});
+  const InterestsScreen({super.key, this.asStep = false, this.atGate = false});
 
   /// Shown inside another flow — 10b's «Lag profil og legg ut» — rather than as
   /// the first thing a new account sees. Then it hands control back to whoever
   /// pushed it instead of taking over the stack.
   final bool asStep;
+
+  /// Shown by the gate in `main.dart`, which is how nearly everybody sees it:
+  /// the first thing after the splash. The gate moves on to the app by itself
+  /// once the picker is done with, so this screen does not go anywhere as well.
+  final bool atGate;
 
   @override
   State<InterestsScreen> createState() => _InterestsScreenState();
@@ -643,9 +805,8 @@ class _InterestsScreenState extends State<InterestsScreen> {
   void _leave() {
     if (widget.asStep) {
       Navigator.of(context).pop();
-    } else {
-      Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const DiscoverScreen()), (r) => false);
+    } else if (!widget.atGate) {
+      Navigator.of(context).pushAndRemoveUntil(appTabsRoute(), (r) => false);
     }
   }
 

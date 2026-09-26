@@ -20,6 +20,7 @@ Future<bool> showProposalSheet(
 }) async {
   final result = await showModalBottomSheet<bool>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(

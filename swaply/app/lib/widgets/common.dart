@@ -392,12 +392,16 @@ class EmptyState extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.icon = Icons.inbox_outlined,
+    this.footer,
   });
 
   final String title, body;
   final String? actionLabel;
   final VoidCallback? onAction;
   final IconData icon;
+
+  /// A quieter second way on, under the button — words, not another button.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -419,6 +423,8 @@ class EmptyState extends StatelessWidget {
                 const SizedBox(height: Insets.lg),
                 SizedBox(width: 230, child: PrimaryButton(actionLabel!, onPressed: onAction)),
               ],
+              // 15 under the button, as 10c keeps its own «Har du konto?».
+              if (footer != null) ...[const SizedBox(height: 15), footer!],
             ],
           ),
         ),

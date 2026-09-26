@@ -19,7 +19,7 @@ class ChatsScreen extends StatefulWidget {
   State<ChatsScreen> createState() => _ChatsScreenState();
 }
 
-class _ChatsScreenState extends State<ChatsScreen> {
+class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
   List<ChatSummary>? _threads;
   String? _error;
 
@@ -28,6 +28,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
     super.initState();
     _load();
   }
+
+  @override
+  void onTabReturn() => _load();
 
   Future<void> _load() async {
     try {
@@ -140,8 +143,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
         ],
       ),
       onTap: () async {
-        await Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => ThreadScreen(threadId: thread.id)));
+        // 06g is drawn without the bar: the composer is at the foot instead.
+        await pushOverBar<void>(context, ThreadScreen(threadId: thread.id));
         await _load();
       },
     );

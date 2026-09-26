@@ -94,10 +94,20 @@ class SwaplyApi {
     return Me.fromJson(json['user'] as Map<String, dynamic>);
   }
 
-  Future<Me> login(String email, String password) async {
+  /// Signing in, with the bearer token along when there is one — the same as
+  /// [register]. The app starts as a device without asking, so somebody signing
+  /// in to the account they already have has usually been looking around
+  /// first, and the server folds that device's account into theirs.
+  /// `carriedLikes` is how many of its wishes came along: zero when nothing
+  /// moved, and when the server says nothing at all.
+  Future<({Me me, int carriedLikes})> login(String email, String password) async {
     final json = await _post('/auth/login', {'email': email, 'password': password});
     token = json['token'] as String;
-    return Me.fromJson(json['user'] as Map<String, dynamic>);
+    final carried = json['carried'] as Map<String, dynamic>?;
+    return (
+      me: Me.fromJson(json['user'] as Map<String, dynamic>),
+      carriedLikes: (carried?['likes'] as num?)?.toInt() ?? 0,
+    );
   }
 
   Future<void> logout() async {

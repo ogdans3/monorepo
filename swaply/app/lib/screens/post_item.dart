@@ -20,6 +20,15 @@ class PickedPhoto {
   final String name;
 }
 
+/// «Legg ut» from somewhere else — an empty Oppdag, 10a, the button on 13 —
+/// opens the Legg ut tab as it was left, rather than stacking a second form on
+/// top of the screen it was pressed on. A screen on its own, with no tabs to
+/// open, pushes the form.
+void openListingForm(BuildContext context) {
+  if (showTab(context, 1)) return;
+  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PostItemScreen()));
+}
+
 /// 10b Legg ut gjenstand. Step one of two: if there is no profile yet, step two
 /// is screen 10c, which is why the header counts.
 ///
@@ -94,8 +103,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
     // account this device already has is claimed rather than replaced.
     if (!session.signedIn || session.anonymous) {
       // Step 2/2: no profile yet, so the profile screen comes first.
-      await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => const CreateProfileScreen(continuingToListing: true)));
+      await pushOverBar<bool>(context, const CreateProfileScreen(continuingToListing: true));
       if (!mounted) return;
       final now = context.read<Session>();
       if (!now.signedIn || now.anonymous) return;
@@ -121,7 +129,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
       await context.read<Session>().refresh();
       if (!mounted) return;
       showDone(context, 'Lagt ut. Nå kan folk like den.');
-      Navigator.of(context).pushNamedAndRemoveUntil('/profile', (r) => false);
+      // To 13, where it now is — and the tab this form is in starts over, so
+      // the next «Legg ut» is an empty form and not this listing again.
+      goToTab(context, 4, startOver: true);
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {

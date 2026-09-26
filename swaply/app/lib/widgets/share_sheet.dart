@@ -21,6 +21,8 @@ Future<void> showShareSheet(
 }) =>
     showModalBottomSheet<void>(
       context: context,
+      // Over the bar, not inside the tab under it; see `pushOverBar`.
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(

@@ -143,13 +143,13 @@ class _MatchScreenState extends State<MatchScreen> {
                         // arrange this one themselves, so the button goes to
                         // the conversation rather than to an overview of a
                         // trade nobody is facilitating.
-                        onPressed: () => Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => chain && trade.threadId != null
-                                ? ThreadScreen(threadId: trade.threadId!)
-                                : TradeDetailScreen(tradeId: trade.id),
-                          ),
-                        ),
+                        // The chat covers the bar, as this does; the trade is
+                        // drawn with it, so it goes into the tab underneath.
+                        onPressed: () => chain && trade.threadId != null
+                            ? Navigator.of(context).pushReplacement(MaterialPageRoute(
+                                builder: (_) => ThreadScreen(threadId: trade.threadId!)))
+                            : pushInTab<void>(context, TradeDetailScreen(tradeId: trade.id),
+                                replace: true),
                       ),
                       const SizedBox(height: 12),
                       GestureDetector(
@@ -957,8 +957,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                       : () => _run((api) async {
                             final result = await api.mark(trade.id, 'received', value: !received);
                             if (result.complete && mounted) {
-                              await Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (_) => TradeCompletedScreen(trade: result.trade)));
+                              await pushOverBar<void>(
+                                  context, TradeCompletedScreen(trade: result.trade));
                             }
                             return result.trade;
                           })),
@@ -1059,8 +1059,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                       color: SwaplyColors.greyLight)),
               if (trade.threadId != null)
                 GestureDetector(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => ThreadScreen(threadId: trade.threadId!))),
+                  onTap: () =>
+                      pushOverBar<void>(context, ThreadScreen(threadId: trade.threadId!)),
                   child: const Text('Åpne ›',
                       style: TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
@@ -1148,8 +1148,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                       const Text('Du har ikke vurdert byttet ennå.', style: Type.secondary),
                       const SizedBox(height: Insets.sm),
                       SecondaryButton('Vurder byttet',
-                          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => ReviewScreen(trade: trade)))),
+                          onPressed: () =>
+                              pushOverBar<void>(context, ReviewScreen(trade: trade))),
                     ],
                   )
                 : Column(
@@ -1198,6 +1198,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                   busy: _busy,
                   onPressed: () async {
                     final session = context.read<Session>();
+                    // 06c is drawn with the bar, so it opens in the tab,
+                    // over this screen and under the bar.
                     final accepted = await Navigator.of(context).push<bool>(
                         MaterialPageRoute(builder: (_) => AgreementScreen(trade: trade)));
                     if (accepted == true) await _load();
@@ -1244,13 +1246,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
           onPressed: _busy ? null : () => _run((api) => api.cancelWithdrawal(trade.id))));
     } else if (trade.state == 'cancelled') {
       children.add(SecondaryButton('Tilbake til Bytter',
-          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/trades', (r) => false)));
+          onPressed: () => goToTab(context, 2)));
     } else if (trade.state == 'completed' && trade.yourReviewScore == null) {
       children.add(PrimaryButton(
           'Vurder ${trade.receivingFrom.displayName.split(' ').first}',
           onPressed: () async {
-            await Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => ReviewScreen(trade: trade)));
+            await pushOverBar<void>(context, ReviewScreen(trade: trade));
             await _load();
           }));
     }
@@ -1268,6 +1269,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
   }
 
   Future<void> _openCounterOffer(Trade trade) async {
+    // 09a and 09b are drawn with the bar: in the tab, like 06c.
     final changed = await Navigator.of(context)
         .push<bool>(MaterialPageRoute(builder: (_) => CounterOfferScreen(trade: trade)));
     if (changed == true) await _load();
@@ -1362,6 +1364,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
   }) =>
       showModalBottomSheet<bool>(
         context: context,
+        // Over the bar, not inside the tab under it; see `pushOverBar`.
+        useRootNavigator: true,
         backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
