@@ -6,6 +6,7 @@ import { blockedBetween } from '../lib/blocks.js'
 import { CATEGORIES, CONDITIONS } from '../lib/constants.js'
 import { badRequest, forbidden, notFound } from '../lib/errors.js'
 import { toStoredPath } from '../lib/media.js'
+import { townFor } from '../lib/postcodes.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
 
@@ -19,7 +20,8 @@ const itemBody = z.object({
   subcategory: z.string().trim().max(60).nullish(),
   condition: z.enum(CONDITIONS).nullish(),
   estimatedValueNok: z.number().int().min(0).max(10_000_000).nullish(),
-  postalCode: z.string().regex(/^\d{4}$/).nullish(),
+  // Looked up, never stored: see `townOf`.
+  postalCode: z.string().regex(/^\d{4}$/, 'Et postnummer har fire sifre.').nullish(),
   town: z.string().trim().max(60).nullish(),
   // Up to ten, first is the cover. A listing with none is allowed: services
   // usually have none, and discovery draws a generated card instead.
@@ -40,6 +42,24 @@ const itemBody = z.object({
     .default([]),
 })
 
+/**
+ * The town a listing's postcode belongs to, which is all of it anybody else
+ * sees. A postcode that belongs to none is refused rather than passed over:
+ * passing over it is how a listing went out with no town at all while 10b
+ * said the town would show, and a typo is the likeliest reason for one.
+ */
+function townOf(postalCode: string | null | undefined): string | null {
+  if (!postalCode) return null
+  const town = townFor(postalCode)
+  if (!town) {
+    throw badRequest(
+      'unknown_postal_code',
+      `Fant ikke postnummer ${postalCode}. Sjekk det, eller la feltet stå tomt.`,
+    )
+  }
+  return town
+}
+
 export default async function itemRoutes(app: FastifyInstance) {
   app.post('/items', async (request, reply) => {
     // 10c stands between looking around and listing something: a thing on the
@@ -51,7 +71,14 @@ export default async function itemRoutes(app: FastifyInstance) {
       throw badRequest('condition_required', 'Velg tilstand for gjenstanden.')
     }
 
+    // Where the thing is: the postcode typed on 10b, and only then wherever
+    // the owner is (a town sent as words wins over both, and no screen sends
+    // one). A profile made on 10c has no town, and 10c is where most listings
+    // come from, so without the postcode a listing usually had none; and a
+    // thing kept at the cabin is at the cabin, whatever the profile says.
+    const typed = townOf(body.postalCode)
     const owner = await one(app.db, sql`select town, postal_code from users where id = ${userId}`)
+    const town = body.town ?? typed ?? owner?.['town'] ?? townFor(owner?.['postal_code'])
 
     const item = await one(
       app.db,
@@ -61,7 +88,7 @@ export default async function itemRoutes(app: FastifyInstance) {
                   ${body.category}, ${body.subcategory ?? null},
                   ${body.kind === 'service' ? null : body.condition!},
                   ${body.estimatedValueNok ?? null},
-                  ${body.town ?? owner?.['town'] ?? null})
+                  ${town})
           returning *`,
     )
 
@@ -136,7 +163,7 @@ export default async function itemRoutes(app: FastifyInstance) {
             subcategory = coalesce(${body.subcategory ?? null}, subcategory),
             condition = coalesce(${body.condition ?? null}::condition, condition),
             estimated_value_nok = coalesce(${body.estimatedValueNok ?? null}, estimated_value_nok),
-            town = coalesce(${body.town ?? null}, town)
+            town = coalesce(${body.town ?? townOf(body.postalCode)}, town)
           where id = ${id} returning *`,
     )
 
