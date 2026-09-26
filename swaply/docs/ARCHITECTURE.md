@@ -265,6 +265,29 @@ like survives. The session is reissued at the same moment: the account has just
 gained a password, and the token that belonged to a device should not outlive
 that change.
 
+**The app starts as one without asking.** With no saved session and no
+invitation link, the gate in `app/lib/main.dart` makes the device an account
+behind 01 and goes on to 02, so nobody meets a sign-in before they have seen
+anything. Signing out forgets the device id along with the token, and a start
+refused as `device_claimed` makes a new id, so the next person on a phone is a
+new stranger rather than the last one's device.
+
+**Signing in folds the device into the account.** Starting without asking means
+somebody with an account elsewhere arrives as a stranger, and may wish for
+things before finding «Logg inn». `POST /auth/login` with that device's bearer
+merges its account into the one signed in to, in one transaction and only
+after the password (`backend/src/auth/merge.ts`): the likes are copied with
+their dates, less the ones the account could not have made itself; blocks are
+unioned both ways; reports, feedback and the invitation it took are re-pointed;
+and the device's account is deleted. `FATE_OF_REFERENCES` there gives every
+foreign key to `users` a decided fate — carried, dropped with the account, or a
+row that means the merge must not run — and a flow test compares it with the
+database, so a table added later has to be decided before the suite passes. The
+wishes that moved get `closeLoopThrough` right after the commit rather than
+waiting for the hourly sweep: each is now a wish from somebody who has
+something to give. A test account is never folded, in either direction, and
+neither is a session the switcher minted.
+
 ## Data protection
 
 Norway is in the EEA, so the GDPR applies in full. This is our reading and not a

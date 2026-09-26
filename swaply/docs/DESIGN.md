@@ -155,6 +155,10 @@ Everything that puts you in front of another person waits for 10c: **listing, wr
 
 Making the profile **claims the account the device already has**, rather than starting a second one. Nothing that was liked is lost, and the session is reissued because the account has just gained a password.
 
+**The app starts here without asking.** On a first start with no invitation link it makes the device's account behind 01 and goes straight on to 02; nobody meets a sign-in before they have seen anything. With a link, the invitation page is still the first screen, and only a server that is invite-only and refuses a start without a key puts the sign-in first. Signing out forgets the device id as well as the session, so the next person on the phone starts as a new stranger.
+
+Which means somebody with an account on another phone arrives as a stranger first. **Signing in from there folds the device's account into theirs**: in one transaction, and only after the password, the wishes move across, blocks and reports follow them, the invitation the device took names the account, and the device's account is deleted. A wish the account could not have made itself — for its own listing, one it already has, one across a block — stays behind, and each wish that moves gets the same loop search a heart gets, because it now belongs to somebody with something to give. Test accounts are never folded, in either direction.
+
 ## Feedback
 
 Two separate things after a completed trade, and they are not the same screen:

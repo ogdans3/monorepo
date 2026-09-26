@@ -34,7 +34,13 @@ columns, and that is the decision, not an oversight.
 first message and accepting all require a profile, because each puts a person in
 front of another person. Making that profile *claims the device's account* rather
 than making a second one, so every like survives. A device that has been claimed
-is never let in by device id again.
+is never let in by device id again. The app starts as one without asking, so
+somebody with an account elsewhere arrives as a stranger first; signing in from
+there *folds the device's account into theirs* — the wishes come along and the
+device's account is deleted — and never for a test account, in either
+direction. Every column that points at a person has a decided fate in
+`backend/src/auth/merge.ts`, and a flow test holds that list against the
+database.
 
 **A photo row holds a path, never a URL.** `item_media.url` is `/media/<name>`
 and the origin is put in front of it on the way out, which is what makes the

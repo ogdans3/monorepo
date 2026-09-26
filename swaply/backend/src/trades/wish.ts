@@ -34,20 +34,7 @@ export async function expressWish(db: Database, userId: string, itemId: string):
         on conflict do nothing`,
   )
 
-  const cycles = await findCyclesThrough(db, userId, itemId)
-  let tradeId: string | null = null
-  // One is enough to celebrate; the rest would fight over the same items.
-  const cycle = cycles[0]
-  if (cycle) {
-    tradeId = await openTradeFromCycle(db, cycle)
-    for (const hop of cycle) {
-      await db.execute(
-        sql`insert into notifications (user_id, type, payload)
-            values (${hop.userId}, 'trade_opened',
-                    jsonb_build_object('tradeId', ${tradeId}::text))`,
-      )
-    }
-  }
+  const tradeId = await closeLoopThrough(db, userId, itemId)
 
   await db.execute(sql`
     insert into notifications (user_id, type, payload)
@@ -68,4 +55,35 @@ export async function expressWish(db: Database, userId: string, itemId: string):
       Number(counts!['listed']) === 0 && Number(counts!['liked']) >= LIKES_BEFORE_LISTING_PROMPT,
     likedCount: Number(counts!['liked']),
   }
+}
+
+/**
+ * The search a wish sets off, and the trade it opens when a loop closes.
+ *
+ * Apart from `expressWish` for the one caller that holds a wish nobody has just
+ * pressed: signing in from a phone that was looking around carries the phone's
+ * wishes into the account (`auth/merge.ts`), and each of them may close a loop
+ * the moment it belongs to somebody with something to give. That caller runs
+ * this and not the whole of `expressWish` because the owner was told about the
+ * heart when it was pressed, and telling them again would be a second like.
+ */
+export async function closeLoopThrough(
+  db: Database,
+  userId: string,
+  itemId: string,
+): Promise<string | null> {
+  const cycles = await findCyclesThrough(db, userId, itemId)
+  // One is enough to celebrate; the rest would fight over the same items.
+  const cycle = cycles[0]
+  if (!cycle) return null
+
+  const tradeId = await openTradeFromCycle(db, cycle)
+  for (const hop of cycle) {
+    await db.execute(
+      sql`insert into notifications (user_id, type, payload)
+          values (${hop.userId}, 'trade_opened',
+                  jsonb_build_object('tradeId', ${tradeId}::text))`,
+    )
+  }
+  return tradeId
 }

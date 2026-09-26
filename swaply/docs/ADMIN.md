@@ -87,7 +87,7 @@ missing the floor offers «Logg ut» instead, which is the honest fallback.
 | **Kjør sweepen nå** | Up to an hour of waiting for the second matching trigger. |
 | **Forfall fristen nå** | Three days. `WITHDRAWAL_RESPONSE_HOURS` is 72, so 08b's expiry branch is otherwise a calendar problem. |
 | **Tilstand** | Opening psql against the production box to answer «which invariant moved». |
-| **Glem denne enheten** | A device id that is kept forever, which makes «se deg rundt» a once-per-machine screen. |
+| **Glem denne enheten** | Forgetting the device id by hand. Rarely needed now: signing out forgets it, and a start the server refuses as `device_claimed` makes a new one, so the next start on the machine is a new stranger either way. |
 
 ## What bounds the damage
 
