@@ -85,19 +85,31 @@ class SwaplyApi {
 
   /// Looking around without an account. The device id is the only credential
   /// this identity has, which is why it is a secret and not the phone's own.
-  Future<Me> startAnonymously({required String deviceId, String? invite}) async {
+  ///
+  /// Hands the token back rather than taking it, unlike a sign-in: an answer
+  /// the splash gave up waiting for can still arrive, after the person has
+  /// signed in, and taking its token then would make them a stranger again.
+  /// The session decides whether the answer still stands.
+  Future<({String token, Me me})> startAnonymously({
+    required String deviceId,
+    String? invite,
+  }) async {
     final json = await _post('/auth/anonymous', {
       'deviceId': deviceId,
       if (invite != null && invite.isNotEmpty) 'invite': invite,
     });
-    token = json['token'] as String;
-    return Me.fromJson(json['user'] as Map<String, dynamic>);
+    return (
+      token: json['token'] as String,
+      me: Me.fromJson(json['user'] as Map<String, dynamic>),
+    );
   }
 
   /// Signing in, with the bearer token along when there is one — the same as
   /// [register]. The app starts as a device without asking, so somebody signing
   /// in to the account they already have has usually been looking around
-  /// first, and the server folds that device's account into theirs.
+  /// first, and the server folds that device's account into theirs. The
+  /// session's sign-in waits out a start still on its way, so there is a
+  /// bearer whenever this phone is, or is about to be, a stranger.
   /// `carriedLikes` is how many of its wishes came along: zero when nothing
   /// moved, and when the server says nothing at all.
   Future<({Me me, int carriedLikes})> login(String email, String password) async {

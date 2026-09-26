@@ -445,7 +445,75 @@ describe('signing in on a phone that has been looking around', () => {
     }
   })
 
-  test('19. every column that points at a person has a decided fate', async () => {
+  test('19. the owner’s own account holds the key, and is folded into like anybody’s', async () => {
+    // The person who runs the test tooling tries the app on a phone that
+    // starts as a stranger, like everybody's. Only a test account is refused
+    // as the account signed in to: the key is not a reason to leave his
+    // wishes behind, and nor is the ring of test accounts he owns.
+    const owner = await register('Eier', 'eier@epost.no')
+    await grantAdmin(owner.id)
+    const made = await call('POST', '/admin/accounts', { token: owner.token, body: { withItems: 1 } })
+    expect(made.status).toBe(201)
+    const [ringItem] = await db.execute<Json>(
+      sql`select id from items where owner_id = ${made.body!['id']}`,
+    )
+    const canoe = await list(owner.token, 'Kano')
+
+    const stranger = await call('POST', '/auth/anonymous', {
+      body: { deviceId: 'device-owners-phone-0123456789' },
+    })
+    const phone = stranger.body!['token'] as string
+    for (const item of [lamp, ringItem!['id'], canoe]) {
+      expect((await call('POST', `/items/${item}/like`, { token: phone })).status, item).toBe(200)
+    }
+
+    const res = await signIn('eier@epost.no', phone)
+
+    expect(res.status).toBe(200)
+    // The lamp, and the test account's listing, which is the test account's
+    // and not his. The canoe is his own, and a wish for one's own thing is
+    // what a heart pressed on it signed in is refused: an owner trying the
+    // app out on his own listings sees those hearts stay behind, by rule.
+    expect(res.body!['carried']).toEqual({ likes: 2 })
+    expect(await likedBy(res.body!['token'])).toEqual([lamp, ringItem!['id']].sort())
+    expect(await exists(stranger.body!['user']['id'])).toBe(false)
+    // His own session, key and all: not one the switcher minted.
+    expect((await call('GET', '/admin/overview', { token: res.body!['token'] })).status).toBe(200)
+  })
+
+  test('20. a phone that makes a profile instead keeps every wish, on the same row', async () => {
+    // 10c's way in. Nothing is folded: the phone's account is the one that
+    // gets the name, so what it wished for never moves at all.
+    const stranger = await call('POST', '/auth/anonymous', {
+      body: { deviceId: 'device-claiming-phone-0123456789' },
+    })
+    const phone = stranger.body!['token'] as string
+    for (const item of [drill, chair]) {
+      expect((await call('POST', `/items/${item}/like`, { token: phone })).status, item).toBe(200)
+    }
+
+    const res = await call('POST', '/auth/register', {
+      token: phone,
+      body: { displayName: 'Siri', email: 'siri@epost.no', password: 'byttehandel1' },
+    })
+
+    expect(res.status).toBe(201)
+    expect(res.body!['user']['id']).toBe(stranger.body!['user']['id'])
+    expect(await likedBy(res.body!['token'])).toEqual([drill, chair].sort())
+  })
+
+  test('21. a phone whose stranger is already gone signs in as it always did', async () => {
+    // Its token died with the fold in step 5: a second tab, or a sign-in
+    // tried again after the first one landed. Nothing is left to carry, and
+    // that is no reason to refuse the password.
+    const res = await signIn('ola@epost.no', looking)
+
+    expect(res.status).toBe(200)
+    expect(res.body!['user']['id']).toBe(olaId)
+    expect(res.body!['carried']).toBeUndefined()
+  })
+
+  test('22. every column that points at a person has a decided fate', async () => {
     // The merge ends in a delete, and the delete fails on any reference nobody
     // moved. A table added later is caught here, in review, rather than on the
     // first sign-in that trips over it.

@@ -83,11 +83,21 @@ class Session extends ChangeNotifier {
   /// shows the sign-in, as it did before it started on its own.
   bool inviteRequired = false;
 
-  /// A start in flight, from the gate or from «Prøv igjen». One at a time: the
-  /// gate asks on every build while nobody is signed in, and two strangers for
-  /// one device is one too many.
+  /// A start in flight: the saved token being checked, or the device being
+  /// made a stranger — by the gate, by «Prøv igjen» or by «Se deg rundt». One
+  /// at a time: the gate asks on every build while nobody is signed in, and
+  /// two strangers for one device is one too many. A sign-in waits for it; see
+  /// [_settle].
   Future<void>? _starting;
   bool get starting => _starting != null;
+
+  /// Bumped each time somebody signs in, makes a profile or signs out here.
+  /// An answer about who this phone is that was asked for before and arrives
+  /// after — a start the splash gave up waiting for, a `/me` sent on the
+  /// stranger's token — is about somebody the phone no longer is. Taken, it
+  /// made the person who had just signed in a stranger again, with none of
+  /// what they had brought along.
+  int _decided = 0;
 
   /// How long the splash waits for an answer before it says it has none. A
   /// host that drops packets is not refused, and without this the splash
@@ -97,7 +107,13 @@ class Session extends ChangeNotifier {
   /// the same account on «Prøv igjen».
   static const patience = Duration(seconds: 12);
 
-  Future<void> restore() async {
+  /// A start like any other, so a sign-in waits for it: 16c can be open over
+  /// the splash from the first frame, by its address, and a check still on
+  /// its way when that sign-in folds the saved token away comes back refused
+  /// — which dropped the token the sign-in had just been given.
+  Future<void> restore() => _once(_restore);
+
+  Future<void> _restore() async {
     final prefs = await SharedPreferences.getInstance();
     _adminToken = prefs.getString('adminToken');
     final saved = prefs.getString('token');
@@ -137,8 +153,10 @@ class Session extends ChangeNotifier {
   /// app last closed. Decided before anybody is told who is signed in, so the
   /// gate goes to 02 or to the app, and not to one on its way to the other.
   Future<void> _recognise() async {
+    final asked = _decided;
     final found = await api.me();
     final prefs = await SharedPreferences.getInstance();
+    if (asked != _decided) return;
     interestsPending = found.interests.isEmpty && prefs.getString(_pickerKey) == found.id;
     _become(found);
   }
@@ -157,7 +175,7 @@ class Session extends ChangeNotifier {
 
   Future<void> _becomeStranger() async {
     try {
-      await lookAround().timeout(patience);
+      await _lookAround().timeout(patience);
       stalled = false;
     } on ApiException catch (e) {
       if (e.code == 'invite_required') {
@@ -172,15 +190,31 @@ class Session extends ChangeNotifier {
 
   /// Runs [step] unless one is already running, and says so both ways: the
   /// splash's button spins meanwhile, and the gate decides again after.
-  Future<void> _once(Future<void> Function() step) {
+  /// [quiet] says neither, for a start whose screen speaks for itself.
+  Future<void> _once(Future<void> Function() step, {bool quiet = false}) {
     final running = _starting;
     if (running != null) return running;
     final started = _starting = step().whenComplete(() {
       _starting = null;
-      notifyListeners();
+      if (!quiet) notifyListeners();
     });
-    notifyListeners();
+    if (!quiet) notifyListeners();
     return started;
+  }
+
+  /// Until no start is in flight. A sign-in sent while this phone is still
+  /// being made a stranger goes without the stranger's token, so nothing is
+  /// folded in — and the stranger then lands on top of the account signed
+  /// in to. Waited for, a sign-in carries whatever the phone did, however
+  /// quick the person was.
+  Future<void> _settle() async {
+    for (var running = _starting; running != null; running = _starting) {
+      try {
+        await running;
+      } catch (_) {
+        // Said to whoever asked for it. Here it only matters that it is over.
+      }
+    }
   }
 
   Future<void> _persist() async {
@@ -246,12 +280,24 @@ class Session extends ChangeNotifier {
   }
 
   /// Look around without making anything: the gate does this on its own, and
-  /// the invitation page on «Se deg rundt».
-  Future<void> lookAround() async {
+  /// the invitation page on «Se deg rundt» — which leaves «Jeg har konto fra
+  /// før» and «Lag profil med en gang» under the thumb while it is on its way,
+  /// so it is a start a sign-in waits for. A quiet one: the page says what was
+  /// wrong itself, and the gate deciding again on a refusal took the page
+  /// away with the reason on it.
+  ///
+  /// Given up on after [patience], as the gate's own start is: a host that
+  /// drops packets held the sign-in waiting behind this, and the page's own
+  /// button, until the phone gave up on the connection. An answer that was
+  /// only late still lands, unless somebody has signed in meanwhile.
+  Future<void> lookAround() => _once(() => _lookAround().timeout(patience), quiet: true);
+
+  Future<void> _lookAround() async {
+    final asked = _decided;
     final prefs = await SharedPreferences.getInstance();
-    Future<Me> start(String? invite) async =>
+    Future<({String token, Me me})> start(String? invite) async =>
         api.startAnonymously(deviceId: await _deviceId(prefs), invite: invite);
-    me = await _withInvite((invite) async {
+    final started = await _withInvite((invite) async {
       try {
         return await start(invite);
       } on ApiException catch (e) {
@@ -265,6 +311,13 @@ class Session extends ChangeNotifier {
         return start(invite);
       }
     });
+    // Somebody signed in while this was on its way — past the splash's
+    // patience, on 16c opened over it — and a stranger is not who they are.
+    // What it was made with, device id and all, is still there for the next
+    // start to find.
+    if (asked != _decided) return;
+    api.token = started.token;
+    me = started.me;
     letGoOfInvite();
     // An answer, if a late one: whatever the splash said about there being
     // none is no longer so.
@@ -280,7 +333,7 @@ class Session extends ChangeNotifier {
   /// is no reason to keep them out, and the invitation page would otherwise
   /// be the one wall left, with both of its ways in sending the same dead key.
   /// Where a key is required, what was wrong with this one is what to say.
-  Future<Me> _withInvite(Future<Me> Function(String? invite) ask) async {
+  Future<T> _withInvite<T>(Future<T> Function(String? invite) ask) async {
     final invite = pendingInvite;
     try {
       return await ask(invite);
@@ -328,9 +381,13 @@ class Session extends ChangeNotifier {
     // gate or behind a link. Asking again here, between 10c and the listing it
     // was made for, is the picker a second time — and the gate, seeing it
     // pending, would take the app down from under the half-filled form to
-    // show it.
+    // show it. Read before the wait below: a stranger made while this form
+    // was open over the invitation has not been through 02 — it is under 10c.
     final claiming = anonymous;
-    me = await _withInvite((invite) => api.register(
+    // A stranger on its way is this device's account, and the profile is
+    // made on it, with the bearer that says which.
+    await _settle();
+    final made = await _withInvite((invite) => api.register(
           displayName: displayName,
           email: email,
           phone: phone,
@@ -340,6 +397,8 @@ class Session extends ChangeNotifier {
           // Spent here unless this device already spent it looking around.
           invite: invite,
         ));
+    _decided++;
+    me = made;
     letGoOfInvite();
     interestsPending = !claiming && me!.interests.isEmpty;
     await _persist();
@@ -356,9 +415,15 @@ class Session extends ChangeNotifier {
     // Asking again showed the picker twice in a row, with the toast about the
     // likes lying across its «Fortsett». Signing in anywhere else — 16c at an
     // invite-only gate, or from the invitation page — nobody on this phone has
-    // been through it yet.
+    // been through it yet — nor has a stranger made while 16c was waiting for
+    // it below, which is why this is read first.
     final walkedThrough = anonymous;
+    // The stranger's token is what tells the server which device to fold
+    // in. Sent before the stranger exists, nothing came along, and the
+    // stranger then replaced the account signed in to.
+    await _settle();
     final signed = await api.login(email, password);
+    _decided++;
     me = signed.me;
     interestsPending = !walkedThrough && me!.interests.isEmpty;
     await _persist();
@@ -383,6 +448,7 @@ class Session extends ChangeNotifier {
       // Signing out locally must work even if the server cannot be reached —
       // refused or not answering at all.
     }
+    _decided++;
     me = null;
     api.token = null;
     _adminToken = null;
@@ -398,7 +464,13 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refresh() async => _become(await api.me());
+  Future<void> refresh() async {
+    final asked = _decided;
+    final found = await api.me();
+    // A screen of the stranger's asking as the sign-in lands: it would put
+    // the stranger back, over the account the likes were just folded into.
+    if (asked == _decided) _become(found);
+  }
 
   void _become(Me found) {
     me = found;
