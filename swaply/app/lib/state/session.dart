@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
+import 'listing_draft.dart';
 
 /// Who is signed in, plus the two counters the bottom bar draws: unread chats
 /// and trades waiting on you.
@@ -48,6 +49,11 @@ class Session extends ChangeNotifier {
   /// opening. The gate opens it, once, when there is an app to open it in.
   String? linkToOpen;
 
+  /// 10b as it stood when 10c went up over it, until 10c is done with. Here
+  /// rather than in the form, because signing in on 10c builds a new app and
+  /// the form goes with the old one; see [ListingDraft].
+  ListingDraft? listingToFinish;
+
   /// True until the interest picker has been through once. Screen 02 is the
   /// first thing a new account sees, and it is skippable.
   bool interestsPending = false;
@@ -59,6 +65,13 @@ class Session extends ChangeNotifier {
   /// empty as never having been asked. By account id, so it cannot outlive the
   /// account it was owed to.
   static const _pickerKey = 'interestsPendingFor';
+
+  /// The highest like count 10a has been shown at, one key per account. The
+  /// server says `promptToList` on every heart that lands on a count it asks
+  /// at — the fifth, then every tenth after it — and a heart taken back and
+  /// given again lands on the same count a second time. Only the phone knows
+  /// it already asked.
+  static const _listingPromptKey = 'listingPromptShownAt:';
 
   /// The splash could not get past itself: no answer from the server, either
   /// about the saved token or about making this device a stranger. Nothing is
@@ -373,6 +386,7 @@ class Session extends ChangeNotifier {
     me = null;
     api.token = null;
     _adminToken = null;
+    listingToFinish = null;
     unreadChats = 0;
     tradesNeedingYou = 0;
     // The gate makes the next person on this phone a stranger straight away,
@@ -392,6 +406,33 @@ class Session extends ChangeNotifier {
     unreadChats = found.unreadMessages;
     tradesNeedingYou = found.tradesNeedingYou;
     notifyListeners();
+  }
+
+  /// Whether 10a goes up for the heart that brought this account to
+  /// [likedCount] wishes. Never unless the server said [promptToList], and then
+  /// only above the highest count it has been shown at. A yes is remembered
+  /// before the sheet is up, so liking, taking it back and liking again at
+  /// five asks once, and the next time is fifteen. The card's heart and the
+  /// item page's both ask here, so neither repeats what the other has said.
+  Future<bool> listingPromptDue({required bool promptToList, required int likedCount}) async {
+    final id = me?.id;
+    if (!promptToList || id == null) return false;
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_listingPromptKey$id';
+    if (likedCount <= (prefs.getInt(key) ?? 0)) return false;
+    await prefs.setInt(key, likedCount);
+    return true;
+  }
+
+  /// Forgets that 10a has been shown to [accountId] on this phone. For the
+  /// test tooling's «Nullstill likes»: the server counts from nothing again,
+  /// and the count remembered here would keep the sheet down until the old
+  /// one was passed — the one way to walk 10a again was the way it could not
+  /// be walked. Never from a count going down on its own: somebody taking
+  /// hearts back below five has been asked, and is not asked again at five.
+  Future<void> forgetListingPrompt(String accountId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_listingPromptKey$accountId');
   }
 
   Future<void> setInterests(List<String> interests) async {

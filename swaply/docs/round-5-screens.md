@@ -22,6 +22,11 @@ the export forced:
 - **Withdrawal is a negotiation of its own** (08a–08c): you ask, the other party
   answers within a deadline, and once something has been sent you cannot.
 
+One the product owner made afterwards, the other way round: **10a is offered at
+five likes and then every tenth** (15, 25, …), not at ten as its title below
+says. Moved on 26.09.2026; the copy keeps the live count, so the first time it
+reads «Du har likt 5 ting». `DESIGN.md` has the rule.
+
 
 ======================================================================
 ### 01 Splash   (1106 bytes)

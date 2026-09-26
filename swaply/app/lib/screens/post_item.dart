@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
+import '../state/listing_draft.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
@@ -55,7 +56,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
   final _value = TextEditingController();
   final _postal = TextEditingController();
   final _subcategory = TextEditingController();
-  final _photos = <UploadedImage>[];
+  final _photos = <ListingPhoto>[];
   bool _uploading = false;
 
   String _kind = 'item';
@@ -64,13 +65,22 @@ class _PostItemScreenState extends State<PostItemScreen> {
   bool _busy = false;
   String? _error;
 
+  /// The held picture the server said no to after 10c, drawn with a coral
+  /// edge. The message over the button says what was wrong and not which of
+  /// up to ten it was, and without this every «Legg ut» failed the same way
+  /// until the right ✕ was guessed.
+  ListingPhoto? _refused;
+
   Item? get _editing => widget.editing;
 
   @override
   void initState() {
     super.initState();
     final item = _editing;
-    if (item == null) return;
+    if (item == null) {
+      _resume();
+      return;
+    }
     _title.text = item.title;
     _description.text = item.description ?? '';
     _value.text = item.estimatedValueNok?.toString() ?? '';
@@ -81,9 +91,45 @@ class _PostItemScreenState extends State<PostItemScreen> {
     // The photographs are already the server's, and it takes the same paths
     // back. A URL it handed out is one it accepts.
     for (final url in item.media) {
-      _photos.add(UploadedImage.fromJson({'path': url, 'url': url, 'bytes': 0}));
+      _photos.add(ListingPhoto.stored(UploadedImage.fromJson({'path': url, 'url': url, 'bytes': 0})));
     }
   }
+
+  /// A form that was waiting on 10c when the person signed in there instead,
+  /// taken up by the new app's Legg ut and sent on, as it would have been
+  /// after 10c; see [ListingDraft]. Not for a device still looking around:
+  /// that would only be 10c again.
+  void _resume() {
+    final session = context.read<Session>();
+    final draft = session.listingToFinish;
+    if (draft == null || !session.signedIn || session.anonymous) return;
+    session.listingToFinish = null;
+    _kind = draft.kind;
+    _category = draft.category;
+    _condition = draft.condition;
+    _title.text = draft.title;
+    _description.text = draft.description;
+    _subcategory.text = draft.subcategory;
+    _value.text = draft.value;
+    _postal.text = draft.postalCode;
+    _photos.addAll(draft.photos);
+    // After the first frame: sending sets state, and lands in the tab it is in.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _submit();
+    });
+  }
+
+  ListingDraft _draft() => ListingDraft(
+        kind: _kind,
+        category: _category,
+        condition: _condition,
+        title: _title.text,
+        description: _description.text,
+        subcategory: _subcategory.text,
+        value: _value.text,
+        postalCode: _postal.text,
+        photos: [..._photos],
+      );
 
   @override
   void dispose() {
@@ -103,17 +149,25 @@ class _PostItemScreenState extends State<PostItemScreen> {
     // account this device already has is claimed rather than replaced.
     if (!session.signedIn || session.anonymous) {
       // Step 2/2: no profile yet, so the profile screen comes first.
+      final who = session.me?.id;
+      session.listingToFinish = _draft();
       await pushOverBar<bool>(context, const CreateProfileScreen(continuingToListing: true));
-      if (!mounted) return;
-      final now = context.read<Session>();
-      if (!now.signedIn || now.anonymous) return;
+      // Signed in on 10c rather than making a profile there: somebody else
+      // now, whose new app has this form in it, and lists it from there. Not
+      // nobody becoming somebody, which is 10c making a first account.
+      if (who != null && session.me?.id != who) return;
+      session.listingToFinish = null;
+      if (!mounted || !session.signedIn || session.anonymous) return;
     }
 
     setState(() {
       _busy = true;
       _error = null;
+      _refused = null;
     });
     try {
+      await _sendHeldPhotos();
+      if (!mounted) return;
       await context.read<SwaplyApi>().createItem({
         'kind': _kind,
         'title': _title.text.trim(),
@@ -123,7 +177,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
         if (_kind == 'item') 'condition': _condition,
         if (_value.text.trim().isNotEmpty) 'estimatedValueNok': int.tryParse(_value.text.trim()),
         if (_postal.text.trim().isNotEmpty) 'postalCode': _postal.text.trim(),
-        'media': [for (final photo in _photos) photo.path],
+        'media': [for (final photo in _photos) photo.stored!.path],
       });
       if (!mounted) return;
       await context.read<Session>().refresh();
@@ -133,9 +187,36 @@ class _PostItemScreenState extends State<PostItemScreen> {
       // the next «Legg ut» is an empty form and not this listing again.
       goToTab(context, 4, startOver: true);
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      // No answer. After 10c this is a person with a profile and a form still
+      // full, so the form stays and says so; «Legg ut» sends what is missing.
+      if (mounted) setState(() => _error = noContact);
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// The pictures picked before there was a profile to hold them, sent now
+  /// that there is one. In the strip's order, which is the listing's — the
+  /// first is the cover — and one at a time, so that when one fails the ones
+  /// before it are the server's and the rest are still on the phone. Each is
+  /// marked the moment it lands: a second «Legg ut» sends only what is left.
+  Future<void> _sendHeldPhotos() async {
+    final api = context.read<SwaplyApi>();
+    for (final photo in [..._photos]) {
+      if (photo.stored != null) continue;
+      try {
+        photo.stored = await api.uploadImage(photo.bytes!, filename: photo.name!);
+      } on ApiException catch (e) {
+        // Too big, not a picture the server reads, or empty: this one, and
+        // not the connection or the session. Marked, so the ✕ that fixes it
+        // is the one on the tile with the coral edge.
+        if (e.statusCode == 400 || e.statusCode == 413 || e.statusCode == 415) {
+          _refused = photo;
+        }
+        rethrow;
+      }
     }
   }
 
@@ -155,7 +236,11 @@ class _PostItemScreenState extends State<PostItemScreen> {
         'subcategory': _subcategory.text.trim(),
         if (_kind == 'item') 'condition': _condition,
         if (_value.text.trim().isNotEmpty) 'estimatedValueNok': int.tryParse(_value.text.trim()),
-        'media': [for (final photo in _photos) photo.path],
+        // Only when one is typed. The server keeps the town a postcode
+        // belongs to and not the postcode, so the field opens empty, and
+        // empty leaves the listing where it is.
+        if (_postal.text.trim().isNotEmpty) 'postalCode': _postal.text.trim(),
+        'media': [for (final photo in _photos) photo.stored!.path],
       });
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -172,8 +257,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
   ///
   /// The picker is injectable because a widget test has no camera roll, and the
   /// half worth testing is everything after it.
+  ///
+  /// Without a profile the picture is only kept: the server refuses to store
+  /// one for a device, and «Neste» sends it once 10c has made the profile.
   Future<void> _addPhoto() async {
-    if (_uploading) return;
+    // Not while «Legg ut» is sending the strip: it goes through a copy, and a
+    // picture added behind it would be listed without ever being sent.
+    if (_uploading || _busy) return;
 
     final picked = widget.pickImage != null
         ? await widget.pickImage!()
@@ -183,6 +273,18 @@ class _PostItemScreenState extends State<PostItemScreen> {
                 file == null ? null : PickedPhoto(await file.readAsBytes(), file.name));
     if (picked == null || !mounted) return;
 
+    final session = context.read<Session>();
+    if (!session.signedIn || session.anonymous) {
+      setState(() {
+        _photos.add(ListingPhoto.held(picked.bytes, picked.name));
+        // The reason and the coral edge go together, and the next «Legg ut»
+        // says again if it still holds.
+        _error = null;
+        _refused = null;
+      });
+      return;
+    }
+
     setState(() {
       _uploading = true;
       _error = null;
@@ -190,7 +292,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
     try {
       final image =
           await context.read<SwaplyApi>().uploadImage(picked.bytes, filename: picked.name);
-      if (mounted) setState(() => _photos.add(image));
+      if (mounted) setState(() => _photos.add(ListingPhoto.stored(image)));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -385,28 +487,45 @@ class _PostItemScreenState extends State<PostItemScreen> {
                   child: Text('Kun by vises for andre',
                       style: TextStyle(fontSize: 10, color: SwaplyColors.grey)),
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: SwaplyColors.red, fontSize: 13)),
-                ],
                 const SizedBox(height: 12),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 12, 22, 30),
-            child: PrimaryButton(
-              _editing != null
-                  ? 'Lagre endringene'
-                  : signedIn
-                      ? 'Legg ut'
-                      : 'Neste',
-              busy: _busy,
-              // Enabled either way: a disabled button explains nothing, and
-              // an empty title should be told, not silently refused.
-              onPressed: _title.text.trim().isEmpty
-                  ? () => setState(() => _error = 'Gi gjenstanden en tittel.')
-                  : _submit,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Over the button, as on 10c and 16c, and not at the foot of
+                // the form: on a phone the form runs past the screen, and a
+                // reason written down there was never seen — after 10c the
+                // spinner stopped, «Neste» became «Legg ut», and nothing said
+                // why nothing had been listed.
+                if (_error != null) ...[
+                  // Coral, the «no» colour. Red is report and block, and an
+                  // error here is neither.
+                  Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+                  const SizedBox(height: Insets.sm),
+                ],
+                PrimaryButton(
+                  _editing != null
+                      ? 'Lagre endringene'
+                      : signedIn
+                          ? 'Legg ut'
+                          : 'Neste',
+                  busy: _busy,
+                  // Held while a picture is on its way: listed now, the
+                  // listing would go out without it. The spinner on the strip
+                  // says what is being waited for.
+                  enabled: !_uploading,
+                  // Enabled otherwise: a disabled button explains nothing,
+                  // and an empty title should be told, not silently refused.
+                  onPressed: _title.text.trim().isEmpty
+                      ? () => setState(() => _error = 'Gi gjenstanden en tittel.')
+                      : _submit,
+                ),
+              ],
             ),
           ),
         ],
@@ -510,13 +629,18 @@ class _PostItemScreenState extends State<PostItemScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(Radii.card),
-                        child: Image.network(entry.value.url,
-                            height: 106,
-                            width: 106,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                                height: 106, width: 106, color: SwaplyColors.greenSoft)),
+                        child: _thumbnail(entry.value),
                       ),
+                      if (identical(entry.value, _refused))
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            key: const ValueKey('refused-photo'),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(Radii.card),
+                              border: Border.all(color: SwaplyColors.coral, width: 2),
+                            ),
+                          ),
+                        ),
                       if (entry.key == 0)
                         Positioned(
                           left: 6,
@@ -536,7 +660,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
                         right: 2,
                         top: 2,
                         child: GestureDetector(
-                          onTap: () => setState(() => _photos.removeAt(entry.key)),
+                          // Held still while «Legg ut» is sending the strip.
+                          onTap: _busy
+                              ? null
+                              : () => setState(() {
+                                    final gone = _photos.removeAt(entry.key);
+                                    if (identical(gone, _refused)) _refused = null;
+                                  }),
                           child: const CircleAvatar(
                             radius: 11,
                             backgroundColor: Colors.white,
@@ -550,6 +680,19 @@ class _PostItemScreenState extends State<PostItemScreen> {
           ],
         ),
       );
+
+  /// From memory while the bytes are on the phone, from the server otherwise.
+  Widget _thumbnail(ListingPhoto photo) {
+    Widget blank(BuildContext _, Object _, StackTrace? _) =>
+        Container(height: 106, width: 106, color: SwaplyColors.greenSoft);
+    final bytes = photo.bytes;
+    if (bytes != null) {
+      return Image.memory(bytes,
+          height: 106, width: 106, fit: BoxFit.cover, errorBuilder: blank);
+    }
+    return Image.network(photo.stored!.url,
+        height: 106, width: 106, fit: BoxFit.cover, errorBuilder: blank);
+  }
 
   Widget _pick(String label, bool selected, VoidCallback onTap) => GestureDetector(
         onTap: onTap,

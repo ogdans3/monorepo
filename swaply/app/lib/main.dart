@@ -174,7 +174,10 @@ class _RootGateState extends State<RootGate> {
       session.linkToOpen = null;
       _openSharedListing(link);
     }
-    return AppTabs(tab: widget.tab);
+    // A listing that was waiting on 10c when the person signed in there
+    // instead: this is their new app, and it opens where the form is, which
+    // finishes it.
+    return AppTabs(tab: session.listingToFinish != null ? 1 : widget.tab);
   }
 
   Future<void> _openSharedListing(String token) async {

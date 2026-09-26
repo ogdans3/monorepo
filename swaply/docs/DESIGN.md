@@ -85,6 +85,10 @@ A listing is either an item or a service. A service has no condition — "worn" 
 
 Photos are optional for both. Discovery is a collage, so a listing without one needs a generated card rather than a hole: category mark and title on deep green.
 
+### Where a listing is
+
+**A listing shows a town, never a postcode.** 10b asks for a postcode and says «Kun by vises for andre», so the server looks it up in Bring's register and keeps only the town it belongs to, written the way a sentence writes it («Mo i Rana», not «MO I RANA»). The postcode wins over the owner's town, because a thing kept at the cabin is at the cabin; without one the listing takes the owner's town, and with neither it has none rather than an invented one. A postcode that belongs to no town is refused in words, not passed over — passing over it is how listings from a profile made on 10c, which asks for no place, went out with no town at all. The register is carried in the build (`backend/src/lib/postcode-register.ts`, rewritten by `pnpm postcodes` when Bring changes a postcode) rather than asked for per listing, which would tell a lookup service where people live.
+
 ### Lifecycle
 
 ```
@@ -152,6 +156,8 @@ Built 09.09.2026. What was decided in the building:
 The token also opens the door without an account, which is where *anonymous-first* above becomes real: **a device may look and wish.** Discovery, the item pages and the heart are open to it, and the wishes are kept.
 
 Everything that puts you in front of another person waits for 10c: **listing, writing the first message, and accepting.** A trade has two named people in it, so an unclaimed wish does not close a loop either — it is held, and counts from the moment the profile exists.
+
+**Wishes with nothing to give are a dead end, and 10a says so.** While somebody has listed nothing, the heart that brings their likes to five offers to put something out, and after that every tenth one — fifteen, twenty-five, and on — so that «Senere» is taken at its word. Only a heart that made a like counts: pressed on something already liked it asks nothing, tells the owner nothing and searches for no loop. Two hearts pressed at once are counted one after the other, so the count that asks is never skipped, and a heart stands even when the loop search behind it fails — the owner is told with the like, and the sweep finds the loop. The app never shows 10a twice at the same count. The export titles 10a «Prompt etter 10 likes»; the product owner moved it to five and then every ten on 26.09.2026, so on this point the file is ahead of the export on purpose.
 
 Making the profile **claims the account the device already has**, rather than starting a second one. Nothing that was liked is lost, and the session is reissued because the account has just gained a password.
 

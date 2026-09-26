@@ -2,13 +2,18 @@
 //
 // The strings checked here are lifted from `docs/round-5-screens.md`, so this
 // suite is what stops the app drifting away from the drawings.
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/api/models.dart';
+import 'package:swaply_app/design/tokens.dart';
 import 'package:swaply_app/main.dart';
 import 'package:swaply_app/screens/agreement.dart';
 import 'package:swaply_app/screens/chat.dart';
@@ -284,24 +289,238 @@ void main() {
       expect(find.text('Meldingen er sendt. Samtalen ligger under Chats.'), findsOneWidget);
     });
 
-    testWidgets('04 the tenth wish says what to do next, here as on the collage',
+    testWidgets('04 the fifth wish says what to do next, here as on the collage',
         (tester) async {
-      // 10a lived on the discovery card only, so reaching ten hearts from a
+      // 10a lived on the discovery card only, so reaching the count from a
       // listing was the one way to get there and never be told.
       server.overrides['POST /items/item-console/like'] =
-          {'liked': true, 'tradeId': null, 'promptToList': true, 'likedCount': 10};
+          {'liked': true, 'tradeId': null, 'promptToList': true, 'likedCount': 5};
       await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
 
       await tester.tap(find.byIcon(Icons.favorite_border).last);
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Du har likt 10 ting'), findsOneWidget);
+      expect(find.textContaining('Du har likt 5 ting'), findsOneWidget);
       expect(find.text('Legg ut en gjenstand'), findsOneWidget);
+    });
+
+    testWidgets('04 …and says nothing at a count the card has already said it at',
+        (tester) async {
+      // One memory for both hearts, so a prompt dismissed on the collage is
+      // not put up again the moment the same count is reached from here.
+      server.overrides['POST /items/item-console/like'] =
+          {'liked': true, 'tradeId': null, 'promptToList': true, 'likedCount': 5};
+      await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
+      expect(await session.listingPromptDue(promptToList: true, likedCount: 5), isTrue);
+
+      await tester.tap(find.byIcon(Icons.favorite_border).last);
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('POST /items/item-console/like'));
+      expect(find.textContaining('Du har likt'), findsNothing);
+    });
+
+    testWidgets('04 …and says it even when the page was left before the answer came',
+        (tester) async {
+      // The fifth heart is the one that asks, and the sixth does not: a ‹
+      // pressed while the heart was on its way cost the sheet for ten more.
+      final answer = Completer<Object?>();
+      server.overrides['POST /items/item-console/like'] = (http.Request _) => answer.future;
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => const ItemDetailScreen(itemId: 'item-console'))),
+            child: const Text('Oppdag'),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Oppdag'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.favorite_border).last);
+      await tester.pump();
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(ItemDetailScreen), findsNothing);
+
+      answer.complete({'liked': true, 'tradeId': null, 'promptToList': true, 'likedCount': 5});
+      await tester.pumpAndSettle();
+
+      expect(find.text('Du har likt 5 ting. På tide å legge ut noe selv'), findsOneWidget);
     });
 
     testWidgets('a listing with no photo gets a card, not a hole', (tester) async {
       await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
       expect(find.byIcon(Icons.sports_esports_outlined), findsWidgets);
+    });
+  });
+
+  group('10a the prompt to list', () {
+    // At the fifth heart, and every tenth after it, for as long as nothing is
+    // listed. The server says when a count is due, and says it again for a
+    // heart taken back and given again; only the phone knows it already asked.
+    testWidgets('comes at five, not again for the same five, and next at fifteen',
+        (tester) async {
+      var liked = false;
+      var count = 4;
+      server.overrides['GET /discover'] = (http.Request _) => {
+            'total': 2,
+            'items': [
+              FakeServer.drill,
+              {...FakeServer.console, 'likedByMe': liked},
+            ],
+          };
+      server.overrides['POST /items/item-console/like'] = (http.Request _) {
+        liked = true;
+        count++;
+        return {
+          'liked': true,
+          'tradeId': null,
+          'promptToList': count == 5 || count == 15,
+          'likedCount': count,
+        };
+      };
+      server.overrides['DELETE /items/item-console/like'] = (http.Request _) {
+        liked = false;
+        count--;
+        return <String, Object?>{};
+      };
+      await mount(tester, const DiscoverScreen());
+
+      Future<void> heart() async {
+        await tester.tap(find.descendant(
+            of: find.byKey(const ValueKey('item-console')),
+            matching: find.byIcon(liked ? Icons.favorite : Icons.favorite_border)));
+        await tester.pumpAndSettle();
+      }
+
+      // 1. The fifth heart gets it, with the count in it.
+      await heart();
+      expect(find.text('Du har likt 5 ting. På tide å legge ut noe selv'), findsOneWidget);
+      await tester.tap(find.text('Senere'));
+      await tester.pumpAndSettle();
+
+      // 2. Taken back and given again is five again, and the server says so,
+      //    but it has been said.
+      await heart();
+      await heart();
+      expect(count, 5);
+      expect(find.textContaining('Du har likt'), findsNothing);
+
+      // 3. Ten hearts on, elsewhere, it is due again.
+      await heart();
+      count = 14;
+      await heart();
+      expect(find.text('Du har likt 15 ting. På tide å legge ut noe selv'), findsOneWidget);
+    });
+
+    testWidgets('comes for a card that is gone by the time the answer does', (tester) async {
+      // A card can go while its heart is on the way — the collage fetched
+      // again under it — and the sheet was owed to the heart, not the card.
+      final answer = Completer<Object?>();
+      server.overrides['POST /items/item-console/like'] = (http.Request _) => answer.future;
+      final showing = ValueNotifier(true);
+      addTearDown(showing.dispose);
+      await mount(
+        tester,
+        Scaffold(
+          body: ValueListenableBuilder<bool>(
+            valueListenable: showing,
+            builder: (_, show, _) => show
+                ? ItemCard(item: Item.fromJson(FakeServer.console), onChanged: () {})
+                : const SizedBox(),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.favorite_border));
+      await tester.pump();
+      showing.value = false;
+      await tester.pumpAndSettle();
+      expect(find.byType(ItemCard), findsNothing);
+
+      answer.complete({'liked': true, 'tradeId': null, 'promptToList': true, 'likedCount': 5});
+      await tester.pumpAndSettle();
+
+      expect(find.text('Du har likt 5 ting. På tide å legge ut noe selv'), findsOneWidget);
+    });
+
+    testWidgets('is the export\'s sheet: a handle, the count in green, and what was liked',
+        (tester) async {
+      // What the person has been wanting is the argument for giving something,
+      // so the sheet shows the last three of it rather than saying so.
+      server.overrides['GET /me/likes'] = {
+        'items': [
+          for (var i = 0; i < 4; i++) {...FakeServer.console, 'id': 'liked-$i', 'cover': null},
+        ],
+      };
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => TextButton(
+              onPressed: () => showListingPrompt(context, 5), child: const Text('Vis')),
+        ),
+      );
+      await tester.tap(find.text('Vis'));
+      await tester.pumpAndSettle();
+
+      // No golden holds this sheet, so its shape is held here: off-white,
+      // rounded 28 at the top, a 40 by 5 handle, and the pictures at 88.
+      final sheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+      expect(sheet.backgroundColor, SwaplyColors.bg);
+      expect(
+          sheet.shape,
+          const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28))));
+      final handle = find.byWidgetPredicate((w) =>
+          w is Container &&
+          w.constraints == const BoxConstraints.tightFor(width: 40, height: 5));
+      expect(handle, findsOneWidget);
+      expect(tester.getTopLeft(handle).dy,
+          lessThan(tester.getTopLeft(find.textContaining('Du har likt')).dy));
+      expect(tester.getSize(find.byType(ItemThumb).first), const Size(88, 88));
+      final title = tester.widget<Text>(find.text('Du har likt 5 ting. På tide å legge ut noe selv'));
+      expect(title.style!.color, SwaplyColors.greenDeep);
+      expect(title.style!.fontSize, 24);
+      expect(find.byType(ItemThumb), findsNWidgets(3));
+      expect(find.text('ting du\nhar likt'), findsOneWidget);
+      // «Senere» is words under the button, not a second button.
+      expect(find.byType(SecondaryButton), findsNothing);
+      await tester.tap(find.widgetWithText(TextButton, 'Senere'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+    });
+
+    testWidgets('…and without an answer about the likes, leaves the row out', (tester) async {
+      // Three empty tiles would read as three pictures that failed.
+      server.overrides['GET /me/likes'] = 500;
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => TextButton(
+              onPressed: () => showListingPrompt(context, 15), child: const Text('Vis')),
+        ),
+      );
+      await tester.tap(find.text('Vis'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Du har likt 15 ting. På tide å legge ut noe selv'), findsOneWidget);
+      expect(find.byType(ItemThumb), findsNothing);
+      expect(find.text('ting du\nhar likt'), findsNothing);
+      expect(find.text('Legg ut en gjenstand'), findsOneWidget);
+    });
+
+    test('is remembered by account, and never without the server', () async {
+      await session.login('ola@epost.no', 'passord');
+      expect(await session.listingPromptDue(promptToList: false, likedCount: 25), isFalse);
+      expect(await session.listingPromptDue(promptToList: true, likedCount: 5), isTrue);
+      expect(await session.listingPromptDue(promptToList: true, likedCount: 5), isFalse);
+
+      // Somebody else on the same phone has not been asked anything.
+      await session.lookAround();
+      expect(await session.listingPromptDue(promptToList: true, likedCount: 5), isTrue);
     });
   });
 
@@ -1197,6 +1416,9 @@ void main() {
       await mount(tester, const PostItemScreen(), signedIn: false);
 
       await tester.enterText(find.byType(TextField).first, 'Fiskestang');
+      // Postnummer: what the listing's town comes from, since a profile made
+      // on 10c has none of its own.
+      await tester.enterText(find.byType(TextField).at(4), '7030');
       await tester.pump();
       await tester.tap(find.text('Neste'));
       await tester.pumpAndSettle();
@@ -1215,6 +1437,7 @@ void main() {
       expect(server.requests, contains('POST /auth/register'));
       expect(server.requests, contains('POST /items'));
       expect(server.bodies['POST /items']!['title'], 'Fiskestang');
+      expect(server.bodies['POST /items']!['postalCode'], '7030');
     });
   });
 
@@ -1241,6 +1464,27 @@ void main() {
 
       expect(server.bodies['PATCH /items/item-mine']!['title'],
           'Bosch drill 18V med koffert');
+      // The postcode field opens empty — the server keeps the town, not the
+      // postcode — and left empty it does not move the listing.
+      expect(server.bodies['PATCH /items/item-mine']!.containsKey('postalCode'), isFalse);
+    });
+
+    testWidgets('a postcode typed while correcting it moves it', (tester) async {
+      // The field was there when correcting a listing and went nowhere: the
+      // correction was sent without it.
+      server.overrides['PATCH /items/item-mine'] = {...FakeServer.drill, 'id': 'item-mine'};
+      await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
+
+      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rediger annonsen'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).at(4), '5003');
+      await tester.tap(find.text('Lagre endringene'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['PATCH /items/item-mine']!['postalCode'], '5003');
     });
 
     testWidgets('and taking it down asks first', (tester) async {
@@ -1273,7 +1517,39 @@ void main() {
   });
 
   group('10b photographs', () {
-    testWidgets('a picked photo is uploaded and shown in the strip', (tester) async {
+    /// A picker that hands over a picture under each name in turn.
+    Future<PickedPhoto?> Function() picker(List<String> names) {
+      var next = 0;
+      return () async => PickedPhoto([1, 2, 3, next], names[next++]);
+    }
+
+    Future<void> addPhotos(WidgetTester tester, int count) async {
+      for (var i = 0; i < count; i++) {
+        await tester.tap(find.text('Legg til bilder'));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    /// «Neste» on 10b, and 10c filled in and sent.
+    Future<void> throughProfile(WidgetTester tester) async {
+      await tester.enterText(find.byType(TextField).first, 'Fiskestang');
+      await tester.pump();
+      await tester.tap(find.text('Neste'));
+      await tester.pumpAndSettle();
+      for (final (field, text) in [
+        (0, 'Ola N.'),
+        (1, 'ola@epost.no'),
+        (2, '412 34 567'),
+        (3, 'drillbits123'),
+      ]) {
+        await tester.enterText(find.byType(TextField).at(field), text);
+      }
+      await tester.tap(find.text('Lag profil og legg ut'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('somebody with a profile sends a picked photo at once, and the strip draws it',
+        (tester) async {
       await mount(
         tester,
         PostItemScreen(pickImage: () async => const PickedPhoto([1, 2, 3], 'drill.jpg')),
@@ -1283,7 +1559,7 @@ void main() {
       await tester.tap(find.text('Legg til bilder'));
       await tester.pumpAndSettle();
 
-      expect(server.requests, contains('POST /media'));
+      expect(server.uploadedNames, ['drill.jpg']);
       // The strip draws the URL the server handed back, and the first one is
       // the cover.
       final image = tester.widget<Image>(find.byType(Image).first).image as NetworkImage;
@@ -1319,7 +1595,217 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Forside'), findsNothing);
+      final said = tester.widget<Text>(find.text('Bildet er for stort. Grensen er 10 MB.'));
+      // Coral is «no». Red is report and block, and this is neither.
+      expect(said.style!.color, SwaplyColors.coral);
+    });
+
+    testWidgets('a device with no profile keeps its photos until 10c has made one',
+        (tester) async {
+      // The server stores a photograph only for somebody with a profile, and
+      // a device gets one on 10c, which comes after this form. Sending each
+      // picture the moment it was picked was refused, every one of them.
+      await session.lookAround();
+      server.overrides['POST /items'] = {...FakeServer.drill, 'title': 'Fiskestang'};
+      await mount(tester, PostItemScreen(pickImage: picker(['sykkel.jpg', 'stang.jpg'])),
+          signedIn: false);
+
+      await addPhotos(tester, 2);
+
+      expect(server.requests, isNot(contains('POST /media')));
+      // Drawn from the bytes on the phone, the first as the cover.
+      final drawn = tester.widgetList<Image>(find.byType(Image)).map((i) => i.image);
+      expect(drawn, hasLength(2));
+      expect(drawn, everyElement(isA<MemoryImage>()));
+      expect(find.text('Forside'), findsOneWidget);
+
+      await throughProfile(tester);
+
+      // In the order they were picked, with the profile's key and not the
+      // device's, after the profile and before the listing that needs them.
+      expect(server.uploadedNames, ['sykkel.jpg', 'stang.jpg']);
+      expect(server.bearers['POST /media'], 'Bearer tok');
+      final asked = server.requests;
+      expect(asked.indexOf('POST /auth/register'), lessThan(asked.indexOf('POST /media')));
+      expect(asked.lastIndexOf('POST /media'), lessThan(asked.indexOf('POST /items')));
+      expect(server.bodies['POST /items']!['media'], [
+        '/media/${FakeServer.storedPhotoAt(0)}',
+        '/media/${FakeServer.storedPhotoAt(1)}',
+      ]);
+    });
+
+    testWidgets('one that does not get there keeps the form, and «Legg ut» sends only the rest',
+        (tester) async {
+      await session.lookAround();
+      server.overrides['POST /items'] = {...FakeServer.drill, 'title': 'Fiskestang'};
+      var dropped = false;
+      server.overrides['POST /media'] = (http.Request _) {
+        // The second picture, once: the profile is made and the first stored.
+        if (server.uploads == 1 && !dropped) {
+          dropped = true;
+          return unreachable;
+        }
+        return asUsual;
+      };
+      await mount(tester, PostItemScreen(pickImage: picker(['en.jpg', 'to.jpg', 'tre.jpg'])),
+          signedIn: false);
+
+      await addPhotos(tester, 3);
+      await throughProfile(tester);
+
+      // Still 10b, still filled in, every picture still in the strip, and
+      // nothing listed. It says so in coral.
+      expect(find.byType(PostItemScreen), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+          'Fiskestang');
+      expect(find.byType(Image), findsNWidgets(3));
+      expect(tester.widget<Text>(find.text(noContact)).style!.color, SwaplyColors.coral);
+      expect(server.requests, isNot(contains('POST /items')));
+      expect(server.uploadedNames, ['en.jpg']);
+      // The profile is made, so what is left is the last step and not «Neste».
+      expect(session.anonymous, isFalse);
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Legg ut'));
+      await tester.pumpAndSettle();
+
+      // Nothing twice: not the profile, not the picture that was stored.
+      expect(server.requests.where((r) => r == 'POST /auth/register'), hasLength(1));
+      expect(server.uploadedNames, ['en.jpg', 'to.jpg', 'tre.jpg']);
+      expect(server.bodies['POST /items']!['media'], [
+        for (var n = 0; n < 3; n++) '/media/${FakeServer.storedPhotoAt(n)}',
+      ]);
+    });
+
+    testWidgets('signed in on 10c instead, the pictures go out as the account signed in to',
+        (tester) async {
+      // Signing in makes the phone somebody else, and the app's tabs give
+      // somebody else a new form — which is what the key does here too. The
+      // pictures held for the stranger go with what was typed.
+      await session.lookAround();
+      server.overrides['POST /auth/login'] = {'token': 'tok', 'user': FakeServer.me};
+      server.overrides['POST /items'] = {...FakeServer.drill, 'title': 'Fiskestang'};
+      final pick = picker(['en.jpg', 'to.jpg']);
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => PostItemScreen(
+              key: ValueKey(context.select<Session, String?>((s) => s.me?.id)), pickImage: pick),
+        ),
+        signedIn: false,
+      );
+
+      await addPhotos(tester, 2);
+      await tester.enterText(find.byType(TextField).first, 'Fiskestang');
+      await tester.pump();
+      await tester.tap(find.text('Neste'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Logg inn'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'ola@epost.no');
+      await tester.enterText(find.byType(TextField).last, 'passord');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Logg inn'));
+      await tester.pumpAndSettle();
+
+      expect(server.uploadedNames, ['en.jpg', 'to.jpg']);
+      expect(server.bearers['POST /media'], 'Bearer tok');
+      expect(server.requests.where((r) => r == 'POST /items'), hasLength(1));
+      expect(server.bodies['POST /items']!['title'], 'Fiskestang');
+      expect(server.bodies['POST /items']!['media'], [
+        '/media/${FakeServer.storedPhotoAt(0)}',
+        '/media/${FakeServer.storedPhotoAt(1)}',
+      ]);
+    });
+
+    testWidgets('…and says so where a phone shows it, over the button', (tester) async {
+      // The form runs past the foot of a phone, and the reason used to be
+      // written under its last field: the spinner stopped, «Neste» became
+      // «Legg ut», and nothing on screen said why nothing had gone out.
+      await session.lookAround();
+      var dropped = false;
+      server.overrides['POST /media'] = (http.Request _) {
+        if (server.uploads == 1 && !dropped) {
+          dropped = true;
+          return unreachable;
+        }
+        return asUsual;
+      };
+      await mount(tester, PostItemScreen(pickImage: picker(['en.jpg', 'to.jpg'])),
+          signedIn: false);
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+
+      await addPhotos(tester, 2);
+      await throughProfile(tester);
+
+      expect(find.text(noContact).hitTestable(), findsOneWidget);
+      expect(tester.getRect(find.text(noContact)).bottom,
+          lessThanOrEqualTo(tester.getRect(find.widgetWithText(PrimaryButton, 'Legg ut')).top));
+    });
+
+    testWidgets('a picture the server will not take is marked, and the rest go out without it',
+        (tester) async {
+      // Somebody with a profile is refused at the pick and the picture never
+      // enters the strip. A held one is refused after 10c, among up to ten.
+      await session.lookAround();
+      server.overrides['POST /items'] = {...FakeServer.drill, 'title': 'Fiskestang'};
+      server.overrides['POST /media'] = (http.Request request) =>
+          latin1.decode(request.bodyBytes).contains('filename="to.jpg"')
+              ? const Refusal(400, 'file_too_large', 'Bildet er for stort. Grensen er 10 MB.')
+              : asUsual;
+      await mount(tester, PostItemScreen(pickImage: picker(['en.jpg', 'to.jpg', 'tre.jpg'])),
+          signedIn: false);
+
+      await addPhotos(tester, 3);
+      await throughProfile(tester);
+
+      // 1. The reason, and a coral edge on the picture it is about.
       expect(find.text('Bildet er for stort. Grensen er 10 MB.'), findsOneWidget);
+      final marked = find.byKey(const ValueKey('refused-photo'));
+      expect(marked, findsOneWidget);
+      expect(tester.getRect(marked), tester.getRect(find.byType(Image).at(1)));
+      final edge = (tester.widget<DecoratedBox>(marked).decoration as BoxDecoration).border!;
+      expect((edge as Border).top.color, SwaplyColors.coral);
+      expect(server.uploadedNames, ['en.jpg']);
+
+      // 2. Its ✕ takes it out, and the mark with it.
+      await tester.tap(find.byIcon(Icons.close).at(1));
+      await tester.pumpAndSettle();
+      expect(marked, findsNothing);
+      expect(find.byType(Image), findsNWidgets(2));
+
+      // 3. «Legg ut» sends what is left, once each, in order.
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Legg ut'));
+      await tester.pumpAndSettle();
+      expect(server.uploadedNames, ['en.jpg', 'tre.jpg']);
+      expect(server.bodies['POST /items']!['media'], [
+        '/media/${FakeServer.storedPhotoAt(0)}',
+        '/media/${FakeServer.storedPhotoAt(1)}',
+      ]);
+    });
+
+    testWidgets('somebody with a profile cannot list while a picture is still on its way',
+        (tester) async {
+      // «Legg ut» pressed during the upload listed without the picture, and
+      // the answer landed on a form that was already gone.
+      final upload = Completer<Object?>();
+      server.overrides['POST /media'] = (http.Request _) => upload.future;
+      await mount(
+        tester,
+        PostItemScreen(pickImage: () async => const PickedPhoto([1, 2, 3], 'drill.jpg')),
+      );
+      await tester.enterText(find.byType(TextField).first, 'Bosch drill 18V');
+      await tester.tap(find.text('Legg til bilder'));
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Legg ut'));
+      await tester.pump();
+      expect(server.requests, isNot(contains('POST /items')));
+
+      upload.complete(asUsual);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Legg ut'));
+      await tester.pumpAndSettle();
+      expect(server.bodies['POST /items']!['media'], ['/media/${FakeServer.storedPhoto}']);
     });
   });
 }

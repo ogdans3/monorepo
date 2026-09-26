@@ -17,8 +17,18 @@ export const CATEGORIES = [
 
 export const CONDITIONS = ['new', 'good', 'worn'] as const
 
-/** Screen 10a fires once someone has liked this many things without listing any. */
-export const LIKES_BEFORE_LISTING_PROMPT = 10
+/**
+ * Screen 10a: while someone has listed nothing, the heart that brings their
+ * likes to 5 offers it, and then every 10th after that — 15, 25, 35.
+ *
+ * Early, because wishes with nothing to give are a dead end and the sooner
+ * that is said the fewer of them pile up. Then quieter, because the person who
+ * answered «Senere» meant it, and asking again on every heart turns the heart
+ * into something to avoid. The export's title says ten; the product owner moved
+ * it on 26.09.2026.
+ */
+export const LIKES_BEFORE_LISTING_PROMPT = 5
+export const LISTING_PROMPT_EVERY = 10
 
 /** «Svarer ikke Ola innen fristen, fortsetter byttet som vanlig.» */
 export const WITHDRAWAL_RESPONSE_HOURS = 72

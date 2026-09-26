@@ -6,6 +6,7 @@
 // that the product still means what it decided to mean.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
@@ -65,6 +66,47 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.requests, contains('POST /items/item-drill/like'));
+    });
+
+    testWidgets('…and a screen reader can find it by name, which follows the wish',
+        (tester) async {
+      // A drawn circle alone is an unnamed button, so the one action on the
+      // card that matters was the one nobody could ask for. The same two words
+      // as the heart on the item page.
+      final semantics = tester.ensureSemantics();
+      var liked = false;
+      server.overrides['GET /discover'] = (http.Request _) => {
+            'total': 2,
+            'items': [
+              {...FakeServer.drill, 'likedByMe': liked},
+              FakeServer.console,
+            ],
+          };
+      server.overrides['POST /items/item-drill/like'] = (http.Request _) {
+        liked = true;
+        return {'liked': true, 'tradeId': null, 'promptToList': false, 'likedCount': 1};
+      };
+      await mount(tester, const DiscoverScreen());
+
+      final heart = find.descendant(
+          of: find.byKey(const ValueKey('item-drill')),
+          matching: find.bySemanticsLabel('Jeg vil ha'));
+      expect(heart, findsOneWidget);
+      expect(
+          tester.getSemantics(heart),
+          matchesSemantics(
+              label: 'Jeg vil ha', isButton: true, hasTapAction: true));
+
+      await tester.tap(heart);
+      await tester.pumpAndSettle();
+
+      expect(server.requests, contains('POST /items/item-drill/like'));
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('item-drill')),
+              matching: find.bySemanticsLabel('Du vil ha denne')),
+          findsOneWidget);
+      semantics.dispose();
     });
 
     testWidgets('long press keeps the rare actions, and the heart is not among them',

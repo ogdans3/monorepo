@@ -81,8 +81,10 @@ WebP. No SVG: it is a document with scripts in it.
 
 **The client shrinks the picture**, at 1600px and quality 82, so what arrives is
 a few hundred kilobytes rather than the five megabytes a phone camera makes. The
-ten-megabyte ceiling on the server is for the client that does not — the browser
-build, where the picker cannot resize.
+browser build shrinks too, through a canvas, but the quality only applies to
+JPEG and WebP, and a picture the browser cannot draw is sent as it was picked.
+The ten-megabyte ceiling on the server is for those, and for any client that
+does not shrink at all.
 
 **An upload that never became a listing is swept.** The picture is uploaded on
 10b before the listing exists, so somebody who changes their mind leaves bytes

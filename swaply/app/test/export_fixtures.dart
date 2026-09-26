@@ -367,9 +367,11 @@ final _thread1 = {
 Object? exportCanned(String key, FakeServer server) => switch (key) {
       'POST /auth/login' || 'POST /auth/register' => {'token': 'tok', 'user': me},
       'GET /me' || 'PUT /me/interests' || 'PATCH /me' => me,
-      // Two uploads, two different pictures, so 10b shows «foto 1» and «foto 2».
+      // Two uploads, two different pictures, so 10b shows «foto 1» and «foto 2»
+      // for somebody with a profile. The fake counts an upload once it is
+      // answered; a device with none keeps its pictures and never gets here.
       'POST /media' => () {
-          final file = ['bike-white.jpg', 'drill.jpg'][server.uploads++ % 2];
+          final file = ['bike-white.jpg', 'drill.jpg'][server.uploads % 2];
           return {'path': '/media/$file', 'url': '$photos$file', 'bytes': 3};
         }(),
       'GET /discover' => {

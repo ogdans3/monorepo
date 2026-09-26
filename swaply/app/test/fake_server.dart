@@ -14,7 +14,11 @@ class FakeServer {
   /// Serve the people and things the round-5 export draws, so a golden can
   /// be laid over the frame it came from. The flow tests keep the small set.
   final bool export;
+
+  /// Photographs the server has stored, and the names they were sent under,
+  /// in the order they arrived. A refused upload counts for neither.
   int uploads = 0;
+  final uploadedNames = <String>[];
 
   final requests = <String>[];
 
@@ -28,8 +32,8 @@ class FakeServer {
 
   /// Answers that replace the canned ones. Besides a body or a status there is
   /// a [Refusal], [unreachable], and a function of the request — which may hand
-  /// back any of those, or a future of one — for an answer that changes
-  /// between calls.
+  /// back any of those, or a future of one, or [asUsual] for the canned answer
+  /// — for an answer that changes between calls.
   final Map<String, Object?> overrides = {};
 
   http.Client get client => MockClient((request) async {
@@ -46,6 +50,11 @@ class FakeServer {
         var body = overrides.containsKey(key) ? overrides[key] : _canned(key, request);
         if (body is Object? Function(http.Request)) body = body(request);
         if (body is Future) body = await body;
+        if (identical(body, asUsual)) body = _canned(key, request);
+        if (key == 'POST /media' && body is Map) {
+          uploads++;
+          uploadedNames.add(_filename(request));
+        }
         if (identical(body, unreachable)) {
           // What the http client throws when there is no network or no
           // server: not an answer at all.
@@ -78,6 +87,24 @@ class FakeServer {
       });
 
   Object? _canned(String key, http.Request request) {
+    if (key == 'POST /media') {
+      // Ahead of the export's answers too: the real server stores a photograph
+      // only for somebody with a profile — nobody without a session, and no
+      // device that is looking around.
+      final bearer = request.headers['authorization'];
+      if (bearer == null) return const Refusal(401, 'unauthorized', 'Du må logge inn.');
+      if (bearer == 'Bearer $deviceToken') return Refusal.accountRequired;
+    }
+    if (key == 'POST /auth/register' &&
+        request.headers['authorization'] == 'Bearer $deviceToken') {
+      // A device making its profile claims its own row, so the account that
+      // comes back is the stranger's, now with a name: the same id. The app
+      // keys a person's tabs by that id, and a claim is not somebody else.
+      return {
+        'token': 'tok',
+        'user': {...me, 'id': lookingAround['id']},
+      };
+    }
     if (export) {
       final hit = exportCanned(key, this);
       if (hit != null) return hit;
@@ -88,8 +115,8 @@ class FakeServer {
         'POST /auth/logout' => {},
         'POST /auth/anonymous' => {'token': deviceToken, 'user': lookingAround},
         'POST /media' => {
-            'path': '/media/$storedPhoto',
-            'url': 'http://test/media/$storedPhoto',
+            'path': '/media/${storedPhotoAt(uploads)}',
+            'url': 'http://test/media/${storedPhotoAt(uploads)}',
             'bytes': 3,
           },
         'POST /items/item-drill/share' => {
@@ -302,6 +329,18 @@ class FakeServer {
   /// What the server names a stored photograph: sixteen random bytes in hex.
   static const storedPhoto = '0123456789abcdef0123456789abcdef.jpg';
 
+  /// The name of the [n]th photograph stored, counting from nought, which is
+  /// [storedPhoto]. Each its own, so a listing's photographs can be told apart
+  /// and their order checked.
+  static String storedPhotoAt(int n) =>
+      n == 0 ? storedPhoto : '${n.toRadixString(16).padLeft(32, '0')}.jpg';
+
+  /// The file name a multipart upload was sent under. Read as Latin-1, which
+  /// takes any byte, because the rest of the body is a photograph.
+  static String _filename(http.Request request) =>
+      RegExp(r'filename="([^"]*)"').firstMatch(latin1.decode(request.bodyBytes))?.group(1) ??
+      '';
+
   /// A device that has been let in and has made nothing: no name, no address,
   /// and the wishes it has expressed are still its own.
   static const lookingAround = {
@@ -471,6 +510,11 @@ class Refusal {
   /// `/auth/anonymous` for a device id whose account has since been claimed.
   static const deviceClaimed = Refusal(409, 'device_claimed',
       'Denne enheten hører allerede til en konto. Logg inn med e-post og passord.');
+
+  /// Listing, the first message, accepting and storing a photograph, asked
+  /// for by a device that has no profile yet.
+  static const accountRequired = Refusal(403, 'account_required',
+      'Lag en profil for å gjøre dette. Du beholder det du har likt.');
 }
 
 /// No answer: no network, or no server behind the address.
@@ -478,6 +522,14 @@ const unreachable = _Unreachable();
 
 class _Unreachable {
   const _Unreachable();
+}
+
+/// From an override that is a function: this time, answer as if there were
+/// no override.
+const asUsual = _AsUsual();
+
+class _AsUsual {
+  const _AsUsual();
 }
 
 /// The chain variant, which is the one screen that has to make a three-person

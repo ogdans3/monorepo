@@ -160,6 +160,33 @@ void main() {
       expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
     });
 
+    testWidgets('«Nullstill likes» brings 10a back, and nothing else does', (tester) async {
+      // The phone remembers the highest count it showed 10a at, per account,
+      // so a heart taken back and given again does not ask twice. Resetting
+      // likes starts the server's count over, and the sheet has to come with
+      // it or the tool cannot walk 10a a second time.
+      asAdmin();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('listingPromptShownAt:test-1', 15);
+      await mount(tester, const AdminScreen());
+
+      Future<void> reset(String lever) async {
+        await tester.tap(find.byTooltip('Nullstill eller slett'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(lever));
+        await tester.pumpAndSettle();
+      }
+
+      await reset('Nullstill gjenstander');
+      expect(prefs.getInt('listingPromptShownAt:test-1'), 15);
+
+      await reset('Nullstill likes');
+      expect(server.bodies['POST /admin/accounts/test-1/reset'], {
+        'parts': ['likes'],
+      });
+      expect(prefs.getInt('listingPromptShownAt:test-1'), isNull);
+    });
+
     testWidgets('building a trade goes through the product’s own buttons', (tester) async {
       asAdmin();
       await mount(tester, const AdminScreen());

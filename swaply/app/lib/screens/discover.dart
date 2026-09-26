@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
+import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
 import 'item_detail.dart';
@@ -330,14 +331,22 @@ class _ItemCardState extends State<ItemCard> {
       _liked = !_liked;
     });
     final api = context.read<SwaplyApi>();
+    final session = context.read<Session>();
+    // For 10a, which is owed to this heart even if the card is gone by the
+    // time the answer comes: the server offers it at five and then not until
+    // fifteen.
+    final root = Navigator.of(context, rootNavigator: true);
     try {
       if (_liked) {
         final result = await api.like(widget.item.id);
-        if (!mounted) return;
         if (result.tradeId != null) {
+          if (!mounted) return;
           await pushOverBar<void>(context, MatchScreen(tradeId: result.tradeId!));
-        } else if (result.promptToList) {
-          await _showListingPrompt(result.likedCount);
+        } else {
+          final due = await session.listingPromptDue(
+              promptToList: result.promptToList, likedCount: result.likedCount);
+          if (due) await showListingPrompt(mounted ? context : root.context, result.likedCount);
+          if (!mounted) return;
         }
       } else {
         await api.unlike(widget.item.id);
@@ -352,10 +361,6 @@ class _ItemCardState extends State<ItemCard> {
       if (mounted) setState(() => _busy = false);
     }
   }
-
-  /// 10a, wherever the tenth heart was tapped.
-  Future<void> _showListingPrompt(int likedCount) =>
-      showListingPrompt(context, likedCount);
 
   @override
   Widget build(BuildContext context) {
@@ -387,19 +392,27 @@ class _ItemCardState extends State<ItemCard> {
                 Positioned(
                   right: 8,
                   top: 8,
-                  child: GestureDetector(
-                    onTap: _toggle,
-                    child: Container(
-                      height: 34,
-                      width: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _liked ? Icons.favorite : Icons.favorite_border,
-                        size: 18,
-                        color: _liked ? SwaplyColors.coral : SwaplyColors.ink,
+                  // A drawn circle is an unnamed button to a screen reader,
+                  // and this is the one on the card that matters. Named as on
+                  // the item page, so a heart is called one thing everywhere.
+                  child: Semantics(
+                    container: true,
+                    button: true,
+                    label: _liked ? 'Du vil ha denne' : 'Jeg vil ha',
+                    child: GestureDetector(
+                      onTap: _toggle,
+                      child: Container(
+                        height: 34,
+                        width: 34,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _liked ? Icons.favorite : Icons.favorite_border,
+                          size: 18,
+                          color: _liked ? SwaplyColors.coral : SwaplyColors.ink,
+                        ),
                       ),
                     ),
                   ),
@@ -802,41 +815,143 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
       GestureDetector(onTap: onTap, child: Pill(label, selected: selected));
 }
 
-/// 10a. Ten wishes and nothing to give is a dead end, so we say so — from the
-/// collage and from a listing alike. It used to live on the discovery card
-/// only, so reaching ten hearts from an item page was the one way to get there
-/// and never be told.
+/// 10a. Wishes and nothing to give is a dead end, so we say so: at the fifth
+/// heart, and at every tenth after it for as long as nothing is listed. The
+/// server says when a count is due and [Session.listingPromptDue] keeps it to
+/// once a count. From the collage and from a listing alike — it used to live
+/// on the discovery card only, so reaching the count from an item page was the
+/// one way to get there and never be told.
 Future<void> showListingPrompt(BuildContext context, int likedCount) async {
-if (!context.mounted) return;
+  if (!context.mounted) return;
+  // Asked for before the sheet is up, so the pictures are usually there by
+  // the time it has slid in, and asked for once: a sheet rebuilds.
+  final liked = context
+      .read<SwaplyApi>()
+      .myLikes()
+      .then((items) => items.take(3).toList(), onError: (Object _) => const <Item>[]);
   await showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
-    backgroundColor: Colors.white,
+    // The export's sheet is the screen's own off-white, rounded 28 at the top.
+    backgroundColor: SwaplyColors.bg,
     shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
-    builder: (sheet) => Padding(
-      padding: const EdgeInsets.all(Insets.lg),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Du har likt $likedCount ting. På tide å legge ut noe selv',
-              style: Type.title),
-          const SizedBox(height: Insets.sm),
-          const Text(
-            'Bytter skjer først når du har noe å gi. Legg ut én ting, så kan vi begynne '
-            'å lete etter swaps for deg.',
-            style: Type.secondary,
-          ),
-          const SizedBox(height: Insets.lg),
-          PrimaryButton('Legg ut en gjenstand', onPressed: () {
-            Navigator.of(sheet).pop();
-            openListingForm(context);
-          }),
-          const SizedBox(height: Insets.sm),
-          SecondaryButton('Senere', onPressed: () => Navigator.of(sheet).pop()),
-        ],
-      ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+    builder: (sheet) => _ListingPrompt(
+      likedCount: likedCount,
+      liked: liked,
+      onList: () {
+        Navigator.of(sheet).pop();
+        openListingForm(context);
+      },
+      onLater: () => Navigator.of(sheet).pop(),
     ),
   );
+}
+
+/// 10a as the export draws it: a handle, the count in the brand's green, and
+/// the last three things liked — what the person has been wanting is the
+/// argument for giving something, so the sheet shows it rather than says it.
+class _ListingPrompt extends StatelessWidget {
+  const _ListingPrompt({
+    required this.likedCount,
+    required this.liked,
+    required this.onList,
+    required this.onLater,
+  });
+
+  final int likedCount;
+  final Future<List<Item>> liked;
+  final VoidCallback onList, onLater;
+
+  /// The export's tiles before a picture is in them.
+  static const _waiting = [Color(0xFFEBEFEA), Color(0xFFE7E4DC), Color(0xFFE2E6EA)];
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        // 34 under «Senere» in the export, 12 of which are its own tap target.
+        padding: const EdgeInsets.fromLTRB(24, 10, 24, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD7DDD6),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text('Du har likt $likedCount ting. På tide å legge ut noe selv',
+                style: Type.screen.copyWith(fontSize: 24, height: 1.2)),
+            const SizedBox(height: 14),
+            const Text(
+              'Bytter skjer først når du har noe å gi. Legg ut én ting, så kan vi begynne '
+              'å lete etter swaps for deg.',
+              style: TextStyle(fontSize: 14.5, height: 1.5, color: SwaplyColors.inkMuted),
+            ),
+            FutureBuilder<List<Item>>(
+              future: liked,
+              builder: (context, answer) {
+                final items = answer.data;
+                // No answer, or nothing left to show — a liked listing can
+                // be taken down since — and the row is not drawn at all:
+                // three empty tiles would read as pictures that failed.
+                if (items != null && items.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 18),
+                  child: SizedBox(
+                    height: 88,
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < (items?.length ?? 3); i++) ...[
+                          if (items == null)
+                            Container(
+                              width: 88,
+                              height: 88,
+                              decoration: BoxDecoration(
+                                color: _waiting[i],
+                                borderRadius: BorderRadius.circular(Radii.card),
+                              ),
+                            )
+                          else
+                            ItemThumb(items[i], size: 88, radius: Radii.card),
+                          const SizedBox(width: 10),
+                        ],
+                        const Expanded(
+                          child: Text('ting du\nhar likt',
+                              style: TextStyle(
+                                  fontSize: 11, height: 1.4, color: SwaplyColors.greyLight)),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 18),
+            PrimaryButton('Legg ut en gjenstand', onPressed: onList),
+            const SizedBox(height: 2),
+            // Words, not a second button, as drawn: putting it off is
+            // allowed rather than offered.
+            SizedBox(
+              height: 40,
+              child: TextButton(
+                onPressed: onLater,
+                style: TextButton.styleFrom(
+                  foregroundColor: SwaplyColors.grey,
+                  padding: EdgeInsets.zero,
+                ),
+                // On the label and not as the button's text style, which would
+                // replace the theme's and take its font family with it.
+                child: const Text('Senere',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      );
 }

@@ -82,7 +82,7 @@ missing the floor offers «Logg ut» instead, which is the honest fallback.
 | **Bygg et bytte** | Nine named states, each otherwise a multi-account journey: `talking` `pending` `countered` `accepted` `handover` `paused` `completed` `declined` `displaced`, two-way or three-way. |
 | **Som motparten** | Switch, act, switch back, look — four switches to watch one counter-offer land on 09e. Chips at the foot of the trade screen do the other side's move without leaving it. |
 | **Få noen til å ville ha denne** | The heart, pressed on your own real listing by one of your test accounts. If it closes a loop a real trade opens and a real notification lands. |
-| **Nullstill** | Three one-way doors in the product: interests can never be emptied (`PUT /me/interests` takes three at minimum), BankID is set once and never unset, and a listing cannot be unmade back into an empty profile. |
+| **Nullstill** | Three one-way doors in the product: interests can never be emptied (`PUT /me/interests` takes three at minimum), BankID is set once and never unset, and a listing cannot be unmade back into an empty profile. «Nullstill likes» also makes this phone forget the count it last showed 10a at for that account, so 10a can be walked again from five. |
 | **Slett testkonto** | Accounts piling up, and the device id that `/auth/anonymous` refuses a second time. Goes through the real `anonymiseUser`, sealed as `reason = 'test_account'`. |
 | **Kjør sweepen nå** | Up to an hour of waiting for the second matching trigger. |
 | **Forfall fristen nå** | Three days. `WITHDRAWAL_RESPONSE_HOURS` is 72, so 08b's expiry branch is otherwise a calendar problem. |

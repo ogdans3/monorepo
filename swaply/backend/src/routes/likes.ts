@@ -15,7 +15,9 @@ export default async function likeRoutes(app: FastifyInstance) {
     const userId = app.requireUser(request)
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
 
-    const wish = await expressWish(app.db, userId, id)
+    const wish = await expressWish(app.db, userId, id, {
+      searchFailed: (err) => request.log.warn({ err, itemId: id }, 'loop search after a heart failed'),
+    })
     return { liked: true, ...wish }
   })
 

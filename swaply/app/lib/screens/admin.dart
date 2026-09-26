@@ -212,6 +212,7 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _accountMenu(TestAccount account) async {
+    final session = context.read<Session>();
     await showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
@@ -253,6 +254,9 @@ class _AdminScreenState extends State<AdminScreen> {
                   Navigator.of(sheet).pop();
                   _run('reset', (api) async {
                     final done = await api.adminReset(account.id, [part.$1]);
+                    // And this phone's memory of having shown 10a: without it
+                    // the count starts over and the sheet does not.
+                    if (part.$1 == 'likes') await session.forgetListingPrompt(account.id);
                     return '${account.displayName}: ${done.join(', ')}';
                   });
                 },
@@ -268,6 +272,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 Navigator.of(sheet).pop();
                 _run('delete', (api) async {
                   await api.adminDeleteAccount(account.id);
+                  await session.forgetListingPrompt(account.id);
                   return 'Slettet ${account.displayName}';
                 });
               },

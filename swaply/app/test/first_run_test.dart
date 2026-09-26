@@ -799,6 +799,54 @@ void main() {
       expect(session.anonymous, isFalse);
     });
 
+    testWidgets('7. signing in on 10c instead still lists the thing, as the account signed in to',
+        (tester) async {
+      // Somebody with an account from another phone arrives as a stranger,
+      // and on 10c signs in rather than make a second profile. That is a new
+      // person to the gate, which builds them a new app — and the form went
+      // with the old one: nothing listed, and what was typed gone.
+      server.overrides['POST /auth/login'] = {
+        'token': 'tok',
+        'user': FakeServer.me,
+        'carried': {'likes': 2},
+      };
+      server.overrides['POST /items'] = {...FakeServer.drill, 'title': 'Fiskestang'};
+      await asStranger(tester);
+      await startListing(tester);
+      expect(session.listingToFinish, isNotNull);
+
+      await tester.tap(find.text('Logg inn'));
+      await tester.pumpAndSettle();
+      server.overrides['GET /me'] = FakeServer.me;
+      await tester.enterText(find.byType(TextField).first, 'ola@epost.no');
+      await tester.enterText(find.byType(TextField).last, 'passord');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Logg inn'));
+      await tester.pumpAndSettle();
+
+      // Listed once, by the account signed in to, as the form was left.
+      expect(asked('POST /items'), 1);
+      expect(server.bearers['POST /items'], 'Bearer tok');
+      expect(server.bodies['POST /items']!['title'], 'Fiskestang');
+      expect(asked('POST /auth/register'), 0);
+      expect(session.listingToFinish, isNull);
+      // And on 13, where it now is, with nothing of 10c or 16c left over.
+      expect(find.byType(LoginScreen, skipOffstage: false), findsNothing);
+      expect(find.byType(CreateProfileScreen, skipOffstage: false), findsNothing);
+      expect(find.byType(ProfileScreen), findsOneWidget);
+    });
+
+    testWidgets('…and ‹ on 10c leaves nothing waiting for a sign-in', (tester) async {
+      await asStranger(tester);
+      await startListing(tester);
+
+      await tester.tap(find.text('‹'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Neste'), findsOneWidget);
+      expect(session.listingToFinish, isNull);
+      expect(server.requests, isNot(contains('POST /items')));
+    });
+
     testWidgets('…and 16c from the profile turns into 10c in its place', (tester) async {
       await asStranger(tester);
       await tapTab(tester, 'Profil');

@@ -62,6 +62,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     if (item == null || _liking) return;
     setState(() => _liking = true);
     final api = context.read<SwaplyApi>();
+    // Taken now, for 10a. The server offers it on one heart — the fifth, the
+    // fifteenth — and not on the next, so a ‹ pressed before the answer came
+    // cost it for ten hearts. It goes up over wherever the person went.
+    final session = context.read<Session>();
+    final root = Navigator.of(context, rootNavigator: true);
 
     // What comes after a wish — the match screen, or 10a — is a screen on top
     // of this one, and the heart underneath must not still be spinning while
@@ -73,20 +78,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       } else {
         wished = await api.like(item.id);
       }
-      await _load();
+      // A page left while the heart was on its way has nothing to redraw,
+      // and reading the API through it threw.
+      if (mounted) await _load();
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _liking = false);
     }
 
-    if (wished == null || !mounted) return;
+    if (wished == null) return;
     if (wished.tradeId != null) {
-      await pushOverBar<void>(context, MatchScreen(tradeId: wished.tradeId!));
-    } else if (wished.promptToList) {
-      // 10a fires on the tenth wish, and the heart here is the same heart.
-      await showListingPrompt(context, wished.likedCount);
+      if (mounted) await pushOverBar<void>(context, MatchScreen(tradeId: wished.tradeId!));
+      return;
     }
+    // 10a comes on the same hearts here as on the collage, and asks the same
+    // session whether it has been shown at this count already.
+    final due = await session.listingPromptDue(
+        promptToList: wished.promptToList, likedCount: wished.likedCount);
+    if (due) await showListingPrompt(mounted ? context : root.context, wished.likedCount);
   }
 
   Future<void> _send() async {

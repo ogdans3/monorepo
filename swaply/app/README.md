@@ -51,7 +51,7 @@ several rows below point at the same file with a different `state` behind it.
 | 01 Splash · 02 Interesser · 10c Lag profil · 16c Logg inn | `screens/onboarding.dart` |
 | 05 Oppdag · 05b Avansert søk | `screens/discover.dart` |
 | 04 Gjenstand detalj | `screens/item_detail.dart` |
-| 10a Prompt etter 10 likes | `screens/discover.dart`, on the tenth heart |
+| 10a Prompt etter 10 likes | `screens/discover.dart`, on the fifth heart and every tenth after it — not the tenth, see below |
 | 10b Legg ut gjenstand | `screens/post_item.dart` |
 | 06a Swap toveis · 07i Swap treveis | `MatchScreen` |
 | 06b Godta · 06e Venter · 06f Overlevering · 09e Motbytte mottatt · 09f Avslått · 09i Ferdig · 07j Treveis-oversikt · 08b Pauset · 08c Avvist | `TradeDetailScreen`, by state |
@@ -65,6 +65,24 @@ several rows below point at the same file with a different `state` behind it.
 | 12a Varsler | `screens/notifications.dart` |
 | 13 Profil · 13b Annen profil · 17c Tom · 16a Rapporter · 16b Innstillinger | `screens/profile.dart` |
 | 06h Vurdering · 07l Vurdering B2 · 06i Tilbakemelding · 09h Fullført | `screens/review.dart` |
+
+**10a comes at the fifth heart, not at the tenth** the export's title names.
+That is a decision, not a drift, and `../docs/DESIGN.md` has it: while nothing
+is listed it comes at five, then at fifteen, twenty-five and on, so «Senere»
+puts it off rather than ending it. The sheet says the real count — «Du har likt
+5 ting» where the drawing has 10. The server decides when a count is due, and
+only on a heart that made a new like; `Session.listingPromptDue` remembers on
+the phone, by account, the highest count it has been shown at, so a heart taken
+back and given again does not ask twice. Listing anything ends it, because the
+server stops asking. «Nullstill likes» in Testverktøy forgets that count as well
+as the likes, or the sheet would stay down until the old count was passed.
+
+The sheet itself is the drawing's: the handle, the screen's off-white, the
+count in green, and the last three things liked beside «ting du har likt», from
+`GET /me/likes` and asked for as the sheet opens. Without an answer the row is
+left out rather than drawn as three empty tiles. A heart whose page or card is
+gone by the time the answer comes still gets its sheet, over wherever the
+person went: the fifth heart asks and the sixth does not.
 
 Three things are here that round 5 did not draw, because the invitations needed
 them: the sheet behind the share button on 04 and the invitation row on 16b
@@ -114,6 +132,14 @@ when there were any. That is somebody else, so it is a fresh shell — and not
 and the stranger had it a minute ago. (Its picks come along too, where the
 account had none.) Signing in where nobody has been through the gate yet —
 16c on an invite-only server, or from the invitation — still gets 02 once.
+
+Signing in on 10c, halfway through a listing, is the same fold into somebody
+else, and the fresh shell would have come without the form: the title, the
+pictures held for the stranger, all gone, and nothing listed. So 10b hands the
+session a `ListingDraft` (`state/listing_draft.dart`) before it opens 10c and
+takes it back when 10c is done with; a sign-in there leaves it in place, the
+gate opens the new app on Legg ut, and the form there takes the draft up and
+finishes it — pictures, then the listing — as the account signed in to.
 
 The screens the gate shows — 01, the invitation, 02, and 16c when it has to —
 do not navigate on their own. The gate moves on when the session changes, and a
@@ -183,8 +209,24 @@ without a camera roll.
 
 The upload returns a path and a URL: the listing is created with the **path**,
 the strip draws the **URL**. iOS asks for permission with the sentence in
-`ios/Runner/Info.plist`; the browser build uses a file input and cannot resize,
-which is what the server's ceiling is for.
+`ios/Runner/Info.plist`. The browser build picks through a file input and
+shrinks through a canvas to the same 1600px, but the quality only applies to
+JPEG and WebP — a PNG comes back redrawn and still lossless — and a picture the
+browser cannot draw, HEIC outside Safari, is passed on as it was picked. Those
+two are what the server's ceiling is for.
+
+The server stores a photograph only for somebody with a profile, and a stranger
+gets one on 10c, which comes *after* 10b. So a stranger's pictures are picked
+and shrunk the same way and then **kept on the phone**, drawn from memory in the
+strip, and sent one at a time in the strip's order once 10c has made the
+profile and before the listing is created. Each is marked as it lands: if one
+does not get there, 10b stays up with everything still in it and says why in
+coral, over the button where a phone shows it, and «Legg ut» sends only what is
+missing. A picture the server will not take — too big for the ceiling, or not a
+JPEG, PNG or WebP — is refused at that point rather than when it was picked; its
+tile gets a coral edge, and its ✕ takes it out. Somebody with a profile has each
+picture sent as it is picked, as before, and «Legg ut» waits while one is on
+its way.
 
 ## The section the export does not draw at all
 

@@ -190,9 +190,22 @@ Future<void> shoot(WidgetTester tester, String name, Widget screen,
 /// The trade the fake server serves, as the screens that take one expect it.
 Trade _trade() => Trade.fromJson(fx.exportTrade1());
 
-/// A photograph of a drill, as the picker would hand it over.
-Future<PickedPhoto?> _pick() async =>
-    PickedPhoto(File('test/photos/drill.jpg').readAsBytesSync(), 'drill.jpg');
+/// The export's two photographs on 10b, the bike and then the drill, as the
+/// picker would hand them over: a device with no profile keeps them on the
+/// phone, so the strip draws the bytes picked and not what an upload returns.
+var _picked = 0;
+Future<PickedPhoto?> _pick() async {
+  final file = ['bike-white.jpg', 'drill.jpg'][_picked++ % 2];
+  return PickedPhoto(File('test/photos/$file').readAsBytesSync(), file);
+}
+
+/// Pictures drawn from memory are decoded for real, which the test's fake
+/// clock never gets round to: let every one on screen finish, outside it.
+Future<void> _decodeImages(WidgetTester tester) => tester.runAsync(() async {
+      for (final element in find.byType(Image).evaluate()) {
+        await precacheImage((element.widget as Image).image, element);
+      }
+    });
 
 void main() {
   setUp(() async {
@@ -201,6 +214,7 @@ void main() {
     addTearDown(() => now = DateTime.now);
     await _loadFonts();
     SharedPreferences.setMockInitialValues({});
+    _picked = 0;
     server = FakeServer(export: true);
     api = SwaplyApi(baseUrl: 'http://test', client: server.client);
     session = Session(api)..loading = false;
@@ -251,6 +265,7 @@ void main() {
         await t.pumpAndSettle();
         await t.tap(find.text('Legg til bilder'));
         await t.pumpAndSettle();
+        await _decodeImages(t);
         final fields = find.byType(TextField);
         await t.enterText(fields.at(0), 'Bosch drill 18V');
         await t.enterText(fields.at(2), '600');
