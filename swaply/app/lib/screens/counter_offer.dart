@@ -150,7 +150,8 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
+                    // 12 at the foot, all of it inside «Avbryt».
+                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
                     child: Column(
                       children: [
                         PrimaryButton('Send motbytte',
@@ -159,8 +160,11 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                             // gives nothing is not one the other can accept.
                             enabled: _selectedMine.isNotEmpty && _selectedTheirs.isNotEmpty,
                             onPressed: _send),
-                        const SizedBox(height: 8),
-                        GestureDetector(
+                        // The 8 over it and the foot under it: 40, which is
+                        // all the export leaves between the button and the
+                        // edge of the screen.
+                        TapArea(
+                          room: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                           onTap: () => Navigator.of(context).pop(false),
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 2),
@@ -296,54 +300,61 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
   /// 09d. «MELLOMLEGG · Du betaler Ola» and a stepper; the words flip who pays
   /// when tapped. The suggested amount is the difference, because that is the
   /// number both people are already looking at.
-  Widget _cashPicker(String other) => SectionCard(
-        radius: 16,
-        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
-        child: Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() => _iPay = !_iPay),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('MELLOMLEGG',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.66,
-                            color: SwaplyColors.greyLight)),
-                    const SizedBox(height: 2),
-                    Text(
-                      _cash == 0
-                          ? 'Ingen mellomlegg'
-                          : _iPay
-                              ? 'Du betaler $other'
-                              : '$other betaler deg',
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
-                    ),
-                  ],
+  ///
+  /// The three share the card, padding and all, so the 34 circles answer
+  /// across its height.
+  Widget _cashPicker(String other) => TapRoom(
+        child: SectionCard(
+          radius: 16,
+          padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+          child: Row(
+            children: [
+              Expanded(
+                child: TapArea(
+                  onTap: () => setState(() => _iPay = !_iPay),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('MELLOMLEGG',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.66,
+                              color: SwaplyColors.greyLight)),
+                      const SizedBox(height: 2),
+                      Text(
+                        _cash == 0
+                            ? 'Ingen mellomlegg'
+                            : _iPay
+                                ? 'Du betaler $other'
+                                : '$other betaler deg',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            _step('−', () => setState(() => _cash = (_cash - 50).clamp(0, 1000000))),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 60,
-              child: Text(kr(_cash),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w800, color: SwaplyColors.ink)),
-            ),
-            const SizedBox(width: 8),
-            _step('+', () => setState(() => _cash += 50)),
-          ],
+              _step('−', '50 kr mindre',
+                  () => setState(() => _cash = (_cash - 50).clamp(0, 1000000))),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 60,
+                child: Text(kr(_cash),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800, color: SwaplyColors.ink)),
+              ),
+              const SizedBox(width: 8),
+              _step('+', '50 kr mer', () => setState(() => _cash += 50)),
+            ],
+          ),
         ),
       );
 
-  Widget _step(String glyph, VoidCallback onTap) => GestureDetector(
+  /// A glyph in a circle, so it is named for what it does.
+  Widget _step(String glyph, String label, VoidCallback onTap) => TapArea(
+        label: label,
         onTap: onTap,
         child: Container(
           width: 34,

@@ -258,6 +258,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         toolbarHeight: 59,
         leadingWidth: 44,
         leading: IconButton(
+          tooltip: 'Tilbake',
           padding: const EdgeInsets.only(left: 10),
           icon: const Icon(Icons.chevron_left, size: 26, color: SwaplyColors.ink),
           onPressed: () => Navigator.of(context).maybePop(),
@@ -428,8 +429,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
     final negotiable =
         trade != null && ['talking', 'pending', 'countered'].contains(trade.state);
 
+    // 10 over the chips and 8 under them, and 8 under the field: the chips
+    // share theirs, and the field and «Send» share the rest.
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: const BoxDecoration(
         color: SwaplyColors.surface,
         border: Border(top: BorderSide(color: SwaplyColors.barLine)),
@@ -439,71 +442,75 @@ class _ThreadScreenState extends State<ThreadScreen> {
           if (negotiable)
             // Filled pills that wrap onto a second line, as the export draws
             // them — not a row that scrolls sideways and hides the third one.
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+            TapRoom(
+              room: const EdgeInsets.only(top: 10, bottom: 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                  // Each chip is its own sheet in the export, not three routes
-                  // into the same screen.
-                  _chip('♥ Jeg vil ha',
-                      () => _propose(trade, ProposalKind.askTheirs)),
-                  _chip('Foreslå ting',
-                      () => _propose(trade, ProposalKind.offerMine)),
-                  _chip('Foreslå mellomlegg',
-                      () => _propose(trade, ProposalKind.cash)),
+                    // Each chip is its own sheet in the export, not three routes
+                    // into the same screen.
+                    _chip('♥ Jeg vil ha',
+                        () => _propose(trade, ProposalKind.askTheirs)),
+                    _chip('Foreslå ting',
+                        () => _propose(trade, ProposalKind.offerMine)),
+                    _chip('Foreslå mellomlegg',
+                        () => _propose(trade, ProposalKind.cash)),
                   ],
                 ),
               ),
             ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _input,
-                  minLines: 1,
-                  maxLines: 4,
-                  style: const TextStyle(fontSize: 14.5, color: SwaplyColors.ink),
-                  decoration: InputDecoration(
-                    hintText: _thread?.kind == 'chain' ? 'Skriv til begge…' : 'Skriv en melding…',
-                    hintStyle: const TextStyle(fontSize: 14.5, color: SwaplyColors.greyLight),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+          TapRoom(
+            room: EdgeInsets.only(top: negotiable ? 0 : 10, bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TapArea(
+                    child: TextField(
+                      controller: _input,
+                      minLines: 1,
+                      maxLines: 4,
+                      style: const TextStyle(fontSize: 14.5, color: SwaplyColors.ink),
+                      decoration: InputDecoration(
+                        hintText:
+                            _thread?.kind == 'chain' ? 'Skriv til begge…' : 'Skriv en melding…',
+                        hintStyle: const TextStyle(fontSize: 14.5, color: SwaplyColors.greyLight),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: _sending ? null : _send,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+                const SizedBox(width: 10),
+                TapArea(
+                  room: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+                  onTap: _sending ? null : _send,
                   child: Text('Send',
                       style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText)),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _chip(String label, VoidCallback onTap) => GestureDetector(
+  Widget _chip(String label, VoidCallback onTap) => TapArea(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),

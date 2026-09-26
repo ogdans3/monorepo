@@ -269,27 +269,33 @@ class _ProposalSheetState extends State<_ProposalSheet> {
 
   Widget _cashBody() => Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _toggle('Jeg betaler', _iPay, () => setState(() => _iPay = true)),
-              ),
-              const SizedBox(width: Insets.sm),
-              Expanded(
-                child: _toggle('$_other betaler', !_iPay, () => setState(() => _iPay = false)),
-              ),
-            ],
+          // 40 tall, and 4 of the 14 under them answer too.
+          TapRoom(
+            room: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _toggle('Jeg betaler', _iPay, () => setState(() => _iPay = true)),
+                ),
+                const SizedBox(width: Insets.sm),
+                Expanded(
+                  child: _toggle('$_other betaler', !_iPay, () => setState(() => _iPay = false)),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: Insets.md),
+          const SizedBox(height: Insets.md - 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
+                tooltip: '50 kr mindre',
                 onPressed: () => setState(() => _amount = (_amount - 50).clamp(0, 1000000)),
                 icon: const Icon(Icons.remove_circle_outline),
               ),
               Text(_amount == 0 ? 'Ingen' : kr(_amount), style: Type.title),
               IconButton(
+                tooltip: '50 kr mer',
                 onPressed: () => setState(() => _amount += 50),
                 icon: const Icon(Icons.add_circle_outline),
               ),
@@ -321,7 +327,7 @@ class _ProposalSheetState extends State<_ProposalSheet> {
         ],
       );
 
-  Widget _toggle(String label, bool selected, VoidCallback onTap) => GestureDetector(
+  Widget _toggle(String label, bool selected, VoidCallback onTap) => TapArea(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),

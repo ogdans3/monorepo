@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../design/tokens.dart';
 import '../state/session.dart';
+import 'common.dart';
 
 /// «Du er Kari N. — ikke deg selv.»
 ///
@@ -47,7 +48,7 @@ class AdminFloor extends StatelessWidget {
             top: false,
             child: Container(
               height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.only(left: 14),
               decoration: const BoxDecoration(
                 border: Border(top: BorderSide(color: AdminColors.accent, width: 3)),
               ),
@@ -64,20 +65,27 @@ class AdminFloor extends StatelessWidget {
                           fontSize: 12, fontWeight: FontWeight.w600, color: AdminColors.ink),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  // The floor's whole height and the gap before it, and out to
+                  // the edge: the floor is 34 tall and that is all there is.
+                  TapArea(
+                    room: const EdgeInsets.fromLTRB(10, 0, 14, 0),
                     onTap: () async {
                       await session.returnToAdmin();
                       if (!context.mounted) return;
                       (navigator?.currentState ?? Navigator.maybeOf(context))
                           ?.pushNamedAndRemoveUntil('/', (route) => false);
                     },
-                    child: Text(
-                      // Naming the admin makes it a door rather than a warning.
-                      session.canReturnToAdmin ? 'Tilbake til $admin ↩' : 'Logg ut ↩',
-                      style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w800, color: AdminColors.accent),
+                    child: SizedBox(
+                      height: 34 - 3,
+                      child: Center(
+                        widthFactor: 1,
+                        child: Text(
+                          // Naming the admin makes it a door rather than a warning.
+                          session.canReturnToAdmin ? 'Tilbake til $admin ↩' : 'Logg ut ↩',
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w800, color: AdminColors.accent),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -122,33 +130,37 @@ class AdminCard extends StatelessWidget {
   final String? note;
   final List<Widget> children;
 
+  /// The card is the room its buttons and chips share: none of them is drawn
+  /// a finger tall, and the padding and the gaps make up the rest.
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-        decoration: BoxDecoration(
-          color: AdminColors.cardFill,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AdminColors.hairline),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title.toUpperCase(),
-                style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    color: AdminColors.accent)),
-            if (note != null) ...[
-              const SizedBox(height: 4),
-              Text(note!,
-                  style: const TextStyle(fontSize: 12, height: 1.4, color: AdminColors.muted)),
+  Widget build(BuildContext context) => TapRoom(
+        child: Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          decoration: BoxDecoration(
+            color: AdminColors.cardFill,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AdminColors.hairline),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title.toUpperCase(),
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: AdminColors.accent)),
+              if (note != null) ...[
+                const SizedBox(height: 4),
+                Text(note!,
+                    style: const TextStyle(fontSize: 12, height: 1.4, color: AdminColors.muted)),
+              ],
+              const SizedBox(height: 10),
+              ...children,
             ],
-            const SizedBox(height: 10),
-            ...children,
-          ],
+          ),
         ),
       );
 }
@@ -161,28 +173,31 @@ class AdminButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool filled, busy;
 
+  /// 40 tall, so it answers across more than itself: see [AdminCard].
   @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 40,
-        child: OutlinedButton(
-          onPressed: busy ? null : onPressed,
-          style: OutlinedButton.styleFrom(
-            backgroundColor: filled ? AdminColors.accent : Colors.transparent,
-            foregroundColor: filled ? Colors.white : AdminColors.ink,
-            disabledForegroundColor: AdminColors.muted,
-            side: BorderSide(color: filled ? AdminColors.accent : AdminColors.hairline),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+  Widget build(BuildContext context) => TapArea(
+        child: SizedBox(
+          height: 40,
+          child: OutlinedButton(
+            onPressed: busy ? null : onPressed,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: filled ? AdminColors.accent : Colors.transparent,
+              foregroundColor: filled ? Colors.white : AdminColors.ink,
+              disabledForegroundColor: AdminColors.muted,
+              side: BorderSide(color: filled ? AdminColors.accent : AdminColors.hairline),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+            ),
+            child: busy
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AdminColors.ink))
+                : Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
           ),
-          child: busy
-              ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AdminColors.ink))
-              : Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
         ),
       );
 }

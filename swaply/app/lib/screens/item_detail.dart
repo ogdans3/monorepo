@@ -19,9 +19,16 @@ import 'trade_detail.dart';
 /// 04 Gjenstand detalj. The gallery, the owner strip, the conversation box that
 /// opens a negotiation, and the two big buttons at the bottom.
 class ItemDetailScreen extends StatefulWidget {
-  const ItemDetailScreen({super.key, required this.itemId});
+  const ItemDetailScreen({super.key, required this.itemId, this.onHeart});
 
   final String itemId;
+
+  /// Told as the heart here is pressed, and again once the server has said
+  /// what it is — the same as [ItemCard.onHeart]. The card this page was
+  /// opened from is under it, and without this it went on showing the heart
+  /// from before until the collage asked for on the way back had landed:
+  /// empty as the page slid away, then filled.
+  final void Function(bool liked, {required bool answered})? onHeart;
 
   @override
   State<ItemDetailScreen> createState() => _ItemDetailScreenState();
@@ -30,6 +37,11 @@ class ItemDetailScreen extends StatefulWidget {
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Item? _item;
   String? _error;
+
+  /// The heart as this phone has it, which runs ahead of [_item]: it turns on
+  /// the tap, the way the card's does, and goes back only if the server says
+  /// no. [_liking] is a heart on its way, and a second tap waits for it.
+  bool _liked = false;
   bool _liking = false;
   int _photo = 0;
   final _message = TextEditingController();
@@ -51,7 +63,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Future<void> _load() async {
     try {
       final item = await context.read<SwaplyApi>().item(widget.itemId);
-      if (mounted) setState(() => _item = item);
+      if (mounted) {
+        setState(() {
+          _item = item;
+          if (!_liking) _liked = item.likedByMe;
+        });
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     }
@@ -60,7 +77,18 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Future<void> _like() async {
     final item = _item;
     if (item == null || _liking) return;
-    setState(() => _liking = true);
+    // Turned now, and nothing else on the page is touched. The heart used to
+    // spin until the answer came and then fetch the whole listing again to
+    // learn what it had just said: a flash on the one button that matters,
+    // for nothing the page did not know.
+    final wish = !_liked;
+    setState(() {
+      _liking = true;
+      _liked = wish;
+    });
+    // Taken now: the answer can come after ‹, and the card still wants it.
+    final heard = widget.onHeart;
+    heard?.call(wish, answered: false);
     final api = context.read<SwaplyApi>();
     // Taken now, for 10a. The server offers it on one heart — the fifth, the
     // fifteenth — and not on the next, so a ‹ pressed before the answer came
@@ -69,22 +97,31 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final root = Navigator.of(context, rootNavigator: true);
 
     // What comes after a wish — the match screen, or 10a — is a screen on top
-    // of this one, and the heart underneath must not still be spinning while
-    // it is up. So the call finishes first and the follow-up comes after.
+    // of this one and not part of the heart, which is done with and free to
+    // be pressed again before either goes up. So the call finishes first and
+    // the follow-up comes after.
     ({String? tradeId, bool promptToList, int likedCount})? wished;
+    var landed = false;
     try {
-      if (item.likedByMe) {
-        await api.unlike(item.id);
-      } else {
+      if (wish) {
         wished = await api.like(item.id);
+      } else {
+        await api.unlike(item.id);
       }
-      // A page left while the heart was on its way has nothing to redraw,
-      // and reading the API through it threw.
-      if (mounted) await _load();
+      landed = true;
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
     } finally {
-      if (mounted) setState(() => _liking = false);
+      // Back as it was if the server did not take it, whether it refused or
+      // was never reached. A page left meanwhile has nothing to put back,
+      // but the card it was opened from does.
+      heard?.call(landed ? wish : !wish, answered: true);
+      if (mounted) {
+        setState(() {
+          _liking = false;
+          if (!landed) _liked = !wish;
+        });
+      }
     }
 
     if (wished == null) return;
@@ -198,15 +235,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         const SizedBox(height: 11),
                         _ownerStrip(owner),
                       ],
-                      const SizedBox(height: 11),
-                      if (mine)
+                      if (mine) ...[
+                        const SizedBox(height: 11),
                         const SectionCard(
                           child: Text(
                             'Dette er din egen ting. Slik ser andre den.',
                             style: Type.secondary,
                           ),
-                        )
-                      else
+                        ),
+                      ] else
                         _conversationBox(owner),
                       // The cheapest lever in the tooling: the heart is the
                       // whole product, and this presses it on your own real
@@ -237,36 +274,39 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
   }
 
-  Widget _adminWant(Item item) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        decoration: BoxDecoration(
-          color: AdminColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AdminColors.accent),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                AdminBadge('admin'),
-                SizedBox(width: 8),
-                // Norwegian runs long and this sits inside a card: the title
-                // wraps rather than running off the edge of it.
-                Expanded(
-                  child: Text('Få noen til å ville ha denne',
-                      style: TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w800, color: AdminColors.ink)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text('Trykker hjertet som en av testkontoene dine, gjennom den ekte veien.',
-                style: TextStyle(fontSize: 11.5, height: 1.4, color: AdminColors.muted)),
-            const SizedBox(height: 10),
-            AdminButton('Velg konto', onPressed: () => _pickWanter(item)),
-          ],
+  // The card is the room its button shares, as on the tool's own screen.
+  Widget _adminWant(Item item) => TapRoom(
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            color: AdminColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AdminColors.accent),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  AdminBadge('admin'),
+                  SizedBox(width: 8),
+                  // Norwegian runs long and this sits inside a card: the title
+                  // wraps rather than running off the edge of it.
+                  Expanded(
+                    child: Text('Få noen til å ville ha denne',
+                        style: TextStyle(
+                            fontSize: 12.5, fontWeight: FontWeight.w800, color: AdminColors.ink)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text('Trykker hjertet som en av testkontoene dine, gjennom den ekte veien.',
+                  style: TextStyle(fontSize: 11.5, height: 1.4, color: AdminColors.muted)),
+              const SizedBox(height: 10),
+              AdminButton('Velg konto', onPressed: () => _pickWanter(item)),
+            ],
+          ),
         ),
       );
 
@@ -360,25 +400,29 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         errorBuilder: (_, _, _) => Container(color: SwaplyColors.greenSoft)),
                   ),
           ),
+          // Three 38 circles, 10 under the status bar and 14 in from the
+          // sides, 8 between the two at the right. Each answers across 44:
+          // three of those on every side, which is why the row sits three
+          // higher and further out, and two of the eight are left between.
           Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 14,
-            right: 14,
+            top: MediaQuery.of(context).padding.top + 10 - _roundRoom,
+            left: 14 - _roundRoom,
+            right: 14 - _roundRoom,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _round(Icons.chevron_left, () => Navigator.of(context).maybePop()),
+                _round(Icons.chevron_left, 'Tilbake', () => Navigator.of(context).maybePop()),
                 Row(
                   children: [
-                    _round(Icons.ios_share, () {
+                    _round(Icons.ios_share, 'Del', () {
                       showShareSheet(
                         context,
                         title: 'Del ${item.title}',
                         mint: (api) => api.shareItem(item.id),
                       );
                     }),
-                    const SizedBox(width: 8),
-                    _round(Icons.more_horiz, () {
+                    const SizedBox(width: 8 - 2 * _roundRoom),
+                    _round(Icons.more_horiz, 'Flere valg', () {
                       // Your own listing is not something to report. It is the
                       // one thing you can change and take down, and until now
                       // the app could do neither.
@@ -516,117 +560,139 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
   }
 
-  Widget _round(IconData icon, VoidCallback onTap) => Material(
-        color: SwaplyColors.bg.withValues(alpha: 0.92),
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox(height: 38, width: 38, child: Icon(icon, size: 20, color: SwaplyColors.ink)),
+  /// Round, 38 across, over the photograph. The ripple stays the circle; the
+  /// area around it is [_roundRoom] wider on every side.
+  Widget _round(IconData icon, String label, VoidCallback onTap) => TapArea(
+        room: const EdgeInsets.all(_roundRoom),
+        label: label,
+        child: Material(
+          color: SwaplyColors.bg.withValues(alpha: 0.92),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(
+                height: 38, width: 38, child: Icon(icon, size: 20, color: SwaplyColors.ink)),
+          ),
         ),
       );
 
-  Widget _ownerStrip(UserRef owner) => InkWell(
-        onTap: () => Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: owner.id))),
-        borderRadius: BorderRadius.circular(Radii.card),
-        child: SectionCard(
-          child: Row(
-            children: [
-              Avatar(owner.displayName, size: 42),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(owner.displayName, style: Type.heading),
-                    const SizedBox(height: 2),
-                    // «★ 4,8 · 23 bytter · BankID-verifisert», one grey line.
-                    Text(
-                      [
-                        if (owner.ratingAvg != null)
-                          '★ ${owner.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
-                        if (owner.tradeCount != null) '${owner.tradeCount} bytter',
-                        if (owner.bankidVerified) 'BankID-verifisert',
-                      ].join(' · '),
-                      style: const TextStyle(fontSize: 12, height: 1.35, color: SwaplyColors.grey),
-                    ),
-                  ],
+  static const _roundRoom = (kTapTarget - 38) / 2;
+
+  // Its own node: without one, the whole page of words around it told a
+  // screen reader it was the button.
+  Widget _ownerStrip(UserRef owner) => TapArea(
+        child: InkWell(
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: owner.id))),
+          borderRadius: BorderRadius.circular(Radii.card),
+          child: SectionCard(
+            child: Row(
+              children: [
+                Avatar(owner.displayName, size: 42),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(owner.displayName, style: Type.heading),
+                      const SizedBox(height: 2),
+                      // «★ 4,8 · 23 bytter · BankID-verifisert», one grey line.
+                      Text(
+                        [
+                          if (owner.ratingAvg != null)
+                            '★ ${owner.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
+                          if (owner.tradeCount != null) '${owner.tradeCount} bytter',
+                          if (owner.bankidVerified) 'BankID-verifisert',
+                        ].join(' · '),
+                        style: const TextStyle(
+                            fontSize: 12, height: 1.35, color: SwaplyColors.grey),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Text('Se profil ›', style: Type.link),
-            ],
+                const Text('Se profil ›', style: Type.link),
+              ],
+            ),
           ),
         ),
       );
 
   /// The box that opens a negotiation. Writing here is what creates the trade,
   /// which is why the chips are trade actions and not emoji.
+  ///
+  /// «Åpne ›», the field and «Send» share the box and the 11 over it: «Åpne ›»
+  /// the top, the field and «Send» the foot.
   Widget _conversationBox(UserRef? owner) {
     final name = owner?.displayName.split(' ').first ?? 'eieren';
 
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Kicker('Samtale med $name'),
-              if (_openedThreadId != null)
-                GestureDetector(
-                  onTap: () =>
-                      pushOverBar<void>(context, ThreadScreen(threadId: _openedThreadId!)),
-                  child: const Text('Åpne ›', style: Type.link),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _message,
-                  minLines: 1,
-                  maxLines: 3,
-                  style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
-                  decoration: InputDecoration(
-                    hintText: 'Skriv en melding til $name…',
-                    hintStyle: const TextStyle(fontSize: 13, color: SwaplyColors.greyLight),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+    return TapRoom(
+      room: const EdgeInsets.only(top: 11),
+      child: SectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Kicker('Samtale med $name'),
+                if (_openedThreadId != null)
+                  TapArea(
+                    onTap: () =>
+                        pushOverBar<void>(context, ThreadScreen(threadId: _openedThreadId!)),
+                    child: const Text('Åpne ›', style: Type.link),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TapArea(
+                    child: TextField(
+                      controller: _message,
+                      minLines: 1,
+                      maxLines: 3,
+                      style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
+                      decoration: InputDecoration(
+                        hintText: 'Skriv en melding til $name…',
+                        hintStyle: const TextStyle(fontSize: 13, color: SwaplyColors.greyLight),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: Insets.md),
-              // A word, not a filled button: the box already invites you to
-              // write, and a green slab beside it competes with the heart.
-              GestureDetector(
-                onTap: _sending ? null : _send,
-                child: Text(
-                  'Send',
-                  style: Type.link.copyWith(
-                    fontSize: 13,
-                    color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText,
+                const SizedBox(width: Insets.md),
+                // A word, not a filled button: the box already invites you to
+                // write, and a green slab beside it competes with the heart.
+                TapArea(
+                  onTap: _sending ? null : _send,
+                  child: Text(
+                    'Send',
+                    style: Type.link.copyWith(
+                      fontSize: 13,
+                      color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText,
+                    ),
                   ),
                 ),
-              ),
+              ],
+            ),
+            if (_openedThreadId != null) ...[
+              const SizedBox(height: Insets.sm),
+              const Text('Meldingen er sendt. Samtalen ligger under Chats.', style: Type.small),
             ],
-          ),
-          if (_openedThreadId != null) ...[
-            const SizedBox(height: Insets.sm),
-            const Text('Meldingen er sendt. Samtalen ligger under Chats.', style: Type.small),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -653,13 +719,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               onPressed: () => Navigator.of(context).maybePop(),
             ),
             const SizedBox(width: 26),
+            // Never busy: the heart has already turned by the time the call
+            // goes, so a spinner in it would only hide that it had.
             CircleAction(
-              icon: item.likedByMe ? Icons.favorite : Icons.favorite_border,
+              icon: _liked ? Icons.favorite : Icons.favorite_border,
               size: 62,
               iconSize: 26,
               filled: true,
-              busy: _liking,
-              semanticLabel: item.likedByMe ? 'Du vil ha denne' : 'Jeg vil ha',
+              semanticLabel: _liked ? 'Du vil ha denne' : 'Jeg vil ha',
               onPressed: _like,
             ),
           ],

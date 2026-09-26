@@ -433,7 +433,7 @@ class _AdminScreenState extends State<AdminScreen> {
         ],
       );
 
-  Widget _chip(String label, {required VoidCallback onTap, bool busy = false}) => GestureDetector(
+  Widget _chip(String label, {required VoidCallback onTap, bool busy = false}) => TapArea(
         onTap: busy ? null : onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

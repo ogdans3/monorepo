@@ -110,8 +110,12 @@ class _ShareSheetState extends State<_ShareSheet> {
               child: Center(child: CircularProgressIndicator(strokeWidth: 2.4)),
             )
           else ...[
-            SectionCard(
-              child: SelectableText(_link!.text, style: Type.body),
+            // The card is where the text can be selected, not only the
+            // words: two lines of it in a 42-tall box are not a target.
+            TapArea(
+              child: SectionCard(
+                child: SelectableText(_link!.text, style: Type.body),
+              ),
             ),
             const SizedBox(height: Insets.md),
             PrimaryButton('Kopier lenke', icon: Icons.link, onPressed: _copy),

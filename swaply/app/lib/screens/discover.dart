@@ -35,6 +35,29 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   /// export draws: one home tab, not a shelf per interest.
   String? _chip;
 
+  /// How many times the collage has been asked for, and which asking the one
+  /// on screen is the answer to.
+  int _asked = 0, _shown = 0;
+
+  /// The hearts pressed on this collage, by item: what the person made it,
+  /// and the last asking sent before the server had said yes or no to it —
+  /// null while it is still on its way. The grid stays live while it is
+  /// asked for again behind it, so a heart can be newer than the answer on
+  /// its way, and that answer, landing after, turned the heart back. A
+  /// collage asked for no later than [until] is out of date about that card;
+  /// one asked for after it is the server's word again.
+  final _hearts = <String, ({bool liked, int? until})>{};
+
+  void _heard(String id, bool liked, {required bool answered}) =>
+      _hearts[id] = (liked: liked, until: answered ? _asked : null);
+
+  bool _likedOn(Item item) {
+    final heart = _hearts[item.id];
+    if (heart == null) return item.likedByMe;
+    final until = heart.until;
+    return until == null || _shown <= until ? heart.liked : item.likedByMe;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +87,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
       });
     }
     final api = context.read<SwaplyApi>();
+    final asked = ++_asked;
     try {
       final res = await api.discover(
         q: _search.text.trim(),
@@ -80,6 +104,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
       setState(() {
         _total = res.total;
         _results = res.items;
+        _shown = asked;
       });
     } on ApiException catch (e) {
       if (mounted && !behind) setState(() => _error = e.message);
@@ -113,8 +138,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
       child: Column(
         children: [
           Padding(
-            // 18 at the sides on this screen, 6 above and 10 below the field.
-            padding: const EdgeInsets.fromLTRB(18, 6, 18, 10),
+            // 18 at the sides on this screen, 6 above and 10 below the field —
+            // the 10 below inside the chips, which answer across it.
+            padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
             child: Row(
               children: [
                 Expanded(
@@ -173,11 +199,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   // sits in what the grid shows first, which the export does not draw — see
   // `/discover` in the backend.
 
+  /// A 29-tall chip answers across 51: the 10 over it from the field's row,
+  /// the 12 under it, and half of the 7 to the chip on either side, so a
+  /// finger in the gap gets the nearer chip. The row scrolls, so it cannot be
+  /// a [TapRoom]; each chip lays its halves out inside itself, and the list's
+  /// padding is short by the same. Nothing is drawn anywhere else: 18 in, 7
+  /// apart, and 25 past the last chip at the end of the scroll.
+  static const _halfGap = 7 / 2;
+
   Widget _categoryChips() => SizedBox(
-        height: 41,
+        height: 10 + 29 + 12,
         child: ListView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+          padding: const EdgeInsets.fromLTRB(18 - _halfGap, 0, 18 + 7 - _halfGap, 0),
           children: [
             _chipButton('Alt', null),
             for (final key in _chipOrder) _chipButton(categoryLabels[key]!, key),
@@ -185,16 +219,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
         ),
       );
 
-  Widget _chipButton(String label, String? category) => Padding(
-        padding: const EdgeInsets.only(right: 7),
-        child: GestureDetector(
-          onTap: () {
-            if (_chip == category) return;
-            setState(() => _chip = category);
-            _load();
-          },
-          child: Center(child: Pill(label, selected: _chip == category)),
-        ),
+  Widget _chipButton(String label, String? category) => TapArea(
+        room: const EdgeInsets.fromLTRB(_halfGap, 10, _halfGap, 12),
+        onTap: () {
+          if (_chip == category) return;
+          setState(() => _chip = category);
+          _load();
+        },
+        child: Center(child: Pill(label, selected: _chip == category)),
       );
 
   Widget _body() {
@@ -237,7 +269,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
                 ItemCard(
                   key: ValueKey(items[i].id),
                   item: items[i],
-                  onChanged: _load,
+                  liked: _likedOn(items[i]),
+                  onHeart: (liked, {required answered}) =>
+                      _heard(items[i].id, liked, answered: answered),
+                  // Behind the grid, like a tab coming back: coming back from
+                  // a card's page is not a new search, and a spinner in the
+                  // grid's place would redraw every picture and lose how far
+                  // down it you were.
+                  onChanged: () => _load(quiet: true),
                   // Three heights, cycling: a collage is made of things that
                   // are not the same shape.
                   // Never taller than square: the export's collage runs from
@@ -280,27 +319,51 @@ class _SquareIconButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool active;
 
+  // An icon, so it is named: 05b is «Avansert søk».
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Radii.pill),
-        child: Container(
-          height: 48,
-          width: 48,
-          decoration: BoxDecoration(
-            color: active ? SwaplyColors.greenPressed : Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(color: SwaplyColors.fieldLine),
+  Widget build(BuildContext context) => TapArea(
+        label: 'Avansert søk',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(Radii.pill),
+          child: Container(
+            height: 48,
+            width: 48,
+            decoration: BoxDecoration(
+              color: active ? SwaplyColors.greenPressed : Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: SwaplyColors.fieldLine),
+            ),
+            child: Icon(icon, size: 20, color: active ? Colors.white : SwaplyColors.inkBody),
           ),
-          child: Icon(icon, size: 20, color: active ? Colors.white : SwaplyColors.inkBody),
         ),
       );
 }
 
 class ItemCard extends StatefulWidget {
-  const ItemCard({super.key, required this.item, required this.onChanged, this.aspect});
+  const ItemCard(
+      {super.key,
+      required this.item,
+      required this.onChanged,
+      this.liked,
+      this.onHeart,
+      this.aspect});
 
   final Item item;
+
+  /// Whether the heart is on, where the collage knows better than [item]: a
+  /// heart pressed here since [item] was asked for.
+  final bool? liked;
+
+  /// Told as the heart is pressed, here or on this card's page, with what it
+  /// was made, and again once the server has answered, with what it is now.
+  /// The collage keeps it, since this card may be gone by the answer.
+  final void Function(bool liked, {required bool answered})? onHeart;
+
+  /// When this card's page has been opened and closed again: a block from its
+  /// «⋯» can change what the grid should show. Never for a heart, on the card
+  /// or on the page, which changes the card and nothing else — the page's
+  /// comes back through [onHeart] like the card's own.
   final VoidCallback onChanged;
 
   /// Width over height for the picture. Given by the collage so that cards are
@@ -312,7 +375,7 @@ class ItemCard extends StatefulWidget {
 }
 
 class _ItemCardState extends State<ItemCard> {
-  late bool _liked = widget.item.likedByMe;
+  late bool _liked = widget.liked ?? widget.item.likedByMe;
   bool _busy = false;
 
   @override
@@ -321,15 +384,28 @@ class _ItemCardState extends State<ItemCard> {
     // The grid is fetched again behind the cards when the tab comes back, and
     // a heart taken back somewhere else in the meantime is the server's to
     // tell. Not while a tap here is still on its way.
-    if (!_busy && !identical(oldWidget.item, widget.item)) _liked = widget.item.likedByMe;
+    if (!_busy && !identical(oldWidget.item, widget.item)) {
+      _liked = widget.liked ?? widget.item.likedByMe;
+    }
   }
 
+  /// The heart turns on the tap and changes this card and nothing else. It
+  /// used to fetch the whole collage again once the answer came, which put a
+  /// spinner in the grid's place and built it back from nothing — every
+  /// picture drawn again and the scroll back at the top, for one heart.
+  /// Nothing else on the page depends on a wish: it reserves nothing, so no
+  /// card comes or goes because of one, and whether this one is wished is
+  /// [_liked].
   Future<void> _toggle() async {
     if (_busy) return;
+    final want = !_liked;
     setState(() {
       _busy = true;
-      _liked = !_liked;
+      _liked = want;
     });
+    final heard = widget.onHeart;
+    heard?.call(want, answered: false);
+    var answered = false;
     final api = context.read<SwaplyApi>();
     final session = context.read<Session>();
     // For 10a, which is owed to this heart even if the card is gone by the
@@ -337,8 +413,9 @@ class _ItemCardState extends State<ItemCard> {
     // fifteen.
     final root = Navigator.of(context, rootNavigator: true);
     try {
-      if (_liked) {
+      if (want) {
         final result = await api.like(widget.item.id);
+        heard?.call(want, answered: answered = true);
         if (result.tradeId != null) {
           if (!mounted) return;
           await pushOverBar<void>(context, MatchScreen(tradeId: result.tradeId!));
@@ -346,18 +423,21 @@ class _ItemCardState extends State<ItemCard> {
           final due = await session.listingPromptDue(
               promptToList: result.promptToList, likedCount: result.likedCount);
           if (due) await showListingPrompt(mounted ? context : root.context, result.likedCount);
-          if (!mounted) return;
         }
       } else {
         await api.unlike(widget.item.id);
+        heard?.call(want, answered: answered = true);
       }
-      widget.onChanged();
     } on ApiException catch (e) {
+      heard?.call(!want, answered: answered = true);
       if (mounted) {
-        setState(() => _liked = !_liked);
+        setState(() => _liked = !want);
         showError(context, e);
       }
     } finally {
+      // No word either way — the connection went. The card goes on showing
+      // what was pressed, and the next collage asked for says what is so.
+      if (!answered) heard?.call(want, answered: true);
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -368,8 +448,20 @@ class _ItemCardState extends State<ItemCard> {
 
     return GestureDetector(
       onTap: () async {
-        await Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: item.id)));
+        // The page's heart is this card's heart, and the card is under the
+        // page: it turns as the page's does, so the page slides away off the
+        // heart the person left it with instead of the one from before. The
+        // collage keeps it too, for an answer asked for before it that lands
+        // after — the same as a heart pressed on the card.
+        final heard = widget.onHeart;
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ItemDetailScreen(
+                  itemId: item.id,
+                  onHeart: (liked, {required answered}) {
+                    heard?.call(liked, answered: answered);
+                    if (mounted) setState(() => _liked = liked);
+                  },
+                )));
         widget.onChanged();
       },
       onLongPress: () => _showContextMenu(context, item, widget.onChanged),
@@ -389,30 +481,30 @@ class _ItemCardState extends State<ItemCard> {
                         : _generatedCard(item),
                   ),
                 ),
+                // 34 across, 8 in from the corner, and answering across 44:
+                // five of the eight all round, which keeps the rest of the
+                // picture the card's.
                 Positioned(
-                  right: 8,
-                  top: 8,
+                  right: 8 - 5,
+                  top: 8 - 5,
                   // A drawn circle is an unnamed button to a screen reader,
                   // and this is the one on the card that matters. Named as on
                   // the item page, so a heart is called one thing everywhere.
-                  child: Semantics(
-                    container: true,
-                    button: true,
+                  child: TapArea(
+                    room: const EdgeInsets.all(5),
                     label: _liked ? 'Du vil ha denne' : 'Jeg vil ha',
-                    child: GestureDetector(
-                      onTap: _toggle,
-                      child: Container(
-                        height: 34,
-                        width: 34,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          _liked ? Icons.favorite : Icons.favorite_border,
-                          size: 18,
-                          color: _liked ? SwaplyColors.coral : SwaplyColors.ink,
-                        ),
+                    onTap: _toggle,
+                    child: Container(
+                      height: 34,
+                      width: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _liked ? Icons.favorite : Icons.favorite_border,
+                        size: 18,
+                        color: _liked ? SwaplyColors.coral : SwaplyColors.ink,
                       ),
                     ),
                   ),
@@ -613,27 +705,20 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: swaplyAppBar(context, 'Avansert søk', actions: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() {
-            _text.clear();
-            _minText.clear();
-            _maxText.clear();
-            _category = null;
-            _subcategory = null;
-            _min = null;
-            _max = null;
-            _condition = null;
-            _sort = 'newest';
-            _countPreview();
-          }),
-          child: const Padding(
-            padding: EdgeInsets.only(top: 5),
-            child: Text('Nullstill',
-                style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
-          ),
-        ),
+        headerTextAction(
+            'Nullstill',
+            () => setState(() {
+                  _text.clear();
+                  _minText.clear();
+                  _maxText.clear();
+                  _category = null;
+                  _subcategory = null;
+                  _min = null;
+                  _max = null;
+                  _condition = null;
+                  _sort = 'newest';
+                  _countPreview();
+                })),
       ]),
       body: SafeArea(
         child: Column(
@@ -677,26 +762,38 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                   ),
                   if (_category != null && _subcategories.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Text('Underkategori i ${categoryLabels[_category]}', style: Type.section),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 7,
-                      runSpacing: 7,
-                      children: [
-                        _choice('Alle', _subcategory == null,
-                            () => setState(() {
-                                  _subcategory = null;
-                                  _countPreview();
-                                })),
-                        ..._subcategories.map((s) => _choice(s, _subcategory == s,
-                            () => setState(() {
-                                  _subcategory = s;
-                                  _countPreview();
-                                }))),
-                      ],
+                    // The chips can run to two rows, 7 apart, and a chip in
+                    // the first row takes the heading over it as well as the
+                    // gap: 8 and a 29-tall chip and half the 7 are not 44.
+                    TapRoom(
+                      room: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Underkategori i ${categoryLabels[_category]}',
+                              style: Type.section),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 7,
+                            runSpacing: 7,
+                            children: [
+                              _choice('Alle', _subcategory == null,
+                                  () => setState(() {
+                                        _subcategory = null;
+                                        _countPreview();
+                                      })),
+                              ..._subcategories.map((s) => _choice(s, _subcategory == s,
+                                  () => setState(() {
+                                        _subcategory = s;
+                                        _countPreview();
+                                      }))),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                  const SizedBox(height: 16),
+                  ] else
+                    const SizedBox(height: 16),
                   const Text('Verdi', style: Type.section),
                   const SizedBox(height: 6),
                   Row(
@@ -738,62 +835,67 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text('Tilstand', style: Type.section),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 7,
-                    runSpacing: 7,
-                    children: conditionLabels.entries
-                        .map((e) => _choice(e.value, _condition == e.key, () {
-                              setState(() => _condition = _condition == e.key ? null : e.key);
-                              _countPreview();
-                            }))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Sorter etter', style: Type.section),
-                  const SizedBox(height: 8),
-                  // A segmented track, the same as on «Mine handler».
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: SwaplyColors.chip,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      children: [
-                        for (final (key, label) in const [
-                          ('newest', 'Nyeste'),
-                          ('nearest', 'Nærmest'),
-                          ('value', 'Verdi'),
-                        ])
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() => _sort = key);
+                  // The 8 over the chips and the 16 under them are theirs.
+                  TapRoom(
+                    room: const EdgeInsets.only(top: 8, bottom: 16),
+                    child: Wrap(
+                      spacing: 7,
+                      runSpacing: 7,
+                      children: conditionLabels.entries
+                          .map((e) => _choice(e.value, _condition == e.key, () {
+                                setState(() => _condition = _condition == e.key ? null : e.key);
                                 _countPreview();
-                              },
-                              child: Container(
-                                height: 33,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: _sort == key ? Colors.white : null,
-                                  borderRadius: BorderRadius.circular(11),
+                              }))
+                          .toList(),
+                    ),
+                  ),
+                  const Text('Sorter etter', style: Type.section),
+                  // A segmented track, the same as on «Mine handler». A
+                  // 33-tall segment answers across its third of the track and
+                  // the 8 over it and the 20 under it.
+                  TapRoom(
+                    room: const EdgeInsets.only(top: 8, bottom: 20),
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: SwaplyColors.chip,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          for (final (key, label) in const [
+                            ('newest', 'Nyeste'),
+                            ('nearest', 'Nærmest'),
+                            ('value', 'Verdi'),
+                          ])
+                            Expanded(
+                              child: TapArea(
+                                onTap: () {
+                                  setState(() => _sort = key);
+                                  _countPreview();
+                                },
+                                child: Container(
+                                  height: 33,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: _sort == key ? Colors.white : null,
+                                    borderRadius: BorderRadius.circular(11),
+                                  ),
+                                  child: Text(label,
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight:
+                                              _sort == key ? FontWeight.w700 : FontWeight.w600,
+                                          color: _sort == key
+                                              ? SwaplyColors.ink
+                                              : SwaplyColors.greySoft)),
                                 ),
-                                child: Text(label,
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight:
-                                            _sort == key ? FontWeight.w700 : FontWeight.w600,
-                                        color: _sort == key
-                                            ? SwaplyColors.ink
-                                            : SwaplyColors.greySoft)),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -810,9 +912,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     );
   }
 
-  /// The chips on 05: filled green when chosen, the chip grey otherwise.
+  /// The chips on 05: filled green when chosen, the chip grey otherwise. Each
+  /// is in a [TapRoom] with the ones beside it, which gives it its area.
   Widget _choice(String label, bool selected, VoidCallback onTap) =>
-      GestureDetector(onTap: onTap, child: Pill(label, selected: selected));
+      TapArea(onTap: onTap, child: Pill(label, selected: selected));
 }
 
 /// 10a. Wishes and nothing to give is a dead end, so we say so: at the fifth
@@ -868,8 +971,9 @@ class _ListingPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        // 34 under «Senere» in the export, 12 of which are its own tap target.
-        padding: const EdgeInsets.fromLTRB(24, 10, 24, 22),
+        // 34 under «Senere» in the export, 12 of which are its own tap target
+        // and 2 more its room.
+        padding: const EdgeInsets.fromLTRB(24, 10, 24, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -934,21 +1038,24 @@ class _ListingPrompt extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             PrimaryButton('Legg ut en gjenstand', onPressed: onList),
-            const SizedBox(height: 2),
             // Words, not a second button, as drawn: putting it off is
-            // allowed rather than offered.
-            SizedBox(
-              height: 40,
-              child: TextButton(
-                onPressed: onLater,
-                style: TextButton.styleFrom(
-                  foregroundColor: SwaplyColors.grey,
-                  padding: EdgeInsets.zero,
+            // allowed rather than offered. 40 tall, and the 2 over it and the
+            // 2 under it answer too.
+            TapArea(
+              room: const EdgeInsets.symmetric(vertical: 2),
+              child: SizedBox(
+                height: 40,
+                child: TextButton(
+                  onPressed: onLater,
+                  style: TextButton.styleFrom(
+                    foregroundColor: SwaplyColors.grey,
+                    padding: EdgeInsets.zero,
+                  ),
+                  // On the label and not as the button's text style, which would
+                  // replace the theme's and take its font family with it.
+                  child: const Text('Senere',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
-                // On the label and not as the button's text style, which would
-                // replace the theme's and take its font family with it.
-                child: const Text('Senere',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               ),
             ),
           ],

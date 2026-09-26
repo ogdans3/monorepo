@@ -184,6 +184,20 @@ asks again each time the tab comes back — behind what is on screen, not
 instead of it. Changing tabs is a short fade of the content, and a cut for
 somebody who has asked for less motion.
 
+A heart asks for nothing again. It turns its own card, or the button on 04,
+on the tap and changes nothing else on the screen: no spinner, no picture
+drawn twice, no scroll lost. It used to fetch the collage again when the answer
+came, which on a phone swapped the grid for a spinner and back. A heart on 04
+is handed to the card it was opened from as it is pressed, so the card is
+already right as the page slides away rather than once the collage has come
+back. Coming back from a card's page does ask again, behind the grid like a
+returning tab — which leaves the grid live while it is asked for, so the
+collage remembers the hearts pressed on it or on a card's page meanwhile, and
+an answer asked for before one of them does not turn it back by landing after
+it. `test/heart_test.dart` holds all of it
+frame by frame, against a server that takes as long to answer as a network
+does.
+
 The shell is keyed by who is signed in, so switching accounts or signing out
 never leaves the last person's stacks on screen. A tab's old address —
 `#/trades` in a browser, from when the tabs were routes — opens the gate at that
@@ -198,6 +212,47 @@ listing is written with the bar under it. The «Legg ut» buttons elsewhere open
 that tab rather than a second form. 06c and 09a draw no bar of their own, so
 their goldens, which mount them alone, have none where the export does; in the
 app it is the shell's, under them.
+
+## A finger is 44 points
+
+The export draws controls smaller than a finger — «Hopp over» 21 tall, the
+heart 34 across, «‹» seven pixels in a 25-tall row — and they stay drawn
+exactly so; the goldens hold that. What is bigger is the area that answers,
+made in `widgets/common.dart` one of two ways:
+
+- **`TapArea`** is one target. Its `room` is free space the screen already had
+  — a gap that was a `SizedBox` beside it moves inside it — so the box grows
+  and nothing is drawn anywhere else. Its `reach` answers past the box without
+  laying anything out. Around an `InkWell`, a field or a Material button it
+  only widens where they answer, and a touch off their ink goes to its nearest
+  point.
+- **`TapRoom`** is space several targets share: a row of chips, a segmented
+  control, a field and «Send». Each gets the part nearest to it, as much as
+  makes it 44 and no more, so the amount between «−» and «+» stays an amount.
+
+Between two targets the gap is split down the middle, so a finger in it gets
+the nearer one. 05's chips scroll sideways, and a `TapRoom` does not reach
+through a scroll view, so each chip carries half of the 7 on either side itself.
+
+The header's «‹» and «⋯», and «Hopp over» on 02, sit in a slot the Scaffold
+makes exactly their height. They answer from the route's overlay (`above`),
+from the top edge of the screen down to 44 under the safe area — a browser has
+no status bar, so that reaches into the top of the page — and only where the
+page has nothing of its own there. «Innstillinger» on 13 is the first row of a
+list, which ends at the status bar, so it answers up into it and out to the
+edge the same way. The overlay is hit-tested apart from the page, so it only
+answers while a touch on the target's own box would get there — not while the
+page is on its way out, which popped the page under it on a second tap, nor
+with the box scrolled out of sight — and the page under the finger is hit as
+well: a tap there is the target's, a drag or a wheel is the list's.
+
+`test/tap_targets_test.dart` opens every screen and sheet at 390×844, under the
+export's status bar and again in a browser without one, and holds every target
+to 44×44: Flutter's own guideline first, then each target touched at its edges,
+corners and middle through the real hit test, and laid against every other so
+no two claim the same point. A handful are drawn closer to a neighbour than a
+finger — «Glemt passord?» has 41 between the field and the button — and take
+all the room there is and no more; the test lists them with what they get.
 
 ## Photographs
 

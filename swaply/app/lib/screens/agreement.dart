@@ -102,45 +102,54 @@ class _AgreementScreenState extends State<AgreementScreen> {
                   const SizedBox(height: 12),
                   const Text('Dette godtar du', style: Type.section),
                   const SizedBox(height: 12),
-                  for (final (i, t) in _terms(other).indexed) ...[
-                    if (i > 0) const SizedBox(height: 8),
-                    _term(t),
-                  ],
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('Byttevilkår', style: Type.heading),
-                        content: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Versjon $termsVersion', style: Type.small),
-                              const SizedBox(height: Insets.sm),
-                              ..._terms(other).map((t) => Padding(
-                                    padding: const EdgeInsets.only(bottom: Insets.sm),
-                                    child: Text('• $t', style: Type.body),
-                                  )),
-                              const Text(
-                                'Swaply er ikke part i byttet og fasiliterer ikke frakt eller '
-                                'betaling. Avtalen er mellom dere.',
-                                style: Type.body,
+                  // The terms and the link under them in one piece, so the
+                  // link can answer across the 12 on either side of it and
+                  // the foot of the last term, which has nothing of its own
+                  // to tap.
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final (i, t) in _terms(other).indexed) ...[
+                        if (i > 0) const SizedBox(height: 8),
+                        _term(t),
+                      ],
+                      TapArea(
+                        room: const EdgeInsets.symmetric(vertical: 12),
+                        reach: const EdgeInsets.only(top: 5),
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text('Byttevilkår', style: Type.heading),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('Versjon $termsVersion', style: Type.small),
+                                  const SizedBox(height: Insets.sm),
+                                  ..._terms(other).map((t) => Padding(
+                                        padding: const EdgeInsets.only(bottom: Insets.sm),
+                                        child: Text('• $t', style: Type.body),
+                                      )),
+                                  const Text(
+                                    'Swaply er ikke part i byttet og fasiliterer ikke frakt eller '
+                                    'betaling. Avtalen er mellom dere.',
+                                    style: Type.body,
+                                  ),
+                                ],
                               ),
+                            ),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Lukk')),
                             ],
                           ),
                         ),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Lukk')),
-                        ],
+                        child: const Text('Les hele byttevilkårene ›', style: Type.link),
                       ),
-                    ),
-                    child: const Text('Les hele byttevilkårene ›', style: Type.link),
+                    ],
                   ),
-                  const SizedBox(height: 12),
                   // The consent is a card of its own with a square tick, not a
                   // Material checkbox.
                   GestureDetector(
@@ -191,7 +200,7 @@ class _AgreementScreenState extends State<AgreementScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
+              padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
               child: Column(
                 children: [
                   SwipeToConfirm(
@@ -199,8 +208,11 @@ class _AgreementScreenState extends State<AgreementScreen> {
                     enabled: _accepted && !_busy,
                     onConfirmed: _accept,
                   ),
-                  const SizedBox(height: 10),
-                  GestureDetector(
+                  // The 10 over it and the 12 under it, and the foot of the
+                  // track above, where the knob never goes.
+                  TapArea(
+                    room: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                    reach: const EdgeInsets.only(top: 2),
                     onTap: () => Navigator.of(context).pop(false),
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 2),

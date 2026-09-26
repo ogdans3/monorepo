@@ -63,10 +63,15 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
           // The app starts without asking, so somebody with an account from
           // another phone is a stranger here first, and this is where they
           // look for the way in. 16c is drawn without the bar, so it covers it.
-          footer: SignInRow(onTap: () => pushOverBar<void>(context, const LoginScreen())),
+          footer: SignInRow(
+              room: EmptyState.footerRoom,
+              onTap: () => pushOverBar<void>(context, const LoginScreen())),
         ),
       );
     }
+
+    // Read out here: inside the scaffold's SafeArea the status bar is taken off.
+    final safe = MediaQuery.paddingOf(context);
 
     return SwaplyScaffold(
       currentTab: 4,
@@ -97,154 +102,187 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 0, 22, Insets.xl),
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Only «Innstillinger» up here; the list of notifications is
-                // reached from the settings, since the export draws no bell.
-                GestureDetector(
-                  // 16b is drawn without the bar, so it covers it.
-                  onTap: () => pushOverBar<void>(context, const SettingsScreen()),
-                  child: const Padding(
-                    padding: EdgeInsets.zero,
-                    child: Text('Innstillinger',
-                        style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 84 across, the initial at 32/800.
-                Avatar(me.displayName ?? '?', size: 84, mine: true),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // «Innstillinger» is one line of words in the top corner, and it
+            // answers across the corner: down into the empty space beside the
+            // name, which it shares the room with, and — from above, since
+            // the list ends at the status bar and at its own padding — up to
+            // the top of the screen and out to its edge, where a thumb aimed
+            // at a corner lands. The owner named this one as hard to hit.
+            TapRoom(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      const SizedBox(height: 12),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Flexible(
-                            child: Text(me.displayName ?? 'Uten navn',
-                                style: Type.title, overflow: TextOverflow.ellipsis),
-                          ),
-                          if (me.bankidVerified) ...[
-                            const SizedBox(width: 8),
-                            // Green words on the name's line, not a badge.
-                            const Text('BankID-verifisert',
-                                style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: SwaplyColors.greenText)),
-                          ],
-                          // Whoever holds the key should never be able to
-                          // forget they are holding it.
-                          if (me.isAdmin) ...[
-                            const SizedBox(width: 8),
-                            const AdminBadge('admin'),
-                          ],
-                          if (me.testAccount) ...[
-                            const SizedBox(width: 8),
-                            const AdminBadge('testkonto'),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text.rich(
-                        TextSpan(children: [
-                          if (me.ratingCount == 0)
-                            const TextSpan(text: 'Ingen vurderinger ennå')
-                          else ...[
-                            TextSpan(text: '${_stars(me.ratingAvg)} '),
-                            TextSpan(
-                                text: me.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
-                                style: const TextStyle(fontWeight: FontWeight.w700)),
-                            TextSpan(text: ' · ${me.ratingCount} vurderinger'),
-                          ],
-                        ]),
-                        style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        [
-                          if (me.town != null) me.town!,
-                          if (me.memberSince != null) 'medlem siden ${_month(me.memberSince!)}',
-                        ].join(' · '),
-                        style: Type.secondary,
+                      // Only «Innstillinger» up here; the list of notifications is
+                      // reached from the settings, since the export draws no bell.
+                      TapArea(
+                        above: true,
+                        reach: EdgeInsets.fromLTRB(0, safe.top, 22 + safe.right, 0),
+                        // 16b is drawn without the bar, so it covers it.
+                        onTap: () => pushOverBar<void>(context, const SettingsScreen()),
+                        child: const Text('Innstillinger',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: SwaplyColors.greenText)),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 11),
-            InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const LikedScreen())),
-              child: SectionCard(
-                radius: 16,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        me.likedByCount == 0
-                            ? '♥ Ingen har likt tingene dine ennå'
-                            : '♥ ${me.likedByCount} har likt tingene dine',
-                        style: const TextStyle(
-                            fontSize: 13.5, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 84 across, the initial at 32/800.
+                      Avatar(me.displayName ?? '?', size: 84, mine: true),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Flexible(
+                                  child: Text(me.displayName ?? 'Uten navn',
+                                      style: Type.title, overflow: TextOverflow.ellipsis),
+                                ),
+                                if (me.bankidVerified) ...[
+                                  const SizedBox(width: 8),
+                                  // Green words on the name's line, not a badge.
+                                  const Text('BankID-verifisert',
+                                      style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: SwaplyColors.greenText)),
+                                ],
+                                // Whoever holds the key should never be able to
+                                // forget they are holding it.
+                                if (me.isAdmin) ...[
+                                  const SizedBox(width: 8),
+                                  const AdminBadge('admin'),
+                                ],
+                                if (me.testAccount) ...[
+                                  const SizedBox(width: 8),
+                                  const AdminBadge('testkonto'),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text.rich(
+                              TextSpan(children: [
+                                if (me.ratingCount == 0)
+                                  const TextSpan(text: 'Ingen vurderinger ennå')
+                                else ...[
+                                  TextSpan(text: '${_stars(me.ratingAvg)} '),
+                                  TextSpan(
+                                      text: me.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
+                                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  TextSpan(text: ' · ${me.ratingCount} vurderinger'),
+                                ],
+                              ]),
+                              style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              [
+                                if (me.town != null) me.town!,
+                                if (me.memberSince != null)
+                                  'medlem siden ${_month(me.memberSince!)}',
+                              ].join(' · '),
+                              style: Type.secondary,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const Text('Se hvem ›', style: Type.link),
-                  ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // 40 tall, and 2 of the 11 on either side answer too.
+            const SizedBox(height: 11 - 2),
+            TapArea(
+              room: const EdgeInsets.symmetric(vertical: 2),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const LikedScreen())),
+                child: SectionCard(
+                  radius: 16,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          me.likedByCount == 0
+                              ? '♥ Ingen har likt tingene dine ennå'
+                              : '♥ ${me.likedByCount} har likt tingene dine',
+                          style: const TextStyle(
+                              fontSize: 13.5, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
+                        ),
+                      ),
+                      const Text('Se hvem ›', style: Type.link),
+                    ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 11),
+            const SizedBox(height: 11 - 2),
             const Text('Interesser', style: Type.section),
             const SizedBox(height: 7),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [
-                ...me.interests.map((c) => Pill(categoryLabels[c] ?? c, small: true)),
-                if (me.interests.length < 5)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(Radii.pill),
-                      border: Border.all(color: SwaplyColors.chevron),
-                    ),
-                    child: const Text('+ fylles ut mens du bruker appen',
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+            // «Rediger profil» is a line of words between the interests and
+            // the grid, 11 from each: it answers across the 11 under it and
+            // up over the gap and the interests, which answer nothing.
+            TapRoom(
+              room: const EdgeInsets.only(bottom: 11),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: [
+                      ...me.interests.map((c) => Pill(categoryLabels[c] ?? c, small: true)),
+                      if (me.interests.length < 5)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            border: Border.all(color: SwaplyColors.chevron),
+                          ),
+                          child: const Text('+ fylles ut mens du bruker appen',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: SwaplyColors.grey)),
+                        ),
+                    ],
                   ),
-              ],
+                  const SizedBox(height: 11),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text('Mine gjenstander · ${me.items.length}',
+                            style: Type.section, overflow: TextOverflow.ellipsis),
+                      ),
+                      TapArea(
+                        onTap: () => pushOverBar<void>(context, const EditProfileScreen()),
+                        child: const Text('Rediger profil',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: SwaplyColors.greenText)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 11),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text('Mine gjenstander · ${me.items.length}',
-                      style: Type.section, overflow: TextOverflow.ellipsis),
-                ),
-                GestureDetector(
-                  onTap: () => pushOverBar<void>(context, const EditProfileScreen()),
-                  child: const Text('Rediger profil',
-                      style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 11),
             if (me.items.isEmpty)
               EmptyState(
                 icon: Icons.inventory_2_outlined,
@@ -282,7 +320,8 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
       _ => ('Tilgjengelig', SwaplyColors.greenText),
     };
 
-    return GestureDetector(
+    // The whole cell, to the foot of the caption row.
+    return TapArea(
       onTap: () => Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: item.id))),
       child: Column(
@@ -434,7 +473,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       currentTab: 0,
       // «‹» and «⋯» and nothing between them: the name is in the body.
       appBar: swaplyAppBar(context, '', actions: [
-        headerAction(Icons.more_horiz, () => _menu(user)),
+        headerAction(Icons.more_horiz, () => _menu(user), label: 'Flere valg'),
       ]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(22, 6, 22, Insets.xl),
@@ -573,7 +612,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               itemCount: user.items.length,
               itemBuilder: (context, i) {
                 final item = user.items[i];
-                return GestureDetector(
+                // The whole cell, to the foot of the caption row.
+                return TapArea(
                   onTap: () async {
                     await Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: item.id)));
@@ -669,33 +709,37 @@ class SettingsScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  InkWell(
-                    onTap: () => Navigator.of(context)
-                        .push(MaterialPageRoute(builder: (_) => const AdminScreen())),
-                    child: SizedBox(
-                      // Two lines of type rather than the product rows' one,
-                      // which is four pixels more than 48 and the reason this
-                      // is not `_tile`.
-                      height: 58,
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('Testverktøy',
-                                    style: TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: AdminColors.ink)),
-                                Text('Kontoer · bygg et bytte · tilstand',
-                                    style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
-                              ],
+                  // Its own node: the card around it holds a line that answers
+                  // nothing.
+                  TapArea(
+                    child: InkWell(
+                      onTap: () => Navigator.of(context)
+                          .push(MaterialPageRoute(builder: (_) => const AdminScreen())),
+                      child: SizedBox(
+                        // Two lines of type rather than the product rows' one,
+                        // which is four pixels more than 48 and the reason this
+                        // is not `_tile`.
+                        height: 58,
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text('Testverktøy',
+                                      style: TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: AdminColors.ink)),
+                                  Text('Kontoer · bygg et bytte · tilstand',
+                                      style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
+                                ],
+                              ),
                             ),
-                          ),
-                          const Icon(Icons.chevron_right, size: 20, color: AdminColors.accent),
-                        ],
+                            const Icon(Icons.chevron_right, size: 20, color: AdminColors.accent),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -713,7 +757,8 @@ class SettingsScreen extends StatelessWidget {
                           ),
                         ),
                         if (session.actingAs)
-                          GestureDetector(
+                          // Words in a row 44 tall: the row is its height.
+                          TapArea(
                             onTap: () async {
                               await context.read<Session>().returnToAdmin();
                               if (context.mounted) {
@@ -721,11 +766,17 @@ class SettingsScreen extends StatelessWidget {
                                     .pushNamedAndRemoveUntil('/', (route) => false);
                               }
                             },
-                            child: const Text('Tilbake ↩',
-                                style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: AdminColors.accent)),
+                            child: const SizedBox(
+                              height: 44,
+                              child: Center(
+                                widthFactor: 1,
+                                child: Text('Tilbake ↩',
+                                    style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: AdminColors.accent)),
+                              ),
+                            ),
                           ),
                       ],
                     ),

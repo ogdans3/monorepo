@@ -12,13 +12,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/api/models.dart';
-import 'package:swaply_app/design/tokens.dart';
 import 'package:swaply_app/screens/agreement.dart';
 import 'package:swaply_app/screens/chat.dart';
 import 'package:swaply_app/screens/counter_offer.dart';
@@ -36,131 +34,18 @@ import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/util/clock.dart';
 
 import 'export_fixtures.dart' as fx;
-import 'fake_photos.dart';
 import 'fake_server.dart';
+import 'phone.dart';
 
 late FakeServer server;
 late SwaplyApi api;
 late Session session;
 
-/// The test binding draws every glyph as a box unless real fonts are loaded, and
-/// a picture of boxes is no use for comparing a design. The SDK ships the fonts
-/// the app uses; find them next to the tester binary rather than by an absolute
-/// path, so this works on any machine. Symbols — ★ ♥ ⇄ → ✓ — come from the
-/// system on a phone; here DejaVu stands in, when the machine has it.
-Future<void> _loadFonts() async {
-  final engine = File(Platform.resolvedExecutable).parent; // …/artifacts/engine/<host>
-  final fonts = Directory('${engine.parent.parent.path}/material_fonts');
-
-  Future<void> load(String family, List<String> files) async {
-    final loader = FontLoader(family);
-    var any = false;
-    for (final name in files) {
-      final file = File(name.startsWith('/') ? name : '${fonts.path}/$name');
-      if (file.existsSync()) {
-        any = true;
-        loader.addFont(file.readAsBytes().then((b) => ByteData.view(Uint8List.fromList(b).buffer)));
-      }
-    }
-    if (any) await loader.load();
-  }
-
-  await load('Roboto', ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf', 'Roboto-Black.ttf']);
-  await load('MaterialIcons', ['MaterialIcons-Regular.otf']);
-  await load('Symbols', ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']);
-}
-
-/// The app's theme with the symbol font as a fallback, for the goldens only.
-ThemeData _theme() {
-  final t = swaplyTheme();
-  return t.copyWith(
-    textTheme: t.textTheme.apply(fontFamilyFallback: const ['Symbols']),
-    primaryTextTheme: t.primaryTextTheme.apply(fontFamilyFallback: const ['Symbols']),
-  );
-}
-
-/// The export's status bar: «9:41» and a battery, 46 tall, white on the
-/// green screens. The app is told it is there, so its safe areas match.
-class _Frame extends StatelessWidget {
-  const _Frame({required this.light, required this.child});
-
-  final bool light;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final ink = light ? Colors.white : SwaplyColors.ink;
-    return Stack(
-      children: [
-        MediaQuery(
-          data: mq.copyWith(
-            padding: mq.padding.copyWith(top: 46),
-            viewPadding: mq.viewPadding.copyWith(top: 46),
-            // A picture cannot drift: the confetti holds still, as on a phone
-            // that has asked for less motion.
-            disableAnimations: true,
-          ),
-          child: child,
-        ),
-        Positioned(
-          left: 26,
-          top: 15,
-          // Outside any Material, so the family has to be said.
-          child: Text('9:41',
-              style: TextStyle(
-                  fontFamily: 'Roboto',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: ink,
-                  decoration: TextDecoration.none)),
-        ),
-        Positioned(
-          right: 26,
-          top: 15,
-          child: Container(
-            width: 29,
-            height: 17,
-            padding: const EdgeInsets.all(1.5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: ink.withValues(alpha: light ? 0.5 : 0.35)),
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                width: 16,
-                height: 12,
-                decoration:
-                    BoxDecoration(color: ink, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// A phone, at the size the export draws one.
 Future<void> shoot(WidgetTester tester, String name, Widget screen,
     {bool signedIn = true, bool light = false, Future<void> Function(WidgetTester)? act}) async {
-  tester.view.physicalSize = const Size(390 * 3, 844 * 3);
-  tester.view.devicePixelRatio = 3;
-  addTearDown(tester.view.reset);
-
-  // The photographs: decoded for real, outside the test's fake clock, and
-  // left in the image cache for the screen to find. The hook is put back at
-  // once — the binding checks it is unset when the test body ends.
-  debugNetworkImageHttpClientProvider = PhotoClient.new;
-  await tester.pumpWidget(const MaterialApp(home: SizedBox()));
-  await tester.runAsync(() async {
-    final context = tester.element(find.byType(SizedBox));
-    for (final file in fx.photoFiles) {
-      await precacheImage(NetworkImage('${fx.photos}$file'), context);
-    }
-  });
-  debugNetworkImageHttpClientProvider = null;
+  holdPhone(tester);
+  await precachePhotos(tester);
 
   if (signedIn) await session.login('ola@epost.no', 'passord');
 
@@ -172,8 +57,8 @@ Future<void> shoot(WidgetTester tester, String name, Widget screen,
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: _theme(),
-        builder: (context, child) => _Frame(light: light, child: child!),
+        theme: phoneTheme(),
+        builder: (context, child) => PhoneFrame(light: light, child: child!),
         home: screen,
       ),
     ),
@@ -212,7 +97,7 @@ void main() {
     // A Thursday afternoon, so «i går» and «tirsdag» stay what they were drawn.
     now = () => DateTime(2026, 9, 10, 14, 30);
     addTearDown(() => now = DateTime.now);
-    await _loadFonts();
+    await loadFonts();
     SharedPreferences.setMockInitialValues({});
     _picked = 0;
     server = FakeServer(export: true);

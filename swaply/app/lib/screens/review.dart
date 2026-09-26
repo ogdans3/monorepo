@@ -160,9 +160,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
                             textAlign: TextAlign.center),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Center(child: _stars(first.id, 38, 10)),
-                    const SizedBox(height: 28),
+                    // 24 over the stars and 28 under: 12 of each answer.
+                    const SizedBox(height: 24 - 12),
+                    Center(
+                        child: _stars(first.displayName, first.id, 38, 10,
+                            room: const EdgeInsets.symmetric(horizontal: 16, vertical: 12))),
+                    const SizedBox(height: 28 - 12),
                   ] else ...[
                     const SizedBox(height: 60),
                     const Padding(
@@ -183,7 +186,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     const SizedBox(height: 24),
                     for (final person in _others)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(15, 0, 15, 20),
+                        // 20 at the foot, 12 of it the stars'.
+                        padding: const EdgeInsets.fromLTRB(15, 0, 15, 20 - 12),
                         child: Column(
                           children: [
                             Row(
@@ -206,8 +210,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            _stars(person.id, 32, 8),
+                            // The 8 over them are theirs too.
+                            _stars(person.displayName, person.id, 32, 8,
+                                room: const EdgeInsets.fromLTRB(16, 8, 16, 12)),
                           ],
                         ),
                       ),
@@ -241,15 +246,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 34),
+              // 34 at the foot, 11 of it inside «Hopp over».
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 34 - 11),
               child: Column(
                 children: [
                   PrimaryButton('Send vurdering',
                       busy: _busy,
                       enabled: _others.every((p) => _scores.containsKey(p.id)),
                       onPressed: _submit),
-                  const SizedBox(height: 12),
-                  GestureDetector(
+                  // Words under the button, answering across the 12 over
+                  // them and the top of the foot.
+                  TapArea(
+                    room: const EdgeInsets.fromLTRB(12, 12, 12, 11),
                     onTap: () => Navigator.of(context).maybePop(),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -270,24 +278,63 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   /// Five «★» as text, green when given and pale when not, the way the
   /// export draws them.
-  Widget _stars(String personId, double size, double gap) {
+  ///
+  /// One control, not five buttons: five stars 36 apart cannot each be a
+  /// finger wide, but the strip can, and a touch anywhere on it — or across
+  /// [room] around it — gives the star nearest the finger, as a slide does. A
+  /// screen reader has it as one adjustable value.
+  Widget _stars(String name, String personId, double size, double gap,
+      {EdgeInsets room = EdgeInsets.zero}) {
     final score = _scores[personId] ?? 0;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var n = 1; n <= 5; n++)
-          GestureDetector(
-            onTap: () => setState(() => _scores[personId] = n),
+
+    // Measured off the strip itself — the row and the room around it, five
+    // stars of one width and four gaps — rather than through a key on the
+    // row: a key made here is a new one every build, and the row was built
+    // from nothing on every step of a finger sliding across it.
+    void pick(BuildContext strip, Offset local) {
+      final width = strip.size?.width;
+      if (width == null) return;
+      final star = (width - room.horizontal - 4 * gap) / 5;
+      final x = local.dx - room.left - star / 2;
+      setState(() => _scores[personId] = (x / (star + gap)).round().clamp(0, 4) + 1);
+    }
+
+    return Semantics(
+      slider: true,
+      label: 'Vurdering av ${name.split(' ').first}',
+      value: score == 0 ? 'Ingen stjerner' : '$score av 5',
+      increasedValue: '${(score + 1).clamp(1, 5)} av 5',
+      decreasedValue: score <= 1 ? null : '${score - 1} av 5',
+      onIncrease: () => setState(() => _scores[personId] = (score + 1).clamp(1, 5)),
+      onDecrease: score <= 1 ? null : () => setState(() => _scores[personId] = score - 1),
+      child: ExcludeSemantics(
+        child: Builder(
+          builder: (strip) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapUp: (details) => pick(strip, details.localPosition),
+            onHorizontalDragUpdate: (details) => pick(strip, details.localPosition),
             child: Padding(
-              padding: EdgeInsets.only(right: n < 5 ? gap : 0),
-              child: Text('★',
-                  style: TextStyle(
-                      fontSize: size,
-                      height: 1,
-                      color: n <= score ? SwaplyColors.greenPressed : const Color(0xFFDCE1DB))),
+              padding: room,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var n = 1; n <= 5; n++)
+                    Padding(
+                      padding: EdgeInsets.only(right: n < 5 ? gap : 0),
+                      child: Text('★',
+                          style: TextStyle(
+                              fontSize: size,
+                              height: 1,
+                              color: n <= score
+                                  ? SwaplyColors.greenPressed
+                                  : const Color(0xFFDCE1DB))),
+                    ),
+                ],
+              ),
             ),
           ),
-      ],
+        ),
+      ),
     );
   }
 }

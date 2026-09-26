@@ -124,43 +124,48 @@ class _LikedScreenState extends State<LikedScreen> {
         ),
         child: Column(
           children: [
-            InkWell(
-              onTap: count == 0
-                  ? null
-                  : () => setState(() =>
-                      open ? _expanded.remove(row.item.id) : _expanded.add(row.item.id)),
-              child: Row(
-                children: [
-                  ItemThumb(row.item, size: 52, radius: 14),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(row.item.title, style: Type.heading),
-                        Text(
-                          count == 0
-                              ? 'Ingen likes ennå'
-                              : count == 1
-                                  ? '1 har likt denne'
-                                  : '$count har likt denne',
-                          // Green and bold when somebody has: it is the good
-                          // news on this screen.
-                          style: count == 0
-                              ? Type.small
-                              : const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: SwaplyColors.greenText),
-                        ),
-                      ],
+            // Each its own target, the size of its own ripple: in the list
+            // the whole card, padding and all, used to tell a screen reader it
+            // was the one button, and answered only in the middle of it.
+            TapArea(
+              child: InkWell(
+                onTap: count == 0
+                    ? null
+                    : () => setState(() =>
+                        open ? _expanded.remove(row.item.id) : _expanded.add(row.item.id)),
+                child: Row(
+                  children: [
+                    ItemThumb(row.item, size: 52, radius: 14),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(row.item.title, style: Type.heading),
+                          Text(
+                            count == 0
+                                ? 'Ingen likes ennå'
+                                : count == 1
+                                    ? '1 har likt denne'
+                                    : '$count har likt denne',
+                            // Green and bold when somebody has: it is the good
+                            // news on this screen.
+                            style: count == 0
+                                ? Type.small
+                                : const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: SwaplyColors.greenText),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  // «⌄» when open, «›» when there is something to open.
-                  if (count > 0)
-                    Icon(open ? Icons.expand_more : Icons.chevron_right,
-                        size: 20, color: SwaplyColors.grey),
-                ],
+                    // «⌄» when open, «›» when there is something to open.
+                    if (count > 0)
+                      Icon(open ? Icons.expand_more : Icons.chevron_right,
+                          size: 20, color: SwaplyColors.grey),
+                  ],
+                ),
               ),
             ),
             if (open)
@@ -174,39 +179,41 @@ class _LikedScreenState extends State<LikedScreen> {
                   children: [
                     for (final (i, liker) in row.likers.indexed) ...[
                       if (i > 0) const SizedBox(height: 11),
-                      InkWell(
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => OtherProfileScreen(userId: liker.id))),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(minHeight: 44),
-                          child: Row(
-                            children: [
-                              Avatar(liker.displayName, size: 36),
-                              const SizedBox(width: 11),
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(liker.displayName.split(' ').first,
+                      TapArea(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => OtherProfileScreen(userId: liker.id))),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(minHeight: 44),
+                            child: Row(
+                              children: [
+                                Avatar(liker.displayName, size: 36),
+                                const SizedBox(width: 11),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(liker.displayName.split(' ').first,
+                                          style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: SwaplyColors.ink)),
+                                      Text(
+                                        [
+                                          if (liker.itemCount != null)
+                                            '${liker.itemCount} gjenstander',
+                                          if (liker.town != null) liker.town!,
+                                        ].join(' · '),
                                         style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: SwaplyColors.ink)),
-                                    Text(
-                                      [
-                                        if (liker.itemCount != null)
-                                          '${liker.itemCount} gjenstander',
-                                        if (liker.town != null) liker.town!,
-                                      ].join(' · '),
-                                      style: const TextStyle(
-                                          fontSize: 11.5, color: SwaplyColors.grey),
-                                    ),
-                                  ],
+                                            fontSize: 11.5, color: SwaplyColors.grey),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const Text('Se tingene deres ›', style: Type.link),
-                            ],
+                                const Text('Se tingene deres ›', style: Type.link),
+                              ],
+                            ),
                           ),
                         ),
                       ),

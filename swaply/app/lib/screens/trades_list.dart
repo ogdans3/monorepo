@@ -66,41 +66,21 @@ class _TradesScreenState extends State<TradesScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(22, 6, 22, 12),
-            child: Text('Mine handler', style: Type.screen),
+          // 12 under the heading, 9 of them inside the track's room.
+          Padding(
+            padding: EdgeInsets.fromLTRB(22, 6, 22, data != null && !empty ? 3 : 12),
+            child: const Text('Mine handler', style: Type.screen),
           ),
           if (data != null && !empty)
-            // A segmented control, not an underline: the export draws a grey
-            // track with the chosen one as a white pill inside it.
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: SwaplyColors.chip,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: TabBar(
-                  controller: _tabs,
-                  labelColor: SwaplyColors.ink,
-                  unselectedLabelColor: SwaplyColors.greySoft,
-                  labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                  unselectedLabelStyle:
-                      const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  dividerHeight: 0,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  splashBorderRadius: BorderRadius.circular(11),
-                  indicator: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  tabs: [
-                    Tab(height: 33, text: 'Venter · ${data.waiting.length}'),
-                    Tab(height: 33, text: 'Aktive · ${data.active.length}'),
-                    Tab(height: 33, text: 'Fullført · ${data.done.length}'),
-                  ],
-                ),
+              child: _Segments(
+                controller: _tabs,
+                labels: [
+                  'Venter · ${data.waiting.length}',
+                  'Aktive · ${data.active.length}',
+                  'Fullført · ${data.done.length}',
+                ],
               ),
             ),
           Expanded(
@@ -173,90 +153,98 @@ class _TradesScreenState extends State<TradesScreen>
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () async {
-          await Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id)));
-          await _load();
-        },
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            // The one waiting on you wears a green edge, as the export draws it.
-            border: Border.all(
-                color: yourTurn ? SwaplyColors.greenPressed : SwaplyColors.cardLine),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(trade.isChain ? 'Bytte via kjede' : 'Direkte bytte',
-                      style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: colour == SwaplyColors.amberText
-                          ? SwaplyColors.amberBg
-                          : colour == SwaplyColors.greenText
-                              ? SwaplyColors.availableBg
-                              : SwaplyColors.chip,
-                      borderRadius: BorderRadius.circular(Radii.pill),
+      // Its own node, the card and not the 12 under it, and «Godta byttet»
+      // inside it a node of its own.
+      child: Semantics(
+        container: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () async {
+            await Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id)));
+            await _load();
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              // The one waiting on you wears a green edge, as the export draws it.
+              border: Border.all(
+                  color: yourTurn ? SwaplyColors.greenPressed : SwaplyColors.cardLine),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(trade.isChain ? 'Bytte via kjede' : 'Direkte bytte',
+                        style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colour == SwaplyColors.amberText
+                            ? SwaplyColors.amberBg
+                            : colour == SwaplyColors.greenText
+                                ? SwaplyColors.availableBg
+                                : SwaplyColors.chip,
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                      ),
+                      child: Text(label,
+                          style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: colour)),
                     ),
-                    child: Text(label,
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: colour)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // «det du får → deg → det du gir», with the name over each thing.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _leg('${trade.receivingFrom.displayName.split(' ').first} gir',
-                        trade.youGet, SwaplyColors.greenText),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Column(
-                      children: [
-                        SizedBox(height: 37),
-                        Text('→',
-                            style: TextStyle(
-                                fontSize: 34,
-                                height: 1,
-                                fontWeight: FontWeight.w800,
-                                color: SwaplyColors.greenPressed)),
-                        SizedBox(height: 5),
-                        Text('deg',
-                            style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                color: SwaplyColors.inkBody)),
-                      ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // «det du får → deg → det du gir», with the name over each thing.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _leg('${trade.receivingFrom.displayName.split(' ').first} gir',
+                          trade.youGet, SwaplyColors.greenText),
                     ),
-                  ),
-                  Expanded(
-                    child: _leg('${trade.givingTo.displayName.split(' ').first} får',
-                        trade.youGive, SwaplyColors.amberText),
-                  ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        children: [
+                          SizedBox(height: 37),
+                          Text('→',
+                              style: TextStyle(
+                                  fontSize: 34,
+                                  height: 1,
+                                  fontWeight: FontWeight.w800,
+                                  color: SwaplyColors.greenPressed)),
+                          SizedBox(height: 5),
+                          Text('deg',
+                              style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: SwaplyColors.inkBody)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: _leg('${trade.givingTo.displayName.split(' ').first} får',
+                          trade.youGive, SwaplyColors.amberText),
+                    ),
+                  ],
+                ),
+                if (yourTurn) ...[
+                  const SizedBox(height: Insets.md),
+                  PrimaryButton('Godta byttet', onPressed: () async {
+                    await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id)));
+                    await _load();
+                  }),
                 ],
-              ),
-              if (yourTurn) ...[
-                const SizedBox(height: Insets.md),
-                PrimaryButton('Godta byttet', onPressed: () async {
-                  await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id)));
-                  await _load();
-                }),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -296,4 +284,111 @@ class _TradesScreenState extends State<TradesScreen>
           ),
         ],
       );
+}
+
+/// «Venter · Aktive · Fullført»: a segmented control, not an underline — the
+/// export draws a grey track with the chosen one as a white pill inside it.
+///
+/// It was a [TabBar], which lays a tab out exactly as tall as its pill and
+/// ripples across all of it, so a tab could answer across no more than the 35
+/// it draws. This is laid out and styled as that TabBar was, to the pixel, and
+/// driven by the same [TabController], so the pill still slides with a swipe;
+/// each ripple stays on its pill, and a finger gets the 9 over the track too.
+class _Segments extends StatelessWidget {
+  const _Segments({required this.controller, required this.labels});
+
+  final TabController controller;
+  final List<String> labels;
+
+  /// The TabBar's own sizes: a 33-tall tab over its 2-point indicator line,
+  /// and 16 either side of the label.
+  static const _tab = 33.0, _line = 2.0;
+
+  @override
+  Widget build(BuildContext context) {
+    // As the TabBar mixes them: the theme's titleSmall under the label style.
+    final titleSmall = Theme.of(context).textTheme.titleSmall!;
+    final on = titleSmall
+        .merge(const TextStyle(fontSize: 13, fontWeight: FontWeight.w700))
+        .copyWith(inherit: true);
+    final off = titleSmall
+        .merge(const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))
+        .copyWith(inherit: true);
+    final animation = controller.animation!;
+
+    return TapRoom(
+      room: const EdgeInsets.only(top: 9),
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: SwaplyColors.chip,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) => LayoutBuilder(builder: (context, box) {
+              final width = box.maxWidth / labels.length;
+              return Stack(
+                children: [
+                  Positioned(
+                    left: animation.value * width,
+                    top: 0,
+                    width: width,
+                    height: _tab + _line,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      for (final (i, label) in labels.indexed)
+                        Expanded(child: _segment(i, label, on, off, animation.value)),
+                    ],
+                  ),
+                ],
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _segment(int i, String label, TextStyle on, TextStyle off, double at) {
+    final chosen = (1 - (at - i).abs()).clamp(0.0, 1.0);
+    return TapArea(
+      child: Semantics(
+        selected: i == controller.index,
+        child: InkWell(
+          onTap: () => controller.animateTo(i),
+          borderRadius: BorderRadius.circular(11),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: _line),
+            child: Center(
+              heightFactor: 1,
+              child: Padding(
+                padding: kTabLabelPadding,
+                child: DefaultTextStyle.merge(
+                  style: TextStyle.lerp(on, off, 1 - chosen)!.copyWith(
+                      color: Color.lerp(SwaplyColors.greySoft, SwaplyColors.ink, chosen)),
+                  child: SizedBox(
+                    height: _tab,
+                    child: Center(
+                      widthFactor: 1,
+                      child: Text(label, softWrap: false, overflow: TextOverflow.fade),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -22,6 +22,9 @@ class FakeServer {
 
   final requests = <String>[];
 
+  /// How many times [request] — «GET /discover» — has been asked for.
+  int asked(String request) => requests.where((r) => r == request).length;
+
   /// What was sent, by request. JSON only — a multipart upload is bytes, and
   /// nothing here needs to read them back.
   final bodies = <String, Map<String, dynamic>>{};

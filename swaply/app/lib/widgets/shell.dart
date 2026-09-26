@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../design/tokens.dart';
 import '../state/session.dart';
+import 'common.dart';
 
 /// The routes the five tabs answer to, in the export's order: Oppdag · Legg ut
 /// · Bytter · Chats · Profil. Inside the app a tab is not a route any more —
@@ -152,8 +153,13 @@ class SwaplyNavBar extends StatelessWidget {
 /// status bar — a thin «‹» and the title in deep green, 22/800. `big` is the
 /// 26/800 kind («Innstillinger», «Likt») with 14 below; a subtitle goes under
 /// a big title and, on the small kind, into a chip at the right («Med Ola»).
-/// The glyph's box is 33 wide and the row tall, so the target is more than
-/// the seven pixels it draws.
+///
+/// The «‹» draws seven pixels and a [headerAction] twenty, in a row 25 tall.
+/// Each answers across its corner of the screen instead: from the top edge
+/// down to [kTapTarget] under the safe area, and in from the side of the
+/// screen. The status bar strip counts where a phone has one, and a browser,
+/// which has none, still gets a whole target — which reaches past the header
+/// into the top of the page, so it is a [TapArea] with `above`.
 PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
     {String? subtitle,
     List<Widget> actions = const [],
@@ -167,94 +173,178 @@ PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
   final rowHeight = bare ? 21.0 : big ? 30.0 : 25.0;
   final top = bare ? 0.0 : 6.0;
   final height = top + rowHeight + (under ? 18 : 0) + (big ? (under ? 4 : 14) : 0);
+  final left = showBack ? inset - 14 : inset;
   return PreferredSize(
     preferredSize: Size.fromHeight(height),
-    child: Container(
-      color: SwaplyColors.bg,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(showBack ? inset - 14 : inset, top, inset, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: rowHeight,
-                child: Row(
-                  children: [
-                    if (showBack)
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => Navigator.of(context).maybePop(),
-                        child: const SizedBox(
-                          width: 33,
-                          child: Padding(
-                            padding: EdgeInsets.only(left: 14),
-                            child: Text('‹',
-                                style: TextStyle(
-                                    fontSize: 18, height: 1.15, color: SwaplyColors.ink)),
+    // Built where the header is, so the safe area is the one it is drawn in.
+    child: Builder(builder: (context) {
+      final safe = MediaQuery.paddingOf(context);
+      final above = safe.top + top;
+      final below = math.max(0.0, kTapTarget - top - rowHeight);
+      return Container(
+        color: SwaplyColors.bg,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(left, top, inset, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: rowHeight,
+                  child: _HeaderRow(
+                    reach: EdgeInsets.fromLTRB(0, above, inset + safe.right, below),
+                    rowHeight: rowHeight,
+                    child: Row(
+                      children: [
+                        if (showBack)
+                          TapArea(
+                            above: true,
+                            label: 'Tilbake',
+                            reach: EdgeInsets.fromLTRB(safe.left + left, above,
+                                math.max(0.0, _headerTargetWidth - left - _backWidth), below),
+                            onTap: () => Navigator.of(context).maybePop(),
+                            // The row's height, the glyph centred in it where
+                            // the row used to centre a box of its own: the
+                            // area is measured from this box.
+                            child: SizedBox(
+                              width: _backWidth,
+                              height: rowHeight,
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
+                                child: Padding(
+                                  padding: EdgeInsets.only(left: 14),
+                                  child: Text('‹',
+                                      style: TextStyle(
+                                          fontSize: 18, height: 1.15, color: SwaplyColors.ink)),
+                                ),
+                              ),
+                            ),
                           ),
+                        Expanded(
+                          child: Text(title,
+                              style: big
+                                  ? Type.screen
+                                  : const TextStyle(
+                                      fontSize: 22,
+                                      height: 1.15,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.4,
+                                      color: SwaplyColors.greenDeep),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
                         ),
-                      ),
-                    Expanded(
-                      child: Text(title,
-                          style: big
-                              ? Type.screen
-                              : const TextStyle(
-                                  fontSize: 22,
-                                  height: 1.15,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.4,
-                                  color: SwaplyColors.greenDeep),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
+                        if (!big && subtitle != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: SwaplyColors.chip,
+                              borderRadius: BorderRadius.circular(Radii.pill),
+                            ),
+                            child: Text(subtitle,
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: SwaplyColors.inkMuted)),
+                          ),
+                        ...actions,
+                      ],
                     ),
-                    if (!big && subtitle != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: SwaplyColors.chip,
-                          borderRadius: BorderRadius.circular(Radii.pill),
-                        ),
-                        child: Text(subtitle,
-                            style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: SwaplyColors.inkMuted)),
-                      ),
-                    ...actions,
-                  ],
+                  ),
                 ),
-              ),
-              if (under)
-                Padding(
-                  padding: const EdgeInsets.only(top: 3),
-                  child: Text(subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, color: SwaplyColors.grey)),
-                ),
-            ],
+                if (under)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13, color: SwaplyColors.grey)),
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
-    ),
+      );
+    }),
   );
 }
 
-/// A small glyph at the right of the header — «⋯» — sized to the row.
-Widget headerAction(IconData icon, VoidCallback onTap) => GestureDetector(
-      behavior: HitTestBehavior.opaque,
+/// The «‹» box: 33 wide, the glyph 14 in from its left edge.
+const _backWidth = 33.0;
+
+/// How wide the «‹» target is at the least, counted from the side of the
+/// screen: Material's 48 rather than [kTapTarget], because a corner is where a
+/// thumb lands least precisely. The few points past the box are the start of
+/// the title, which does nothing when touched.
+const _headerTargetWidth = 48.0;
+
+/// The header row, for a [headerAction] in it: how far a target there reaches
+/// past the row — up to the top of the screen, down to [kTapTarget] under the
+/// safe area and out to the right edge — and how tall the row is.
+class _HeaderRow extends InheritedWidget {
+  const _HeaderRow({required this.reach, required this.rowHeight, required super.child});
+
+  final EdgeInsets reach;
+  final double rowHeight;
+
+  @override
+  bool updateShouldNotify(_HeaderRow old) => old.reach != reach || old.rowHeight != rowHeight;
+}
+
+/// A glyph at the right of the header — «⋯» — named for a screen reader,
+/// since it draws no word. 30 wide, the glyph against its right edge.
+Widget headerAction(IconData icon, VoidCallback onTap, {required String label}) =>
+    _HeaderAction(
       onTap: onTap,
-      child: SizedBox(
-        width: 30,
-        height: 25,
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Icon(icon, size: 20, color: SwaplyColors.ink),
-        ),
+      label: label,
+      width: 30,
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Icon(icon, size: 20, color: SwaplyColors.ink),
       ),
     );
+
+/// A word at the right of the header — «Nullstill» — set five below the
+/// middle of the row, as the export draws it.
+Widget headerTextAction(String text, VoidCallback onTap) => _HeaderAction(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 5),
+        child: Text(text,
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+      ),
+    );
+
+class _HeaderAction extends StatelessWidget {
+  const _HeaderAction({required this.onTap, required this.child, this.label, this.width});
+
+  final VoidCallback onTap;
+  final Widget child;
+  final String? label;
+
+  /// A glyph's box has a width of its own; a word's is the word.
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = context.dependOnInheritedWidgetOfExactType<_HeaderRow>();
+    return TapArea(
+      // Outside a header there is nowhere to reach into but its own square.
+      above: row != null,
+      reach: row?.reach,
+      label: label,
+      onTap: onTap,
+      // The row's height, the child centred in it the way the row centres a
+      // shorter box: the area is measured from this box.
+      child: SizedBox(
+        width: width,
+        height: row?.rowHeight,
+        child: width == null ? Center(child: child) : child,
+      ),
+    );
+  }
+}
 
 /// The app behind the gate: five tabs under one bar that is drawn once and
 /// never moves.

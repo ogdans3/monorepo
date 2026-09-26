@@ -134,7 +134,8 @@ class _MatchScreenState extends State<MatchScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 34),
+                  // 34 at the foot, 11 of it inside «Fortsett å sveipe».
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 34 - 11),
                   child: Column(
                     children: [
                       PrimaryButton(
@@ -151,8 +152,10 @@ class _MatchScreenState extends State<MatchScreen> {
                             : pushInTab<void>(context, TradeDetailScreen(tradeId: trade.id),
                                 replace: true),
                       ),
-                      const SizedBox(height: 12),
-                      GestureDetector(
+                      // Words under the button, answering across the 12
+                      // over them and the top of the foot.
+                      TapArea(
+                        room: const EdgeInsets.fromLTRB(12, 12, 12, 11),
                         onTap: () => Navigator.of(context).maybePop(),
                         child: const Padding(
                           padding: EdgeInsets.symmetric(vertical: 2),
@@ -465,12 +468,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
         const SizedBox(height: 7),
         _handoverSection(trade),
       ],
-      if (trade.state != 'completed' && trade.state != 'cancelled') ...[
-        const SizedBox(height: 7),
-        _statusSection(trade),
-      ],
       const SizedBox(height: 7),
-      _conversationSection(trade),
+      _conversationSection(trade,
+          over: trade.state != 'completed' && trade.state != 'cancelled'
+              ? _statusSection(trade)
+              : null),
       // The tooling, at the very bottom of the scroll and nowhere near the
       // product's own buttons. Only for the admin, and never while being
       // somebody else — a tool acting on a tool is how you lose the thread.
@@ -511,81 +513,86 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     };
     final actions = byState[trade.state] ?? const [('message', 'skriver')];
 
+    // The card is the room its chips share, as on the tool's own screen.
     return Padding(
       padding: const EdgeInsets.only(top: Insets.lg),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-        decoration: BoxDecoration(
-          color: AdminColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AdminColors.accent),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                AdminBadge('admin'),
-                SizedBox(width: 8),
-                // Norwegian runs long and this sits inside a card: the title
-                // wraps rather than running off the edge of it.
-                Expanded(
-                  child: Text('Som motparten',
-                      style: TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w800, color: AdminColors.ink)),
+      child: TapRoom(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          decoration: BoxDecoration(
+            color: AdminColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AdminColors.accent),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  AdminBadge('admin'),
+                  SizedBox(width: 8),
+                  // Norwegian runs long and this sits inside a card: the title
+                  // wraps rather than running off the edge of it.
+                  Expanded(
+                    child: Text('Som motparten',
+                        style: TextStyle(
+                            fontSize: 12.5, fontWeight: FontWeight.w800, color: AdminColors.ink)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // «Forfall fristen nå». WITHDRAWAL_RESPONSE_HOURS is 72, so 08b's
+              // expiry branch — nobody answered and the trade carries on — is
+              // otherwise three days away. The lever was documented and shipped
+              // with no control anywhere in the app.
+              if (trade.withdrawal?.state == 'waiting') ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AdminButton('Forfall svarfristen nå',
+                      busy: _busy,
+                      onPressed: () => _run((api) async {
+                            await api.adminExpireWithdrawal(trade.id);
+                            return api.trade(trade.id);
+                          })),
                 ),
               ],
-            ),
-            const SizedBox(height: 10),
-            // «Forfall fristen nå». WITHDRAWAL_RESPONSE_HOURS is 72, so 08b's
-            // expiry branch — nobody answered and the trade carries on — is
-            // otherwise three days away. The lever was documented and shipped
-            // with no control anywhere in the app.
-            if (trade.withdrawal?.state == 'waiting') ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: AdminButton('Forfall svarfristen nå',
-                    busy: _busy,
-                    onPressed: () => _run((api) async {
-                          await api.adminExpireWithdrawal(trade.id);
-                          return api.trade(trade.id);
-                        })),
-              ),
-            ],
-            for (final person in others)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final action in actions)
-                      GestureDetector(
-                        onTap: _busy
-                            ? null
-                            : () => _run((api) async {
-                                  await api.adminAct(trade.id,
-                                      as: person.id, action: action.$1);
-                                  return api.trade(trade.id);
-                                }),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: AdminColors.cardFill,
-                            borderRadius: BorderRadius.circular(Radii.pill),
-                            border: Border.all(color: AdminColors.hairline),
-                          ),
-                          child: Text(
-                            '${person.displayName.split(' ').first} ${action.$2}',
-                            style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w600, color: AdminColors.ink),
+              for (final person in others)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final action in actions)
+                        TapArea(
+                          onTap: _busy
+                              ? null
+                              : () => _run((api) async {
+                                    await api.adminAct(trade.id,
+                                        as: person.id, action: action.$1);
+                                    return api.trade(trade.id);
+                                  }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AdminColors.cardFill,
+                              borderRadius: BorderRadius.circular(Radii.pill),
+                              border: Border.all(color: AdminColors.hairline),
+                            ),
+                            child: Text(
+                              '${person.displayName.split(' ').first} ${action.$2}',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AdminColors.ink),
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -731,7 +738,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
   }) =>
       SectionCard(
         radius: 16,
-        padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+        // With «+ Legg til flere» at the foot, the 11 under it is its own.
+        padding: EdgeInsets.fromLTRB(12, 11, 12, edit != null ? 0 : 11),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -763,7 +771,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: SwaplyColors.ink)),
                         Text('$from · verdi ${kr(item.estimatedValueNok)}',
                             style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
                       ],
@@ -776,24 +786,28 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                             fontWeight: FontWeight.w700,
                             color: SwaplyColors.greenText))
                   else if (edit != null && i > 0)
-                    GestureDetector(
+                    // A word in a row 48 tall: the row is its height, and
+                    // the end of the title beside it — which does nothing —
+                    // makes up the width.
+                    TapArea(
+                      room: const EdgeInsets.fromLTRB(8, 16, 0, 16),
+                      reach: const EdgeInsets.fromLTRB(9, 1, 0, 1),
                       onTap: edit,
-                      child: const Padding(
-                        padding: EdgeInsets.only(left: 8),
-                        child: Text('Fjern',
-                            style: TextStyle(fontSize: 12, color: SwaplyColors.grey)),
-                      ),
+                      child: const Text('Fjern',
+                          style: TextStyle(fontSize: 12, color: SwaplyColors.grey)),
                     ),
                 ],
               ),
             ],
-            if (edit != null) ...[
-              const SizedBox(height: 9),
-              GestureDetector(
+            if (edit != null)
+              // The 9 over it, the card's 11 under it, and the foot of the
+              // row above, which has nothing of its own to tap.
+              TapArea(
+                room: const EdgeInsets.only(top: 9, bottom: 11),
+                reach: const EdgeInsets.only(top: 9),
                 onTap: edit,
                 child: const Text('+ Legg til flere av dine ting', style: Type.link),
               ),
-            ],
           ],
         ),
       );
@@ -990,7 +1004,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                       children: [
                         Text(p.displayName.split(' ').first,
                             style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: SwaplyColors.ink)),
                         Text(_personMeta(p),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1024,7 +1040,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
   }
 
   /// The conversation is available at every stage, including while you wait.
-  Widget _conversationSection(Trade trade) {
+  ///
+  /// [over] is what the screen shows above it — the people and whether they
+  /// have said yes — which answers nothing, so «Åpne ›» may answer up into it.
+  Widget _conversationSection(Trade trade, {Widget? over}) {
     final name = trade.isChain
         ? 'alle'
         : trade.receivingFrom.displayName.split(' ').first;
@@ -1042,8 +1061,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     }
 
     // The same card as on the item screen: kicker and «Åpne ›» inside it,
-    // the last line as a soft bubble, a pill field and «Send» as words.
-    return SectionCard(
+    // the last line as a soft bubble, a pill field and «Send» as words. The
+    // three share the card: «Åpne ›» the top of it, the field and «Send» the
+    // foot, split between them.
+    final card = SectionCard(
       padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1058,12 +1079,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                       letterSpacing: 0.72,
                       color: SwaplyColors.greyLight)),
               if (trade.threadId != null)
-                GestureDetector(
+                TapArea(
                   onTap: () =>
                       pushOverBar<void>(context, ThreadScreen(threadId: trade.threadId!)),
                   child: const Text('Åpne ›',
                       style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: SwaplyColors.greenText)),
                 ),
             ],
           ),
@@ -1100,29 +1123,31 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _message,
-                  style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
-                  onSubmitted: (_) => send(),
-                  decoration: InputDecoration(
-                    hintText: trade.isChain ? 'Skriv til begge…' : 'Skriv en melding…',
-                    hintStyle: const TextStyle(fontSize: 13, color: SwaplyColors.greyLight),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                        borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                child: TapArea(
+                  child: TextField(
+                    controller: _message,
+                    style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
+                    onSubmitted: (_) => send(),
+                    decoration: InputDecoration(
+                      hintText: trade.isChain ? 'Skriv til begge…' : 'Skriv en melding…',
+                      hintStyle: const TextStyle(fontSize: 13, color: SwaplyColors.greyLight),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                          borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                          borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                          borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
-              GestureDetector(
+              TapArea(
                 onTap: trade.threadId == null ? null : send,
                 child: const Text('Send',
                     style: TextStyle(
@@ -1132,6 +1157,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
           ),
         ],
       ),
+    );
+    return TapRoom(
+      child: over == null
+          ? card
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [over, const SizedBox(height: 7), card],
+            ),
     );
   }
 
@@ -1175,6 +1208,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
 
   Widget _actions(Trade trade) {
     final children = <Widget>[];
+    // What the last button takes of the bar's foot as its own.
+    var footRoom = 0.0;
 
     if (['talking', 'pending', 'countered'].contains(trade.state)) {
       // «Jeg vil ha» opens the trade with their listing on the table and
@@ -1211,17 +1246,23 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
         children.add(const SizedBox(height: 6));
       }
       if (!trade.isChain) {
-        children.add(SecondaryButton(
-            halfFilled ? 'Sett sammen byttet' : 'Foreslå motbytte',
-            accent: true,
-            height: 42,
-            onPressed: _busy ? null : () => _openCounterOffer(trade)));
+        // 42 tall, and the 2 under it — the foot of the bar, or of the gap
+        // to «Angre» — answer too.
+        children.add(TapArea(
+          room: const EdgeInsets.only(bottom: 2),
+          child: SecondaryButton(
+              halfFilled ? 'Sett sammen byttet' : 'Foreslå motbytte',
+              accent: true,
+              height: 42,
+              onPressed: _busy ? null : () => _openCounterOffer(trade)),
+        ));
+        footRoom = trade.youAccepted ? 0 : 2;
       }
       if (trade.youAccepted) {
         // De-accept: the lifecycle goes backwards as well as forwards, and your
         // yes is what reserved your things. Undoing it leaves the trade
         // standing, which is what makes it different from withdrawing.
-        children.add(const SizedBox(height: Insets.sm));
+        children.add(SizedBox(height: Insets.sm - (trade.isChain ? 0 : 2)));
         children.add(SecondaryButton('Angre godkjenningen',
             onPressed: _busy ? null : () => _confirmRevoke(trade)));
         children.add(const SizedBox(height: Insets.sm));
@@ -1259,7 +1300,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     if (children.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(Insets.screen, Insets.md, Insets.screen, Insets.md),
+      padding: EdgeInsets.fromLTRB(Insets.screen, Insets.md, Insets.screen, Insets.md - footRoom),
       decoration: const BoxDecoration(
         color: SwaplyColors.surface,
         border: Border(top: BorderSide(color: SwaplyColors.line)),

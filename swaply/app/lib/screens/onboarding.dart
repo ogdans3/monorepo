@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -343,7 +345,8 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           // 28 at the sides and the wordmark 116 down: the export's sign-in.
           // With the chevron, its 21-tall row is the top of the 116.
-          padding: EdgeInsets.fromLTRB(28, back ? 116 - 21 : 116, 28, Insets.xl),
+          // The foot is 28, 14 of it inside «Ny her? Opprett konto».
+          padding: EdgeInsets.fromLTRB(28, back ? 116 - 21 : 116, 28, Insets.xl - 14),
           // One group, so a password manager sees a form with a username and
           // a password in it rather than one lone field at a time — which is
           // what makes it offer anything at all, on the web as on a phone.
@@ -383,11 +386,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: const InputDecoration(hintText: '••••••••'),
                 onSubmitted: (_) => _submit(),
               ),
-              const SizedBox(height: 10),
-              // Words, not a button: 10 under the field, 16 over the button.
+              // Words, not a button: 10 under the field, 16 over the button —
+              // and those 26 are what it answers across, with the empty line
+              // to its left. That is 41 of the 44, and the other three belong
+              // to the field and the button.
               Align(
                 alignment: Alignment.centerRight,
-                child: GestureDetector(
+                child: TapArea(
+                  room: const EdgeInsets.fromLTRB(24, 10, 0, 16),
                   onTap: () => showDialog<void>(
                     context: context,
                     builder: (_) => const _ComingSoonDialog(
@@ -397,7 +403,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text('Glemt passord?', style: Type.link),
                 ),
               ),
-              const SizedBox(height: 16),
               if (_error != null) ...[
                 // Coral, the «no» colour: the other red is for reporting and
                 // blocking, and a wrong password is neither.
@@ -405,36 +410,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: Insets.sm),
               ],
               PrimaryButton('Logg inn', busy: _busy, onPressed: _submit),
-              const SizedBox(height: 16),
               if (socialSignIn) ...[
+                const SizedBox(height: 16),
                 const _OrDivider(),
                 const SizedBox(height: 16),
                 const _SocialButtons(),
-                const SizedBox(height: 16),
               ],
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Ny her? ', style: Type.secondary),
-                  GestureDetector(
-                    onTap: () {
-                      // Back and forth between the two must not stack them.
-                      // Over a 10c, that is back down to it. Otherwise 10c
-                      // takes this screen's place and goes back to whatever
-                      // was under it; with nothing under it, it goes on top.
-                      if (widget.overProfileForm) {
-                        Navigator.of(context).pop();
-                        return;
-                      }
-                      final profile =
-                          MaterialPageRoute<bool>(builder: (_) => const CreateProfileScreen());
-                      back
-                          ? Navigator.of(context).pushReplacement(profile)
-                          : Navigator.of(context).push(profile);
-                    },
-                    child: const Text('Opprett konto', style: Type.link),
+              // The whole line answers, «Ny her?» too, across the 16 above it
+              // and half of the form's foot.
+              Center(
+                child: TapArea(
+                  room: const EdgeInsets.only(top: 16, bottom: 14),
+                  onTap: () {
+                    // Back and forth between the two must not stack them.
+                    // Over a 10c, that is back down to it. Otherwise 10c
+                    // takes this screen's place and goes back to whatever
+                    // was under it; with nothing under it, it goes on top.
+                    if (widget.overProfileForm) {
+                      Navigator.of(context).pop();
+                      return;
+                    }
+                    final profile =
+                        MaterialPageRoute<bool>(builder: (_) => const CreateProfileScreen());
+                    back
+                        ? Navigator.of(context).pushReplacement(profile)
+                        : Navigator.of(context).push(profile);
+                  },
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Ny her? ', style: Type.secondary),
+                      Text('Opprett konto', style: Type.link),
+                    ],
                   ),
-                ],
+                ),
               ),
             ],
             ),
@@ -542,21 +551,28 @@ class _ComingSoonDialog extends StatelessWidget {
 /// profile of a device that is looking around: the app starts without asking,
 /// so somebody with an account from another phone arrives as a stranger, and
 /// that is where they go looking for the way in.
+///
+/// The whole line answers, «Har du konto?» too, across [room]: the free space
+/// its screen leaves around it.
 class SignInRow extends StatelessWidget {
-  const SignInRow({super.key, required this.onTap});
+  const SignInRow({super.key, required this.onTap, this.room = EdgeInsets.zero});
 
   final VoidCallback onTap;
+  final EdgeInsets room;
 
   @override
-  Widget build(BuildContext context) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('Har du konto? ', style: Type.secondary),
-          GestureDetector(
-            onTap: onTap,
-            child: const Text('Logg inn', style: Type.link),
+  Widget build(BuildContext context) => Center(
+        child: TapArea(
+          room: room,
+          onTap: onTap,
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Har du konto? ', style: Type.secondary),
+              Text('Logg inn', style: Type.link),
+            ],
           ),
-        ],
+        ),
       );
 }
 
@@ -712,21 +728,23 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 busy: _busy,
                 onPressed: _submit,
               ),
-              const SizedBox(height: 15),
               if (socialSignIn) ...[
+                const SizedBox(height: 15),
                 const _OrDivider(),
                 const SizedBox(height: 15),
                 const _SocialButtons(compact: true),
-                const SizedBox(height: 15),
               ],
               // Over this screen rather than in its place: whoever opened 10c
               // is waiting for it to finish, and a sign-in that turns back
               // into «Opprett konto» comes back down to this one, 2/2 and all.
+              //
+              // The 15 above it and the 12 under it, and two more under that
+              // from the empty screen below the form, make a whole target.
               SignInRow(
+                room: const EdgeInsets.only(top: 15, bottom: 14),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const LoginScreen(overProfileForm: true))),
               ),
-              const SizedBox(height: 12),
             ],
           ),
               ),
@@ -837,6 +855,8 @@ class _InterestsScreenState extends State<InterestsScreen> {
     // Below three, «Fortsett» has nothing to send: the users table holds three
     // to five interests or none, so one or two came back as a bare 400.
     final short = _chosen.isNotEmpty && _chosen.length < 3;
+    // Read out here: inside the SafeArea the status bar is taken off.
+    final safe = MediaQuery.paddingOf(context);
 
     return Scaffold(
       body: SafeArea(
@@ -846,8 +866,13 @@ class _InterestsScreenState extends State<InterestsScreen> {
               padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
               child: Align(
                 alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                // 21 tall in the corner, and answering across the corner: up
+                // to the top of the screen, out to its edge and down to a whole
+                // target under the safe area, over the grid's empty top.
+                child: TapArea(
+                  above: true,
+                  reach: EdgeInsets.fromLTRB(
+                      0, safe.top + 6, 24 + safe.right, math.max(0, kTapTarget - 6 - 21)),
                   onTap: () {
                     context.read<Session>().dismissInterests();
                     _leave();

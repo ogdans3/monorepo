@@ -332,84 +332,105 @@ class _PostItemScreenState extends State<PostItemScreen> {
               children: [
                 _photoStrip(),
                 const SizedBox(height: 14),
-                _label('Tittel'),
-                TextField(
-                  controller: _title,
-                  // The button below reads this field, so it has to be rebuilt
-                  // as it is typed into.
-                  onChanged: (_) => setState(() {}),
-                  style: _fieldText,
-                  decoration: _field('Bosch drill 18V'),
+                _labelled(
+                  'Tittel',
+                  TapArea(
+                    child: TextField(
+                      controller: _title,
+                      // The button below reads this field, so it has to be
+                      // rebuilt as it is typed into.
+                      onChanged: (_) => setState(() {}),
+                      style: _fieldText,
+                      decoration: _field('Bosch drill 18V'),
+                    ),
+                  ),
+                  below: 12,
                 ),
-                const SizedBox(height: 12),
-                _label('Beskrivelse'),
-                TextField(
-                  controller: _description,
-                  minLines: 3,
-                  maxLines: 6,
-                  style: _fieldText,
-                  decoration: _field('Hva bør folk vite?'),
+                _labelled(
+                  'Beskrivelse',
+                  TapArea(
+                    child: TextField(
+                      controller: _description,
+                      minLines: 3,
+                      maxLines: 6,
+                      style: _fieldText,
+                      decoration: _field('Hva bør folk vite?'),
+                    ),
+                  ),
+                  below: 12,
                 ),
-                const SizedBox(height: 12),
-                _label('Anslått verdi'),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: TextField(
-                        controller: _value,
-                        keyboardType: TextInputType.number,
-                        // A price typed with a space — «1 500» — parses to
-                        // nothing, and a value the server is willing to ignore
-                        // is a listing that quietly loses its price.
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        style: _fieldText,
-                        // suffixText hides until the field has focus; the
-                        // export shows «kr» from the start.
-                        decoration: _field('600').copyWith(
-                            suffixIcon: const Padding(
-                                padding: EdgeInsets.only(right: 14),
-                                child: Text('kr',
-                                    style: TextStyle(fontSize: 14, color: SwaplyColors.grey))),
-                            suffixIconConstraints:
-                                const BoxConstraints(minWidth: 0, minHeight: 0)),
+                _labelled(
+                  'Anslått verdi',
+                  below: 12,
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: TapArea(
+                          child: TextField(
+                            controller: _value,
+                            keyboardType: TextInputType.number,
+                            // A price typed with a space — «1 500» — parses to
+                            // nothing, and a value the server is willing to
+                            // ignore is a listing that quietly loses its price.
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            style: _fieldText,
+                            // suffixText hides until the field has focus; the
+                            // export shows «kr» from the start.
+                            decoration: _field('600').copyWith(
+                                suffixIcon: const Padding(
+                                    padding: EdgeInsets.only(right: 14),
+                                    child: Text('kr',
+                                        style:
+                                            TextStyle(fontSize: 14, color: SwaplyColors.grey))),
+                                suffixIconConstraints:
+                                    const BoxConstraints(minWidth: 0, minHeight: 0)),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      flex: 4,
-                      child: Text('Helt billige ting kan være gratis',
-                          style: TextStyle(fontSize: 11.5, height: 1.3, color: SwaplyColors.greyLight)),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        flex: 4,
+                        child: Text('Helt billige ting kan være gratis',
+                            style: TextStyle(
+                                fontSize: 11.5, height: 1.3, color: SwaplyColors.greyLight)),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
                 _label('Type'),
-                Row(
-                  children: [
-                    _pick('Gjenstand', _kind == 'item', () => setState(() => _kind = 'item')),
-                    const SizedBox(width: Insets.sm),
-                    _pick('Tjeneste', _kind == 'service', () {
-                      // A service has no condition, and it is never reserved.
-                      setState(() {
-                        _kind = 'service';
-                        _condition = null;
-                      });
-                    }),
-                  ],
+                // The two pills share their row and the 12 under it.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TapRoom(
+                    room: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _pick('Gjenstand', _kind == 'item', () => setState(() => _kind = 'item')),
+                        const SizedBox(width: Insets.sm),
+                        _pick('Tjeneste', _kind == 'service', () {
+                          // A service has no condition, and it is never reserved.
+                          setState(() {
+                            _kind = 'service';
+                            _condition = null;
+                          });
+                        }),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 12),
                 // Two columns, as the export sets them: category beside
                 // subcategory, condition beside postcode.
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _label('Hovedkategori'),
-                          DropdownButtonFormField<String>(
+                      child: _labelled(
+                        'Hovedkategori',
+                        below: 12,
+                        TapArea(
+                          child: DropdownButtonFormField<String>(
                             initialValue: _category,
                             isDense: true,
                             // Not `_fieldText`: a dropdown swaps the ambient
@@ -429,47 +450,37 @@ class _PostItemScreenState extends State<PostItemScreen> {
                                 .toList(),
                             onChanged: (v) => setState(() => _category = v ?? _category),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _label('Underkategori'),
-                          TextField(
+                      child: _labelled(
+                        'Underkategori',
+                        below: 12,
+                        TapArea(
+                          child: TextField(
                             controller: _subcategory,
                             style: _fieldText,
                             decoration: _field('Elektroverktøy'),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (_kind == 'item') ...[
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _label('Tilstand'),
-                            _segmented(),
-                          ],
-                        ),
-                      ),
+                      Expanded(child: _labelled('Tilstand', _segmented())),
                       const SizedBox(width: 12),
                     ],
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _label('Postnummer'),
-                          TextField(
+                      child: _labelled(
+                        'Postnummer',
+                        TapArea(
+                          child: TextField(
                             controller: _postal,
                             keyboardType: TextInputType.number,
                             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -477,7 +488,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                             style: _fieldText,
                             decoration: _field('7030').copyWith(counterText: ''),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
@@ -549,6 +560,18 @@ class _PostItemScreenState extends State<PostItemScreen> {
         child: Text(text, style: Type.section),
       );
 
+  /// A field with its label over it, answering as one: a finger on the label
+  /// goes to the field, as a label's does on the web. The fields here are 39
+  /// tall, and the label and [below], the gap under the field, make them a
+  /// whole target.
+  Widget _labelled(String label, Widget field, {double below = 0}) => TapRoom(
+        room: EdgeInsets.only(bottom: below),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [_label(label), field],
+        ),
+      );
+
   /// Condition as a three-way segment, 31 tall in a chip-coloured track.
   Widget _segmented() => Container(
         padding: const EdgeInsets.all(3),
@@ -559,7 +582,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
         child: Row(
           children: conditionLabels.entries
               .map((e) => Expanded(
-                    child: GestureDetector(
+                    child: TapArea(
                       onTap: () => setState(() => _condition = e.key),
                       child: Container(
                         height: 31,
@@ -656,10 +679,15 @@ class _PostItemScreenState extends State<PostItemScreen> {
                                     color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
                           ),
                         ),
+                      // 22 across, 2 in from the corner, and answering
+                      // across the tile's corner: 44 square, in from its
+                      // edges, and none of it over the next tile.
                       Positioned(
-                        right: 2,
-                        top: 2,
-                        child: GestureDetector(
+                        right: 0,
+                        top: 0,
+                        child: TapArea(
+                          room: const EdgeInsets.fromLTRB(kTapTarget - 24, 2, 2, kTapTarget - 24),
+                          label: 'Fjern bildet',
                           // Held still while «Legg ut» is sending the strip.
                           onTap: _busy
                               ? null
@@ -694,7 +722,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
         height: 106, width: 106, fit: BoxFit.cover, errorBuilder: blank);
   }
 
-  Widget _pick(String label, bool selected, VoidCallback onTap) => GestureDetector(
+  Widget _pick(String label, bool selected, VoidCallback onTap) => TapArea(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
