@@ -751,28 +751,47 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
         ),
       );
 
-  Widget _cancelledCard(Trade trade) => Padding(
-        padding: const EdgeInsets.only(top: Insets.sm),
-        child: SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Byttet er avsluttet', style: Type.heading),
-              const SizedBox(height: 6),
-              Text(
-                trade.closeReason ??
-                    'Tingene dine er tilgjengelige for andre igjen.',
-                style: Type.secondary,
-              ),
+  /// Ended: why, and what there is to do about it.
+  ///
+  /// Ended because somebody in it deleted their account, it says that, in the
+  /// app's words — the server's sentence was «Den andre parten», which is
+  /// wrong in a ring of three, and the card went on to offer a new proposal
+  /// from the conversation, to somebody who is no longer anywhere. Nothing
+  /// about things coming free either: most trades a deletion ends were still
+  /// a conversation or an offer, with nothing held.
+  Widget _cancelledCard(Trade trade) {
+    final erased = trade.closeCode == Trade.closedByErasure;
+    return Padding(
+      padding: const EdgeInsets.only(top: Insets.sm),
+      child: SectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Byttet er avsluttet', style: Type.heading),
+            const SizedBox(height: 6),
+            Text(
+              erased
+                  // Under «Byttet er avsluttet», the reason it did. A pair
+                  // has one other person in it and a ring two, and the one
+                  // reading is never the one who left.
+                  ? trade.isChain || trade.participants.length > 2
+                      ? 'En av de andre i byttet slettet kontoen sin.'
+                      : 'Den andre i byttet slettet kontoen sin.'
+                  : trade.closeReason ?? 'Tingene dine er tilgjengelige for andre igjen.',
+              style: Type.secondary,
+            ),
+            if (!erased) ...[
               const SizedBox(height: Insets.sm),
               const Text(
                 'Angret du? Du kan sende et nytt forslag fra samtalen.',
                 style: Type.small,
               ),
             ],
-          ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
   Widget _completedHeader(Trade trade) => Padding(
         padding: const EdgeInsets.only(top: Insets.sm),

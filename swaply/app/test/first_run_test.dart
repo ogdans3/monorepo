@@ -921,6 +921,55 @@ void main() {
       expect(find.byType(ProfileScreen), findsOneWidget);
     });
 
+    testWidgets('8. the profile made, 13 and the bar have its things and its counts at once',
+        (tester) async {
+      // The answer to a claim is the profile — `publicMe` — without what only
+      // `GET /me` lists and counts, and the session went on with that until
+      // something asked again: 13 said nothing was out, and the bar had no
+      // badges. It asks straight after, as a sign-in does.
+      await asStranger(tester);
+      await tapTab(tester, 'Profil');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Lag profil'));
+      await tester.pumpAndSettle();
+      // Who the server says this is once the profile is made.
+      server.overrides['GET /me'] = {
+        ...claimed(),
+        'interests': ['verktoy'],
+        'items': [FakeServer.drill],
+        'unreadMessages': 3,
+        'tradesNeedingYou': 1,
+      };
+      final before = asked('GET /me');
+
+      await fillProfile(tester, 'Lag profil');
+
+      expect(asked('GET /me'), before + 1);
+      expect(session.anonymous, isFalse);
+      expect(session.me!.items.map((item) => item.title), ['Bosch drill 18V']);
+      expect(session.unreadChats, 3);
+      expect(session.tradesNeedingYou, 1);
+      expect(find.byType(CreateProfileScreen, skipOffstage: false), findsNothing);
+      expect(find.text('Bosch drill 18V'), findsOneWidget);
+      expect(find.descendant(of: find.byType(SwaplyNavBar), matching: find.text('3')),
+          findsOneWidget);
+    });
+
+    testWidgets('…and no answer to that asking is nobody\'s business: the profile is made',
+        (tester) async {
+      await asStranger(tester);
+      await tapTab(tester, 'Profil');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Lag profil'));
+      await tester.pumpAndSettle();
+      server.overrides['GET /me'] = unreachable;
+
+      await fillProfile(tester, 'Lag profil');
+
+      expect(session.anonymous, isFalse);
+      expect(session.me!.id, FakeServer.lookingAround['id']);
+      expect(find.byType(CreateProfileScreen, skipOffstage: false), findsNothing);
+      expect(find.text(noContact), findsNothing);
+    });
+
     testWidgets('…and ‹ on 10c leaves nothing waiting for a sign-in', (tester) async {
       await asStranger(tester);
       await startListing(tester);

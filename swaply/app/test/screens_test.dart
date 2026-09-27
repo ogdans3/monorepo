@@ -804,6 +804,60 @@ void main() {
       expect(find.text('Tilbake til Bytter'), findsOneWidget);
     });
 
+    group('09f ended because somebody deleted their account', () {
+      // `DELETE /me` ends every trade the account was in. The card said the
+      // server's sentence — «Den andre parten slettet kontoen sin», which in
+      // a ring of three names one of two — and went on to offer a new
+      // proposal from the conversation, to somebody who is gone. The trade's
+      // `closeCode` says why, and the words are the app's.
+      Map<String, Object?> erased(Map<String, Object?> trade) => {
+            ...trade,
+            'state': 'cancelled',
+            'closedAt': '2026-09-09T08:55:00Z',
+            'closeReason': 'Den andre parten slettet kontoen sin',
+            'closeCode': 'account_deleted',
+          };
+
+      testWidgets('1. in a pair, the other one deleted theirs, and nothing is offered after it',
+          (tester) async {
+        server.overrides['GET /trades/trade-1'] = erased(FakeServer.trade);
+        await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+        expect(find.text('Byttet er avsluttet'), findsOneWidget);
+        expect(find.text('Den andre i byttet slettet kontoen sin.'), findsOneWidget);
+        expect(find.text('Den andre parten slettet kontoen sin'), findsNothing);
+        expect(find.textContaining('Angret du?'), findsNothing);
+        expect(find.textContaining('nytt forslag'), findsNothing);
+        // Nothing about things coming free: most trades a deletion ends were
+        // a conversation or an offer, with nothing held.
+        expect(find.textContaining('tilgjengelige'), findsNothing);
+        expect(find.text('Tilbake til Bytter'), findsOneWidget);
+      });
+
+      testWidgets('2. in a ring of three, it was one of the other two', (tester) async {
+        server.overrides['GET /trades/trade-chain'] = erased(chainTrade());
+        await mount(tester, const TradeDetailScreen(tradeId: 'trade-chain'));
+
+        expect(find.text('En av de andre i byttet slettet kontoen sin.'), findsOneWidget);
+        expect(find.textContaining('Den andre'), findsNothing);
+        expect(find.textContaining('Angret du?'), findsNothing);
+      });
+
+      testWidgets('3. any other end keeps the server\'s words, and the way back to the conversation',
+          (tester) async {
+        server.overrides['GET /trades/trade-1'] = {
+          ...FakeServer.trade,
+          'state': 'cancelled',
+          'closeReason': 'Byttet ble avslått',
+          'closeCode': 'declined',
+        };
+        await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+        expect(find.text('Byttet ble avslått'), findsOneWidget);
+        expect(find.text('Angret du? Du kan sende et nytt forslag fra samtalen.'), findsOneWidget);
+      });
+    });
+
     testWidgets('09i finished: what you got, what you gave, and your review',
         (tester) async {
       server.overrides['GET /trades/trade-1'] = {
@@ -1223,6 +1277,7 @@ void main() {
         'state': 'cancelled',
         'closedAt': '2026-09-09T08:55:00Z',
         'closeReason': 'Den andre parten slettet kontoen sin',
+        'closeCode': 'account_deleted',
       };
       await mount(tester, const NotificationsScreen());
 
@@ -1237,9 +1292,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TradeDetailScreen), findsOneWidget);
-      // The trade as it is now, ended, with the server's reason on it.
+      // The trade as it is now, ended, and why, in the app's words.
       expect(find.text('Byttet er avsluttet'), findsOneWidget);
-      expect(find.text('Den andre parten slettet kontoen sin'), findsOneWidget);
+      expect(find.text('Den andre i byttet slettet kontoen sin.'), findsOneWidget);
       expect(find.text('Tilbake til Bytter'), findsOneWidget);
     });
 
@@ -1741,10 +1796,39 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Den forsvinner fra Oppdag'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilledButton, 'Fjern annonsen'));
+      await tester.tap(find.widgetWithText(SecondaryButton, 'Fjern annonsen'));
       await tester.pumpAndSettle();
 
       expect(server.requests, contains('DELETE /items/item-mine'));
+    });
+
+    testWidgets('taking it down is not drawn in the red that is report and block',
+        (tester) async {
+      // `../CLAUDE.md`: two reds, and #E5484D is report and block only.
+      // Taking your own listing down is neither: it asks in the colours
+      // «Slett kontoen» asks in.
+      await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
+      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.pumpAndSettle();
+
+      final row = tester.widget<Text>(find.text('Fjern annonsen'));
+      expect(row.style?.color, SwaplyColors.redText);
+      final bin = tester.widget<Icon>(find.byIcon(Icons.delete_outline));
+      expect(bin.color, SwaplyColors.redText);
+
+      await tester.tap(find.text('Fjern annonsen'));
+      await tester.pumpAndSettle();
+      final ask = find.widgetWithText(SecondaryButton, 'Fjern annonsen');
+      expect(ask, findsOneWidget);
+      expect(tester.widget<SecondaryButton>(ask).destructive, isTrue);
+      expect(find.widgetWithText(FilledButton, 'Fjern annonsen'), findsNothing);
+      // Nothing on either sheet is the report red.
+      for (final text in tester.widgetList<Text>(find.byType(Text))) {
+        expect(text.style?.color, isNot(SwaplyColors.red), reason: text.data);
+      }
+      for (final icon in tester.widgetList<Icon>(find.byType(Icon))) {
+        expect(icon.color, isNot(SwaplyColors.red));
+      }
     });
 
     testWidgets('offers nothing the server would refuse', (tester) async {

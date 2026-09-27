@@ -120,14 +120,21 @@ with nothing to tap.
   igjen», and never retried behind anybody's back. A saved token the server
   could not be asked about is kept: being offline is not being signed out.
 - **Signing out** forgets the device id as well as the token, so whoever holds
-  the phone next is a new stranger, and sees 02.
+  the phone next is a new stranger, and sees 02. The next id is kept before
+  the token goes rather than made by the gate afterwards: on the web every tab
+  becomes a stranger at that moment, and each used to find no id and make its
+  own — two device accounts, one of them nobody's. See «Another tab» below.
 - **Closing the app on 02**, or reloading the page, comes back to 02. Whose 02
   is still owed is kept next to the token, by account id, because nothing the
   server says can tell a skipped 02 from one never seen: «Hopp over» leaves the
   interests empty too. «Hopp over» and «Fortsett» both let go of it, so 02 is
   shown once and not on every start.
 - **A claimed device** — its account got a name, then the token went missing —
-  is refused by its old id. The app makes a new one and starts over, once.
+  is refused by its old id. Making the profile spends the id, so the app keeps
+  a new one there and then, and a token refused later starts over with it. An
+  id an older app kept after a profile is refused; the app makes a new one and
+  starts over, once, or takes the one another tab refused the same moment has
+  just kept.
 - **Opening the app reaches the server.** A device that only looked around is
   deleted after twelve months in which its own token asked the server
   nothing, and opening the app counts. A cold start asks `GET /me` as it
@@ -140,10 +147,67 @@ with nothing to tap.
   was no answer, coming back is «Prøv igjen», and its button spins as if
   pressed: the kept token is somebody's, and they have just opened the app.
   Once for each return, never on a timer. `test/activity_test.dart` holds it.
+- **A session ended while the app was away** — the account deleted from
+  another phone or by the twelve-month sweep, or its sessions ended — is
+  refused on that return with a 401, and the app did nothing about it: the
+  person was shown as signed in until the next cold start, with every tap
+  refused. Now the refusal of the token itself, and only that, does what a
+  cold start with a dead token does. The token goes, every screen over the
+  gate goes with the person it was about, and the gate makes a new stranger —
+  for a device and for an erased account alike, since an erased account has
+  no device id left. No toast: the gate is the news. `Session.sentBack` is how
+  the session tells the app to take the screens down. The claim on 10c is
+  followed by the same quiet `GET /me` a sign-in is (see below). A refusal
+  heard while a sign-in or a claim is on its way is not a dead token: the
+  server retires the token the asking went on as it lets the person in, and
+  taken as one it closed 10c or 16c under them and made a stranger that threw
+  their draft away. So coming back asks nothing while one is on its way, and a
+  refusal that lands then is decided once it has — somebody else if it
+  worked, still the dead token if it failed.
+  `test/activity_test.dart` holds it.
+- **Another tab** of the site shares the browser's storage, and each tab read
+  the token from it once, when it opened. A tab left open went on as the
+  person another tab had signed out — holding the revoked token, writing it
+  back on its next change and keeping drafts for somebody no longer there —
+  or went on as somebody else after a sign-in there. Each tab now listens for
+  the browser's `storage` event on the token's key (`util/other_tabs.dart`,
+  through `dart:js_interop`), and the storage is what says who this is, read
+  again at the event rather than taken from it: signed out there, this tab
+  drops what it was showing and the gate makes it a stranger — the same one,
+  by the device id that tab kept; signed in there, this tab goes behind the
+  splash and becomes whoever that is. Tabs that become strangers together are
+  one stranger: the id is kept before the token changes — on «Logg ut», and on
+  a profile made — so every tab that hears it sends the same one, and the
+  server lets two starts with one id at the same moment into one account. A
+  stranger's token is kept with the id it was made with, so where two tabs
+  had no id to share and made one each, the id kept still opens the account
+  every tab goes on as. A tab never writes back a token another
+  tab has replaced: before it keeps the token it holds, it reads the storage
+  again, and one written since wins. A stranger made without anybody asking
+  does not overwrite somebody another tab has just signed in. Off the web
+  nothing else writes the preferences and none of this runs.
+  `test/other_tabs_test.dart` holds it, with a stand-in for the event.
+
+**What the phone keeps does not leave it.** The token, the device id and the
+drafts are in the preferences and the support directory, and Android backs
+both up to the person's Google account unless told not to, and restores them
+onto the next phone they sign in on — signed in as them, with no password,
+where «Logg ut» on the first phone never reaches. `android:allowBackup` is off,
+and `dataExtractionRules` leaves every domain out of the cloud backup and the
+device-to-device transfer, which Android 12 does whatever `allowBackup` says;
+the manifest says why. On iOS `NSUserDefaults`, where `shared_preferences`
+keeps the token, is in the iCloud and Finder backups and comes back from them
+on a new phone. The token belongs in the Keychain, as an item that does not
+migrate (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), and moves there
+when a secure-storage dependency is accepted; until then an iOS backup carries
+a live token.
 
 A stranger may look and wish. Making a profile on 10c **claims** it: the same
 account, so the same shell, with a half-filled 10b still behind it and no
-second trip through 02. 10c's «Logg inn» opens 16c over it, and 16c's
+second trip through 02. The answer to the claim is the profile and not the
+rest of `GET /me` — no things, no unread counts — so the session asks for
+that straight after, quietly, as a sign-in does: 13 and the bar's badges
+showed the stranger's none until something asked again. 10c's «Logg inn» opens 16c over it, and 16c's
 «Opprett konto» goes back down to that 10c, so a detour there does not end the
 listing it is step two of. Signing in to an account from another phone **folds**
 the stranger into that account on the server, and the likes come along. The
@@ -266,7 +330,15 @@ is come back to. From «Rapporter et problem» on a finished trade the trade is
 asked for again. Each waits for the server's answer, and a report that did not
 block asks for nothing. The thanks say the block — «Takk. Vi ser på
 rapporten. Kari er blokkert.» — since the screen changes in the same moment.
-`test/block_test.dart` holds all three.
+
+04 comes back `true` when a block took it away, and whatever opened it asks
+again. That was the grid and 13b's own list of things, and nothing else: 04
+opened from 13b's «Send melding», from a notification on 12a or from a shared
+link left the screen under it showing the blocked person's things. «Send
+melding» now asks again as 13b's list does, quietly; a notification and a
+link open 04 into Oppdag with `openListingInTab`, which has the tab's first
+screen ask again, as it does when a finished flow lands on it.
+`test/block_test.dart` holds all of it.
 `test/heart_test.dart` holds all of it frame by frame, against a server that
 takes as long to answer as a network does.
 
@@ -421,6 +493,21 @@ opens it on Legg ut.
   comes back instead, for them to press. The mark comes off before the listing itself
   is asked for, so one whose answer was lost is never sent twice on its own —
   the form comes back instead, and 13 says whether it went.
+- **One listing per draft.** Each draft names the listing it becomes, a UUID
+  kept in its record and sent with «Legg ut» as `Idempotency-Key`. The server
+  makes one listing per key and account and hands the first back to a second
+  asking, so «Legg ut» pressed again after no answer — or after a kill, from
+  the form that comes back — is the same listing, whether or not the first
+  reached it. The draft gets a new one when it is listed or emptied. And the
+  listing made is the whole answer: the session is asked again afterwards for
+  13 and the badges, and no answer to that is quiet — it used to say «Legg ut»
+  had failed after the listing was made, and pressed again, it was made
+  twice. A listing handed back is the one the first press made, though, and
+  the form may have changed since — the title put right, a picture added — so
+  the server's 200 for it, where a new listing is 201, sends the form after it
+  as the same correction «Rediger annonsen» makes, before the draft goes.
+  Handed back as it was, «Lagt ut» went up over the old words and the new ones
+  were lost. `test/listing_once_test.dart` holds all of it.
 - **Until when.** It goes when the listing goes out; when the form is emptied
   — there is no «Forkast», the export draws none, so a form with nothing typed
   and no pictures is no draft, and a type or category chosen on its own keeps
@@ -435,9 +522,8 @@ opens it on Legg ut.
   the words the same way. Tabs of the site share that storage, and each
   answers from the copy it read when it opened, so clearing drafts reads it
   again first: «Logg ut» in one tab also takes a draft another tab kept since.
-  A tab still showing the old account can keep its draft again afterwards —
-  the app does not follow a sign-out made in another tab at all — and the next
-  «Logg ut», or the next new stranger, takes it.
+  The other tabs follow the sign-out (see *Another tab* above), and a form on
+  its way out with them keeps nothing for somebody who is no longer there.
 
 `test/draft_test.dart` holds all of it, killing the app between steps.
 
@@ -522,6 +608,19 @@ lets go even if the sheet was pulled down while the answer was on its way.
 «Kontoen er slettet.» waits until the gate has shown what comes next: a toast
 is placed once, as it goes up, and put up at once it was placed against the
 splash and then lay across 02's «Fortsett».
+
+Everybody else in a trade the deletion ended is told on 12a — «Noen i byttet
+slettet kontoen sin.» — and the trade, ended, says the same thing in words that
+fit it: «Den andre i byttet …» in a pair, «En av de andre i byttet …» in a
+ring. Those are chosen by the trade's `closeCode`, `account_deleted`, not read
+from its `closeReason`, the server's sentence kept for history; and the line
+under every other ended trade, «Angret du? Du kan sende et nytt forslag fra
+samtalen.», is not drawn under this one, since there is nobody to send it to.
+`test/screens_test.dart` holds the words, under 09f.
+
+Taking your own listing down, from «⋯» on 04, asks the way «Slett kontoen»
+does: the row in «Logg ut»'s red and the app's destructive button, never
+report-and-block red.
 
 Acting as a test account, the sheet asks no password — the admin's key is
 behind that session, not the account's — and the tool retires it, as

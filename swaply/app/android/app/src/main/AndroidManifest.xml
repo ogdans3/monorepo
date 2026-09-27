@@ -1,8 +1,33 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- No backup, and no copy onto another phone. Android backs an app up to
+         the person's Google account unless it says otherwise, and restores it
+         onto whichever phone they sign in on next. What this app keeps is
+         not theirs to carry that way:
+
+         - the session token, which is a live key to the account for as long
+           as the server honours it — restored onto another phone, that phone
+           is signed in as them without a password, and «Logg ut» on the first
+           one never reaches it;
+         - the device id, the only credential an account without a profile
+           has (`lib/state/session.dart`);
+         - a half-written listing and its photographs, often of the inside of
+           somebody's home (`lib/state/draft_store.dart`).
+
+         `allowBackup="false"` turns backup off on Android 11 and below. From
+         Android 12 an app targeting it is still copied in a device-to-device
+         transfer — the cable or the setup wizard moving everything onto a new
+         phone — whatever `allowBackup` says, so `dataExtractionRules` leaves
+         out every domain there and in the cloud backup both. The
+         `fullBackupContent` rules say the same for Android 6 to 11, should
+         `allowBackup` ever be turned on for something else. A new phone
+         starts as a new stranger, and signs in. -->
     <application
         android:label="Swaply"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"

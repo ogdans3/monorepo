@@ -65,16 +65,31 @@ class _SwaplyAppState extends State<SwaplyApp> with WidgetsBindingObserver {
   /// rebuild, and each ask listens to the browser anew.
   late final _lessMotion = widget.lessMotion ?? askedForLessMotion();
 
+  /// The session's word that whoever the screens are about is gone; see
+  /// [Session.sentBack].
+  late final StreamSubscription<void> _sentBack;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _sentBack = context.read<Session>().sentBack.listen((_) => _throughGate());
   }
 
   @override
   void dispose() {
+    unawaited(_sentBack.cancel());
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Everything over the gate taken down, as «Logg ut» does: a chat, 16b,
+  /// 10c — each was about somebody this phone no longer is, and the gate
+  /// under them has already moved on to the next start. From here, since
+  /// nothing on screen asked for it: the session did.
+  void _throughGate() {
+    final navigator = _navigator.currentContext;
+    if (navigator != null) backThroughGate(navigator);
   }
 
   /// Back from the background is opening the app, and the server has to hear
@@ -239,8 +254,9 @@ class _RootGateState extends State<RootGate> {
       // invitation carries none at all. Then there is simply nothing to open.
       if (!mounted || invite.itemId == null) return;
       // Into Oppdag, over the grid, with the bar under it: the gate is above
-      // the tabs rather than in one, so it says which.
-      await pushInTab(context, ItemDetailScreen(itemId: invite.itemId!), tab: 0);
+      // the tabs rather than in one, so it says which. And the grid asks
+      // again after a block made on it, as it does for a listing it opened.
+      await openListingInTab(context, invite.itemId!, tab: 0);
     } catch (_) {
       // A link that no longer resolves, or no answer about it, is not worth
       // interrupting anyone over.

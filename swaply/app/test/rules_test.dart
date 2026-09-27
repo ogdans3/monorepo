@@ -4,6 +4,8 @@
 // one of them is easy to undo by accident while making something else better.
 // A screen test asserts that a screen says what the export says; these assert
 // that the product still means what it decided to mean.
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -146,6 +148,51 @@ void main() {
         expect(entry.value, isNot(SwaplyColors.coral), reason: entry.key);
         expect(entry.value, isNot(SwaplyColors.red), reason: entry.key);
       }
+    });
+  });
+
+  group('what the phone keeps does not leave it', () {
+    // The session token is a live key to the account, the device id is the
+    // only credential an account without a profile has, and a draft is
+    // photographs of somebody's things. Android copies an app's data into
+    // the person's Google backup, and across to a new phone, unless the app
+    // says no — and from Android 12 `allowBackup` alone does not stop the
+    // copy to a new phone. The manifest says why.
+    const domains = [
+      'root',
+      'file',
+      'database',
+      'sharedpref',
+      'external',
+      'device_root',
+      'device_file',
+      'device_database',
+      'device_sharedpref',
+    ];
+
+    void excludesEverything(String rules, {required String reason}) {
+      expect(rules, isNot(contains('<include')), reason: reason);
+      for (final domain in domains) {
+        expect(rules, contains('<exclude domain="$domain" path="." />'), reason: '$reason, $domain');
+      }
+    }
+
+    test('backup is off, and the rules for Android 12 and before leave everything out', () {
+      final manifest = File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
+      expect(manifest, contains('android:allowBackup="false"'));
+      expect(manifest, contains('android:dataExtractionRules="@xml/data_extraction_rules"'));
+      expect(manifest, contains('android:fullBackupContent="@xml/backup_rules"'));
+
+      final extraction =
+          File('android/app/src/main/res/xml/data_extraction_rules.xml').readAsStringSync();
+      for (final copy in ['cloud-backup', 'device-transfer']) {
+        final rules = RegExp('<$copy>(.*?)</$copy>', dotAll: true).firstMatch(extraction);
+        expect(rules, isNotNull, reason: copy);
+        excludesEverything(rules!.group(1)!, reason: copy);
+      }
+      excludesEverything(
+          File('android/app/src/main/res/xml/backup_rules.xml').readAsStringSync(),
+          reason: 'full-backup-content');
     });
   });
 

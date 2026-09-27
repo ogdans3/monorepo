@@ -17,8 +17,26 @@ import 'onboarding.dart';
 import 'post_item.dart';
 import 'profile.dart';
 
+/// 04 opened into [tab] by something that is not the screen it lands on: a
+/// notification on 12a, which is taken down as it opens, or a shared link at
+/// the gate. A block made on it takes the page away, saying so with `true`
+/// (see [ItemDetailScreen]), and what is under it then is that tab's stack —
+/// which did not open it, did not ask again after it, and went on showing the
+/// blocked person's things. So the tab's first screen is told to ask again,
+/// quietly, the way it is when a finished flow lands on it.
+Future<void> openListingInTab(BuildContext context, String itemId, {int tab = 0}) async {
+  final shell = TabShell.maybeOf(context);
+  final gone = await pushInTab<bool>(context, ItemDetailScreen(itemId: itemId), tab: tab);
+  if (gone == true) shell?.askAgain(tab);
+}
+
 /// 04 Gjenstand detalj. The gallery, the owner strip, the conversation box that
 /// opens a negotiation, and the two big buttons at the bottom.
+///
+/// Its route comes back `true` when the page went because the listing is no
+/// longer there for you — a block, made here or on the owner's profile — so
+/// that what opened it asks again for what it shows. Every other way out
+/// comes back with nothing.
 class ItemDetailScreen extends StatefulWidget {
   const ItemDetailScreen({super.key, required this.itemId, this.onHeart, this.onSeen});
 
@@ -98,7 +116,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       } else if (!leaveIfGone) {
         showError(context, e);
       } else if (e.statusCode == 404) {
-        Navigator.of(context).maybePop();
+        Navigator.of(context).maybePop(true);
       }
     }
   }
@@ -508,12 +526,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   /// then on — and the page stood there with the owner's thing on it and the
   /// heart still under the thumb. What it was opened from asks again as it
   /// comes back, without the owner's things: the grid when a card's page
-  /// closes, 13b when one of its listings does. The toast the report put up
-  /// says what happened, over whatever is under.
+  /// closes, 13b when one of its listings does, and the tab's first screen
+  /// when a notification or a link opened it; see [openListingInTab]. The
+  /// toast the report put up says what happened, over whatever is under.
   Future<void> _report(Item item) async {
     final blocked =
         await showReportSheet(context, itemId: item.id, personName: item.owner?.displayName);
-    if (blocked && mounted) Navigator.of(context).maybePop();
+    if (blocked && mounted) Navigator.of(context).maybePop(true);
   }
 
   /// «⋯» on a listing of your own: the U and the D of the CRUD the API has
@@ -544,9 +563,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 if (changed == true) await _load();
               },
             ),
+            // In the colour of «Slett kontoen» and «Logg ut»: something of
+            // your own, taken away. Not [SwaplyColors.red], which is report
+            // and block and nothing else — taking your own listing down is
+            // neither.
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: SwaplyColors.red),
-              title: const Text('Fjern annonsen', style: TextStyle(color: SwaplyColors.red)),
+              leading: const Icon(Icons.delete_outline, color: SwaplyColors.redText),
+              title: const Text('Fjern annonsen', style: TextStyle(color: SwaplyColors.redText)),
               onTap: () {
                 Navigator.of(sheet).pop();
                 _confirmRemove(item);
@@ -580,19 +603,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 style: Type.secondary,
               ),
               const SizedBox(height: Insets.lg),
-              SizedBox(
-                height: 54,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: SwaplyColors.red,
-                    shape:
-                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
-                  ),
-                  onPressed: () => Navigator.of(sheet).pop(true),
-                  child: const Text('Fjern annonsen',
-                      style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700)),
-                ),
-              ),
+              // The app's destructive button, as «Slett kontoen» asks with
+              // it: coral's edge, and nothing that looks like the way on. A
+              // red slab here was the report-and-block red on something that
+              // is neither.
+              SecondaryButton('Fjern annonsen',
+                  destructive: true, onPressed: () => Navigator.of(sheet).pop(true)),
               const SizedBox(height: Insets.sm),
               SecondaryButton('Avbryt', onPressed: () => Navigator.of(sheet).pop(false)),
             ],

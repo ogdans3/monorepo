@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 import '../api/models.dart';
@@ -93,6 +94,7 @@ class ListingDraft {
     required this.postalCode,
     required this.photos,
     this.finish = false,
+    this.key,
   });
 
   final String kind, category;
@@ -112,6 +114,17 @@ class ListingDraft {
   /// its own.
   final bool finish;
 
+  /// The listing this draft becomes, named before it is asked for: sent with
+  /// «Legg ut» as `Idempotency-Key`, and the server makes one listing per key
+  /// and account, handing the first back to a second asking. An answer lost
+  /// on the way — no contact, or the app killed while it was out — says
+  /// nothing about whether the listing was made, and «Legg ut» pressed again
+  /// made it twice whenever it had been. Kept with the draft, so a press after
+  /// a kill is the same asking. One per draft: a new one once a draft is
+  /// listed or emptied, since the next is another thing. Null only in a draft
+  /// kept by an app from before there was one; the form names it then.
+  final String? key;
+
   /// Nothing typed and nothing picked. There is no «Forkast» on 10b — the
   /// export draws none — so emptying the form is how a draft is thrown away:
   /// a form in this state is not kept, and the one kept before it goes. The
@@ -120,4 +133,17 @@ class ListingDraft {
   bool get isEmpty =>
       photos.isEmpty &&
       [title, description, subcategory, value, postalCode].every((text) => text.trim().isEmpty);
+}
+
+/// A fresh [ListingDraft.key]: a version 4 UUID, which is what the server
+/// takes. Random rather than counted, and secure rather than quick, since it
+/// names a request on the server for two days.
+String newListingKey() {
+  final random = Random.secure();
+  final bytes = [for (var i = 0; i < 16; i++) random.nextInt(256)];
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // the RFC 4122 variant
+  final hex = [for (final b in bytes) b.toRadixString(16).padLeft(2, '0')].join();
+  return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-'
+      '${hex.substring(16, 20)}-${hex.substring(20)}';
 }

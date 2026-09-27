@@ -183,6 +183,7 @@ Map<String, Object?> _trade({
       'kind': kind,
       'closedAt': closedAt,
       'closeReason': null,
+      'closeCode': null,
       'offerId': 'offer-$id',
       'offerSeq': 1,
       'counterOfferBy': null,

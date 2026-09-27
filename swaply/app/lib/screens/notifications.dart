@@ -188,7 +188,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } else if (tradeId != null) {
       pushInTab<void>(context, TradeDetailScreen(tradeId: tradeId), tab: 2);
     } else if (itemId != null) {
-      pushInTab<void>(context, ItemDetailScreen(itemId: itemId), tab: 0);
+      openListingInTab(context, itemId, tab: 0);
     }
   }
 

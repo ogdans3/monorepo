@@ -31,13 +31,21 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => context.read<Session>().refresh());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _askAgain());
   }
 
   // Everything on 13 is the session's — the things, the likes, the rating —
   // so asking again is asking who you are.
   @override
-  void onTabReturn() => context.read<Session>().refresh();
+  void onTabReturn() => _askAgain();
+
+  /// Quietly: 13 goes on showing what the session last heard, and the next
+  /// asking brings it up to date. Unheld, no answer here was an error nobody
+  /// caught — landing on 13 as a listing goes out with the line gone included.
+  void _askAgain() {
+    if (!mounted) return;
+    unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -453,6 +461,19 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     _load();
   }
 
+  /// One of their listings, from the grid or from «Send melding», and this
+  /// page asked for again on the way back: a block made on the listing's
+  /// «⋯» takes the listing away (see `ItemDetailScreen`) and lands here,
+  /// where their things and «Send melding» stood on as if nothing had
+  /// happened — «Send melding» opened the listing without asking again after
+  /// it at all. Quietly when the page came back saying the listing is gone:
+  /// the block's own toast is up, and is the news.
+  Future<void> _openListing(String itemId) async {
+    final gone = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: itemId)));
+    if (mounted) await _load(quiet: gone == true);
+  }
+
   /// «⋯» on 13b. Reporting is what the export draws behind it; unblocking has
   /// to live here too, because blocking was a tick inside a report and there
   /// was no way back from it anywhere in the app.
@@ -647,8 +668,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                     'akkurat nå. En samtale starter alltid på en gjenstand.');
                 return;
               }
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => ItemDetailScreen(itemId: user.items.first.id)));
+              _openListing(user.items.first.id);
             }),
           ),
           const SizedBox(height: 12),
@@ -672,11 +692,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 final item = user.items[i];
                 // The whole cell, to the foot of the caption row.
                 return TapArea(
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: item.id)));
-                    await _load();
-                  },
+                  onTap: () => _openListing(item.id),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

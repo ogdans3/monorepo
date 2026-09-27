@@ -21,6 +21,12 @@ import 'onboarding.dart';
 /// so a form that finds out first says what the server would have.
 const _imageGone = 'Et av bildene er ikke lagret lenger. Legg det til på nytt.';
 
+/// «Legg ut» answered with the listing an earlier press made, which a trade
+/// has reserved since: it is out, and it stands as that press wrote it. Says
+/// so rather than «Lagt ut», which would claim the form's words went with it.
+const _heldByTrade =
+    'Den var allerede lagt ut, og er reservert i et bytte nå. Den kan ikke endres før byttet er over.';
+
 /// What a picker gives back: the bytes and a name to send them under. Named so
 /// the screen does not have to know whether they came from a camera roll, a
 /// file input in a browser, or a test.
@@ -125,6 +131,12 @@ class _PostItemScreenState extends State<PostItemScreen> {
   /// On its way out; see [ListingDraft.finish].
   bool _finishing = false;
 
+  /// What «Legg ut» names the listing it asks for; see [ListingDraft.key].
+  /// Taken up from a kept draft, so a press after a kill is the same asking,
+  /// and a new one once the form has been emptied: what is written into it
+  /// next is another thing.
+  String _key = newListingKey();
+
   @override
   void initState() {
     super.initState();
@@ -206,6 +218,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
     _photos
       ..clear()
       ..addAll(draft.photos.take(10));
+    _key = draft.key ?? _key;
     // The town beside the digits, as it was drawn when the form was left.
     final code = _postal.text.trim();
     if (code.length == 4 && !_answered(code)) {
@@ -224,6 +237,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
         postalCode: _postal.text,
         photos: [..._photos],
         finish: _finishing,
+        key: _key,
       );
 
   /// Something in the form changed. A picture picked or taken out is kept
@@ -252,7 +266,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
     _keepAfter = null;
     final owner = _owner;
     if (owner == null || _listed || !mounted || _session.me?.id != owner) return Future.value();
-    return _session.drafts.save(owner, _draft());
+    final draft = _draft();
+    // Emptied, which is how a draft is thrown away: the store lets go of it,
+    // and so does the key. Kept, a listing written into the empty form after
+    // a «Legg ut» that had no answer came back from the server as the one
+    // before it.
+    if (draft.isEmpty) _key = newListingKey();
+    return _session.drafts.save(owner, draft);
   }
 
   @override
@@ -378,7 +398,8 @@ class _PostItemScreenState extends State<PostItemScreen> {
       _finishing = false;
       await _keepNow();
       if (!mounted) return;
-      await context.read<SwaplyApi>().createItem({
+      final api = context.read<SwaplyApi>();
+      final listed = await api.createItem({
         'kind': _kind,
         'title': _title.text.trim(),
         if (_description.text.trim().isNotEmpty) 'description': _description.text.trim(),
@@ -388,15 +409,60 @@ class _PostItemScreenState extends State<PostItemScreen> {
         if (_value.text.trim().isNotEmpty) 'estimatedValueNok': int.tryParse(_value.text.trim()),
         if (_postal.text.trim().isNotEmpty) 'postalCode': _postal.text.trim(),
         'media': [for (final photo in _photos) photo.stored!.path],
-      });
+      }, key: _key);
+      // Out, but held by a trade and not corrected to the form; see below.
+      var held = false;
+      if (listed.replayed) {
+        // The key had made this listing already: an earlier press reached
+        // the server and its answer was lost. What stands is what that press
+        // carried, and the form may have been changed since — a title put
+        // right, a picture added. Handed back as it was, «Lagt ut» went up
+        // over the old listing and the draft with the changes was forgotten,
+        // without a word. So the listing is corrected to the form, as
+        // «Rediger annonsen» would, before anything is let go of. Changed or
+        // not: after a kill the phone no longer knows what the first press
+        // carried. No answer, or a refusal, leaves the form and the draft as
+        // they are, and the next press asks for both again.
+        //
+        // Except the one refusal that no press can get past: a trade has
+        // reserved the listing since — its owner accepted one with it, from
+        // another phone or from 13 while this form waited — and a reserved
+        // listing cannot be changed, here or through «Rediger annonsen». Kept
+        // as a draft, every press after that was handed the same listing and
+        // refused the same correction, and once the key stopped answering
+        // (48 hours) the same press listed the thing a second time. So a
+        // reservation, said in the listing handed back or by the correction's
+        // refusal when it came in between, is the end of the draft as much as
+        // a listing made is: the thing is out, as it was first listed.
+        held = listed.item.reserved;
+        if (!held) {
+          try {
+            await api.updateItem(listed.item.id, _correction());
+          } on ApiException catch (e) {
+            if (e.code != 'item_reserved') rethrow;
+            held = true;
+          }
+        }
+      }
       // Listed: the draft is done with, on the phone as well.
       _listed = true;
       _keepAfter?.cancel();
       if (_owner case final owner?) unawaited(_session.drafts.forget(owner));
+      // The listing is made, and that is the whole answer. Who this is is
+      // asked again for 13 and the bar's counts, and nothing hangs on it: it
+      // used to be waited for inside this `try`, so no answer to it said
+      // «Legg ut» had failed after the listing was made — and the form, still
+      // full, listed the thing a second time when pressed again. Not waited
+      // for either, since the listing is out whatever it says, and 13 asks
+      // again itself as it is landed on.
+      unawaited(_session.refresh().then((_) {}, onError: (Object _) {}));
       if (!mounted) return;
-      await context.read<Session>().refresh();
-      if (!mounted) return;
-      showDone(context, 'Lagt ut. Nå kan folk like den.');
+      if (held) {
+        // A note, not «Lagt ut»: out, but not with what the form says now.
+        showNote(context, _heldByTrade);
+      } else {
+        showDone(context, 'Lagt ut. Nå kan folk like den.');
+      }
       // To 13, where it now is — and the tab this form is in starts over, so
       // the next «Legg ut» is an empty form and not this listing again.
       goToTab(context, 4, startOver: true);
@@ -455,6 +521,25 @@ class _PostItemScreenState extends State<PostItemScreen> {
     }
   }
 
+  /// The form, as a correction to a listing that already stands: «Rediger
+  /// annonsen», and a «Legg ut» the server answered with the listing an
+  /// earlier press made. A field emptied is sent empty, so it is emptied
+  /// there too.
+  Map<String, dynamic> _correction() => {
+        'kind': _kind,
+        'title': _title.text.trim(),
+        'description': _description.text.trim(),
+        'category': _category,
+        'subcategory': _subcategory.text.trim(),
+        if (_kind == 'item') 'condition': _condition,
+        if (_value.text.trim().isNotEmpty) 'estimatedValueNok': int.tryParse(_value.text.trim()),
+        // Only when one is typed. The server keeps the town a postcode
+        // belongs to and not the postcode, so the field opens empty, and
+        // empty leaves the listing where it is.
+        if (_postal.text.trim().isNotEmpty) 'postalCode': _postal.text.trim(),
+        'media': [for (final photo in _photos) photo.stored!.path],
+      };
+
   /// The same fields, sent as a correction. A listing a trade is holding is
   /// refused by the server, and that message is the one worth showing.
   Future<void> _save(Item item) async {
@@ -468,20 +553,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
       // that has waited in an open form long enough to be swept goes again.
       await _sendHeldPhotos();
       if (!mounted) return;
-      await context.read<SwaplyApi>().updateItem(item.id, {
-        'kind': _kind,
-        'title': _title.text.trim(),
-        'description': _description.text.trim(),
-        'category': _category,
-        'subcategory': _subcategory.text.trim(),
-        if (_kind == 'item') 'condition': _condition,
-        if (_value.text.trim().isNotEmpty) 'estimatedValueNok': int.tryParse(_value.text.trim()),
-        // Only when one is typed. The server keeps the town a postcode
-        // belongs to and not the postcode, so the field opens empty, and
-        // empty leaves the listing where it is.
-        if (_postal.text.trim().isNotEmpty) 'postalCode': _postal.text.trim(),
-        'media': [for (final photo in _photos) photo.stored!.path],
-      });
+      await context.read<SwaplyApi>().updateItem(item.id, _correction());
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {

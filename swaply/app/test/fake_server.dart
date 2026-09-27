@@ -33,16 +33,33 @@ class FakeServer {
   /// last one wins, as in [bodies].
   final bearers = <String, String?>{};
 
+  /// The `Idempotency-Key` each request carried, by request, and null for
+  /// none. The last one wins, as in [bodies]; [listingKeys] has every one
+  /// «Legg ut» sent, in order.
+  final idempotencyKeys = <String, String?>{};
+  final listingKeys = <String?>[];
+
   /// Answers that replace the canned ones. Besides a body or a status there is
-  /// a [Refusal], [unreachable], and a function of the request — which may hand
+  /// a [Refusal], [Replayed], [unreachable], and a function of the request — which may hand
   /// back any of those, or a future of one, or [asUsual] for the canned answer
   /// — for an answer that changes between calls.
   final Map<String, Object?> overrides = {};
 
+  /// The device account a profile was made on, from the canned answer to a
+  /// claim, until somebody else signs in or out. `GET /me` answers as it
+  /// then: the same id, now with a name — which is what the real server does,
+  /// and the session asks straight after a profile is made.
+  String? _claimed;
+
   http.Client get client => MockClient((request) async {
         final key = '${request.method} ${request.url.path}';
         requests.add(key);
+        if (const {'POST /auth/login', 'POST /auth/anonymous', 'POST /auth/logout'}.contains(key)) {
+          _claimed = null;
+        }
         bearers[key] = request.headers['authorization'];
+        idempotencyKeys[key] = request.headers['idempotency-key'];
+        if (key == 'POST /items') listingKeys.add(request.headers['idempotency-key']);
         // A multipart upload is bytes that are not text; reading `body` on
         // one throws before the request is even answered.
         final json = (request.headers['content-type'] ?? '').startsWith('application/json');
@@ -68,6 +85,10 @@ class FakeServer {
               body.status,
               headers: {'content-type': 'application/json; charset=utf-8'});
         }
+        if (body is Replayed) {
+          return http.Response(jsonEncode(body.listing), 200,
+              headers: {'content-type': 'application/json; charset=utf-8'});
+        }
         if (body == null) {
           return http.Response(
               jsonEncode({'code': 'not_found', 'message': 'Fant ikke det du ba om.'}), 404,
@@ -87,7 +108,9 @@ class FakeServer {
           return http.Response(jsonEncode(error), body,
               headers: {'content-type': 'application/json'});
         }
-        return http.Response(jsonEncode(body), 200,
+        // A listing made is 201, as the real route answers it: 200 there is
+        // one an earlier «Legg ut» made, handed back; see [Replayed].
+        return http.Response(jsonEncode(body), key == 'POST /items' ? 201 : 200,
             headers: {'content-type': 'application/json; charset=utf-8'});
       });
 
@@ -105,6 +128,7 @@ class FakeServer {
       // A device making its profile claims its own row, so the account that
       // comes back is the stranger's, now with a name: the same id. The app
       // keys a person's tabs by that id, and a claim is not somebody else.
+      _claimed = lookingAround['id'] as String;
       return {
         'token': 'tok',
         'user': profileOnly({...me, 'id': lookingAround['id']}),
@@ -178,7 +202,7 @@ class FakeServer {
             'item': {'title': 'Bosch drill 18V', 'media': <String>[]},
             'shareText': 'Se denne på Swaply: Bosch drill 18V, verdi 600 kr.',
           },
-        'GET /me' => me,
+        'GET /me' => _claimed == null ? me : {...me, 'id': _claimed},
         'PUT /me/interests' => profileOnly(me),
         'PATCH /me' => profileOnly(me),
         'DELETE /me/hidden' => {},
@@ -491,6 +515,7 @@ class FakeServer {
     'kind': 'direct',
     'closedAt': null,
     'closeReason': null,
+    'closeCode': null,
     'offerId': 'offer-1',
     'offerSeq': 1,
     'counterOfferBy': null,
@@ -588,6 +613,14 @@ class Refusal {
   /// for by a device that has no profile yet.
   static const accountRequired = Refusal(403, 'account_required',
       'Lag en profil for å gjøre dette. Du beholder det du har likt.');
+}
+
+/// `POST /items` answered with the listing an earlier press with the same
+/// `Idempotency-Key` made: the first listing as it stands, with 200 rather
+/// than the 201 a new one gets.
+class Replayed {
+  const Replayed(this.listing);
+  final Map<String, Object?> listing;
 }
 
 /// No answer: no network, or no server behind the address.

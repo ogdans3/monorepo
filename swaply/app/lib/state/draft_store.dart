@@ -193,8 +193,8 @@ class DraftStore {
         // over a write made meanwhile. A browser's storage is read the moment
         // it is asked, so all a write in the microtasks after can lose is
         // this tab's copy of it — the session keeping its token as a stranger
-        // is made — and the session reads those only at the next start, from
-        // the storage.
+        // is made — and the session reads its token from the storage itself
+        // wherever another tab could have changed it; see `Session`.
         if (_web) await prefs.reload();
         final kept = account == null ? null : _key(account);
         for (final key in prefs.getKeys().toList()) {
@@ -248,6 +248,7 @@ class DraftStore {
         'value': draft.value,
         'postalCode': draft.postalCode,
         'photos': photos,
+        'key': ?draft.key,
         // With when, kept again after each picture lands: [finishWithin]
         // counts from the last moment the app was seen sending it.
         if (draft.finish) ...{'finish': true, 'finishAt': _stamp(now())},
@@ -278,6 +279,8 @@ class DraftStore {
         for (final entry in record['photos'] as List) ?_photo(entry as Map<String, dynamic>, folder),
       ],
       finish: record['finish'] == true && _within(_when(record['finishAt']), finishWithin),
+      // A record from before drafts had one has none, and the form names one.
+      key: record['key'] is String ? record['key'] as String : null,
     );
   }
 

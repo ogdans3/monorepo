@@ -7,13 +7,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../util/clock.dart';
+import '../util/other_tabs.dart';
 import 'draft_store.dart';
 import 'listing_draft.dart';
 
 /// Who is signed in, plus the two counters the bottom bar draws: unread chats
 /// and trades waiting on you.
 class Session extends ChangeNotifier {
-  Session(this.api, {DraftStore? drafts}) : drafts = drafts ?? DraftStore();
+  /// [otherTabs] rings when another tab of the site has changed who is signed
+  /// in; see [tokenChangedElsewhere], which is what it is everywhere but in a
+  /// test. Given, the session also takes the storage it keeps its token in to
+  /// be shared with those tabs.
+  Session(this.api, {DraftStore? drafts, Stream<void>? otherTabs})
+      : drafts = drafts ?? DraftStore() {
+    final elsewhere = otherTabs ?? tokenChangedElsewhere();
+    _shared = elsewhere != null;
+    _otherTabs = elsewhere?.listen((_) => unawaited(_followOtherTab()));
+  }
 
   final SwaplyApi api;
 
@@ -137,7 +147,7 @@ class Session extends ChangeNotifier {
   Future<void> _restore() async {
     final prefs = await SharedPreferences.getInstance();
     _adminToken = prefs.getString('adminToken');
-    final saved = prefs.getString('token');
+    final saved = _known = prefs.getString('token');
     if (saved != null) {
       api.token = saved;
       await _check();
@@ -146,10 +156,12 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Who the saved token belongs to, if the server can say.
-  Future<void> _check() async {
+  /// Who the saved token belongs to, if the server can say. [takeUp] is
+  /// [_recognise]'s.
+  Future<void> _check({bool takeUp = true}) async {
+    final token = api.token;
     try {
-      await _recognise().timeout(patience);
+      await _recognise(takeUp: takeUp).timeout(patience);
       stalled = false;
     } on ApiException catch (e) {
       // A server that is down has not said anything about the token, and nor
@@ -160,9 +172,7 @@ class Session extends ChangeNotifier {
       }
       // A token that no longer resolves is the same as no token at all.
       stalled = false;
-      api.token = null;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('token');
+      await _letGo(token);
     } catch (_) {
       // No answer within [patience]. The token may well be good, and dropping
       // it here would turn somebody with an account into a stranger because a
@@ -174,7 +184,11 @@ class Session extends ChangeNotifier {
   /// The saved token's owner, and whether 02 was still theirs to see when the
   /// app last closed. Decided before anybody is told who is signed in, so the
   /// gate goes to 02 or to the app, and not to one on its way to the other.
-  Future<void> _recognise() async {
+  ///
+  /// Not [takeUp] when following another tab of the site: the listing that
+  /// tab was finishing is that tab's to send, and two tabs sending it would be
+  /// two «Legg ut» for one thing.
+  Future<void> _recognise({bool takeUp = true}) async {
     final asked = _decided;
     final found = await api.me();
     _lastHeard = now();
@@ -182,7 +196,8 @@ class Session extends ChangeNotifier {
     // A listing that was on its way out when the app was closed or killed —
     // signed in on 10c, pictures still going up — is finished now, as it
     // would have been: the gate opens on Legg ut, and the form sends it.
-    final unfinished = found.anonymous ? null : await drafts.unfinished(found.id);
+    final unfinished =
+        found.anonymous || !takeUp ? null : await drafts.unfinished(found.id);
     if (asked != _decided) return;
     listingToFinish ??= unfinished;
     interestsPending = found.interests.isEmpty && prefs.getString(_pickerKey) == found.id;
@@ -269,6 +284,14 @@ class Session extends ChangeNotifier {
     return sending;
   }
 
+  /// Until no sign-in or new profile is on its way, however many follow one
+  /// another. One that fails still ends here.
+  Future<void> _signInsLanded() async {
+    for (var signing = _signingIn; signing != null; signing = _signingIn) {
+      await signing;
+    }
+  }
+
   /// Until no heart is on its way. Bounded by the api's own patience, which
   /// every heart gets: a line that drops packets holds the sign-in no longer
   /// than it holds the heart.
@@ -303,21 +326,163 @@ class Session extends ChangeNotifier {
     return prefs.getString(_pickerKey) == null;
   }
 
-  Future<void> _persist() async {
+  /// Keeps the token, and [deviceId] with it when given: the id the stranger
+  /// behind the token was made with, or the one the next stranger will have
+  /// once the kept one is no way back in. See [_freshDeviceId].
+  Future<void> _persist({String? deviceId}) async {
     // The picker first: a phone that dies between the two writes then comes
     // back to 02 or to no token at all, never to a token without its 02.
     await _keepPicker();
     final prefs = await SharedPreferences.getInstance();
+    // Nothing new of this tab's own, over a storage another tab has written
+    // since: what this tab holds is the token that tab replaced — signed out
+    // of, and revoked — and writing it back signed every tab in again as
+    // somebody who had left, or put a person back over the one who had just
+    // signed in. The storage wins, and this tab follows it.
+    if (api.token == _known && await _overtaken(prefs)) {
+      unawaited(_followOtherTab());
+      return;
+    }
+    // Before the token, so a tab that hears the token change finds the id
+    // that goes with it already there.
+    if (deviceId != null) await prefs.setString('deviceId', deviceId);
     if (api.token == null) {
       await prefs.remove('token');
     } else {
       await prefs.setString('token', api.token!);
     }
+    _known = api.token;
     if (_adminToken == null) {
       await prefs.remove('adminToken');
     } else {
       await prefs.setString('adminToken', _adminToken!);
     }
+  }
+
+  // --- other tabs --------------------------------------------------------------
+  //
+  // On the web every tab of the site keeps its token in one storage, and each
+  // tab reads it once, when it starts. A tab still open went on as whoever it
+  // had started as after another tab signed out — holding the token that
+  // tab had revoked, writing it back on its next change, keeping drafts for
+  // somebody no longer there — or signed in as somebody else. So each tab
+  // listens for the others, and the storage is what says who this is.
+
+  /// Whether the storage the token is kept in is shared with other tabs: the
+  /// web, or a test that says there are some. Nowhere else can anything but
+  /// this app change it.
+  late final bool _shared;
+  StreamSubscription<void>? _otherTabs;
+
+  /// The token this tab last read from the storage, or wrote to it.
+  String? _known;
+
+  /// Each time this tab starts following another; see [_followOtherTab].
+  int _follows = 0;
+
+  /// Whether another tab has written a token to the shared storage since this
+  /// tab last read or wrote one, which makes whatever this tab holds out of
+  /// date. Reads the storage again to know: this tab's copy of it is from
+  /// when this tab last looked. Never, where nothing is shared.
+  Future<bool> _overtaken(SharedPreferences prefs) async {
+    if (!_shared) return false;
+    await prefs.reload();
+    return prefs.getString('token') != _known;
+  }
+
+  /// [token] opens nothing any more, and this phone lets go of it — and the
+  /// storage does, unless another tab has put somebody else there since, who
+  /// is followed instead.
+  Future<void> _letGo(String? token) async {
+    api.token = null;
+    final prefs = await SharedPreferences.getInstance();
+    if (_shared) await prefs.reload();
+    final stored = prefs.getString('token');
+    if (!_shared || stored == token) {
+      await prefs.remove('token');
+      _known = null;
+    } else {
+      unawaited(_followOtherTab());
+    }
+  }
+
+  /// Another tab of the site changed who is signed in, and this one follows,
+  /// by what is in the storage now rather than by what the change said: two
+  /// changes can be heard in the wrong order, and only the storage knows
+  /// which came last. Nothing, when it holds the token this tab has.
+  ///
+  /// Signed out there: nobody is signed in here either. What was on screen
+  /// was that person's, and goes, and the gate makes this tab a stranger —
+  /// the same one as that tab's, by the device id it has kept. Not signed out
+  /// again here, which that tab did; nor is anything forgotten again.
+  ///
+  /// Signed in there, or switched: this tab becomes whoever that is, the way
+  /// a cold start with that token would, behind the splash. Everything on
+  /// screen goes with the person it was about — a sign-in on another tab is
+  /// usually somebody else.
+  Future<void> _followOtherTab() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final stored = prefs.getString('token');
+    _known = stored;
+    if (stored == api.token) return;
+    final follow = ++_follows;
+    _decided++;
+    _adminToken = prefs.getString('adminToken');
+    _forgetWhoThisWas();
+    api.token = stored;
+    if (stored == null) {
+      // Over a sign-in this tab was still following, which is over too.
+      loading = false;
+      notifyListeners();
+      _sendBack();
+      return;
+    }
+    loading = true;
+    notifyListeners();
+    _sendBack();
+    // After whatever start this tab had on its way, which is about somebody
+    // this tab no longer is and is dropped as it lands.
+    await _settle();
+    if (follow != _follows) return;
+    await _once(() => _check(takeUp: false));
+    if (follow != _follows) return;
+    loading = false;
+    notifyListeners();
+  }
+
+  // --- sent back through the gate ------------------------------------------------
+
+  final _gate = StreamController<void>.broadcast();
+
+  /// Rings when this phone has stopped being whoever its screens are about
+  /// without anybody here pressing anything: the server said the session is
+  /// gone ([wake]), or another tab of the site signed out or in
+  /// ([_followOtherTab]). The app takes down every screen over the gate on it,
+  /// as «Logg ut» does — they were the last person's.
+  Stream<void> get sentBack => _gate.stream;
+
+  void _sendBack() {
+    if (!_gate.isClosed) _gate.add(null);
+  }
+
+  /// Nobody is signed in any more, as far as this phone's memory goes. The
+  /// token is not touched, nor is anything kept.
+  void _forgetWhoThisWas() {
+    me = null;
+    listingToFinish = null;
+    unreadChats = 0;
+    tradesNeedingYou = 0;
+    unreadNotifications = 0;
+    interestsPending = false;
+    stalled = false;
+  }
+
+  @override
+  void dispose() {
+    unawaited(_otherTabs?.cancel());
+    unawaited(_gate.close());
+    super.dispose();
   }
 
   Future<void> _keepPicker() async {
@@ -414,8 +579,15 @@ class Session extends ChangeNotifier {
   Future<void> _lookAround() async {
     final asked = _decided;
     final prefs = await SharedPreferences.getInstance();
+    // Another tab of the site signing out, or letting go of a token the
+    // server refused, makes this one a stranger too, in the same moment as
+    // that tab makes its own. Read again here: the id both will send is
+    // already kept by then (see [_freshDeviceId]), so the two are one device
+    // account rather than two.
+    if (_shared) await prefs.reload();
+    late String sent;
     Future<({String token, Me me})> start(String? invite) async =>
-        api.startAnonymously(deviceId: await _deviceId(prefs), invite: invite);
+        api.startAnonymously(deviceId: sent = await _deviceId(prefs), invite: invite);
     final started = await _withInvite((invite) async {
       try {
         return await start(invite);
@@ -424,9 +596,14 @@ class Session extends ChangeNotifier {
         // This device's account has been given a name since and its token is
         // gone, so the device id is no longer a way into it: the password is,
         // and the account is still there to sign in to. A new id is a new
-        // stranger. Once — the server would have to refuse an id nobody has
-        // ever sent for this to fail twice.
-        await prefs.remove('deviceId');
+        // stranger — unless another tab was refused the same id a moment ago
+        // and has already kept the next one, which is then this tab's too.
+        // Once — the server would have to refuse an id nobody has ever sent
+        // for this to fail twice.
+        if (_shared) await prefs.reload();
+        if (prefs.getString('deviceId') == sent) {
+          await prefs.setString('deviceId', _freshDeviceId());
+        }
         return start(invite);
       }
     });
@@ -435,6 +612,13 @@ class Session extends ChangeNotifier {
     // What it was made with, device id and all, is still there for the next
     // start to find.
     if (asked != _decided) return;
+    // Nor while another tab of the site has put somebody in the storage since
+    // this tab last looked: a stranger made here without anybody asking must
+    // not sign that tab's person out of every tab. This tab becomes them.
+    if (await _overtaken(prefs)) {
+      unawaited(_followOtherTab());
+      return;
+    }
     api.token = started.token;
     me = started.me;
     // Nobody was signed in, so whoever last was is gone from this phone:
@@ -450,7 +634,11 @@ class Session extends ChangeNotifier {
     // none is no longer so.
     stalled = false;
     interestsPending = me!.interests.isEmpty;
-    await _persist();
+    // With the id it was made with. Two tabs that each had to make an id —
+    // the site's storage cleared under both — made two strangers, and the id
+    // kept last was often the one whose token was not: a token refused later
+    // then came back with that id, into the account nobody had been using.
+    await _persist(deviceId: sent);
     notifyListeners();
   }
 
@@ -490,10 +678,32 @@ class Session extends ChangeNotifier {
   Future<String> _deviceId(SharedPreferences prefs) async {
     final kept = prefs.getString('deviceId');
     if (kept != null) return kept;
-    final random = Random.secure();
-    final fresh = List.generate(32, (_) => random.nextInt(16).toRadixString(16)).join();
+    final fresh = _freshDeviceId();
     await prefs.setString('deviceId', fresh);
     return fresh;
+  }
+
+  /// A new device id, for the next stranger this phone makes.
+  ///
+  /// The id is replaced, never only forgotten, wherever it is known to be no
+  /// way back in, and the next one is kept just before the token changes
+  /// (see [_persist]) — the change every other tab of the site hears, and
+  /// hears after the id. Forgotten, it was made again by whichever tab looked
+  /// first after that, and on the web every tab looks at once: the one that
+  /// let go, and each one that heard it. Each found none and made its own,
+  /// and they were two device accounts, one left behind with a session
+  /// nobody held, and often the id kept was that one's rather than the
+  /// account every tab went on as. Kept already, it is the one id all of them
+  /// send, and the server lets them all into the one account it makes.
+  ///
+  /// «Logg ut» replaces it: see [logout]. A profile made on the device's own
+  /// account spends it — the server never lets a claimed account in by its
+  /// device id — so it is replaced there too: see [register]. Without that, a
+  /// token refused later sent every tab to the server with the spent id, and
+  /// each, refused, made a new one of its own.
+  static String _freshDeviceId() {
+    final random = Random.secure();
+    return List.generate(32, (_) => random.nextInt(16).toRadixString(16)).join();
   }
 
   Future<void> register({
@@ -542,17 +752,23 @@ class Session extends ChangeNotifier {
         // A claim keeps the id, and the draft with it. Should the server
         // ever make a new account instead, the draft still goes with them.
         await _carryDraft(stranger);
-        await _persist();
+        // The device's own account has a profile now, and its device id is
+        // no way back into it, so the next stranger's is kept already; see
+        // [_freshDeviceId]. Not for a test account claimed through the
+        // switcher: the id kept here is this phone's, not that account's.
+        await _persist(deviceId: claiming && !acting ? _freshDeviceId() : null);
         notifyListeners();
-        if (acting) {
-          try {
-            // The answer is the account and not the session, so it does not
-            // say who is acting, and the floor is drawn from that: without
-            // this it went until the next refresh, and «Tilbake til …» with it.
-            await refresh();
-          } catch (_) {
-            // The next refresh says it; the profile is made either way.
-          }
+        try {
+          // The answer is `publicMe`: the profile, without the things, the
+          // likes and the unread counts only `GET /me` lists, so 13 and the
+          // bar's badges went on showing none until something asked again.
+          // Nor does it say who is acting, which is the account and not the
+          // session, and the floor is drawn from that: «Tilbake til …» went
+          // until the next refresh too. As a sign-in does, quietly.
+          await refresh();
+        } catch (_) {
+          // The next refresh says it; the profile is made either way, and
+          // failing it over this told somebody with a profile they had none.
         }
       });
 
@@ -624,21 +840,19 @@ class Session extends ChangeNotifier {
       // refused or not answering at all.
     }
     _decided++;
-    me = null;
+    _forgetWhoThisWas();
     api.token = null;
     _adminToken = null;
-    listingToFinish = null;
-    unreadChats = 0;
-    tradesNeedingYou = 0;
+    // A draft is somebody's pictures of their own things, often of their own
+    // home: every one on the phone goes, not only the account's.
+    await drafts.forgetAll();
     // The gate makes the next person on this phone a stranger straight away,
     // and it has to be a new one: with the old id they would be let into the
-    // last person's device account, or refused as a claimed one.
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('deviceId');
-    // And a draft is somebody's pictures of their own things, often of their
-    // own home: every one on the phone goes, not only the account's.
-    await drafts.forgetAll();
-    await _persist();
+    // last person's device account, or refused as a claimed one. Kept with
+    // the token going rather than made by the gate, so every other tab of the
+    // site, which hears it go and makes its stranger at the same moment, sends
+    // the same id; see [_freshDeviceId].
+    await _persist(deviceId: _freshDeviceId());
     notifyListeners();
   }
 
@@ -688,19 +902,59 @@ class Session extends ChangeNotifier {
   /// «Prøv igjen», pressed by opening the app: whoever this phone is — the
   /// token kept from last time, or the stranger it was being made — has just
   /// opened it. The splash's button spins meanwhile, as it does when pressed.
+  ///
+  /// Except a refusal of the token itself. The account was deleted while the
+  /// app sat in the background — from another phone, or by the twelve-month
+  /// sweep — or its session was ended, and the app went on showing somebody
+  /// signed in until its next cold start, with every tap refused. That is
+  /// what a cold start with a dead token does, so it is done now: the token
+  /// goes, the screens go with the person they were about, and the gate
+  /// makes the next start — a new stranger, for a device and for an erased
+  /// account alike. Only for the token that was asked about: a sign-in that
+  /// landed meanwhile is somebody else.
+  ///
+  /// Nor while a sign-in or a profile is on its way. The server retires the
+  /// token this would ask on as it lets the person in — a claim reissues the
+  /// device's session, and a sign-in deletes the device it folds in — before
+  /// its answer has told the phone who they are now. A refusal heard in that
+  /// gap is the sign-in's own doing, and taking it for a dead token closed
+  /// 10c or 16c under the person and made a stranger whose start threw away
+  /// the draft the sign-in was about to carry over. The sign-in asks the
+  /// server itself once it lands.
   Future<void> wake() async {
-    if (loading || starting || _waking != null) return;
+    if (loading || starting || _waking != null || _signingIn != null) return;
     if (!signedIn && !stalled) return;
     final last = _lastHeard;
     if (last != null && now().difference(last) < wakeEvery) return;
+    final token = api.token;
+    final asked = _decided;
+    final signedInAsked = signedIn;
     final asking = _waking = signedIn ? refresh() : retry();
     try {
       await asking;
+    } on ApiException catch (e) {
+      if (signedInAsked && e.statusCode == 401) {
+        // Sent before a sign-in was pressed, and refused while it is on its
+        // way: see above. Decided once it has landed — somebody else then,
+        // or, if it failed, still the token that was asked about.
+        await _signInsLanded();
+        if (asked == _decided && api.token == token) await _turnedAway(token);
+      }
+      // Anything else: see above, quiet.
     } catch (_) {
       // See above: quiet.
     } finally {
       if (identical(_waking, asking)) _waking = null;
     }
+  }
+
+  /// The server said [token] opens nothing; see [wake].
+  Future<void> _turnedAway(String? token) async {
+    _decided++;
+    _forgetWhoThisWas();
+    await _letGo(token);
+    notifyListeners();
+    _sendBack();
   }
 
   void _become(Me found) {

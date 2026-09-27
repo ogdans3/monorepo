@@ -364,6 +364,7 @@ class Trade {
         kind = j['kind'] as String? ?? 'direct',
         closedAt = _date(j['closedAt']),
         closeReason = j['closeReason'] as String?,
+        closeCode = j['closeCode'] as String?,
         offerId = j['offerId'] as String?,
         offerSeq = _int(j['offerSeq']),
         counterOfferBy = j['counterOfferBy'] as String?,
@@ -395,6 +396,18 @@ class Trade {
   final String id, state, kind;
   final DateTime? closedAt, youSentAt, youReceivedAt, youPaidAt;
   final String? closeReason, offerId, counterOfferBy, threadId, yourReviewComment;
+
+  /// Why a cancelled trade ended, as a code the app can choose its words by:
+  /// [closedByErasure] and the server's others, or null — a trade that has
+  /// not ended, or one ended for a reason with no code, whose [closeReason]
+  /// is the words. [closeReason] stays the server's sentence, which is what
+  /// history keeps; a code is what lets the words fit whoever reads them.
+  final String? closeCode;
+
+  /// Somebody in the trade deleted their account, and every trade they were
+  /// in ended with it.
+  static const closedByErasure = 'account_deleted';
+
   final int? offerSeq, yourReviewScore;
   final int youPosition, youGiveValue, youGetValue, difference;
   final bool youAccepted;

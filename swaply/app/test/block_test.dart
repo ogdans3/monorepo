@@ -11,6 +11,14 @@
 // asked for again and shows the block, and the trade is asked for again —
 // each once the server has taken the report, never as the sheet closes, and
 // never for a report that did not block.
+//
+// And whatever is under the listing's page when it goes asks again too, which
+// was only so where that screen had opened it itself: the grid, and 13b's
+// list of their things. Opened from 13b's «Send melding», from a notification
+// on 12a or from a shared link, the page went and left the person's things
+// on the screen under it. The page now says it went because of a block, and
+// each way of opening it asks again for what is under it — quietly: the
+// block's own toast is the news.
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -19,12 +27,14 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/main.dart';
 import 'package:swaply_app/screens/discover.dart';
 import 'package:swaply_app/screens/item_detail.dart';
 import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/common.dart';
+import 'package:swaply_app/widgets/shell.dart';
 
 import 'fake_server.dart';
 
@@ -48,6 +58,22 @@ Future<void> mount(WidgetTester tester, Widget screen) async {
       ],
       child: MaterialApp(home: screen),
     ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// The whole app, the way `main.dart` mounts it, signed in: the gate, the
+/// tabs, and screens that open into a tab from outside it.
+Future<void> launch(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+  await session.login('ola@epost.no', 'passord');
+  await tester.pumpWidget(
+    ChangeNotifierProvider<Session>.value(value: session, child: SwaplyApp(api: api)),
   );
   await tester.pumpAndSettle();
 }
@@ -189,6 +215,111 @@ void main() {
 
       expect(server.asked('GET /users/kari-1'), asked);
       expect(find.text('Retro spillkonsoll'), findsOneWidget);
+    });
+  });
+
+  group('04, opened from somewhere that is not under it', () {
+    testWidgets('9. from 13b\'s «Send melding»: a block there asks for the profile again, quietly',
+        (tester) async {
+      await mount(tester, const OtherProfileScreen(userId: 'kari-1'));
+      await tester.tap(find.text('Send melding'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ItemDetailScreen), findsOneWidget);
+      final asked = server.asked('GET /users/kari-1');
+
+      await report(tester, block: true);
+
+      expect(find.byType(ItemDetailScreen), findsNothing);
+      expect(server.asked('GET /users/kari-1'), asked + 1);
+      // The page for somebody blocked: none of her things, and the line that
+      // says so.
+      expect(find.text('Retro spillkonsoll'), findsNothing);
+      expect(find.textContaining('Du har blokkert Kari.'), findsOneWidget);
+      expect(toast(tester), 'Takk. Vi ser på rapporten. Kari er blokkert.');
+    });
+
+    testWidgets('10. from a notification on 12a: the grid it opened over asks again',
+        (tester) async {
+      server.overrides['GET /notifications'] = {
+        'notifications': [
+          {
+            'id': 'n9',
+            // A notification about a listing and nothing else. None of the
+            // kinds the server sends today carries only that, and 12a opens
+            // one in Oppdag all the same.
+            'type': 'listing',
+            'payload': {'itemId': 'item-console'},
+            'actorName': null,
+            'itemTitle': 'Retro spillkonsoll',
+            'readAt': null,
+            'createdAt': '2026-09-09T08:55:00Z',
+          },
+        ],
+        'unread': 1,
+      };
+      await launch(tester);
+      expect(find.text('Retro spillkonsoll'), findsOneWidget);
+      await tester.tap(find.descendant(of: find.byType(SwaplyNavBar), matching: find.text('Profil')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Innstillinger'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Se alle varsler'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Varsel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ItemDetailScreen), findsOneWidget);
+      final discovered = server.asked('GET /discover');
+
+      await report(tester, block: true);
+
+      expect(find.byType(ItemDetailScreen), findsNothing);
+      expect(find.byType(DiscoverScreen), findsOneWidget);
+      expect(server.asked('GET /discover'), discovered + 1);
+      expect(find.text('Retro spillkonsoll'), findsNothing);
+      expect(find.text('Bosch drill 18V'), findsOneWidget);
+      expect(toast(tester), 'Takk. Vi ser på rapporten. Kari er blokkert.');
+    });
+
+    group('from a shared link', () {
+      setUp(() {
+        // Kari's listing, sent by somebody.
+        server.overrides['GET /invites/${FakeServer.shareToken}'] = {
+          'token': FakeServer.shareToken,
+          'url': 'http://web/i/${FakeServer.shareToken}',
+          'used': true,
+          'itemId': 'item-console',
+          'inviter': {'displayName': 'Kari N.', 'town': 'Bergen'},
+          'item': {'title': 'Retro spillkonsoll', 'media': <String>[]},
+          'shareText': 'Se denne på Swaply: Retro spillkonsoll.',
+        };
+        session.pendingInvite = FakeServer.shareToken;
+      });
+
+      testWidgets('11. a block there has the grid it opened over ask again', (tester) async {
+        await launch(tester);
+        expect(find.byType(ItemDetailScreen), findsOneWidget);
+        final discovered = server.asked('GET /discover');
+
+        await report(tester, block: true);
+
+        expect(find.byType(ItemDetailScreen), findsNothing);
+        expect(find.byType(DiscoverScreen), findsOneWidget);
+        expect(server.asked('GET /discover'), discovered + 1);
+        expect(find.text('Retro spillkonsoll'), findsNothing);
+        expect(toast(tester), 'Takk. Vi ser på rapporten. Kari er blokkert.');
+      });
+
+      testWidgets('12. left without a block, nothing is asked again', (tester) async {
+        await launch(tester);
+        final discovered = server.asked('GET /discover');
+
+        await tester.tap(find.bySemanticsLabel('Tilbake'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DiscoverScreen), findsOneWidget);
+        expect(server.asked('GET /discover'), discovered);
+        expect(find.text('Retro spillkonsoll'), findsOneWidget);
+      });
     });
   });
 

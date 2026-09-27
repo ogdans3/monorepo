@@ -514,6 +514,15 @@ class TabShellState extends State<TabShell> with SingleTickerProviderStateMixin 
   /// if the tab never left the screen; see [RefetchOnTabReturn].
   void _land(int tab) => setState(() => _visits[tab]++);
 
+  /// [tab]'s first screen asks the server again, quietly, as it does when a
+  /// finished flow lands on it — for a change to what it shows that was made
+  /// somewhere it did not open itself, and so could not ask again after: a
+  /// block made on a listing a notification or a shared link put over it.
+  /// Nothing else about the tab changes.
+  void askAgain(int tab) {
+    if (mounted) _land(tab);
+  }
+
   /// Opens [route] inside [tab], or the tab showing. From a screen that covers
   /// the bar, that screen is taken down first: a screen the export draws with
   /// the bar belongs above it.

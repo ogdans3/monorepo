@@ -84,14 +84,18 @@ class SwaplyApi {
         if (token != null) 'authorization': 'Bearer $token',
       };
 
-  Future<dynamic> _send(String method, String path, [Object? body]) async =>
+  Future<dynamic> _send(String method, String path,
+          [Object? body,
+          Map<String, String> headers = const {},
+          void Function(int status)? heard]) async =>
       _exchange((giveUp) {
         final request = http.AbortableRequest(method, Uri.parse('$baseUrl$path'),
             abortTrigger: giveUp)
-          ..headers.addAll(_headers(hasBody: body != null));
+          ..headers.addAll(_headers(hasBody: body != null))
+          ..headers.addAll(headers);
         if (body != null) request.body = jsonEncode(body);
         return request;
-      }, refused: 'Noe gikk galt. Prøv igjen.', patience: patience);
+      }, refused: 'Noe gikk galt. Prøv igjen.', patience: patience, heard: heard);
 
   /// Sends the request [build] makes and reads the answer, and says every way
   /// of not getting one as [ApiException.noContact]. Every screen catches
@@ -108,8 +112,13 @@ class SwaplyApi {
   /// whether or not anybody is still waiting for the answer. So for anything
   /// that changes something, «Vi får ikke kontakt» still means that nothing
   /// is known either way, and the next asking shows what is true.
+  ///
+  /// [heard] is told the status of an answer that is not a refusal, for the
+  /// one caller whose answer means something different at 200 and at 201.
   Future<dynamic> _exchange(http.BaseRequest Function(Future<void> giveUp) build,
-      {required String refused, required Duration patience}) async {
+      {required String refused,
+      required Duration patience,
+      void Function(int status)? heard}) async {
     final giveUp = Completer<void>();
     final http.Response response;
     try {
@@ -144,6 +153,7 @@ class SwaplyApi {
         map['message'] as String? ?? refused,
       );
     }
+    heard?.call(response.statusCode);
     return decoded;
   }
 
@@ -290,8 +300,27 @@ class SwaplyApi {
 
   // --- listings -------------------------------------------------------------
 
-  Future<Item> createItem(Map<String, dynamic> body) async =>
-      Item.fromJson(await _post('/items', body));
+  /// «Legg ut». [key] is the draft's own (`ListingDraft.key`), and the same
+  /// key from the same account is one listing: the server hands back the
+  /// first instead of making a second. A «Legg ut» whose answer was lost — no
+  /// contact, or the app killed while it was on its way — has reached the
+  /// server or not, and nothing on the phone can tell which; pressed again,
+  /// it made the thing twice whenever it had.
+  ///
+  /// [replayed] is the server saying the key had already made the listing:
+  /// 200 for one handed back, where a new one is 201. What comes back is then
+  /// the listing as that earlier press wrote it, which is not always what the
+  /// form says now — see `PostItemScreen`, which corrects it.
+  Future<({Item item, bool replayed})> createItem(Map<String, dynamic> body,
+      {String? key}) async {
+    var status = 0;
+    final json = await _send(
+        'POST', '/items', body, {'Idempotency-Key': ?key}, (heard) => status = heard);
+    return (
+      item: Item.fromJson(json as Map<String, dynamic>),
+      replayed: key != null && status == 200,
+    );
+  }
 
   Future<Item> item(String id) async => Item.fromJson(await _get('/items/$id'));
 
