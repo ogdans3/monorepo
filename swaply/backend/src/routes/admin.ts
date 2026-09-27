@@ -164,7 +164,14 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.delete('/admin/accounts/:id', async (request) => {
     const adminId = app.requireAdmin(request)
     const { id } = idParam.parse(request.params)
-    return deleteTestAccount(app.db, adminId, id)
+    const { displayName, freed } = await deleteTestAccount(app.db, adminId, id)
+    // Listings its trades held are back on the market. A search that fails
+    // is left to the hourly sweep: the account is gone either way, and a 500
+    // would send the admin to delete it twice.
+    await sweepForCycles(app.db, freed).catch((err) =>
+      request.log.warn({ err, freed }, 'loop search after deleting a test account failed'),
+    )
+    return { displayName }
   })
 
   /** Bygg et bytte — a trade in a named state, built through the product's own buttons. */

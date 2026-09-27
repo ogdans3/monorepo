@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { CATEGORIES, CONDITIONS } from '../lib/constants.js'
+import { notHiddenFrom } from '../lib/hidden.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import { publicItem } from './serialize.js'
 
@@ -37,7 +38,8 @@ export default async function discoveryRoutes(app: FastifyInstance) {
                        from users x where x.id = ${viewer ?? null})`
 
     // Your own things never appear, and neither does anything held by a trade,
-    // anything already traded, or anything from someone either of you blocked.
+    // anything already traded, anything from someone either of you blocked, or
+    // anything of a kind you asked not to be shown.
     const base = sql`
       from items i
       join users u on u.id = i.owner_id
@@ -51,6 +53,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
           where (b.blocker = ${viewer ?? null} and b.blocked = i.owner_id)
              or (b.blocker = i.owner_id and b.blocked = ${viewer ?? null})
         )
+        and ${notHiddenFrom(viewer ?? null, 'i')}
         and (${args.q ?? null}::text is null
              or i.search @@ plainto_tsquery('norwegian', ${args.q ?? null})
              or ${args.q ?? null} <% i.title)
@@ -134,6 +137,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
               and not exists (select 1 from blocks b
                 where (b.blocker = ${viewer} and b.blocked = i.owner_id)
                    or (b.blocker = i.owner_id and b.blocked = ${viewer}))
+              and ${notHiddenFrom(viewer, 'i')}
             order by i.created_at desc limit 12`,
       )
       rows.push({ category: c, items: items.map(publicItem) })
@@ -142,15 +146,18 @@ export default async function discoveryRoutes(app: FastifyInstance) {
   })
 
   // Screen 05b lists the subcategories that actually exist under a category,
-  // rather than a hard-coded taxonomy nobody maintains.
+  // rather than a hard-coded taxonomy nobody maintains. Less the kinds this
+  // viewer asked not to be shown: offered one, the search found nothing and
+  // said «Vis 0 treff» about a word that was right there in the list.
   app.get('/discover/subcategories', async (request) => {
     const { category } = z.object({ category: z.enum(CATEGORIES) }).parse(request.query)
     const rows = await many<{ subcategory: string }>(
       app.db,
-      sql`select distinct subcategory from items
-          where category = ${category}::category and subcategory is not null
-            and deleted_at is null
-          order by subcategory`,
+      sql`select distinct i.subcategory from items i
+          where i.category = ${category}::category and i.subcategory is not null
+            and i.deleted_at is null
+            and ${notHiddenFrom(request.userId ?? null, 'i')}
+          order by i.subcategory`,
     )
     return { subcategories: rows.map((r) => r['subcategory']) }
   })

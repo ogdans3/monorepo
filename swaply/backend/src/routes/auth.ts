@@ -5,9 +5,12 @@ import { z } from 'zod'
 import { mergeDeviceAccount } from '../auth/merge.js'
 import { hashPassword, verifyPassword } from '../auth/passwords.js'
 import { issueSession, revokeSession } from '../auth/sessions.js'
+import { hiddenCountColumn } from '../lib/hidden.js'
 import { admit } from '../lib/invites.js'
 import { badRequest, conflict, unauthorized } from '../lib/errors.js'
+import { townOf } from '../lib/postcodes.js'
 import { one } from '../lib/rows.js'
+import { emailAddress } from '../lib/validation.js'
 import { closeLoopThrough } from '../trades/wish.js'
 import { publicMe } from './serialize.js'
 
@@ -15,10 +18,10 @@ import { publicMe } from './serialize.js'
 // only appears when you are already trying to list something.
 const registerBody = z.object({
   displayName: z.string().trim().min(1).max(60),
-  email: z.string().email(),
+  email: emailAddress,
   phone: z.string().min(6).max(20).nullish(),
   password: z.string().min(8, 'Passordet må ha minst 8 tegn.'),
-  postalCode: z.string().regex(/^\d{4}$/).nullish(),
+  postalCode: z.string().regex(/^\d{4}$/, 'Et postnummer har fire sifre.').nullish(),
   town: z.string().nullish(),
   // The link that let you in. Spent here unless it was already spent when this
   // device started looking around.
@@ -47,7 +50,8 @@ export default async function authRoutes(app: FastifyInstance) {
     // deleted comes back here as a stranger, which is the right answer.
     const existing = await one(
       app.db,
-      sql`select * from users where device_id = ${body.deviceId} and anonymised_at is null`,
+      sql`select *, ${hiddenCountColumn} from users
+          where device_id = ${body.deviceId} and anonymised_at is null`,
     )
 
     if (existing?.['email']) {
@@ -71,13 +75,18 @@ export default async function authRoutes(app: FastifyInstance) {
       return id
     })
 
-    const user = await one(app.db, sql`select * from users where id = ${userId}`)
+    const user = await one(app.db, sql`select *, ${hiddenCountColumn} from users where id = ${userId}`)
     reply.code(201)
     return { token: await issueSession(app.db, userId), user: publicMe(user!) }
   })
 
   app.post('/auth/register', async (request, reply) => {
     const body = registerBody.parse(request.body)
+    // The postcode is typed and the town is what anybody else sees, so a
+    // postcode decides the town, and one that belongs to no town is refused
+    // here rather than stored as a place nobody can find. Before anything is
+    // written: a typo is the likeliest reason for one.
+    const town = townOf(body.postalCode) ?? body.town ?? null
 
     // Someone who has been looking around on this device keeps their row, and
     // with it every wish they have expressed. Making a profile is claiming the
@@ -94,11 +103,11 @@ export default async function authRoutes(app: FastifyInstance) {
     // comparison is against null, and `id <> null` is null, which is not false.
     const taken = await one(
       app.db,
-      sql`select email = ${body.email} as email_taken,
+      sql`select lower(email) = ${body.email} as email_taken,
                  phone is not null and phone = ${body.phone ?? null} as phone_taken
             from users
            where id is distinct from ${claiming}::uuid
-             and (email = ${body.email}
+             and (lower(email) = ${body.email}
                   or (phone is not null and phone = ${body.phone ?? null}))
            limit 1`,
     )
@@ -121,10 +130,13 @@ export default async function authRoutes(app: FastifyInstance) {
         await tx.execute(
           sql`update users set display_name = ${body.displayName}, email = ${body.email},
                                phone = ${body.phone ?? null}, password_hash = ${passwordHash},
-                               postal_code = ${body.postalCode ?? null},
-                               town = coalesce(${body.town ?? null}, town)
+                               postal_code = coalesce(${body.postalCode ?? null}, postal_code),
+                               town = coalesce(${town}, town)
               where id = ${claiming}`,
         )
+        // The postcode and the town stay a pair: a device may have said where
+        // it is through PATCH /me, and a 10c that asks for neither keeps both.
+        //
         // The invitation was spent when this device first looked around, so a
         // second one is neither needed nor asked for.
         return claiming
@@ -133,7 +145,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const rows = await tx.execute<Record<string, any>>(
         sql`insert into users (display_name, email, phone, password_hash, postal_code, town)
             values (${body.displayName}, ${body.email}, ${body.phone ?? null},
-                    ${passwordHash}, ${body.postalCode ?? null}, ${body.town ?? null})
+                    ${passwordHash}, ${body.postalCode ?? null}, ${town})
             returning id`,
       )
       const id = rows[0]!['id'] as string
@@ -152,7 +164,8 @@ export default async function authRoutes(app: FastifyInstance) {
       if (header?.startsWith('Bearer ')) await revokeSession(app.db, header.slice(7))
     }
 
-    const user = await one(app.db, sql`select * from users where id = ${userId}`)
+    // With the count: a device that hid kinds keeps them when it is claimed.
+    const user = await one(app.db, sql`select *, ${hiddenCountColumn} from users where id = ${userId}`)
     reply.code(201)
     return {
       token: await issueSession(app.db, userId, issuedBy ? { issuedBy } : {}),
@@ -161,9 +174,15 @@ export default async function authRoutes(app: FastifyInstance) {
   })
 
   app.post('/auth/login', async (request) => {
-    const body = z.object({ email: z.string().email(), password: z.string() }).parse(request.body)
+    const body = z.object({ email: emailAddress, password: z.string() }).parse(request.body)
 
-    const user = await one(app.db, sql`select * from users where email = ${body.email}`)
+    // `lower(email)` rather than `email`: the address arrives lower-cased, and
+    // this is the expression the unique index is on, so a row written before
+    // addresses were lower-cased is found all the same.
+    const user = await one(
+      app.db,
+      sql`select *, ${hiddenCountColumn} from users where lower(email) = ${body.email}`,
+    )
     // Same answer either way: telling someone the address exists is telling them
     // half of a credential.
     if (!user?.['password_hash'] || !(await verifyPassword(body.password, user['password_hash']))) {
@@ -199,8 +218,11 @@ export default async function authRoutes(app: FastifyInstance) {
       )
     }
 
-    // Read again when something moved: the interests may have come along.
-    const me = carried ? await one(app.db, sql`select * from users where id = ${user['id']}`) : user
+    // Read again when something moved: the interests may have come along,
+    // and so may what the phone had hidden.
+    const me = carried
+      ? await one(app.db, sql`select *, ${hiddenCountColumn} from users where id = ${user['id']}`)
+      : user
     return {
       token,
       user: publicMe(me!),
@@ -230,7 +252,7 @@ export default async function authRoutes(app: FastifyInstance) {
     const user = await one(
       app.db,
       sql`update users set bankid_subject = ${body.subject}, bankid_verified_at = now()
-          where id = ${userId} returning *`,
+          where id = ${userId} returning *, ${hiddenCountColumn}`,
     )
     return publicMe(user!)
   })

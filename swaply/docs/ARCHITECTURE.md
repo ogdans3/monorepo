@@ -280,8 +280,9 @@ things before finding «Logg inn». `POST /auth/login` with that device's bearer
 merges its account into the one signed in to, in one transaction and only
 after the password (`backend/src/auth/merge.ts`): the likes are copied with
 their dates, less the ones the account could not have made itself; blocks are
-unioned both ways; reports, feedback and the invitation it took are re-pointed;
-and the device's account is deleted. `FATE_OF_REFERENCES` there gives every
+unioned both ways, and so is what it asked not to be shown; reports, feedback
+and the invitation it took are re-pointed; and the device's account is
+deleted. `FATE_OF_REFERENCES` there gives every
 foreign key to `users` a decided fate — carried, dropped with the account, or a
 row that means the merge must not run — and a flow test compares it with the
 database, so a table added later has to be decided before the suite passes. The
@@ -317,9 +318,12 @@ exactly the case where someone has been defrauded.
    contact channel and display name — enough to identify a person to a court, and
    no more — and it is reached through a documented process, not by a service.
 
-**Retention: the completed trade plus three years**, which is the general
-limitation period in foreldelsesloven § 2. When a claim can no longer be brought
-the purpose is spent and the row goes. Messages follow the same window, because
+**Retention: the last completed trade plus three years**, which is the general
+limitation period in foreldelsesloven § 2, **or the deletion plus three years
+when there was no completed trade.** A trade that went wrong — one side sent,
+the other deleted — never completed, and it is exactly the claim the record is
+kept for. When a claim can no longer be brought the purpose is spent and the
+row goes. Messages follow the same window, because
 the evidence in a dispute is almost always in the chat.
 
 **Reports and blocks survive the reported user's deletion**, or
@@ -337,11 +341,20 @@ history actually needs.
 **Deleting an account cancels its active trades first**, with a clear reason to
 the other side. You cannot anonymise someone the counterparty is waiting on.
 
+**The door is `DELETE /me`**, which runs the same `anonymiseUser` the test
+tooling retires its accounts with. The password is asked for when there is one
+— an unlocked phone is not the person — and the sessions go in the same
+transaction as the profile. The tombstone keeps no password hash and no
+postcode: both are the person's, and neither is needed to be somebody's
+counterparty in a history.
+
 **Push payloads carry ids, never finished text.** "Ola liked your Bosch drill"
 carries a name through Google and Apple; the app fetches the words itself.
 
 **Anonymous users have rights too.** A device id is personal data, so there has
-to be a route to access and erasure that does not require an account.
+to be a route to access and erasure that does not require an account. Erasure
+has one: `DELETE /me` with a device's token and nothing else. Access does not
+yet, for a device or for anybody.
 
 **Age.** Norway set the digital age of consent at 13. Unless we intend to write
 the chapter on children's data, the terms say 16 or over.

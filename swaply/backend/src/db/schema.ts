@@ -16,6 +16,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 
@@ -82,7 +83,9 @@ export const users = pgTable(
     // A device id is personal data in its own right.
     deviceId: text('device_id').unique(),
     displayName: text('display_name'),
-    email: text('email').unique(),
+    // Stored lower-cased, and unique whatever the case: see `users_email_unique`
+    // below.
+    email: text('email'),
     phone: text('phone').unique(),
     // Coarse on purpose. Town and county are enough to meet up, and a street
     // address would be more than the product needs.
@@ -124,6 +127,18 @@ export const users = pgTable(
     index('users_test_accounts')
       .on(t.testAccountOf)
       .where(sql`test_account_of is not null`),
+    // One account per address, whatever the case it is typed in. A mail
+    // server treats «Ola@epost.no» and «ola@epost.no» as one mailbox, and a
+    // case-sensitive key let them be two accounts — and turned a capitalised
+    // sign-in into «Feil e-post eller passord». The routes store and look up
+    // the address lower-cased; the index is what holds when one forgets.
+    //
+    // Named as the case-sensitive constraint it replaced, on purpose. An API
+    // image from before drizzle/0005 knows this name and answers it with
+    // «Det finnes allerede en konto med denne e-posten», and a rollback runs
+    // exactly such an image against a database that has already moved on.
+    // Under any other name a case-variant sign-up there was a 500.
+    uniqueIndex('users_email_unique').on(sql`lower(${t.email})`),
   ],
 )
 
@@ -297,6 +312,43 @@ export const likes = pgTable(
     unique('like_once').on(t.fromUser, t.targetItem),
     index('likes_target').on(t.targetItem),
     index('likes_from').on(t.fromUser),
+  ],
+)
+
+// «Ikke vis meg slike» from the long-press menu on a discovery card: this
+// account does not want to be shown listings of this kind. A kind is the
+// category and the free-text subcategory under it, which is as specific as a
+// listing says what it is; a listing with no subcategory has only its
+// category, and hiding every «Diverse» for one lamp would hide far more than
+// was asked, so that one listing is hidden instead.
+//
+// About looking, so an unclaimed device may have rows here, and they are
+// carried when it is folded into an account (`auth/merge.ts`). Nothing here
+// is shown to anybody else, and the owner of a hidden listing is not told.
+export const hiddenListings = pgTable(
+  'hidden_listings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    category: category('category').notNull(),
+    subcategory: text('subcategory'),
+    itemId: uuid('item_id').references(() => items.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // A kind or a listing, never both and never neither.
+    check('hidden_kind_or_listing', sql`num_nonnulls(${t.subcategory}, ${t.itemId}) = 1`),
+    // Pressed twice is hidden once. Case-blind, because the subcategory is
+    // typed by whoever listed the thing, and «Elsykler» and «elsykler» are one
+    // kind to the person who asked not to see it.
+    uniqueIndex('hidden_kind_once')
+      .on(t.userId, t.category, sql`lower(${t.subcategory})`)
+      .where(sql`subcategory is not null`),
+    uniqueIndex('hidden_listing_once')
+      .on(t.userId, t.itemId)
+      .where(sql`item_id is not null`),
   ],
 )
 

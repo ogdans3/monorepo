@@ -2,6 +2,12 @@
 // from Bring's postcode register, https://www.bring.no/postnummerregister-ansi.txt, fetched 2026-09-26.
 // Do not edit by hand: run it again when Bring changes a postcode.
 //
+// Contains data under the Norwegian licence for Open Government data (NLOD)
+// 2.0 distributed by Posten Bring AS: https://data.norge.no/nlod/en/2.0
+// Source: https://data.norge.no/datasets/5e6847ba-156d-4e14-85d3-8d7f8b727523
+// Changed by Swaply: only the postcode and its place are kept, and the place
+// is written as a sentence writes it rather than in capitals.
+//
 // One postcode per line, then the place it belongs to as a sentence writes it.
 export const POSTCODE_REGISTER = `
 0001 Oslo

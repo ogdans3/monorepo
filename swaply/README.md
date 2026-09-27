@@ -177,6 +177,7 @@ Google, Facebook or Apple needs provider agreements, and a link opens the app in
 a browser because universal links need a registered domain and a bundle id. Both
 are one screen away when the accounts exist.
 
-The one gap that is nobody's account but ours: **erasure has an engine and no
-door**. `anonymiseUser` is written and tested, and nothing calls it — settings
-has no «Slett kontoen». It is item 10 in `docs/DESIGN.md`.
+Erasure used to be the one gap that was nobody's account but ours: an engine
+and no door. **`DELETE /me` is the door** (26.09.2026), running `anonymiseUser`
+for the person themselves behind «Slett kontoen» — item 10 in `docs/DESIGN.md`.
+Access, handing a person a copy of what we hold, still has none.

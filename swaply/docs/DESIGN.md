@@ -44,6 +44,8 @@ Discovery is a **collage you scroll**, not a swipe stack. Tinder-style swipe car
 
 **The directed edge is a visible heart on every card.** This is the single most important interaction in the product — a chain only forms when enough people have expressed enough wishes, so the signal has to be cheap and obvious. Round 4 had it behind a long-press with no affordance; round 5 puts it on the card face. Long-press keeps a context menu for the rare actions: hide similar, view profile, report.
 
+**«Ikke vis meg slike» hides a kind, not a card.** A kind is the category and the free-text subcategory under it, compared without regard to case because whoever listed the thing typed it; a listing with no subcategory says no more than its category, so then only that listing is hidden rather than a whole category for one card. It takes the listings out of Oppdag, its rows and its search for that account — and a hidden kind out of the subcategories 05b offers, where it could only lead to «Vis 0 treff» — and nothing else: an item page opened from a link or a notification still opens, nobody else is shown less, and the owner is not told. It is about looking, so a device may do it and it comes along when the device signs in. `DELETE /me/hidden` shows everything again, and every answer that carries the account's own profile counts what is hidden, because hiding is a choice somebody can forget having made; a listing hidden alone stops counting once it is retired or traded, since nothing could bring it back. The answer to a hide carries the count too, and the app offers «Angre» — which is showing everything again — only while that count is one. Built 26.09.2026.
+
 ## Discovery
 
 **Oppdag and Søk are one page**, under Oppdag's name, with the search page's behaviour: a search field that is always visible, and a filter button opening advanced search.
@@ -75,6 +77,8 @@ A match is a **cycle** in this graph:
 
 The search runs on three triggers — a new like, an item becoming available again, and a nightly sweep — because an incremental search only finds cycles through the new edge. On a hit, record a `pending` trade and push-notify all participants.
 
+**A ring is opened once.** A pending trade reserves nothing, so a heart taken back and pressed again finds the ring the first press opened; it is answered with that trade — the same people giving the same things round the same way, in any state short of completed or cancelled — rather than a second trade over it. The answer says the trade is not new (`tradeIsNew`), and the app does not put 06a up for it: «Dere kan swappe!» is the moment a trade opens, and this one had its moment, so the heart just turns. A *different* ring through the same listing still opens: several trades may want one drill, and its owner's acceptance decides between them. The sweep's stricter rule, no new trade on a listing another pending trade already holds, stays the sweep's. Decided 26.09.2026.
+
 ### A trade is not one item against one item
 
 Each side of a hop is a **list of 1–3 items**, with a total value per side and the difference between them recorded as *mellomlegg*: «Mellomlegg: du legger til 200 kr». The cycle search still works on single-item edges — the like is what closes the loop; the item lists are what the parties negotiate afterwards.
@@ -88,6 +92,10 @@ Photos are optional for both. Discovery is a collage, so a listing without one n
 ### Where a listing is
 
 **A listing shows a town, never a postcode.** 10b asks for a postcode and says «Kun by vises for andre», so the server looks it up in Bring's register and keeps only the town it belongs to, written the way a sentence writes it («Mo i Rana», not «MO I RANA»). The postcode wins over the owner's town, because a thing kept at the cabin is at the cabin; without one the listing takes the owner's town, and with neither it has none rather than an invented one. A postcode that belongs to no town is refused in words, not passed over — passing over it is how listings from a profile made on 10c, which asks for no place, went out with no town at all. The register is carried in the build (`backend/src/lib/postcode-register.ts`, rewritten by `pnpm postcodes` when Bring changes a postcode) rather than asked for per listing, which would tell a lookup service where people live.
+
+The same lookup answers everywhere a postcode is typed. Signing up and editing the profile keep the town the postcode belongs to, over a town sent alongside it, and refuse one that belongs to none in the same words 10b uses; `GET /postcodes/:code` answers without a session, so a form can show the town while it is typed. It is reference data and says nothing about anybody.
+
+**The register's licence is NLOD 2.0.** bring.no publishes the file with no terms beside it; Posten Bring AS has registered it in the national data catalogue (data.norge.no, «Postnummer i Norge») under the Norwegian licence for Open Government data 2.0, which allows copying and distributing it, commercially too, with attribution. Checked 26.09.2026. The attribution NLOD asks for — *Contains data under the Norwegian licence for Open Government data (NLOD) distributed by Posten Bring AS*, with links to the licence and the source and a note that we changed it (sentence case, postcode and place only) — is in the header of the generated file. The licence says it must not be hidden or hard to find; a line on a page people can read (an «Om Swaply» or the landing page) is still owed.
 
 ### Lifecycle
 
@@ -129,6 +137,7 @@ A chain trade's thread holds all participants together — it only works if ever
 - On claim: display name, email *or* phone (one contact channel), coarse location.
 - **BankID** is prompted at the first accept and shows as a badge on the profile. It is a trust marker, not a login method.
 - **Login is email only.** Every other sign-in method is off the login screen: one field, one button, and a line saying we send a link.
+- **An address is one address whatever its case.** It is stored lower-cased and without the space autocomplete leaves, looked up the same way, and unique on `lower(email)` in the database. A mail server delivers «Ola@epost.no» and «ola@epost.no» to one mailbox, and a phone keyboard capitalises the first letter by itself; kept as typed, the same person had two accounts or a sign-in that said the password was wrong. The index keeps the old constraint's name, `users_email_unique`, so an image from before the change — a rollback — still answers a clash with «Det finnes allerede en konto med denne e-posten» instead of a 500. Decided 26.09.2026.
 
 ## Trust & safety
 
@@ -163,7 +172,7 @@ Making the profile **claims the account the device already has**, rather than st
 
 **The app starts here without asking.** On a first start with no invitation link it makes the device's account behind 01 and goes straight on to 02; nobody meets a sign-in before they have seen anything. With a link, the invitation page is still the first screen, and only a server that is invite-only and refuses a start without a key puts the sign-in first. Signing out forgets the device id as well as the session, so the next person on the phone starts as a new stranger.
 
-Which means somebody with an account on another phone arrives as a stranger first. **Signing in from there folds the device's account into theirs**: in one transaction, and only after the password, the wishes move across, blocks and reports follow them, the invitation the device took names the account, and the device's account is deleted. A wish the account could not have made itself — for its own listing, one it already has, one across a block — stays behind, and each wish that moves gets the same loop search a heart gets, because it now belongs to somebody with something to give. Test accounts are never folded, in either direction.
+Which means somebody with an account on another phone arrives as a stranger first. **Signing in from there folds the device's account into theirs**: in one transaction, and only after the password, the wishes move across, blocks and reports follow them, so does what it asked not to be shown, the invitation the device took names the account, and the device's account is deleted. A wish the account could not have made itself — for its own listing, one it already has, one across a block — stays behind, and each wish that moves gets the same loop search a heart gets, because it now belongs to somebody with something to give. Test accounts are never folded, in either direction.
 
 ## Feedback
 
@@ -183,6 +192,8 @@ The schema is code now: `backend/src/db/schema.ts`, with the migration in
 - `items` — a listing, item or service, with an optional photo set and an
   `active_trade_id` that is the reservation.
 - `likes` — the directed edge, and nothing else.
+- `hidden_listings` — «Ikke vis meg slike»: a kind (category and subcategory)
+  or one listing that an account does not want put in front of it.
 - `trades` / `trade_participants` — the negotiation and who is in it, in cycle
   order.
 - `trade_offers` / `trade_offer_items` / `trade_offer_cash` — one immutable row
@@ -209,13 +220,30 @@ the case where someone has been defrauded.
    identify a person to a court: the BankID subject, contact channel and display
    name. The running app does not read from it.
 
-**Retention is the completed trade plus three years**, the general limitation
-period in foreldelsesloven § 2. Messages follow the same window, because the
-evidence in a dispute is almost always in the chat.
+**Retention is the last completed trade plus three years**, the general limitation
+period in foreldelsesloven § 2 — **or the deletion plus three years for somebody
+who never completed one.** The second half is not a default: a trade that went
+wrong, where one side sent and the other deleted their account, is by its nature
+one that never completed, and it is the case the record exists for. (This file
+said only the first half until 27.09.2026; `anonymiseUser` has always done
+both.) Messages follow the same window, because the evidence in a dispute is
+almost always in the chat.
 
 Reports and blocks outlive the reported user, or delete-and-re-register is a free
 wash of the record. Deleting an account cancels its active trades first, with a
-reason to the other side.
+reason to the other side — a trade paused on a withdrawal question included, and
+the question closes with it — and whatever of theirs those trades held goes back
+on the market and into the cycle search.
+
+**A person deletes their own account with `DELETE /me`** («Slett kontoen»), built
+26.09.2026. An account with a password gives the password, because a phone left
+unlocked on a table is not the person; a device that never made a profile has only
+its token, and that is enough. Every session dies, and the e-mail and phone are
+free to make a new account with. Two refusals, both in words: the account holding
+the key to the test tooling is erased only after `pnpm admin revoke`, or a
+tombstone would hold the key and a ring nobody can reach; and a test account is
+retired through the tool — pressed while acting as one, «Slett kontoen» is the
+tool, and the tool never ends a trade a real person is standing in.
 
 `ARCHITECTURE.md` has the rest, including the legal bases and why the photos
 moved to OVH.
@@ -228,7 +256,7 @@ Round 5 came back with 45 screens and departs from the brief in two places worth
 
 ## Open questions
 
-1. **The point of no return.** Round 4 introduced a terminal state, «Ikke mulig, en ting er sendt»: past some moment you can no longer back out. Since we don't facilitate shipping, "sent" is self-reported, and nobody has defined who reports it, what it does to a three-way trade when one person has sent and another wants out, or what recourse the sender has. Left undecided on 06.09.
+1. **The point of no return.** Round 4 introduced a terminal state, «Ikke mulig, en ting er sendt»: past some moment you can no longer back out. Since we don't facilitate shipping, "sent" is self-reported, and nobody has defined who reports it, what it does to a three-way trade when one person has sent and another wants out, or what recourse the sender has. Left undecided on 06.09. One consequence to weigh with it, as built on 26.09: backing out through a withdrawal is refused once somebody else has marked their side sent (08c), but deleting the account is not — `DELETE /me` ends an accepted or paused trade like any other, with «Den andre parten slettet kontoen sin», and a trade that ends cancelled gets no snapshot of what was traded. What the sender keeps is the sealed record, three years from the deletion, and the chat.
 2. **Revenue.** Four ideas from 31.07, none of which has appeared in any of five rounds of screens. "An ad every 10th swipe" needs a swipe, which no longer exists. A per-trade admin fee needs facilitation, which we've now ruled out. That leaves ads in the collage and paying to unlock contact info — and the honest option of saying out loud that the MVP is free and unmonetised, so it stops resurfacing every round.
 3. **Does a like carry the item you're offering?** The original model made a swipe an offer of a specific item of yours. With multi-item trades and counter-offers, composing the trade has moved to the negotiation screens, so a like is modelled above as just "I want this". If a like should still name what you'd give, the cycle search changes shape.
 4. **How long do we keep messages beyond a dispute?** Three years is set by the claim window above. Whether an ordinary conversation that never became a trade should live that long is a separate, unanswered question.
@@ -236,8 +264,7 @@ Round 5 came back with 45 screens and departs from the brief in two places worth
 ## Next steps
 
 The list as it stood on 09.09.2026, with what has since been built struck out.
-What is left is held up either by an account we do not have, or — for erasure —
-by a screen nobody has drawn.
+What is left is held up by an account we do not have.
 
 1. ~~Scaffold + Postgres schema~~ — done 09.09.2026
 2. ~~Photo upload~~ — done 09.09.2026, on our own disk. `POST /media` takes one picture, the row holds a path and never a URL, and moving to the OVH bucket is then this one file plus a migration that rewrites the paths. **The bucket is still the destination**: a volume does not survive the machine.
@@ -248,4 +275,4 @@ by a screen nobody has drawn.
 7. ~~Chat + read state~~ — push notifications still need the FCM and APNs accounts
 8. ~~Invite deep link + share link + public item page + anonymous account flow~~ — done 09.09.2026
 9. ~~Report/block, reviews~~
-10. Erasure — **the engine is written and tested, and nothing calls it.** `anonymiseUser` has no endpoint and settings has no «Slett kontoen», so today the right to erasure is exercised by a person with database access. That is the next thing to close.
+10. ~~Erasure~~ — done 26.09.2026. `DELETE /me` runs `anonymiseUser` for the person themselves, with the password for an account that has one and the token alone for a device; see *Erasure and retention*. The screen that asks is the app's «Slett kontoen», at the foot of «Juridisk og personvern» in settings. Access — handing a person a copy of what we hold — still has no door of its own.

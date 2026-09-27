@@ -39,30 +39,31 @@ const owner = ownerFlag === -1 ? null : (rest[ownerFlag + 1] ?? null)
 /**
  * The account behind an address, or a refusal.
  *
- * `users.email` is unique case-*sensitively*, so `Eier@x.no` and `eier@x.no`
- * can both exist — and an ordinary signed-in person chooses their own address.
- * Matching with `lower(email)` and taking the first row would let somebody
- * register a case-variant of the owner's address and receive the key when the
- * owner types their own, lowercase, and reads «… is an admin.» as success.
+ * Matched on `lower(email)`, which is what the unique index is on
+ * (drizzle/0005_email_any_case.sql): an address names one account whatever the
+ * case it is typed in. Before that index, `Eier@x.no` and `eier@x.no` could
+ * both exist, and taking the first match could hand the key to whoever had
+ * registered the case-variant of the owner's address.
  *
- * So: exact match wins, and anything ambiguous is refused with the candidates
- * named. This is the one thing in the system that can cut a key; it does not
- * guess.
+ * So more than one match is still refused, with the candidates named, even
+ * though the index makes it impossible. This file runs from a checkout, and a
+ * checkout can be newer than the database it is pointed at: until the API has
+ * booted and applied 0005 there, nothing but this check stands between the
+ * key and the wrong account. It is the one thing in the system that can cut a
+ * key; it does not guess.
  */
 async function byEmail(email: string): Promise<Row> {
   const rows = await db.execute<Row>(
     sql`select id, display_name, email, is_admin, test_account_of
-        from users where lower(email) = lower(${email}) and anonymised_at is null
+        from users where lower(email) = lower(${email.trim()}) and anonymised_at is null
         order by created_at`,
   )
   if (rows.length === 0) throw new Error(`No account with the e-mail ${email}.`)
-
-  const exact = rows.filter((row) => row['email'] === email)
-  if (exact.length === 1) return exact[0]!
   if (rows.length > 1) {
     throw new Error(
       `${rows.length} accounts match ${email} (${rows.map((r) => r['email']).join(', ')}). ` +
-        'Refusing to guess. Type the address exactly as it is stored.',
+        'Refusing to guess: which one is the person is for a human to decide, and ' +
+        'drizzle/0005 cannot be applied while both exist.',
     )
   }
   return rows[0]!

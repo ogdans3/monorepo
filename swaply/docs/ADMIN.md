@@ -133,10 +133,14 @@ Beyond the ring, three things:
   acceptance, whether a three-way chain is accepted at all, and the revenue
   model are all still open in `DESIGN.md`. The tool reaches those states; it
   does not decide them.
-- **`DELETE /admin/accounts/:id` is not the erasure door.** Item 10 of
-  `DESIGN.md` is a «Slett kontoen» in settings with its own confirmation copy
-  and a self-service path, and that is still unbuilt. This only gives the engine
-  behind it a first caller, on accounts nobody real ever used.
+- **`DELETE /admin/accounts/:id` is not the erasure door.** That is
+  `DELETE /me`, behind «Slett kontoen» at the foot of «Juridisk og personvern»,
+  the last row in settings (16b). The two meet in one place:
+  pressed while acting as a test account, «Slett kontoen» is the tool, so it
+  goes through `deleteTestAccount` — no password, sealed as `test_account`, and
+  refused while a real person is in a trade with the account. The account that
+  holds the key cannot erase itself at all until `pnpm admin revoke` has taken
+  the key away, or a tombstone would hold it.
 - **`INVITE_ONLY` stays a deploy, not a toggle.** It is read once at boot by
   design, and flipping it on a live site locks out real invited people. It is
   shown read-only in the diagnostics.

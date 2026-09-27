@@ -6,7 +6,7 @@ import { blockedBetween } from '../lib/blocks.js'
 import { CATEGORIES, CONDITIONS } from '../lib/constants.js'
 import { badRequest, forbidden, notFound } from '../lib/errors.js'
 import { toStoredPath } from '../lib/media.js'
-import { townFor } from '../lib/postcodes.js'
+import { townFor, townOf } from '../lib/postcodes.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
 
@@ -20,7 +20,7 @@ const itemBody = z.object({
   subcategory: z.string().trim().max(60).nullish(),
   condition: z.enum(CONDITIONS).nullish(),
   estimatedValueNok: z.number().int().min(0).max(10_000_000).nullish(),
-  // Looked up, never stored: see `townOf`.
+  // Looked up, never stored: see `townOf` in lib/postcodes.ts.
   postalCode: z.string().regex(/^\d{4}$/, 'Et postnummer har fire sifre.').nullish(),
   town: z.string().trim().max(60).nullish(),
   // Up to ten, first is the cover. A listing with none is allowed: services
@@ -41,24 +41,6 @@ const itemBody = z.object({
     .max(10)
     .default([]),
 })
-
-/**
- * The town a listing's postcode belongs to, which is all of it anybody else
- * sees. A postcode that belongs to none is refused rather than passed over:
- * passing over it is how a listing went out with no town at all while 10b
- * said the town would show, and a typo is the likeliest reason for one.
- */
-function townOf(postalCode: string | null | undefined): string | null {
-  if (!postalCode) return null
-  const town = townFor(postalCode)
-  if (!town) {
-    throw badRequest(
-      'unknown_postal_code',
-      `Fant ikke postnummer ${postalCode}. Sjekk det, eller la feltet stå tomt.`,
-    )
-  }
-  return town
-}
 
 export default async function itemRoutes(app: FastifyInstance) {
   app.post('/items', async (request, reply) => {

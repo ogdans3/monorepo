@@ -38,6 +38,10 @@ export const FATE_OF_REFERENCES = {
   // and nobody reported this person.
   'reports.reporter': 'carried',
   'reports.target_user': 'carried',
+  // «Ikke vis meg slike» is about looking, which is what the phone was for.
+  // Unioned: what the account already hid stays hidden, and so does what the
+  // phone hid.
+  'hidden_listings.user_id': 'carried',
   // Set null on delete, so it would survive regardless; carried because what
   // somebody told us about the app is still theirs.
   'app_feedback.user_id': 'carried',
@@ -187,6 +191,16 @@ export async function mergeDeviceAccount(
           select target_item from moved order by created_at`,
     )
     await tx.execute(sql`delete from likes where from_user = ${device}`)
+
+    // Copied rather than re-pointed, because the account may already have
+    // hidden the same kind, and a unique index says a kind is hidden once.
+    await tx.execute(
+      sql`insert into hidden_listings (user_id, category, subcategory, item_id, created_at)
+          select ${into}::uuid, category, subcategory, item_id, created_at
+          from hidden_listings where user_id = ${device}
+          on conflict do nothing`,
+    )
+    await tx.execute(sql`delete from hidden_listings where user_id = ${device}`)
 
     // Screen 02 is once per account. Somebody who has already been through it
     // chose what they chose; somebody who has not has just done it on this

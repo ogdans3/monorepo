@@ -23,6 +23,10 @@ export const publicMe = (u: Row) => ({
   isAdmin: Boolean(u['is_admin']),
   /** «This account exists so an admin can test» — drawn as a badge, never hidden. */
   testAccount: Boolean(u['test_account_of']),
+  // «Ikke vis meg slike», counted: see `hiddenCountColumn`, which every route
+  // answering with this selects. Left out rather than guessed where a query
+  // did not, so a client can tell «none» from «not said».
+  hiddenCount: u['hidden_count'] === undefined ? undefined : Number(u['hidden_count']),
 })
 
 /** Somebody else: no e-mail, and the phone only where a trade needs it. */

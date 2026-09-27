@@ -17,6 +17,7 @@ import itemRoutes from './routes/items.js'
 import mediaRoutes from './routes/media.js'
 import likeRoutes from './routes/likes.js'
 import miscRoutes from './routes/misc.js'
+import postcodeRoutes from './routes/postcodes.js'
 import profileRoutes from './routes/profile.js'
 import tradeRoutes from './routes/trades.js'
 
@@ -80,6 +81,8 @@ export async function buildApp(
    * they do. Norwegian, because it is shown to them.
    */
   const uniqueMessages: Record<string, { code: string; message: string }> = {
+    // On lower(email), so «Ola@epost.no» walks into «ola@epost.no» here too.
+    // The name is the old constraint's; see the index in db/schema.ts.
     users_email_unique: {
       code: 'email_taken',
       message: 'Det finnes allerede en konto med denne e-posten.',
@@ -141,6 +144,7 @@ export async function buildApp(
   await app.register(tradeRoutes)
   await app.register(chatRoutes)
   await app.register(miscRoutes)
+  await app.register(postcodeRoutes)
   // Last, and behind `requireAdmin`, which answers 404 for everybody else.
   await app.register(adminRoutes)
 

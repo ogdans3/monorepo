@@ -4,7 +4,8 @@
 // what they asked for. What survives is what a defrauded counterparty would
 // need to bring a claim, in a schema the application never reads, until the
 // claim window closes: the completed trade plus three years, which is the
-// limitation period in foreldelsesloven § 2.
+// limitation period in foreldelsesloven § 2 — or the deletion plus three years
+// for somebody with no completed trade (see account-deletion.test.ts).
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 

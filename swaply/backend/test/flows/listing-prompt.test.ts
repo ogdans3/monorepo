@@ -14,9 +14,10 @@
 // And the half that keeps it honest: **only a heart that made a like is
 // news.** Pressed on something already liked — a stale card, a double tap — it
 // changes nothing, so it neither asks, nor tells the owner a second time, nor
-// runs the loop search again. That last one is not tidiness: a pending trade
-// reserves nothing, so the search finds the same ring it found the first time
-// and would open it twice.
+// runs the loop search again. A pending trade reserves nothing, so the search
+// could only find the ring it found the first time — the slow way to learn
+// nothing new. (A heart taken back and pressed again is a new like, and
+// `liking-again.test.ts` is what it finds.)
 //
 // Which makes the count the thing to get right. Two hearts pressed at once
 // are counted one after the other, or both land on six and the fifth is

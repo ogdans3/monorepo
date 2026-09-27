@@ -80,3 +80,18 @@ export const norwegianIssues: z.ZodErrorMap = (issue) => {
 export function speakNorwegian() {
   z.setErrorMap(norwegianIssues)
 }
+
+/**
+ * An e-mail address as the API keeps it: trimmed and lower-cased.
+ *
+ * A mail server treats «Ola@epost.no» and «ola@epost.no» as one mailbox, and a
+ * phone keyboard capitalises the first letter of a field on its own. Kept as
+ * typed, the same person had two accounts, or none they could sign in to. The
+ * space goes for the same reason: autocomplete puts one after the address, and
+ * «Skriv en gyldig e-postadresse» about an address that is right is a wall.
+ *
+ * Checked after both, so the address that is validated is the one stored.
+ * `users_email_unique` in the schema, an index on lower(email), holds the same
+ * rule in the database.
+ */
+export const emailAddress = z.string().trim().toLowerCase().email()

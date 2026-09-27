@@ -14,36 +14,55 @@ type Row = Record<string, string | null>
  * case where someone has been defrauded and has to be found.
  *
  * Retention is the last completed trade plus three years: the general limitation
- * period in foreldelsesloven § 2. Once a claim can no longer be brought, the
+ * period in foreldelsesloven § 2. Somebody who never completed a trade is kept
+ * three years from the deletion instead, because a trade that went wrong — one
+ * side sent, the other deleted — is one that never completed, and that is the
+ * claim this record exists for. Once a claim can no longer be brought, the
  * purpose is spent and the purge job takes the row.
  */
 export async function anonymiseUser(
   db: Database,
   userId: string,
   opts: { reason?: string } = {},
-) {
+): Promise<{ freed: string[] }> {
   // Filled inside the transaction, spent after it: unlinking a file cannot be
   // rolled back, so it does not happen until the rows are certainly gone.
   let orphaned: string[] = []
+  // The other side's listings that the ended trades were holding. Back on the
+  // market, which is one of the three search triggers — the caller runs it,
+  // after the commit, the way every other cancellation does.
+  const freed: string[] = []
 
   await db.transaction(async (tx) => {
     // You cannot anonymise someone the counterparty is still waiting on, so the
-    // live trades end first, with a reason the other side can read.
+    // live trades end first, with a reason the other side can read. `paused`
+    // is one of them: an accepted trade with a withdrawal question open.
     const live = await tx.execute<Row>(sql`
       select distinct t.id from trades t
       join trade_participants p on p.trade_id = t.id
-      where p.user_id = ${userId} and t.state in ('talking', 'pending', 'countered', 'accepted')
+      where p.user_id = ${userId}
+        and t.state in ('talking', 'pending', 'countered', 'accepted', 'paused')
     `)
     for (const row of live) {
       const tradeId = row['id']!
-      await tx.execute(
+      const released = await tx.execute<Row>(
         sql`update items set active_trade_id = null, status = 'available'
-            where active_trade_id = ${tradeId}`,
+            where active_trade_id = ${tradeId}
+            returning id, owner_id`,
       )
+      for (const item of released) if (item['owner_id'] !== userId) freed.push(item['id']!)
       await tx.execute(
         sql`update trades set state = 'cancelled', closed_at = now(),
                    close_reason = 'Den andre parten slettet kontoen sin'
             where id = ${tradeId}`,
+      )
+      // A withdrawal question still waiting is moot: the trade it asked about
+      // has ended under it. Closed as lapsed, because an answer given later
+      // to a waiting row — a no puts the trade back to `accepted` — would
+      // bring a cancelled trade back to life with a tombstone in it.
+      await tx.execute(
+        sql`update trade_withdrawals set state = 'expired', resolved_at = now()
+            where trade_id = ${tradeId} and state = 'waiting'`,
       )
     }
 
@@ -92,6 +111,7 @@ export async function anonymiseUser(
     await tx.execute(sql`delete from sessions where user_id = ${userId}`)
     await tx.execute(sql`delete from notifications where user_id = ${userId}`)
     await tx.execute(sql`delete from likes where from_user = ${userId}`)
+    await tx.execute(sql`delete from hidden_listings where user_id = ${userId}`)
     await tx.execute(sql`delete from item_media where item_id in
       (select id from items where owner_id = ${userId})`)
     await tx.execute(
@@ -101,14 +121,17 @@ export async function anonymiseUser(
 
     // The tombstone. The row lives so the counterparty's trade history still
     // has someone on the other side of it; nothing personal is left in it.
+    // The password hash goes with the address it opened, and the postcode
+    // with the town it was looked up for.
     await tx.execute(sql`
       update users set
         device_id = null, display_name = null, email = null, phone = null,
-        town = null, county = null, interests = '{}',
-        bankid_subject = null, anonymised_at = now()
+        town = null, county = null, postal_code = null, password_hash = null,
+        interests = '{}', bankid_subject = null, anonymised_at = now()
       where id = ${userId}
     `)
   })
 
   for (const path of orphaned) await removeStored(path)
+  return { freed }
 }

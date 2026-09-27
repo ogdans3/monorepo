@@ -18,7 +18,7 @@ let inviterId: string | null = null
 
 if (email) {
   const [row] = await db.execute<{ id: string }>(
-    sql`select id from users where email = ${email} and anonymised_at is null`,
+    sql`select id from users where lower(email) = lower(${email}) and anonymised_at is null`,
   )
   if (!row) {
     await client.end()

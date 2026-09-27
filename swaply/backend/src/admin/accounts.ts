@@ -289,6 +289,9 @@ export async function deleteTestAccount(db: Database, adminId: string, targetId:
     )
   }
 
-  await anonymiseUser(db, targetId, { reason: 'test_account' })
-  return { displayName: target['display_name'] }
+  // `freed` is whatever its trades were holding of the ring's other accounts,
+  // back on the market: one of the three search triggers, which the caller
+  // runs once the erasure has committed.
+  const { freed } = await anonymiseUser(db, targetId, { reason: 'test_account' })
+  return { displayName: target['display_name'], freed }
 }

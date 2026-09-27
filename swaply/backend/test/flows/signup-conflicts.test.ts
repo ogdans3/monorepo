@@ -10,6 +10,11 @@
 // the ordinary case reads well; and the error handler translates the unique
 // index itself, so the race between check and insert — and every route that
 // has no check of its own — answers the same way.
+//
+// And an address is one address whatever its case. A mail server delivers
+// «Ola@epost.no» and «ola@epost.no» to the same mailbox, and a phone keyboard
+// capitalises the first letter of a field by itself; kept as typed, the same
+// person got two accounts, or a sign-in that said the password was wrong.
 import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
@@ -125,5 +130,63 @@ describe('signing up with something taken', () => {
 
     expect(me.statusCode).toBe(200)
     expect(me.json()['phone']).toBe('406 41 522')
+  })
+
+  test('6. the same address with capitals in it is the same address, and taken', async () => {
+    const res = await post('/auth/register', {
+      displayName: 'Ola igjen',
+      email: 'Ola@Epost.no',
+      password: 'et langt passord',
+    })
+
+    expect(res.status).toBe(409)
+    expect(res.body['code']).toBe('email_taken')
+  })
+
+  test('7. signing in with a capital letter finds the account', async () => {
+    const res = await post('/auth/login', { email: 'Ola@epost.no', password: 'et langt passord' })
+
+    expect(res.status).toBe(200)
+    expect(res.body['user']['email']).toBe('ola@epost.no')
+  })
+
+  test('8. an address is kept lower-cased, without the space autocomplete leaves', async () => {
+    const res = await post('/auth/register', {
+      displayName: 'Siri',
+      email: ' Siri.Berg@Epost.NO ',
+      password: 'et langt passord',
+    })
+
+    expect(res.status).toBe(201)
+    expect(res.body['user']['email']).toBe('siri.berg@epost.no')
+
+    const again = await post('/auth/login', { email: 'siri.berg@epost.no', password: 'et langt passord' })
+    expect(again.status).toBe(200)
+  })
+
+  test('9. changing to somebody else’s address in other capitals is refused in words', async () => {
+    const per = await post('/auth/login', { email: 'per@epost.no', password: 'et langt passord' })
+    expect(per.status).toBe(200)
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/me',
+      headers: { authorization: `Bearer ${per.body['token']}` },
+      payload: { email: 'KARI@epost.no' },
+    })
+
+    expect(res.statusCode).toBe(409)
+    expect(res.json()['code']).toBe('email_taken')
+    expect(res.json()['message']).toContain('e-posten')
+  })
+
+  test('10. and the database holds the rule for a write that forgets to lower-case', async () => {
+    // Straight into the table, the way a script or a route written next year
+    // might. The unique index is on lower(email), so case is no way around it.
+    // It is still called what the case-sensitive constraint was, because an
+    // image from before the migration — a rollback — only knows that name.
+    await expect(
+      db.execute(sql`insert into users (display_name, email) values ('Kopi', 'OLA@EPOST.NO')`),
+    ).rejects.toMatchObject({ cause: { constraint_name: 'users_email_unique' } })
   })
 })
