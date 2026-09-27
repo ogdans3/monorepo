@@ -257,6 +257,91 @@ void main() {
       expect(toast(tester).bottom, 844 - 14);
     });
 
+    testWidgets('7. an outlined button counts: the foot of the trade screen is often only those',
+        (tester) async {
+      // 06f, 09f and a paused trade end in «Trekk deg fra byttet», «Tilbake
+      // til Bytter» or «Angre forespørselen» and nothing else, and a refusal
+      // of one lay across it: only the filled button was measured.
+      await sayOver(
+          tester,
+          Scaffold(
+            body: Column(children: [
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+                child: SecondaryButton('Trekk deg fra byttet', destructive: true, onPressed: () {}),
+              ),
+            ]),
+          ));
+
+      expect(toast(tester).bottom, tester.getRect(find.byType(SecondaryButton)).top - 14);
+    });
+
+    testWidgets('8. said as a page opens, it goes up over that page\'s button', (tester) async {
+      // «Lagt ut» and the tab it lands on, a sign-in and the app it opens:
+      // the toast is said in the same moment the page is asked for, when the
+      // page is not built yet. It was measured against the page it was
+      // leaving, and lay across the new one's button.
+      await hold(
+          tester,
+          Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => footed()));
+                    showToastOn(ScaffoldMessenger.of(context), ToastTone.done, 'Lagt ut.');
+                  },
+                  child: const Text('Legg ut'),
+                ),
+              ),
+            ),
+          ));
+      await tester.tap(find.text('Legg ut'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fortsett'), findsOneWidget);
+      expect(toast(tester).bottom, button(tester).top - 14);
+    });
+
+    testWidgets('…and said as a page goes, over the button of the page it uncovers',
+        (tester) async {
+      // A block from 04's «⋯» takes the listing away, and the report's thanks
+      // go up in the same moment: measured against 04's heart and ✕, it stood
+      // high over the grid; measured against nothing, it lay across 02.
+      await hold(tester, footed());
+      final under = button(tester);
+      final navigator = Navigator.of(tester.element(find.text('Fortsett')));
+      navigator.push(MaterialPageRoute<void>(
+          builder: (context) => Scaffold(
+                body: Column(children: [
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 200),
+                    child: PrimaryButton('Høyt oppe', onPressed: () {}),
+                  ),
+                ]),
+              )));
+      await tester.pumpAndSettle();
+
+      final messenger = ScaffoldMessenger.of(tester.element(find.text('Høyt oppe')));
+      navigator.pop();
+      showToastOn(messenger, ToastTone.done, 'Takk. Vi ser på rapporten.');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Høyt oppe'), findsNothing);
+      expect(toast(tester).bottom, under.top - 14);
+    });
+
+    testWidgets('…and a toast whose place is the same is put up once', (tester) async {
+      await sayOver(tester, footed());
+      final first = tester.element(find.byType(SwaplyToast));
+      await tester.pump(const Duration(milliseconds: 500));
+      // The same card, not one taken down and put up again.
+      expect(tester.element(find.byType(SwaplyToast)), same(first));
+      expect(find.byType(SwaplyToast), findsOneWidget);
+    });
+
     testWidgets('6. anything else can ask to be kept clear of — the composer on 06g',
         (tester) async {
       await sayOver(

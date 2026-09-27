@@ -30,7 +30,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.2
+  # 1.5 is the first with AbortableRequest: a request that runs out of
+  # patience is called off rather than left to land after the app gave up.
+  # 1.6 because it is what the lock already held, and so what the app is
+  # tested and shipped with. It no longer adds a charset to an
+  # application/json body; JSON is UTF-8 without one, and abort_test holds
+  # that ø and å still go up as UTF-8.
+  http: ^1.6.0
+  # The support directory, where a half-written 10b keeps its photographs
+  # between one start of the app and the next.
+  path_provider: ^2.1.6
   provider: ^6.1.2
   shared_preferences: ^2.3.2
   intl: ^0.19.0

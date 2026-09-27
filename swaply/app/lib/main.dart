@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -55,7 +56,7 @@ class SwaplyApp extends StatefulWidget {
   State<SwaplyApp> createState() => _SwaplyAppState();
 }
 
-class _SwaplyAppState extends State<SwaplyApp> {
+class _SwaplyAppState extends State<SwaplyApp> with WidgetsBindingObserver {
   /// For the admin floor, which sits outside the navigator — under it, on the
   /// screen — and so cannot find it by looking up.
   final _navigator = GlobalKey<NavigatorState>();
@@ -63,6 +64,29 @@ class _SwaplyAppState extends State<SwaplyApp> {
   /// Asked once, for the life of the app: the builder below runs on every
   /// rebuild, and each ask listens to the browser anew.
   late final _lessMotion = widget.lessMotion ?? askedForLessMotion();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Back from the background is opening the app, and the server has to hear
+  /// it: a device nobody opens for twelve months is deleted. See
+  /// [Session.wake], which keeps it to once a minute after an answer, and
+  /// quiet.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(Provider.of<Session>(context, listen: false).wake());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,8 +189,9 @@ class _RootGateState extends State<RootGate> {
     if (session.loading) return const SplashScreen();
     if (!session.signedIn) {
       // No answer from the server. Said on the splash, with the one thing
-      // there is to do about it, and not retried behind anybody's back: a
-      // phone with no network would otherwise ask forever.
+      // there is to do about it, and not retried on a timer: a phone with no
+      // network would ask forever. Only the person opening the app again
+      // asks again, once for each time; see [Session.wake].
       if (session.stalled) {
         return SplashScreen(onRetry: session.retry, retrying: session.starting);
       }

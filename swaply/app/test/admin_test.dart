@@ -21,6 +21,7 @@ import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/admin_chrome.dart';
+import 'package:swaply_app/widgets/common.dart';
 
 import 'fake_server.dart';
 
@@ -238,6 +239,52 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.bodies['POST /admin/items/item-mine/want'], {'as': 'test-1'});
+    });
+
+    /// «Velg konto», and the first test account.
+    Future<void> want(WidgetTester tester) async {
+      await tester.tap(find.text('Velg konto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Testbruker Én'));
+      await tester.pumpAndSettle();
+    }
+
+    String toast(WidgetTester tester) =>
+        tester.widget<SwaplyToast>(find.byType(SwaplyToast)).message;
+
+    testWidgets('…and says when that closed a circle', (tester) async {
+      asAdmin();
+      server.overrides['POST /admin/items/item-mine/want'] = {
+        'tradeId': 'trade-1',
+        'tradeIsNew': true,
+        'promptToList': false,
+        'likedCount': 1,
+      };
+      await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
+
+      await want(tester);
+
+      expect(toast(tester), 'Testbruker Én vil ha den, og sirkelen lukket seg.');
+    });
+
+    testWidgets('…and that the trade was open already, when it was', (tester) async {
+      // Pressed on something the account already wants, the server names the
+      // trade already open over that ring, with `tradeIsNew: false`. «… og
+      // sirkelen lukket seg» read as a new trade with the same people.
+      asAdmin();
+      server.overrides['POST /admin/items/item-mine/want'] = {
+        'liked': true,
+        'tradeId': 'trade-1',
+        'tradeIsNew': false,
+        'promptToList': false,
+        'likedCount': 1,
+      };
+      await mount(tester, const ItemDetailScreen(itemId: 'item-mine'));
+
+      await want(tester);
+
+      expect(toast(tester), 'Testbruker Én vil ha den. Sirkelen har allerede et åpent bytte.');
+      expect(find.textContaining('lukket seg'), findsNothing);
     });
   });
 

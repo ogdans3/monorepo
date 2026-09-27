@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../api/models.dart';
+import '../util/clock.dart';
 
 /// One picture in 10b's strip: bytes still on the phone, the server's copy,
 /// or both.
@@ -9,7 +10,10 @@ import '../api/models.dart';
 /// device looking around has none until 10c — which comes after the form, not
 /// before it. So a stranger's pictures are held here and sent once the profile
 /// exists, and a picture that has reached the server says so, which is what
-/// keeps a second «Legg ut» from sending it again.
+/// keeps a second «Legg ut» from sending it again. Somebody with a profile
+/// sends each as it is picked, and the bytes are kept all the same: the
+/// server lets go of a picture no listing took up, and the phone is where it
+/// is sent again from.
 class ListingPhoto {
   ListingPhoto.held(List<int> bytes, String this.name)
       : bytes = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
@@ -27,17 +31,56 @@ class ListingPhoto {
 
   /// The path the listing is made with. Null until the server has the bytes.
   UploadedImage? stored;
+
+  /// When [stored] came back, by this phone's clock, for a picture sent from
+  /// the form. Null for one already on a listing, which the server keeps as
+  /// long as the listing.
+  DateTime? storedAt;
+
+  /// How long a picture sent from the form is taken to be the server's. An
+  /// upload no listing has taken up is swept after a day (`GRACE_HOURS` in
+  /// `backend/src/lib/media-sweep.ts`; the two change together), and a draft
+  /// kept on the phone outlives that easily: Monday's pictures, listed on
+  /// Wednesday by their paths, went on the market as broken ones. Short of
+  /// the day by enough to finish a «Legg ut» in. Measured on the phone's
+  /// clock at both ends, so a phone set wrong does not move it.
+  static const serverKeeps = Duration(hours: 20);
+
+  /// The server's answer to sending this picture, and when it came.
+  void sent(UploadedImage image) {
+    stored = image;
+    storedAt = now();
+  }
+
+  /// Whether the listing can be made with [stored]: there is one, and it is
+  /// not old enough to have been swept. One that is goes up again, from the
+  /// bytes the phone kept; see `_sendHeldPhotos` on 10b.
+  bool get onServer {
+    final at = storedAt;
+    return stored != null && (at == null || now().difference(at) < serverKeeps);
+  }
+
+  /// The file in the drafts folder that holds [bytes] on this phone, once
+  /// the draft store has written it; see `DraftStore`. A picture is written
+  /// once, under a name of its own, so keeping the form again as it is typed
+  /// into does not write the picture again. Null on the web, which has no
+  /// folder, and for a picture that is only the server's.
+  String? file;
 }
 
-/// 10b as it stood when 10c went up over it, held by the session until 10c is
-/// done with.
+/// 10b as it stands: what was typed, what was chosen, and the pictures.
 ///
-/// Somebody with an account from another phone arrives as a stranger, and on
-/// 10c they sign in rather than make a profile. That makes the phone somebody
-/// else, and the gate builds that somebody a new app: the form went with the
-/// old one — the title, the pictures, all of it — and nothing was listed. So
-/// the new app opens on Legg ut instead, and the form there takes this up and
-/// finishes what was started, as it would have after 10c.
+/// Kept on the phone as the form is filled in, by `DraftStore`, so that the
+/// app closed or killed — 10c open over the form or not — opens again on the
+/// same form rather than an empty one.
+///
+/// And handed to the session as 10c goes up over the form, until 10c is done
+/// with. Somebody with an account from another phone arrives as a stranger,
+/// and on 10c they sign in rather than make a profile. That makes the phone
+/// somebody else, and the gate builds that somebody a new app: the form went
+/// with the old one — the title, the pictures, all of it — and nothing was
+/// listed. So the new app opens on Legg ut instead, and the form there takes
+/// this up and finishes what was started, as it would have after 10c.
 class ListingDraft {
   const ListingDraft({
     required this.kind,
@@ -49,6 +92,7 @@ class ListingDraft {
     required this.value,
     required this.postalCode,
     required this.photos,
+    this.finish = false,
   });
 
   final String kind, category;
@@ -57,4 +101,23 @@ class ListingDraft {
   /// As typed, not trimmed: the form trims when it sends.
   final String title, description, subcategory, value, postalCode;
   final List<ListingPhoto> photos;
+
+  /// On its way out: «Legg ut» was pressed, or «Logg inn» on 10c, and the
+  /// listing itself has not been asked for yet — its pictures are still
+  /// going up. A draft kept like this when the app is closed or killed is
+  /// finished on the next start, as it would have been, if that start comes
+  /// within `DraftStore.finishWithin`; later, the form comes back instead.
+  /// Never true once the listing has been sent for: one that reached the
+  /// server with the answer lost on the way must not go out a second time on
+  /// its own.
+  final bool finish;
+
+  /// Nothing typed and nothing picked. There is no «Forkast» on 10b — the
+  /// export draws none — so emptying the form is how a draft is thrown away:
+  /// a form in this state is not kept, and the one kept before it goes. The
+  /// type, the category and the condition are choices on a form and not
+  /// something written, so on their own they keep nothing.
+  bool get isEmpty =>
+      photos.isEmpty &&
+      [title, description, subcategory, value, postalCode].every((text) => text.trim().isEmpty);
 }

@@ -112,7 +112,7 @@ void main() {
     }
 
     testWidgets('16c a wrong password says so and does not sign you in', (tester) async {
-      server.overrides['POST /auth/login'] = 401;
+      server.overrides['POST /auth/login'] = Refusal.wrongCredentials;
       await mount(tester, const LoginScreen(), signedIn: false);
 
       await tester.enterText(find.byType(TextField).first, 'ola@epost.no');
@@ -122,6 +122,42 @@ void main() {
 
       expect(find.text('Feil e-post eller passord.'), findsOneWidget);
       expect(session.signedIn, isFalse);
+    });
+
+    testWidgets('16c …and says the same to a server from before it had a code for it',
+        (tester) async {
+      // That one answered a wrong password with the generic refusal, whose
+      // «Du må logge inn.» under «Logg inn» reads as the button doing nothing.
+      server.overrides['POST /auth/login'] = 401;
+      await mount(tester, const LoginScreen(), signedIn: false);
+
+      await tester.enterText(find.byType(TextField).first, 'ola@epost.no');
+      await tester.enterText(find.byType(TextField).last, 'feil');
+      await tester.tap(find.text('Logg inn'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Feil e-post eller passord.'), findsOneWidget);
+      expect(find.text('Du må logge inn.'), findsNothing);
+    });
+
+    testWidgets('16c a sign-in answers with the profile, and the rest comes from GET /me',
+        (tester) async {
+      // The fake answers as `publicMe` does — no things, no unread counts —
+      // so a screen that read those off the sign-in's answer would show
+      // nothing here, as it would against the real server.
+      await mount(tester, const LoginScreen(), signedIn: false);
+      await tester.enterText(find.byType(TextField).first, 'ola@epost.no');
+      await tester.enterText(find.byType(TextField).last, 'passord');
+      await tester.tap(find.text('Logg inn'));
+      await tester.pumpAndSettle();
+
+      final answered = FakeServer.profileOnly(FakeServer.me);
+      expect(answered.containsKey('items'), isFalse);
+      expect(answered.containsKey('unreadMessages'), isFalse);
+      expect(server.requests, containsAllInOrder(['POST /auth/login', 'GET /me']));
+      expect(session.me!.items, hasLength(1));
+      expect(session.unreadChats, 2);
+      expect(session.tradesNeedingYou, 1);
     });
 
     testWidgets('10c creating a profile asks for the four things and says why', (tester) async {
@@ -1162,6 +1198,73 @@ void main() {
       expect(find.byType(ThreadScreen), findsOneWidget);
     });
 
+    testWidgets('12a a trade ended by a deleted account says so, and opens the trade',
+        (tester) async {
+      // `DELETE /me` ends every trade the account was in and tells the others
+      // with `trade_cancelled` and a reason code — never the words, which
+      // are the app's. It fell through to «Varsel» and «Åpne Swaply for å se
+      // hva som skjedde».
+      server.overrides['GET /notifications'] = {
+        'notifications': [
+          {
+            'id': 'n4',
+            'type': 'trade_cancelled',
+            'payload': {'tradeId': 'trade-1', 'reason': 'account_deleted'},
+            'actorName': null,
+            'itemTitle': null,
+            'readAt': null,
+            'createdAt': '2026-09-09T08:55:00Z',
+          },
+        ],
+        'unread': 1,
+      };
+      server.overrides['GET /trades/trade-1'] = {
+        ...FakeServer.trade,
+        'state': 'cancelled',
+        'closedAt': '2026-09-09T08:55:00Z',
+        'closeReason': 'Den andre parten slettet kontoen sin',
+      };
+      await mount(tester, const NotificationsScreen());
+
+      expect(find.text('Byttet er avsluttet'), findsOneWidget);
+      // True in a ring of three as in a pair, and nothing about things
+      // coming free: most trades a deletion ends had nothing held.
+      expect(find.text('Noen i byttet slettet kontoen sin.'), findsOneWidget);
+      expect(find.textContaining('tilgjengelige'), findsNothing);
+      expect(find.text('Varsel'), findsNothing);
+
+      await tester.tap(find.text('Byttet er avsluttet'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TradeDetailScreen), findsOneWidget);
+      // The trade as it is now, ended, with the server's reason on it.
+      expect(find.text('Byttet er avsluttet'), findsOneWidget);
+      expect(find.text('Den andre parten slettet kontoen sin'), findsOneWidget);
+      expect(find.text('Tilbake til Bytter'), findsOneWidget);
+    });
+
+    testWidgets('12a …and a reason this app does not know yet still reads as an ended trade',
+        (tester) async {
+      server.overrides['GET /notifications'] = {
+        'notifications': [
+          {
+            'id': 'n5',
+            'type': 'trade_cancelled',
+            'payload': {'tradeId': 'trade-1', 'reason': 'something_new'},
+            'actorName': null,
+            'itemTitle': null,
+            'readAt': null,
+            'createdAt': '2026-09-09T08:55:00Z',
+          },
+        ],
+        'unread': 1,
+      };
+      await mount(tester, const NotificationsScreen());
+
+      expect(find.text('Byttet er avsluttet'), findsOneWidget);
+      expect(find.text('Åpne byttet for å se hvorfor.'), findsOneWidget);
+    });
+
     testWidgets('12a the words are assembled here, from ids', (tester) async {
       await mount(tester, const NotificationsScreen());
 
@@ -1393,6 +1496,21 @@ void main() {
       // The sheet says what the link is, because it is a key and not a preview.
       expect(find.textContaining('kan brukes én gang'), findsOneWidget);
       expect(server.requests, contains('POST /items/item-drill/share'));
+    });
+
+    testWidgets('04 a link that could not be made says so in coral, not in the report red',
+        (tester) async {
+      // `../CLAUDE.md`: two reds, and #E5484D is report and block. A refusal
+      // here is the «no» colour, as it is in a toast.
+      server.overrides['POST /items/item-drill/share'] = 500;
+      await mount(tester, const ItemDetailScreen(itemId: 'item-drill'));
+
+      await tester.tap(find.byIcon(Icons.ios_share));
+      await tester.pumpAndSettle();
+
+      final said = tester.widget<Text>(find.text('Noe gikk galt hos oss.'));
+      expect(said.style!.color, SwaplyColors.coral);
+      expect(said.style!.color, isNot(SwaplyColors.red));
     });
 
     testWidgets('04 «Kopier lenke» puts the whole line on the clipboard',
@@ -1686,10 +1804,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.uploadedNames, ['drill.jpg']);
-      // The strip draws the URL the server handed back, and the first one is
-      // the cover.
-      final image = tester.widget<Image>(find.byType(Image).first).image as NetworkImage;
-      expect(image.url, 'http://test/media/${FakeServer.storedPhoto}');
+      // The strip draws the picture picked, which the phone keeps — the
+      // draft goes up again from it if the server has let go of the upload
+      // by the time it is listed — and the first one is the cover.
+      final image = tester.widget<Image>(find.byType(Image).first).image as MemoryImage;
+      expect(image.bytes, [1, 2, 3]);
       expect(find.text('Forside'), findsOneWidget);
     });
 

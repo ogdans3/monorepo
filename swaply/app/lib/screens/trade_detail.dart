@@ -32,6 +32,7 @@ class MatchScreen extends StatefulWidget {
 
 class _MatchScreenState extends State<MatchScreen> {
   Trade? _trade;
+  ApiException? _error;
 
   @override
   void initState() {
@@ -39,18 +40,41 @@ class _MatchScreenState extends State<MatchScreen> {
     _load();
   }
 
+  /// The trade has opened on the server whether or not this page gets to
+  /// show it, so a failure here is the page's and not the trade's. It used to
+  /// be a toast over a spinner that went on turning on deep green, with no
+  /// header and nothing to press — the way out was the phone's own back, and
+  /// a browser has none on the page.
   Future<void> _load() async {
     try {
       final trade = await context.read<SwaplyApi>().trade(widget.tradeId);
-      if (mounted) setState(() => _trade = trade);
+      if (mounted) {
+        setState(() {
+          _trade = trade;
+          _error = null;
+        });
+      }
     } on ApiException catch (e) {
-      if (mounted) showError(context, e);
+      if (mounted) setState(() => _error = e);
     }
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   @override
   Widget build(BuildContext context) {
     final trade = _trade;
+    // The app's own failed page, as 06b draws it: «‹», and «Prøv igjen» for
+    // no answer. Not the celebration's green — nothing is being celebrated.
+    if (_error != null) {
+      return Scaffold(
+        appBar: swaplyAppBar(context, 'Bytte'),
+        body: LoadFailure(_error!, missing: 'Fant ikke byttet', onRetry: _retry),
+      );
+    }
     if (trade == null) {
       return const Scaffold(
         backgroundColor: SwaplyColors.greenDeep,
@@ -133,40 +157,44 @@ class _MatchScreenState extends State<MatchScreen> {
                     ),
                   ),
                 ),
-                Padding(
-                  // 34 at the foot, 11 of it inside «Fortsett å sveipe».
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 34 - 11),
-                  child: Column(
-                    children: [
-                      PrimaryButton(
-                        chain ? 'Start chat' : 'Se byttet',
-                        // 07i offers a chat, and means it: the three of them
-                        // arrange this one themselves, so the button goes to
-                        // the conversation rather than to an overview of a
-                        // trade nobody is facilitating.
-                        // The chat covers the bar, as this does; the trade is
-                        // drawn with it, so it goes into the tab underneath.
-                        onPressed: () => chain && trade.threadId != null
-                            ? Navigator.of(context).pushReplacement(MaterialPageRoute(
-                                builder: (_) => ThreadScreen(threadId: trade.threadId!)))
-                            : pushInTab<void>(context, TradeDetailScreen(tradeId: trade.id),
-                                replace: true),
-                      ),
-                      // Words under the button, answering across the 12
-                      // over them and the top of the foot.
-                      TapArea(
-                        room: const EdgeInsets.fromLTRB(12, 12, 12, 11),
-                        onTap: () => Navigator.of(context).maybePop(),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 2),
-                          child: Text('Fortsett å sveipe',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xA6FFFFFF))),
+                // The button and the words under it are both ways on, and a
+                // toast goes up over the two of them.
+                KeepClear(
+                  child: Padding(
+                    // 34 at the foot, 11 of it inside «Fortsett å sveipe».
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 34 - 11),
+                    child: Column(
+                      children: [
+                        PrimaryButton(
+                          chain ? 'Start chat' : 'Se byttet',
+                          // 07i offers a chat, and means it: the three of them
+                          // arrange this one themselves, so the button goes to
+                          // the conversation rather than to an overview of a
+                          // trade nobody is facilitating.
+                          // The chat covers the bar, as this does; the trade is
+                          // drawn with it, so it goes into the tab underneath.
+                          onPressed: () => chain && trade.threadId != null
+                              ? Navigator.of(context).pushReplacement(MaterialPageRoute(
+                                  builder: (_) => ThreadScreen(threadId: trade.threadId!)))
+                              : pushInTab<void>(context, TradeDetailScreen(tradeId: trade.id),
+                                  replace: true),
                         ),
-                      ),
-                    ],
+                        // Words under the button, answering across the 12
+                        // over them and the top of the foot.
+                        TapArea(
+                          room: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+                          onTap: () => Navigator.of(context).maybePop(),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 2),
+                            child: Text('Fortsett å sveipe',
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xA6FFFFFF))),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -335,8 +363,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
   /// Asked for when the page opens, and again after a pull or anything done
   /// on it. Only the first asking can fail into [LoadFailure]: after that the
   /// trade on screen stays and the failure is a toast over it. A pull with no
-  /// connection used to replace the trade with «Fant ikke byttet».
-  Future<void> _load() async {
+  /// connection used to replace the trade with «Fant ikke byttet». [quiet]
+  /// says nothing even then, for an asking whose news is already up.
+  Future<void> _load({bool quiet = false}) async {
     try {
       final trade = await context.read<SwaplyApi>().trade(widget.tradeId);
       if (mounted) {
@@ -349,7 +378,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
       if (!mounted) return;
       if (_trade == null) {
         setState(() => _error = e);
-      } else {
+      } else if (!quiet) {
         showError(context, e);
       }
     }
@@ -358,6 +387,16 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
   void _retry() {
     setState(() => _error = null);
     _load();
+  }
+
+  /// «Rapporter et problem med byttet». A report that blocked, once the
+  /// server has it, asks for the trade again, quietly — the thanks and the
+  /// block are the toast — so what is on screen is the trade as the server
+  /// has it across the block, and not as it was before.
+  Future<void> _report(Trade trade) async {
+    final blocked = await showReportSheet(context,
+        userId: trade.receivingFrom.id, personName: trade.receivingFrom.displayName);
+    if (blocked && mounted) await _load(quiet: true);
   }
 
   Future<void> _run(Future<Trade> Function(SwaplyApi api) action) async {
@@ -1216,8 +1255,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
           ),
           const SizedBox(height: Insets.md),
           TextButton.icon(
-            onPressed: () => showReportSheet(context,
-                userId: trade.receivingFrom.id, personName: trade.receivingFrom.displayName),
+            onPressed: () => _report(trade),
             icon: const Icon(Icons.flag_outlined, size: 17, color: SwaplyColors.red),
             label: const Text('Rapporter et problem med byttet',
                 style: TextStyle(color: SwaplyColors.red)),

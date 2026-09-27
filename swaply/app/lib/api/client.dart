@@ -28,9 +28,12 @@ class ApiException implements Exception {
   /// address, a request that took longer than [SwaplyApi.patience], or a page
   /// that is not JSON — a proxy's error page, a hotel wifi's sign-in. Nothing
   /// was said about what was asked, so nothing is known about it: a heart may
-  /// or may not have landed. [statusCode] is 0 even where a proxy sent one: it
-  /// is not Swaply's, and a screen that reads a 413 as «this picture is too
-  /// big» must not read it off a page the server never wrote.
+  /// or may not have landed, and so may anything else that changes something.
+  /// A screen that changed itself on the tap asks the server again behind
+  /// it, quietly, rather than trust either guess. [statusCode] is 0 even where
+  /// a proxy sent one: it is not Swaply's, and a screen that reads a 413 as
+  /// «this picture is too big» must not read it off a page the server never
+  /// wrote.
   ApiException.noContact()
       : statusCode = 0,
         code = noContactCode,
@@ -81,27 +84,42 @@ class SwaplyApi {
         if (token != null) 'authorization': 'Bearer $token',
       };
 
-  Future<dynamic> _send(String method, String path, [Object? body]) async {
-    final request = http.Request(method, Uri.parse('$baseUrl$path'))
-      ..headers.addAll(_headers(hasBody: body != null));
-    if (body != null) request.body = jsonEncode(body);
-    return _exchange(request, refused: 'Noe gikk galt. Prøv igjen.', patience: patience);
-  }
+  Future<dynamic> _send(String method, String path, [Object? body]) async =>
+      _exchange((giveUp) {
+        final request = http.AbortableRequest(method, Uri.parse('$baseUrl$path'),
+            abortTrigger: giveUp)
+          ..headers.addAll(_headers(hasBody: body != null));
+        if (body != null) request.body = jsonEncode(body);
+        return request;
+      }, refused: 'Noe gikk galt. Prøv igjen.', patience: patience);
 
-  /// Sends [request] and reads the answer, and says every way of not getting
-  /// one as [ApiException.noContact]. Every screen catches [ApiException] and
-  /// nothing else: a dropped connection used to throw past all of them, so a
-  /// heart the server never heard stayed on and a form said nothing at all.
+  /// Sends the request [build] makes and reads the answer, and says every way
+  /// of not getting one as [ApiException.noContact]. Every screen catches
+  /// [ApiException] and nothing else: a dropped connection used to throw past
+  /// all of them, so a heart the server never heard stayed on and a form said
+  /// nothing at all.
   ///
-  /// The request is not called off when [patience] runs out — aborting one
-  /// takes a newer `http` than `pubspec.yaml` asks for — so it can still reach
-  /// the server late. Nobody is told it did, which is what «Vi får ikke
-  /// kontakt» already says: nothing is known either way.
-  Future<dynamic> _exchange(http.BaseRequest request,
+  /// When [patience] runs out the request is called off: [build] hands it the
+  /// future that does it, and the connection is closed rather than left to
+  /// deliver the request late — a «Ikke vis meg slike» the app had already
+  /// said failed used to be applied a minute after, with nothing on screen
+  /// to show it. Calling off cannot take back what already reached the
+  /// server, though, and a request that has been sent whole is carried out
+  /// whether or not anybody is still waiting for the answer. So for anything
+  /// that changes something, «Vi får ikke kontakt» still means that nothing
+  /// is known either way, and the next asking shows what is true.
+  Future<dynamic> _exchange(http.BaseRequest Function(Future<void> giveUp) build,
       {required String refused, required Duration patience}) async {
+    final giveUp = Completer<void>();
     final http.Response response;
     try {
-      response = await _client.send(request).then(http.Response.fromStream).timeout(patience);
+      response = await _client
+          .send(build(giveUp.future))
+          .then(http.Response.fromStream)
+          .timeout(patience, onTimeout: () {
+        giveUp.complete();
+        throw TimeoutException('No answer', patience);
+      });
     } on Exception {
       // `ClientException`, the socket's and the handshake's own, and the
       // timeout: all of them the connection, none of them the server. An
@@ -246,12 +264,13 @@ class SwaplyApi {
   /// Multipart, so the bytes are not base64'd into a third more of them, and
   /// without the JSON content type the rest of the client sends by default.
   Future<UploadedImage> uploadImage(List<int> bytes, {required String filename}) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/media'))
-      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
-    if (token != null) request.headers['authorization'] = 'Bearer $token';
-
-    final decoded = await _exchange(request,
-        refused: 'Bildet ble ikke lastet opp.', patience: uploadPatience);
+    final decoded = await _exchange((giveUp) {
+      final request =
+          http.AbortableMultipartRequest('POST', Uri.parse('$baseUrl/media'), abortTrigger: giveUp)
+            ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+      if (token != null) request.headers['authorization'] = 'Bearer $token';
+      return request;
+    }, refused: 'Bildet ble ikke lastet opp.', patience: uploadPatience);
     return UploadedImage.fromJson(decoded as Map<String, dynamic>);
   }
 
@@ -563,9 +582,15 @@ class SwaplyApi {
       _post('/admin/trades/$tradeId/act', {'as': as, 'action': action});
 
   /// «Få noen til å ville ha denne» — one directed edge, through the real heart.
-  Future<String?> adminWant(String itemId, {required String as}) async {
+  /// The trade it names may be one already open over the ring, which the
+  /// server says with `tradeIsNew: false`, as it does for a heart.
+  Future<({String? tradeId, bool tradeIsNew})> adminWant(String itemId,
+      {required String as}) async {
     final json = await _post('/admin/items/$itemId/want', {'as': as});
-    return json['tradeId'] as String?;
+    return (
+      tradeId: json['tradeId'] as String?,
+      tradeIsNew: json['tradeIsNew'] as bool? ?? true,
+    );
   }
 
   Future<void> adminExpireWithdrawal(String tradeId) async =>

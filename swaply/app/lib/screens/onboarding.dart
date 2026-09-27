@@ -226,27 +226,33 @@ class _InviteScreenState extends State<InviteScreen> {
               const SizedBox(height: Insets.xl),
               PrimaryButton('Se deg rundt', busy: _busy, onPressed: _lookAround),
               const SizedBox(height: Insets.sm),
-              SizedBox(
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0x55FFFFFF)),
-                    shape:
-                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+              // The other two ways in are ways in as much as the button is,
+              // and a refusal of «Se deg rundt» goes up over all three.
+              KeepClear(
+                child: SizedBox(
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0x55FFFFFF)),
+                      shape:
+                          RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+                    ),
+                    child: const Text('Lag profil med en gang',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
-                  child: const Text('Lag profil med en gang',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: Insets.sm),
-              TextButton(
-                onPressed: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const LoginScreen())),
-                child: const Text('Jeg har konto fra før',
-                    style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+              KeepClear(
+                child: TextButton(
+                  onPressed: () => Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => const LoginScreen())),
+                  child: const Text('Jeg har konto fra før',
+                      style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                ),
               ),
             ],
           ),
@@ -319,9 +325,16 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       // The ‹ may have taken this screen down while the answer was on its way.
       if (!mounted) return;
-      setState(() => _error = e.code == 'unauthorized'
-          ? 'Feil e-post eller passord.'
-          : e.message);
+      // A wrong address or password is `wrong_credentials`, in the server's
+      // own words since it has had a code of its own. A server from before
+      // that answered with the generic refusal, whose «Du må logge inn.» is
+      // for a request with no session behind it — said under «Logg inn» to
+      // somebody who just tried to, it read as the button doing nothing — so
+      // the sentence is the app's either way.
+      setState(() => _error = switch (e.code) {
+            'wrong_credentials' || 'unauthorized' => 'Feil e-post eller passord.',
+            _ => e.message,
+          });
     } catch (_) {
       // No answer, or none that could be read — a proxy's error page is not
       // JSON. It used to say nothing: the spinner stopped and the fields sat

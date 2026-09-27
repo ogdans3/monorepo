@@ -26,6 +26,61 @@ class DiscoverScreen extends StatefulWidget {
 
 class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn {
   final _search = TextEditingController();
+
+  /// The field's focus, which is only ever the person's to give it: a caret
+  /// and a keyboard nobody asked for cover half the grid. Two things gave it
+  /// anyway, and neither was a tap. See [_letGoOfSearch] for the one in the
+  /// app, and the heading in [build] for the one in a browser.
+  late FocusNode _searchFocus = _newSearchFocus();
+
+  FocusNode _newSearchFocus() =>
+      FocusNode(debugLabel: 'Oppdag, søk')..addListener(_letGoOfSearch);
+
+  /// Focus that leaves the field is not coming back to it. A route keeps a
+  /// history of what had focus in it and hands focus back to the last of
+  /// them when what covered it goes: a search typed, a card held down and
+  /// its sheet closed, and the field had the caret and the keyboard up again
+  /// without being touched. A node that is let go of leaves that history, so
+  /// the field is handed a new one — as it loses focus, not as it gets it.
+  ///
+  /// Not while it is the app that has lost the focus. In a browser, and on
+  /// a desktop, a window that loses focus — another tab, the address bar, a
+  /// word copied from somewhere else — takes it off the field until the
+  /// window has it back, and then gives it to the node that had it. A new
+  /// node there is one that never had it, and the caret the person left in
+  /// the field was gone when they came back to it. So the node is let go of
+  /// once the app is back in front, and only if the field did not get the
+  /// focus back with it; see [_backInFront].
+  void _letGoOfSearch() {
+    if (_searchFocus.hasFocus || !mounted) return;
+    final app = WidgetsBinding.instance.lifecycleState;
+    if (app != null && app != AppLifecycleState.resumed) {
+      _letGoWhenBack = true;
+      return;
+    }
+    final old = _searchFocus;
+    setState(() => _searchFocus = _newSearchFocus());
+    // Once the field has taken the new one in the frame, and let go of this.
+    WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+  }
+
+  /// The field lost the focus while the app was not in front; see
+  /// [_letGoOfSearch].
+  bool _letGoWhenBack = false;
+  late final AppLifecycleListener _lifecycle;
+
+  /// After the frame the app comes back in, by when the focus that was
+  /// taken away with the window has been given back. A field still without
+  /// it is one whose focus something else took meanwhile — a sheet that went
+  /// up while the window was away — and the window gives nothing back then;
+  /// it is let go of now, as it would have been had the app been in front.
+  void _backInFront() {
+    if (!_letGoWhenBack) return;
+    _letGoWhenBack = false;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) => _letGoOfSearch())
+      ..scheduleFrame();
+  }
   SearchFilters _filters = const SearchFilters();
 
   bool _loading = true;
@@ -86,12 +141,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(onResume: _backInFront);
     _load();
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _search.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -203,6 +261,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
     } on ApiException catch (e) {
       if (mounted) setState(() => _hidden.remove(guess));
       showErrorOn(messenger, e);
+      // No answer is not a no. The request is called off when the api gives
+      // up on it, but one that reached the server whole is carried out all
+      // the same, and the kind comes back here while the server has it
+      // hidden. Asked again behind the grid, the server says which — and so
+      // does 16b's count.
+      if (e.isNoContact) {
+        unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
+        if (mounted) await _load(quiet: true);
+      }
     }
   }
 
@@ -252,15 +319,33 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
       currentTab: 0,
       child: Column(
         children: [
+          // The screen's name, for a screen reader alone, in the 6 over the
+          // field. The export draws no title here — the field is the top of
+          // the screen — and in a browser with a screen reader on, a page
+          // that appears is given focus on its first focusable thing when
+          // nothing on it has asked for focus: after a sheet closed, since a
+          // sheet takes the page out of what a screen reader reads, and after
+          // signing in, which builds the page anew. That was the field, and it
+          // took the focus as if tapped: a caret, and a keyboard. A heading
+          // comes first and takes it instead, as the name of where you are,
+          // which is what a page that appears should say.
+          Semantics(
+            container: true,
+            header: true,
+            label: 'Oppdag',
+            child: const SizedBox(height: 6, width: double.infinity),
+          ),
           Padding(
             // 18 at the sides on this screen, 6 above and 10 below the field —
-            // the 10 below inside the chips, which answer across it.
-            padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+            // the 6 above in the heading, and the 10 below inside the chips,
+            // which answer across it.
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _search,
+                    focusNode: _searchFocus,
                     textInputAction: TextInputAction.search,
                     onSubmitted: (_) => _load(),
                     style: const TextStyle(
@@ -885,9 +970,20 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     super.dispose();
   }
 
+  /// The chips under a category are a way to narrow it, and the search goes
+  /// on without them: with no answer they are left out, quietly, as the count
+  /// on the button is, and the category is searched whole. It used to have no
+  /// catch at all, so no contact was an error nothing caught. Only the answer
+  /// for the category still chosen is taken — picked again meanwhile, the
+  /// older one landing last put its chips under the newer.
   Future<void> _loadSubcategories() async {
-    final list = await context.read<SwaplyApi>().subcategories(_category!);
-    if (mounted) setState(() => _subcategories = list);
+    final category = _category!;
+    try {
+      final list = await context.read<SwaplyApi>().subcategories(category);
+      if (mounted && _category == category) setState(() => _subcategories = list);
+    } on ApiException {
+      // Nothing to say: see above.
+    }
   }
 
   /// How many times the count has been asked for. Typing asks at every

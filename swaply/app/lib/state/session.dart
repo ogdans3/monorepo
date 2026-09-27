@@ -6,14 +6,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
+import '../util/clock.dart';
+import 'draft_store.dart';
 import 'listing_draft.dart';
 
 /// Who is signed in, plus the two counters the bottom bar draws: unread chats
 /// and trades waiting on you.
 class Session extends ChangeNotifier {
-  Session(this.api);
+  Session(this.api, {DraftStore? drafts}) : drafts = drafts ?? DraftStore();
 
   final SwaplyApi api;
+
+  /// 10b as each account on this phone left it. Here rather than in the form
+  /// because who a draft belongs to changes here: a sign-in hands it on, and
+  /// «Logg ut» forgets it.
+  final DraftStore drafts;
 
   Me? me;
   bool loading = true;
@@ -51,7 +58,9 @@ class Session extends ChangeNotifier {
 
   /// 10b as it stood when 10c went up over it, until 10c is done with. Here
   /// rather than in the form, because signing in on 10c builds a new app and
-  /// the form goes with the old one; see [ListingDraft].
+  /// the form goes with the old one; see [ListingDraft]. Also a listing the
+  /// app was closed or killed in the middle of sending, found on the next
+  /// start; see [_recognise].
   ListingDraft? listingToFinish;
 
   /// True until the interest picker has been through once. Screen 02 is the
@@ -168,8 +177,14 @@ class Session extends ChangeNotifier {
   Future<void> _recognise() async {
     final asked = _decided;
     final found = await api.me();
+    _lastHeard = now();
     final prefs = await SharedPreferences.getInstance();
+    // A listing that was on its way out when the app was closed or killed —
+    // signed in on 10c, pictures still going up — is finished now, as it
+    // would have been: the gate opens on Legg ut, and the form sends it.
+    final unfinished = found.anonymous ? null : await drafts.unfinished(found.id);
     if (asked != _decided) return;
+    listingToFinish ??= unfinished;
     interestsPending = found.interests.isEmpty && prefs.getString(_pickerKey) == found.id;
     _become(found);
   }
@@ -422,6 +437,14 @@ class Session extends ChangeNotifier {
     if (asked != _decided) return;
     api.token = started.token;
     me = started.me;
+    // Nobody was signed in, so whoever last was is gone from this phone:
+    // signed out, or turned away by the server — deleted, folded, or a
+    // stranger left unused for too long. What they were writing is theirs,
+    // and nobody can open it now. Not while an admin's own account is parked
+    // behind a switch: that one is coming back. Not waited for — the store
+    // takes one step at a time, so no draft of this stranger's can be kept
+    // before it.
+    if (_adminToken == null) unawaited(drafts.forgetAllBut(me!.id));
     letGoOfInvite();
     // An answer, if a late one: whatever the splash said about there being
     // none is no longer so.
@@ -495,6 +518,7 @@ class Session extends ChangeNotifier {
         // was open over the invitation, and under it since — still is. Read
         // after the wait, so it is about the stranger that is claimed.
         final claiming = anonymous;
+        final stranger = claiming ? me?.id : null;
         final through = await _throughThePicker();
         // Claiming is what an unclaimed test account is for, and the session
         // the switcher minted survives it on the server — the way back to the
@@ -515,6 +539,9 @@ class Session extends ChangeNotifier {
         letGoOfInvite();
         if (!acting) _adminToken = null;
         interestsPending = made.interests.isEmpty && !(claiming && through);
+        // A claim keeps the id, and the draft with it. Should the server
+        // ever make a new account instead, the draft still goes with them.
+        await _carryDraft(stranger);
         await _persist();
         notifyListeners();
         if (acting) {
@@ -552,6 +579,7 @@ class Session extends ChangeNotifier {
         // account, whose picks stay in the ring — nobody's walk through it
         // comes along, and an account with no interests gets it once.
         final through = await _throughThePicker();
+        final stranger = anonymous ? me?.id : null;
         final signed = await api.login(email, password);
         _decided++;
         me = signed.me;
@@ -560,6 +588,7 @@ class Session extends ChangeNotifier {
         // for whoever this is, and the next switch went back to it.
         _adminToken = null;
         interestsPending = me!.interests.isEmpty && !(signed.folded && through);
+        await _carryDraft(stranger);
         await _persist();
         // Signed in from here on, whatever happens next. The server has said
         // so and the token is kept, and the stranger this phone was is gone: a
@@ -575,6 +604,17 @@ class Session extends ChangeNotifier {
         }
         return signed.carriedLikes;
       });
+
+  /// The stranger's half-written 10b goes where the stranger went: a sign-in
+  /// folds it into another account, and the draft kept by its id would be
+  /// left with an account that no longer exists. Before the token is kept, so
+  /// a phone that dies in between never holds the account without the draft.
+  /// Handed over as one to finish when 10c was on its way to listing it.
+  Future<void> _carryDraft(String? stranger) async {
+    final now = me?.id;
+    if (stranger == null || now == null || stranger == now) return;
+    await drafts.handOver(stranger, now, finish: listingToFinish != null);
+  }
 
   Future<void> logout() async {
     try {
@@ -595,6 +635,9 @@ class Session extends ChangeNotifier {
     // last person's device account, or refused as a claimed one.
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('deviceId');
+    // And a draft is somebody's pictures of their own things, often of their
+    // own home: every one on the phone goes, not only the account's.
+    await drafts.forgetAll();
     await _persist();
     notifyListeners();
   }
@@ -602,9 +645,62 @@ class Session extends ChangeNotifier {
   Future<void> refresh() async {
     final asked = _decided;
     final found = await api.me();
+    _lastHeard = now();
     // A screen of the stranger's asking as the sign-in lands: it would put
     // the stranger back, over the account the likes were just folded into.
     if (asked == _decided) _become(found);
+  }
+
+  /// When the server last answered this phone about who it is — a cold
+  /// start, or any [refresh]. Only an answer: an asking that got none may
+  /// never have reached it, and counting it kept the next return to the app
+  /// quiet — a lift with no signal, the app put away and brought back forty
+  /// seconds later with one, and that opening was never heard. For [wake].
+  DateTime? _lastHeard;
+
+  /// The asking [wake] has out, so a second return while it is on its way
+  /// does not send another.
+  Future<void>? _waking;
+
+  /// How often coming back to the app asks the server again, at most.
+  static const wakeEvery = Duration(minutes: 1);
+
+  /// The app came back from the background, or a browser tab came back into
+  /// view: ask the server who this is, quietly.
+  ///
+  /// A device account is deleted after twelve months in which its own token
+  /// asked the server nothing, and the product owner's rule about what counts
+  /// is strict: opening the app does. A cold start asks, restoring the token;
+  /// an app brought back from the background asked nothing until somebody
+  /// pressed something, so a phone opened every week to look at the grid it
+  /// already held was, to the server, a phone nobody used. The answer also
+  /// brings the bar's counts up to date, which is worth having on the way
+  /// back.
+  ///
+  /// At most once a [wakeEvery] after an answer, counting any since: flicking
+  /// between apps, or a browser tab losing and taking focus, is not a request
+  /// each time. After no answer the next return asks again — once for each
+  /// time the person comes back, and never on its own. Never says anything:
+  /// no answer, or a refusal, is for the next thing the person does to find
+  /// out.
+  ///
+  /// On the splash that is saying there was no answer, coming back is
+  /// «Prøv igjen», pressed by opening the app: whoever this phone is — the
+  /// token kept from last time, or the stranger it was being made — has just
+  /// opened it. The splash's button spins meanwhile, as it does when pressed.
+  Future<void> wake() async {
+    if (loading || starting || _waking != null) return;
+    if (!signedIn && !stalled) return;
+    final last = _lastHeard;
+    if (last != null && now().difference(last) < wakeEvery) return;
+    final asking = _waking = signedIn ? refresh() : retry();
+    try {
+      await asking;
+    } catch (_) {
+      // See above: quiet.
+    } finally {
+      if (identical(_waking, asking)) _waking = null;
+    }
   }
 
   void _become(Me found) {

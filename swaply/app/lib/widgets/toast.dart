@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../design/tokens.dart';
 import 'common.dart' show TapArea;
@@ -157,9 +158,13 @@ class SwaplyToast extends StatelessWidget {
   }
 }
 
-/// A screen's primary action, which a toast never lies over. [PrimaryButton]
-/// is one of these by itself; a screen whose primary action is something else
-/// — the composer on 06g, the heart at the foot of 04 — says so with this.
+/// A screen's action, which a toast never lies over. [PrimaryButton] and
+/// [SecondaryButton] are each one of these by themselves; anything else a
+/// screen acts with — the composer on 06g, the heart at the foot of 04, the
+/// words under the button on 06a and on the invitation — says so with this.
+/// The trade screen used to be the exception that proved the need: in most of
+/// its states its foot is outlined buttons only, «Trekk deg fra byttet» or
+/// «Tilbake til Bytter», and a refusal lay across them.
 ///
 /// It draws nothing and lays nothing out. A toast used to sit 14 above the
 /// foot of whatever screen it was on, and on a screen drawn without the bar —
@@ -332,24 +337,66 @@ double _footMargin(ScaffoldMessengerState messenger, String message, String? act
   );
 }
 
+/// How many toasts have been asked for, so a toast can tell whether it is
+/// still the newest: only the newest is placed again; see [showToastOn].
+int _raised = 0;
+
 /// Shown through the messenger rather than an overlay of our own, so a swipe
 /// dismisses it and a screen that leaves takes its toast with it.
+///
+/// Placed as it goes up, and once more when the frame it went up in is drawn.
+/// A toast is often said in the same moment as a page comes or goes — «Lagt
+/// ut» and the tab it lands on, a block and the listing it leaves — and then
+/// the page it was measured against is the one on its way out: the one coming
+/// in is not built until the next frame, and the one a pop uncovers is still
+/// offstage. So it lay across the new page's buttons, or stood high over a
+/// foot that was no longer there. By the end of that frame the page that
+/// stays is laid out and current, and a toast whose place has changed is put
+/// up again in it, before anybody can have read it where it was.
 void showToastOn(ScaffoldMessengerState? messenger, ToastTone tone, String message,
     {ToastAction? action}) {
   if (messenger == null) return;
-  final marks = _marks[tone]!;
-  late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason> shown;
+  final raised = ++_raised;
   // Replace rather than queue: two refusals in a row means the second one is
   // the one you are waiting for.
   messenger.hideCurrentSnackBar();
-  shown = messenger.showSnackBar(SnackBar(
+  final margin = _footMargin(messenger, message, action?.label);
+  var shown = _present(messenger, tone, message, action, margin);
+  SchedulerBinding.instance.addPostFrameCallback((_) {
+    // A newer toast is up, or this one has gone already: nothing to place.
+    if (raised != _raised || !messenger.mounted || shown.gone) return;
+    final settled = _footMargin(messenger, message, action?.label);
+    if ((settled - margin).abs() < 0.5) return;
+    // Out of the queue, and down if it is showing — it has been up for one
+    // frame of its entrance, so going down is as quick — and up again where
+    // it belongs. Whatever else is still going down goes on doing so first.
+    messenger.clearSnackBars();
+    shown = _present(messenger, tone, message, action, settled);
+  });
+}
+
+/// One toast in the messenger, and whether it has gone.
+class _Shown {
+  _Shown(this.controller) {
+    controller.closed.whenComplete(() => gone = true);
+  }
+
+  final ScaffoldFeatureController<SnackBar, SnackBarClosedReason> controller;
+  bool gone = false;
+}
+
+_Shown _present(ScaffoldMessengerState messenger, ToastTone tone, String message,
+    ToastAction? action, double margin) {
+  final marks = _marks[tone]!;
+  late final _Shown shown;
+  shown = _Shown(messenger.showSnackBar(SnackBar(
     content: SwaplyToast(
       message,
       tone: tone,
       action: action == null
           ? null
           : ToastAction(action.label, () {
-              shown.close();
+              shown.controller.close();
               action.onPressed();
             }),
     ),
@@ -361,9 +408,10 @@ void showToastOn(ScaffoldMessengerState? messenger, ToastTone tone, String messa
     behavior: SnackBarBehavior.floating,
     // The room under the card is the margin's, which a touch goes through:
     // lifted over a button, the button still answers under it.
-    margin: EdgeInsets.fromLTRB(_edge, 0, _edge, _footMargin(messenger, message, action?.label)),
+    margin: EdgeInsets.fromLTRB(_edge, 0, _edge, margin),
     dismissDirection: DismissDirection.horizontal,
-  ));
+  )));
+  return shown;
 }
 
 /// An [ApiException] already carries Norwegian a person can read, so the

@@ -582,8 +582,8 @@ bool _answersTaps(HitTestTarget target) => switch (target) {
       _ => false,
     };
 
-/// The pill button every screen ends with, and so the one thing a toast is
-/// never laid over; see [KeepClear].
+/// The pill button every screen ends with, and so a thing a toast is never
+/// laid over; see [KeepClear].
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton(this.label,
       {super.key,
@@ -646,7 +646,8 @@ class PrimaryButton extends StatelessWidget {
 
 /// Three outlined looks from the export: plain, «Avslå» (badge red on a pink
 /// edge — the same pair as the ✕ on the item screen) and the green outline of
-/// «Foreslå motbytte».
+/// «Foreslå motbytte». Kept clear of by a toast as [PrimaryButton] is: at the
+/// foot of the trade screen it is often the only button there.
 class SecondaryButton extends StatelessWidget {
   const SecondaryButton(this.label,
       {super.key, this.onPressed, this.destructive = false, this.accent = false, this.height = 52});
@@ -669,22 +670,24 @@ class SecondaryButton extends StatelessWidget {
         : accent
             ? SwaplyColors.greenPressed
             : const Color(0x22064E3B);
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colour,
-          backgroundColor: destructive ? Colors.white : null,
-          side: BorderSide(color: edge),
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+    return KeepClear(
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colour,
+            backgroundColor: destructive ? Colors.white : null,
+            side: BorderSide(color: edge),
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: accent ? 14 : 15,
+                  fontWeight: destructive || accent ? FontWeight.w700 : FontWeight.w600)),
         ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: accent ? 14 : 15,
-                fontWeight: destructive || accent ? FontWeight.w700 : FontWeight.w600)),
       ),
     );
   }

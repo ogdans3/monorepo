@@ -199,31 +199,36 @@ class _AgreementScreenState extends State<AgreementScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-              child: Column(
-                children: [
-                  SwipeToConfirm(
-                    label: 'Sveip for å godta byttet',
-                    enabled: _accepted && !_busy,
-                    onConfirmed: _accept,
-                  ),
-                  // The 10 over it and the 12 under it, and the foot of the
-                  // track above, where the knob never goes.
-                  TapArea(
-                    room: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                    reach: const EdgeInsets.only(top: 2),
-                    onTap: () => Navigator.of(context).pop(false),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 2),
-                      child: Text('Avbryt',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: SwaplyColors.grey)),
+            // The swipe and «Avbryt» under it are the screen's two actions,
+            // and a toast goes up over both: the refusal of a swipe used to
+            // lie across «Avbryt», the other thing to do about it.
+            KeepClear(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+                child: Column(
+                  children: [
+                    SwipeToConfirm(
+                      label: 'Sveip for å godta byttet',
+                      enabled: _accepted && !_busy,
+                      onConfirmed: _accept,
                     ),
-                  ),
-                ],
+                    // The 10 over it and the 12 under it, and the foot of the
+                    // track above, where the knob never goes.
+                    TapArea(
+                      room: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                      reach: const EdgeInsets.only(top: 2),
+                      onTap: () => Navigator.of(context).pop(false),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Text('Avbryt',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: SwaplyColors.grey)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

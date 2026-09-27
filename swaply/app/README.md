@@ -128,6 +128,18 @@ with nothing to tap.
   shown once and not on every start.
 - **A claimed device** — its account got a name, then the token went missing —
   is refused by its old id. The app makes a new one and starts over, once.
+- **Opening the app reaches the server.** A device that only looked around is
+  deleted after twelve months in which its own token asked the server
+  nothing, and opening the app counts. A cold start asks `GET /me` as it
+  restores the token; an app brought back from the background, or a browser
+  tab brought back into view, asked nothing until somebody pressed something.
+  Now `Session.wake` asks, quietly — no toast — at most once a minute after an
+  answer, counting any `GET /me` answered since, so flicking between apps is
+  not a request each time. An asking that got no answer may never have
+  arrived, so the next return asks again. On the splash that is saying there
+  was no answer, coming back is «Prøv igjen», and its button spins as if
+  pressed: the kept token is somebody's, and they have just opened the app.
+  Once for each return, never on a timer. `test/activity_test.dart` holds it.
 
 A stranger may look and wish. Making a profile on 10c **claims** it: the same
 account, so the same shell, with a half-filled 10b still behind it and no
@@ -242,8 +254,46 @@ before a sign-in brought other kinds along or another phone hid one; and a
 second hide on the screen spends the first toast's «Angre». A report that
 blocked, once the server has taken it, or the owner's profile closed again,
 asks for the grid behind it, so a block takes their things away.
+
+A block can be made from three other places, and each used to leave the
+person on screen. From «⋯» on 04 the page goes — across a block the server has
+no such listing for you — and the grid under it asks again as it comes back.
+From «⋯» on 13b the profile is asked for again and stays: the server keeps it
+readable because that is where a block is taken back, so it comes back with
+none of their things, the line saying they are blocked and «Opphev
+blokkeringen» behind «⋯»; a listing of theirs it was opened from goes when it
+is come back to. From «Rapporter et problem» on a finished trade the trade is
+asked for again. Each waits for the server's answer, and a report that did not
+block asks for nothing. The thanks say the block — «Takk. Vi ser på
+rapporten. Kari er blokkert.» — since the screen changes in the same moment.
+`test/block_test.dart` holds all three.
 `test/heart_test.dart` holds all of it frame by frame, against a server that
 takes as long to answer as a network does.
+
+The search field has the focus only when somebody gives it the focus. Two
+things gave it without a tap. A route hands focus back to whatever had it
+last when what covered it goes, so a search typed, a card held down and its
+sheet closed brought the keyboard back; the field now lets go of its focus
+node as it loses focus, and nothing has it to give back — except when it is
+the window that lost it: a browser takes the focus off the field while
+another tab or the address bar has it, and gives it back to the same node
+when the window returns, so the node is kept then. And in a browser with
+a screen reader on, a page that appears with nothing on it asking for focus is
+focused by the web engine on its first focusable thing — after a sheet closes,
+since a sheet takes the page out of what a screen reader reads, and after
+signing in, which builds the page anew — and an edit field takes that as a
+tap. Oppdag draws no title, so the field was first. A heading, «Oppdag», for a
+screen reader alone, now sits in the 6 over the field and takes it instead.
+`test/focus_test.dart` holds both; the browser half is held on the rule the
+engine applies, since a widget test has no browser to run it in.
+
+A hide that gets no answer puts the kind back, says «Vi får ikke kontakt …», and
+asks for the grid again behind it, quietly. The request is called off when the
+api gives up on it, but calling off closes the connection and nothing more: a
+request that reached the server whole is carried out whether anybody still
+waits for the answer or not. So no answer is not a no, and the grid asked for
+after it is what shows whether the kind is hidden. `test/abort_test.dart` holds
+both halves.
 
 The shell is keyed by who is signed in, so switching accounts or signing out
 never leaves the last person's stacks on screen. A tab's old address —
@@ -256,7 +306,10 @@ the goldens are still the screens as the export draws them.
 
 One place where the export and the app do not agree about the bar: 10b is
 drawn without it, as step one of two, and is also the Legg ut tab, so a new
-listing is written with the bar under it. The «Legg ut» buttons elsewhere open
+listing is written with the bar under it. There it keeps 12 under «Neste»
+rather than the export's 30, which is room over the home indicator that the
+bar keeps itself: with both, «Kun by vises for andre» was cut off at the edge
+of the form, and the export shows it whole. The «Legg ut» buttons elsewhere open
 that tab rather than a second form. 06c and 09a draw no bar of their own, so
 their goldens, which mount them alone, have none where the export does; in the
 app it is the shell's, under them.
@@ -331,6 +384,63 @@ tile gets a coral edge, and its ✕ takes it out. Somebody with a profile has ea
 picture sent as it is picked, as before, and «Legg ut» waits while one is on
 its way.
 
+## A listing half written is kept on the phone
+
+Closing the app, or the phone killing it in the background, used to throw 10b
+away: what was typed, and every picture a stranger's phone was holding for it.
+10c is where somebody puts the phone down to go and find a password, so it is
+also where this hurt most. Now the form is kept as it is filled in
+(`state/draft_store.dart`), and the app opened again has it back in Legg ut —
+the words, the type, category and condition, the town beside the postcode and
+the pictures in their order — whether it was killed on 10b or with 10c over it.
+It still opens where it always does; only a listing that was on its way out
+opens it on Legg ut.
+
+- **Where.** The fields are one record in the preferences; each held picture is
+  a file of its own in `drafts/` under the app's support directory — not
+  Documents, which Files on iOS shows to the person. A picture the server has
+  already — somebody with a profile, or one sent after 10c — is kept as its
+  path and when it was sent, and its bytes are kept too: the server sweeps an
+  upload no listing has taken up after a day, so a path older than twenty
+  hours is not trusted, and the picture goes up again from the phone when the
+  draft is listed — or is left out, where only the path was kept. A picture
+  is written under a temporary name and renamed into place
+  before the record naming it, so a phone that dies half-way leaves a draft
+  that loads: a record that does not read is dropped with its pictures, a
+  picture that is missing or not whole is left out and the rest come back, and
+  files no record names are swept.
+- **Whose.** By account id: nobody on a shared phone sees another's, and a test
+  account keeps its own apart from the admin's. A claim on 10c keeps the id; a
+  sign-in, which folds the stranger into another account, hands the draft to
+  that account before the new token is kept. A draft handed over from 10c is
+  marked as on its way out, and so is any listing while its pictures go up:
+  killed then, the next start opens on Legg ut and finishes it, sending only
+  the pictures that had not gone — if that start comes within five minutes.
+  Swiping the app away is the one way to stop a «Legg ut» once pressed, and a
+  start a week later is somebody opening the app to look around: the form
+  comes back instead, for them to press. The mark comes off before the listing itself
+  is asked for, so one whose answer was lost is never sent twice on its own —
+  the form comes back instead, and 13 says whether it went.
+- **Until when.** It goes when the listing goes out; when the form is emptied
+  — there is no «Forkast», the export draws none, so a form with nothing typed
+  and no pictures is no draft, and a type or category chosen on its own keeps
+  nothing; on «Logg ut», which takes every draft on the phone, since a draft is
+  pictures of somebody's things in somebody's home; when the account is
+  deleted; and when the phone is made a new stranger, which means whoever was
+  signed in before can no longer be — signed out, or turned away by the server.
+- **In a browser** there is no folder. The record goes in the browser's storage
+  with the pictures in it as base64 while they come to under three million
+  characters, and without them beyond that: the words come back and the
+  pictures are picked again. A browser whose storage is fuller than that keeps
+  the words the same way. Tabs of the site share that storage, and each
+  answers from the copy it read when it opened, so clearing drafts reads it
+  again first: «Logg ut» in one tab also takes a draft another tab kept since.
+  A tab still showing the old account can keep its draft again afterwards —
+  the app does not follow a sign-out made in another tab at all — and the next
+  «Logg ut», or the next new stranger, takes it.
+
+`test/draft_test.dart` holds all of it, killing the app between steps.
+
 ## The town beside the postcode
 
 The export draws 10b's postcode as «7030 Trondheim»: the digits, and the town
@@ -366,6 +476,13 @@ screen — a push notification, not a screen with a back button — so it never 
 a door into the list of them inside the app. The screen was built anyway, and
 without that row nothing could open it.
 
+12a words every kind the server sends, from ids, as the lock screen the
+export drew it as would. A trade ended because somebody in it deleted their
+account comes as `trade_cancelled` with the reason `account_deleted`, and says
+«Byttet er avsluttet» and why; a reason the app does not know yet still says
+the trade ended, and the trade says the rest. It opens the trade, which shows
+it ended, with the server's reason on it.
+
 **«Vis alt på Oppdag igjen» on 16b**, under «Oppdag», with how much is hidden
 beside it — kinds, and listings hidden alone while they can still be shown —
 and only while any are, which is why the export's 16b, whose Ola has hidden
@@ -378,10 +495,18 @@ after, so the count and the row go.
 The export draws «Juridisk og personvern» at the foot of 16b and nothing behind
 it, and it was a dialog. It is a screen of its own now, drawn without the bar
 like 16b: what the product says about itself — the trade is between you, no
-fødselsnummer, what deletion keeps — and at its foot, as a row in a card the
-way «Logg ut» is on 16b, **«Slett kontoen»**. A device looking around never
-gets there: its 13 is an invitation to make a profile, and there is nothing to
-delete.
+fødselsnummer, what deletion keeps, and that an account that only looked
+around is deleted after twelve months in which the app was never opened — and
+at its foot, as a row in a card the way «Logg ut» is on 16b, **«Slett
+kontoen»**. Under everything, in small grey type, is the attribution NLOD 2.0
+asks for of anybody using Bring's postcode register: the licensor, the
+licence and where to find both, and that we changed it — the same facts as the
+header of `backend/src/lib/postcode-register.ts`, in Norwegian and where a
+person can read them. A device looking around has no 16b, so its 13 — an
+invitation to make a profile — carries the way here itself, a quiet line under
+«Har du konto? Logg inn», and says the twelve-month rule in its own words:
+the likes are kept on an account for the device, and go with it. «Slett
+kontoen» is not drawn for a device; there is no profile to delete.
 
 The row opens a sheet with one sentence of what happens — the profile emptied
 and the things taken down at once, trades under way ended, a minimal record
@@ -420,12 +545,25 @@ A toast never lies over the screen's primary action. It sits 14 above the foot
 of its screen — the bar, in a tab, whose screens end where the bar begins; the
 keyboard, when it is up — unless that is where the action is, which on a screen
 drawn without the bar (02, 10b, 10c, a chat) it is. Then it goes up to 14 above
-it. What counts is measured as the toast goes up: every `PrimaryButton`, and
-anything wrapped in `KeepClear` — the composer on 06g, the heart and ✕ at the
-foot of 04 — that is on screen at that moment. Nothing covering the page, no
-tab out of sight, no button scrolled out of its list. The room under a lifted
-toast is margin, so the button under it still answers. A toast can carry one
-word of a way back at its right edge, «Angre», which takes it down as well.
+it. What counts is every `PrimaryButton` and every `SecondaryButton` — the
+trade screen's foot is outlined buttons only in most of its states, «Trekk deg
+fra byttet» or «Tilbake til Bytter», and a refusal lay across them — and
+anything wrapped in `KeepClear`: the composer on 06g, the heart and ✕ at the
+foot of 04, the swipe and «Avbryt» on 06c, the words under 06a's button and
+the invitation's. Nothing covering the page, no tab out of sight, no button
+scrolled out of its list. The room under a lifted toast is margin, so the
+button under it still answers. A toast can carry one word of a way back at its
+right edge, «Angre», which takes it down as well.
+
+It is measured as it goes up, and once more when the frame it went up in has
+been drawn. A toast is often said in the same moment as a page comes or goes —
+a listing out and the tab it lands on, a block and the page it leaves — and
+then the page it was measured against is the one leaving: the new one is not
+built until the next frame, and the one a pop uncovers is still offstage. A
+toast whose place has changed by then is put up again where it belongs,
+before anybody can have read it where it was. `test/toast_test.dart` holds the
+rules, and `test/tap_targets_test.dart` raises one over every screen and holds
+it off every target outside a list.
 
 A page asked for again keeps what it has. Every failure to get an answer is
 `ApiException.noContact`, and it reached error states written for refusals: a
@@ -438,6 +576,11 @@ igjen»; after that the page stays, and a pull that fails says so in a toast
 over it (a tab coming back keeps quiet, as Oppdag's does). A detail page that
 could not get its one thing at all says «Fikk ikke kontakt» for no answer and
 «Fant ikke …» only for the server's no — `LoadFailure` in `widgets/common.dart`.
+06a is one of them: it said no answer in a toast and went on spinning on deep
+green with no header and nothing to press. It has the app's own failed page
+now, with «‹». The subcategories on 05b are a way to narrow a category and the
+search goes on without them, so no answer about them leaves them out quietly,
+as it does the count on the button.
 `test/no_contact_test.dart` holds each of them.
 
 ## Two things that are honest about being unfinished

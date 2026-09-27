@@ -72,7 +72,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   /// Asked for when the page opens, and again after the listing is edited or
   /// the test tooling has made somebody want it. Only the first asking can fail into [LoadFailure]:
   /// after that the listing stays and the failure is a toast over it.
-  Future<void> _load() async {
+  ///
+  /// [leaveIfGone] is for coming back from the owner's profile, where a block
+  /// may have been made: across a block the server has no such listing for
+  /// you, and a page of it left standing was the owner's things still on
+  /// screen after the person had asked never to see them. So a listing that
+  /// is gone takes the page with it, without a word — the block said its
+  /// own — and no answer then keeps quiet, as a tab coming back does.
+  Future<void> _load({bool leaveIfGone = false}) async {
     try {
       final item = await context.read<SwaplyApi>().item(widget.itemId);
       if (mounted) {
@@ -88,8 +95,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       if (!mounted) return;
       if (_item == null) {
         setState(() => _error = e);
-      } else {
+      } else if (!leaveIfGone) {
         showError(context, e);
+      } else if (e.statusCode == 404) {
+        Navigator.of(context).maybePop();
       }
     }
   }
@@ -373,12 +382,21 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 onTap: () async {
                   Navigator.of(sheet).pop();
                   try {
-                    final tradeId = await api.adminWant(item.id, as: account.id);
-                    if (tradeId == null) {
+                    final wanted = await api.adminWant(item.id, as: account.id);
+                    if (wanted.tradeId == null) {
                       showNoteOn(messenger, '${account.displayName} vil ha den. Ingen sirkel ennå.');
+                    } else if (!wanted.tradeIsNew) {
+                      // Pressed again on something the account already
+                      // wants: the server names the trade already open over
+                      // that ring rather than opening a second, and saying
+                      // the circle closed read as a new trade.
+                      showNoteOn(
+                          messenger,
+                          '${account.displayName} vil ha den. Sirkelen har allerede '
+                          'et åpent bytte.');
                     } else {
                       showDoneOn(messenger,
-                          '${account.displayName} vil ha den — og sirkelen lukket seg!');
+                          '${account.displayName} vil ha den, og sirkelen lukket seg.');
                       // A trade of yours opened, and the bar counts them.
                       unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
                     }
@@ -450,8 +468,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       if (mine) {
                         _ownItemMenu(item);
                       } else {
-                        showReportSheet(context,
-                            itemId: item.id, personName: item.owner?.displayName);
+                        _report(item);
                       }
                     }),
                   ],
@@ -483,6 +500,20 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         ],
       ),
     );
+  }
+
+  /// «⋯» on somebody else's listing: 16a. A report that blocked, once the
+  /// server has it, takes this page away: across a block the listing does not
+  /// exist for you — the server answers «Fant ikke gjenstanden» for it from
+  /// then on — and the page stood there with the owner's thing on it and the
+  /// heart still under the thumb. What it was opened from asks again as it
+  /// comes back, without the owner's things: the grid when a card's page
+  /// closes, 13b when one of its listings does. The toast the report put up
+  /// says what happened, over whatever is under.
+  Future<void> _report(Item item) async {
+    final blocked =
+        await showReportSheet(context, itemId: item.id, personName: item.owner?.displayName);
+    if (blocked && mounted) Navigator.of(context).maybePop();
   }
 
   /// «⋯» on a listing of your own: the U and the D of the CRUD the API has
@@ -603,8 +634,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   // screen reader it was the button.
   Widget _ownerStrip(UserRef owner) => TapArea(
         child: InkWell(
-          onTap: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: owner.id))),
+          // Asked for again on the way back: the owner may have been blocked
+          // there, and then this listing is gone as well; see [_load].
+          onTap: () async {
+            await Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: owner.id)));
+            if (mounted) await _load(leaveIfGone: true);
+          },
           borderRadius: BorderRadius.circular(Radii.card),
           child: SectionCard(
             child: Row(

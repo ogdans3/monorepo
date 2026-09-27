@@ -148,6 +148,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'Byttet er pauset mens du svarer.',
           ),
         'message' => ('Ny melding', 'Åpne samtalen for å svare.'),
+        // A trade that ended without anybody in it saying so here: today only
+        // because somebody in it deleted their account, and the server ended
+        // every trade they were in. The payload says why with a code and the
+        // words are ours, as for every other kind. A reason this app does not
+        // know yet still gets the part it can say, and the trade says the
+        // rest — its own reason is on it, in words.
+        //
+        // «Noen i byttet», not «den andre parten»: a ring has three people in
+        // it. And nothing about the things coming free: most trades a
+        // deletion ends were still a conversation or an offer, where nothing
+        // was ever held, and a thing reserved by another trade still is.
+        'trade_cancelled' => (
+            'Byttet er avsluttet',
+            n.payload['reason'] == 'account_deleted'
+                ? 'Noen i byttet slettet kontoen sin.'
+                : 'Åpne byttet for å se hvorfor.',
+          ),
         _ => ('Varsel', 'Åpne Swaply for å se hva som skjedde.'),
       };
 

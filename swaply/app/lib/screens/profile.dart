@@ -52,22 +52,48 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
 
     // Looking around has no profile to show, and an empty one drawn as if it
     // were a person's is worse than saying what is going on.
+    //
+    // Where the likes are, and how long: the server holds them, on an account
+    // for this device — not the phone, which is what this said until the
+    // server began deleting a device nobody opens for twelve months. This is
+    // the one screen of its own a device has, so the rule is said here, to
+    // the only people it applies to.
     if (me.anonymous) {
       return SwaplyScaffold(
         currentTab: 4,
         child: EmptyState(
           icon: Icons.person_outline,
           title: 'Du ser deg rundt',
-          body: 'Tingene du liker er lagret her på enheten din. Lag en profil når du '
-              'vil legge ut noe eller snakke med noen — du beholder alt du har likt.',
+          body: 'Det du liker, er lagret på en konto for denne enheten. Lag en profil når '
+              'du vil legge ut noe eller snakke med noen — du beholder alt du har likt. '
+              'Åpner du ikke appen på tolv måneder, slettes kontoen, og det du har likt '
+              'med den.',
           actionLabel: 'Lag profil',
           onAction: () => pushOverBar<bool>(context, const CreateProfileScreen()),
-          // The app starts without asking, so somebody with an account from
-          // another phone is a stranger here first, and this is where they
-          // look for the way in. 16c is drawn without the bar, so it covers it.
-          footer: SignInRow(
-              room: EmptyState.footerRoom,
-              onTap: () => pushOverBar<void>(context, const LoginScreen())),
+          footer: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // The app starts without asking, so somebody with an account
+              // from another phone is a stranger here first, and this is
+              // where they look for the way in. 16c is drawn without the bar,
+              // so it covers it.
+              SignInRow(
+                  room: EmptyState.footerRoom,
+                  onTap: () => pushOverBar<void>(context, const LoginScreen())),
+              // A device has no 16b, which is where the terms are otherwise
+              // reached from — and it reads town names from the postcode
+              // register on 10b like anybody, whose credit is on that screen.
+              // Quieter than the way in above it, and a finger's height of
+              // its own under it.
+              Center(
+                child: TapArea(
+                  room: const EdgeInsets.only(top: 16, bottom: 14),
+                  onTap: () => pushOverBar<void>(context, const LegalScreen()),
+                  child: const Text('Juridisk og personvern', style: Type.small),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -401,8 +427,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
   /// Asked for when the page opens, and again after an unblock or on coming
   /// back from one of their things. Only the first asking can fail into [LoadFailure]: after that the
-  /// profile stays and the failure is a toast over it.
-  Future<void> _load() async {
+  /// profile stays and the failure is a toast over it — or nothing, when
+  /// [quiet]: after a block, whose own toast is up and is the news.
+  Future<void> _load({bool quiet = false}) async {
     try {
       final user = await context.read<SwaplyApi>().user(widget.userId);
       if (mounted) {
@@ -415,7 +442,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       if (!mounted) return;
       if (_user == null) {
         setState(() => _error = e);
-      } else {
+      } else if (!quiet) {
         showError(context, e);
       }
     }
@@ -429,9 +456,20 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   /// «⋯» on 13b. Reporting is what the export draws behind it; unblocking has
   /// to live here too, because blocking was a tick inside a report and there
   /// was no way back from it anywhere in the app.
+  ///
+  /// A report that blocked, once the server has it, asks for the profile
+  /// again: it went on showing their things and «Send melding» as if nothing
+  /// had happened. The page stays rather than going — the server keeps a
+  /// profile readable across a block because this is where a block is taken
+  /// back — and what comes back is the page for somebody blocked: none of
+  /// their things, the line that says so, and «Opphev blokkeringen» behind
+  /// «⋯». A listing of theirs this was opened from goes when it is come back
+  /// to; see `ItemDetailScreen`.
   Future<void> _menu(UserRef user) async {
     if (!user.blockedByYou) {
-      showReportSheet(context, userId: user.id, personName: user.displayName);
+      final blocked =
+          await showReportSheet(context, userId: user.id, personName: user.displayName);
+      if (blocked && mounted) await _load(quiet: true);
       return;
     }
 
@@ -823,18 +861,22 @@ class SettingsScreen extends StatelessWidget {
                     .push(MaterialPageRoute(builder: (_) => const LegalScreen()))),
             // A red row in the last card, not a button of its own: that is
             // where the export puts it, and it is not something to advertise.
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('Logg ut',
-                  style: TextStyle(
-                      fontSize: 14.5, fontWeight: FontWeight.w700, color: SwaplyColors.redText)),
-              onTap: () async {
-                await context.read<Session>().logout();
-                // Not to the sign-in: the gate makes whoever holds the phone
-                // next a new stranger, and 02 is the first thing they see.
-                if (context.mounted) backThroughGate(context);
-              },
+            // Still the screen's last action, and a toast goes up over it
+            // when it is at the foot.
+            KeepClear(
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Logg ut',
+                    style: TextStyle(
+                        fontSize: 14.5, fontWeight: FontWeight.w700, color: SwaplyColors.redText)),
+                onTap: () async {
+                  await context.read<Session>().logout();
+                  // Not to the sign-in: the gate makes whoever holds the phone
+                  // next a new stranger, and 02 is the first thing they see.
+                  if (context.mounted) backThroughGate(context);
+                },
+              ),
             ),
           ]),
           const SizedBox(height: Insets.xl),
@@ -933,10 +975,11 @@ class _ShowEverythingRowState extends State<_ShowEverythingRow> {
       onTap: _busy ? null : _showEverything);
 }
 
-/// Juridisk og personvern, opened from the last card on 16b. Round 5 draws
-/// the row and nothing behind it; what is here is what the product already
-/// says about itself, and the way to delete the account, which the export
-/// left no other room for. Drawn without the bar, as 16b is.
+/// Juridisk og personvern, opened from the last card on 16b — and from the
+/// foot of a device's 13, which has no 16b. Round 5 draws the row and nothing
+/// behind it; what is here is what the product already says about itself,
+/// and the way to delete the account, which the export left no other room
+/// for. Drawn without the bar, as 16b is.
 class LegalScreen extends StatelessWidget {
   const LegalScreen({super.key});
 
@@ -957,27 +1000,54 @@ class LegalScreen extends StatelessWidget {
                 'identitetspost beholdes adskilt i tre år etter siste gjennomførte bytte, '
                 'eller etter slettingen om du aldri har byttet, slik at et krav kan '
                 'fremmes eller forsvares.',
+            // The product owner's rule for a device nobody uses, which the
+            // server keeps strictly: no request from its own token for twelve
+            // months, and opening the app sends one. Said here because it is
+            // the other way an account ends, and the only one nobody asks for.
+            'Har du bare sett deg rundt, uten å lage en profil, slettes kontoen når '
+                'appen ikke har vært åpnet på tolv måneder. Det du har likt, forsvinner '
+                'med den.',
           ]) ...[
             Text(paragraph, style: Type.body),
             const SizedBox(height: 12),
           ],
-          // A device looking around has no profile to delete, and never gets
-          // this far: 13 is an invitation to make one.
+          // A device looking around reaches this from its 13, and has no
+          // profile to delete: its way on is to make one.
           if (session.signedIn && !session.anonymous) ...[
             const SizedBox(height: 8),
             _group([
               // A row in a card, the way «Logg ut» is on 16b and in its
-              // colour: something you can do, not something offered.
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Slett kontoen',
-                    style: TextStyle(
-                        fontSize: 14.5, fontWeight: FontWeight.w700, color: SwaplyColors.redText)),
-                onTap: () => _delete(context),
+              // colour: something you can do, not something offered. Kept
+              // clear of by a toast, as «Logg ut» is.
+              KeepClear(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Slett kontoen',
+                      style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: SwaplyColors.redText)),
+                  onTap: () => _delete(context),
+                ),
               ),
             ]),
           ],
+          // What NLOD 2.0 asks of anybody who uses the postcode register: the
+          // licensor, the licence and where to find both, and that we changed
+          // it — in words a person can find, not only in the header of the
+          // generated file (`backend/src/lib/postcode-register.ts`). Quiet,
+          // under everything else: a source, not a term.
+          const SizedBox(height: 28),
+          const Kicker('Postnummer'),
+          const SizedBox(height: 6),
+          const Text(
+            'Inneholder data under norsk lisens for offentlige data (NLOD) 2.0 '
+            'tilgjengeliggjort av Posten Bring AS. Vi bruker bare postnummeret og stedet, '
+            'og skriver stedsnavnet med vanlig stor forbokstav.\n'
+            'Lisens: data.norge.no/nlod/no/2.0 · Kilde: bring.no/postnummerregister-ansi.txt',
+            style: TextStyle(fontSize: 12, height: 1.45, color: SwaplyColors.grey),
+          ),
         ],
       ),
     );
@@ -1003,6 +1073,7 @@ class LegalScreen extends StatelessWidget {
         acting: acting,
         onDeleted: () async {
           if (acting) {
+            final gone = session.me?.id;
             // «Slett kontoen» while acting as a test account is the test
             // tool retiring it, and the admin is still who is holding the
             // phone: back to their own account. The server ended the session
@@ -1012,6 +1083,10 @@ class LegalScreen extends StatelessWidget {
             } on ApiException {
               await session.logout();
             }
+            // A half-written listing of the account's goes with it — once
+            // the phone is somebody else, so its form keeps nothing after.
+            // The other way, «Logg ut» forgets every draft on the phone.
+            if (gone != null) await session.drafts.forget(gone);
           } else {
             // The server has ended every session already, so the sign-out
             // it is sent here is refused, and that is fine: what matters is
@@ -1413,7 +1488,14 @@ class _ReportSheetState extends State<_ReportSheet> {
         detail: _detail.text.trim().isEmpty ? null : _detail.text.trim(),
         block: block,
       );
-      showDoneOn(widget.messenger, 'Takk. Vi ser på rapporten.');
+      // The block is said with the thanks: the screen it was made on goes,
+      // or loses their things, in the same moment, and this is the one
+      // sentence that says why.
+      showDoneOn(
+          widget.messenger,
+          block
+              ? 'Takk. Vi ser på rapporten. ${widget.personName!.split(' ').first} er blokkert.'
+              : 'Takk. Vi ser på rapporten.');
       widget.landed.complete(block);
     } on ApiException catch (e) {
       showErrorOn(widget.messenger, e);

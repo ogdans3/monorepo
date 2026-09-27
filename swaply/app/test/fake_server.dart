@@ -77,7 +77,9 @@ class FakeServer {
           // The shapes the real API answers with, so a screen's error handling
           // is tested against the message a person would actually read.
           final error = switch (body) {
-            401 => {'code': 'unauthorized', 'message': 'Feil e-post eller passord.'},
+            // No session behind the request, or a dead one. A wrong password
+            // is a code of its own: [Refusal.wrongCredentials].
+            401 => {'code': 'unauthorized', 'message': 'Du må logge inn.'},
             409 => {'code': 'not_completed', 'message': 'Du kan vurdere når byttet er gjennomført.'},
             413 => {'code': 'file_too_large', 'message': 'Bildet er for stort. Grensen er 10 MB.'},
             _ => {'code': 'error', 'message': 'Noe gikk galt hos oss.'},
@@ -105,7 +107,7 @@ class FakeServer {
       // keys a person's tabs by that id, and a claim is not somebody else.
       return {
         'token': 'tok',
-        'user': {...me, 'id': lookingAround['id']},
+        'user': profileOnly({...me, 'id': lookingAround['id']}),
       };
     }
     if (key == 'POST /me/hidden') {
@@ -141,11 +143,13 @@ class FakeServer {
     }
     if (export) {
       final hit = exportCanned(key, this);
-      if (hit != null) return hit;
+      if (hit != null) return _signedIn(key, hit);
     }
     return switch (key) {
-        'POST /auth/login' => {'token': 'tok', 'user': me},
-        'POST /auth/register' => {'token': 'tok', 'user': me},
+        // `publicMe`, as the real routes answer: the lists and counts are
+        // `GET /me`'s, which the session asks for after a sign-in.
+        'POST /auth/login' => {'token': 'tok', 'user': profileOnly(me)},
+        'POST /auth/register' => {'token': 'tok', 'user': profileOnly(me)},
         'POST /auth/logout' => {},
         'POST /auth/anonymous' => {'token': deviceToken, 'user': lookingAround},
         'POST /media' => {
@@ -306,6 +310,16 @@ class FakeServer {
         _ => null,
       };
   }
+
+  /// The export's answer to a sign-in, cut to what the real route answers
+  /// with. The export's account is left as it is, since its screens are drawn
+  /// from `GET /me`, which the session asks for straight after.
+  static Object? _signedIn(String key, Object? answer) =>
+      (key == 'POST /auth/login' || key == 'POST /auth/register') &&
+              answer is Map<String, Object?> &&
+              answer['user'] is Map<String, Object?>
+          ? {...answer, 'user': profileOnly(answer['user']! as Map<String, Object?>)}
+          : answer;
 
   // --- fixtures -------------------------------------------------------------
 
@@ -556,6 +570,11 @@ class Refusal {
   const Refusal(this.status, this.code, this.message);
   final int status;
   final String code, message;
+
+  /// `POST /auth/login` with an address or a password that is wrong — the
+  /// same answer for both, since telling which is half of a credential.
+  static const wrongCredentials =
+      Refusal(401, 'wrong_credentials', 'Feil e-post eller passord.');
 
   /// `/auth/anonymous` on a server that lets nobody in without a key.
   static const inviteRequired = Refusal(403, 'invite_required',

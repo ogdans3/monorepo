@@ -103,8 +103,55 @@ void main() {
       // And for somebody who never completed one, which is what the engine
       // keeps too: three years from the deletion.
       expect(find.textContaining('eller etter slettingen om du aldri har byttet'), findsOneWidget);
+      // The other way an account ends: a device that only looked around, left
+      // unopened for twelve months.
+      expect(
+          find.textContaining('uten å lage en profil, slettes kontoen når appen ikke har vært '
+              'åpnet på tolv måneder'),
+          findsOneWidget);
+      // And what NLOD 2.0 asks of anybody using Bring's postcode register:
+      // the licensor, the licence and where both are, and that it was changed.
+      expect(
+          find.textContaining('Inneholder data under norsk lisens for offentlige data (NLOD) 2.0 '
+              'tilgjengeliggjort av Posten Bring AS.'),
+          findsOneWidget);
+      expect(find.textContaining('Lisens: data.norge.no/nlod/no/2.0'), findsOneWidget);
       expect(find.text('Slett kontoen'), findsOneWidget);
       // Over the bar, as 16b is: nothing of the bar answers under it.
+      expect(find.byType(SwaplyNavBar).hitTestable(), findsNothing);
+    });
+
+    testWidgets('1b. a device looking around is told the twelve-month rule on its own 13, and reaches the screen from there',
+        (tester) async {
+      // The rule is only for a device that never made a profile, and such a
+      // device has no 16b: the screen that said it was one it could not open.
+      // Its 13 said the likes were kept «her på enheten din», when the
+      // server holds them, on an account it deletes after twelve idle months.
+      server.overrides['GET /me'] = FakeServer.lookingAround;
+      await boot(tester, saved: const {'token': FakeServer.deviceToken});
+      await tester.tap(
+          find.descendant(of: find.byType(SwaplyNavBar), matching: find.text('Profil')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Du ser deg rundt'), findsOneWidget);
+      expect(find.textContaining('lagret på en konto for denne enheten'), findsOneWidget);
+      expect(
+          find.textContaining('Åpner du ikke appen på tolv måneder, slettes kontoen, og det du '
+              'har likt med den.'),
+          findsOneWidget);
+      expect(find.textContaining('her på enheten din'), findsNothing);
+
+      await tester.tap(find.text('Juridisk og personvern'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LegalScreen), findsOneWidget);
+      expect(find.textContaining('slettes kontoen når appen ikke har vært åpnet på tolv måneder'),
+          findsOneWidget);
+      // The postcode register's credit is for a device too: 10b looks up its
+      // towns for anybody.
+      expect(find.textContaining('tilgjengeliggjort av Posten Bring AS.'), findsOneWidget);
+      // No profile to delete, so no way to.
+      expect(find.text('Slett kontoen'), findsNothing);
       expect(find.byType(SwaplyNavBar).hitTestable(), findsNothing);
     });
 

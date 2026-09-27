@@ -19,8 +19,11 @@ import 'package:swaply_app/screens/item_detail.dart';
 import 'package:swaply_app/screens/onboarding.dart';
 import 'package:swaply_app/screens/post_item.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/widgets/common.dart';
+import 'package:swaply_app/widgets/shell.dart';
 
 import 'fake_server.dart';
+import 'phone.dart';
 
 late FakeServer server;
 late SwaplyApi api;
@@ -234,5 +237,39 @@ void main() {
     await tester.tap(find.text('Lagre endringene'));
     await tester.pumpAndSettle();
     expect(server.bodies['PATCH /items/item-mine']!['postalCode'], '5003');
+  });
+
+  testWidgets('8. the note under the field is on a phone whole, as the export draws it',
+      (tester) async {
+    // At 390×844 with the bar under the form, the 30 the export leaves under
+    // «Neste» — room over the home indicator, which the bar keeps itself —
+    // put «Kun by vises for andre» half under the edge of the form.
+    // Real files, which the test's fake clock would never finish reading.
+    await tester.runAsync(loadFonts);
+    holdPhone(tester);
+    await session.lookAround();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<SwaplyApi>.value(value: api),
+          ChangeNotifierProvider<Session>.value(value: session),
+        ],
+        child: MaterialApp(
+          theme: phoneTheme(),
+          builder: (context, child) => PhoneFrame(light: false, child: child!),
+          home: const PostItemScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final note = tester.getRect(find.text('Kun by vises for andre'));
+    final form = tester.getRect(find.byType(Scrollable).first);
+    expect(note.bottom, lessThanOrEqualTo(form.bottom));
+    // 12 under «Neste», as over it, and then the bar.
+    final button = tester.getRect(find.byType(PrimaryButton));
+    final bar = tester.getRect(find.byType(SwaplyNavBar));
+    expect(bar.top - button.bottom, 12);
+    expect(button.top - form.bottom, 12);
   });
 }

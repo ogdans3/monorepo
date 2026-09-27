@@ -9,11 +9,17 @@ import 'package:provider/provider.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
+import '../state/draft_store.dart';
 import '../state/listing_draft.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
 import 'onboarding.dart';
+
+/// A picture kept only by a path the server may have swept. The server's own
+/// words for the same refusal (`image_gone`, `backend/src/routes/items.ts`),
+/// so a form that finds out first says what the server would have.
+const _imageGone = 'Et av bildene er ikke lagret lenger. Legg det til på nytt.';
 
 /// What a picker gives back: the bytes and a name to send them under. Named so
 /// the screen does not have to know whether they came from a camera roll, a
@@ -90,11 +96,48 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   Item? get _editing => widget.editing;
 
+  /// Whose draft this form is, kept on the phone as it is filled in so that
+  /// the app closed or killed opens on it again; see [DraftStore]. Null while
+  /// correcting a listing, which is the server's already, and with nobody
+  /// signed in, which only a test mounts.
+  String? _owner;
+
+  /// Read once: [dispose] keeps the last of the typing, and a disposed form
+  /// can no longer look up the tree.
+  late final Session _session;
+
+  /// Kept once the typing has held still for a moment, rather than on every
+  /// letter — on the web the record carries the pictures. Kept at once when
+  /// the app goes to the background, which is the last moment a phone is
+  /// sure to give it before it may kill the app. Running, it is also the
+  /// only sign that something has not been kept yet.
+  Timer? _keepAfter;
+  static const _keepDelay = Duration(milliseconds: 400);
+  AppLifecycleListener? _lifecycle;
+
+  /// Something typed or picked before the kept draft had been read. What is
+  /// on screen then wins, and is kept over it.
+  bool _touched = false;
+
+  /// Listed, and the draft forgotten: nothing here is kept again.
+  bool _listed = false;
+
+  /// On its way out; see [ListingDraft.finish].
+  bool _finishing = false;
+
   @override
   void initState() {
     super.initState();
+    _session = context.read<Session>();
     final item = _editing;
     if (item == null) {
+      _owner = _session.me?.id;
+      for (final c in [_title, _description, _value, _postal, _subcategory]) {
+        c.addListener(_changed);
+      }
+      _lifecycle = AppLifecycleListener(onStateChange: (state) {
+        if (state != AppLifecycleState.resumed) _keepWaiting();
+      });
       _resume();
       return;
     }
@@ -112,28 +155,62 @@ class _PostItemScreenState extends State<PostItemScreen> {
     }
   }
 
-  /// A form that was waiting on 10c when the person signed in there instead,
-  /// taken up by the new app's Legg ut and sent on, as it would have been
-  /// after 10c; see [ListingDraft]. Not for a device still looking around:
-  /// that would only be 10c again.
+  /// A form that was on its way out when the phone became somebody else —
+  /// signed in on 10c rather than making a profile there — or when the app
+  /// was closed, taken up by this Legg ut and sent on, as it would have been;
+  /// see [ListingDraft]. Not for a device still looking around: that would
+  /// only be 10c again. Otherwise the form as it was last left, if it was.
   void _resume() {
-    final session = context.read<Session>();
-    final draft = session.listingToFinish;
-    if (draft == null || !session.signedIn || session.anonymous) return;
-    session.listingToFinish = null;
-    _kind = draft.kind;
-    _category = draft.category;
-    _condition = draft.condition;
+    final draft = _session.listingToFinish;
+    if (draft == null || !_session.signedIn || _session.anonymous) {
+      unawaited(_restore());
+      return;
+    }
+    _session.listingToFinish = null;
+    _takeUp(draft);
+    // After the first frame: sending sets state, and lands in the tab it is in.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _submit();
+    });
+  }
+
+  /// The form as its account last left it on this phone: the app closed or
+  /// killed with it half filled, 10c open over it or not.
+  Future<void> _restore() async {
+    final owner = _owner;
+    if (owner == null) return;
+    final kept = await _session.drafts.load(owner);
+    if (kept == null || !mounted || _touched || _session.me?.id != owner) return;
+    setState(() => _takeUp(kept));
+    // Back in the form, and no longer on its way out: only a start that
+    // finds it so sends it on its own; see `Session`. Kept so at once, or the
+    // next start would send what the person is now looking at.
+    if (kept.finish) unawaited(_keepNow());
+  }
+
+  void _takeUp(ListingDraft draft) {
+    // A draft kept by an older app can name a category this one no longer
+    // has, and the dropdown will not draw a value that is not in it.
+    _kind = draft.kind == 'service' ? 'service' : 'item';
+    if (categoryLabels.containsKey(draft.category)) _category = draft.category;
+    _condition = _kind == 'service'
+        ? null
+        : conditionLabels.containsKey(draft.condition)
+            ? draft.condition
+            : 'good';
     _title.text = draft.title;
     _description.text = draft.description;
     _subcategory.text = draft.subcategory;
     _value.text = draft.value;
     _postal.text = draft.postalCode;
-    _photos.addAll(draft.photos);
-    // After the first frame: sending sets state, and lands in the tab it is in.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _submit();
-    });
+    _photos
+      ..clear()
+      ..addAll(draft.photos.take(10));
+    // The town beside the digits, as it was drawn when the form was left.
+    final code = _postal.text.trim();
+    if (code.length == 4 && !_answered(code)) {
+      _lookupAfter = Timer(_lookupDelay, () => _lookUp(code));
+    }
   }
 
   ListingDraft _draft() => ListingDraft(
@@ -146,11 +223,46 @@ class _PostItemScreenState extends State<PostItemScreen> {
         value: _value.text,
         postalCode: _postal.text,
         photos: [..._photos],
+        finish: _finishing,
       );
+
+  /// Something in the form changed. A picture picked or taken out is kept
+  /// [now]; typing, once it holds still.
+  void _changed({bool now = false}) {
+    _touched = true;
+    if (_owner == null || _listed) return;
+    _keepAfter?.cancel();
+    _keepAfter = now ? null : Timer(_keepDelay, _keepNow);
+    if (now) unawaited(_keepNow());
+  }
+
+  /// Whatever is waiting to be kept, now. Only that: a form with nothing
+  /// changed has nothing to write, and an empty one written before its kept
+  /// draft had been read back would throw that draft away.
+  void _keepWaiting() {
+    if (_keepAfter?.isActive ?? false) unawaited(_keepNow());
+  }
+
+  /// The form as it is now, kept for its account. Only for the account it
+  /// was started by: after «Logg ut» nobody is, and a sign-in on 10c has
+  /// handed the draft on to the account signed in to, whose own Legg ut
+  /// keeps it from there.
+  Future<void> _keepNow() {
+    _keepAfter?.cancel();
+    _keepAfter = null;
+    final owner = _owner;
+    if (owner == null || _listed || !mounted || _session.me?.id != owner) return Future.value();
+    return _session.drafts.save(owner, _draft());
+  }
 
   @override
   void dispose() {
     _lookupAfter?.cancel();
+    _lifecycle?.dispose();
+    // What was typed in the moment before the form went — a tab started
+    // over — is kept like the rest. Not once the phone is somebody else; see
+    // [_keepNow].
+    _keepWaiting();
     for (final c in [_title, _description, _value, _postal, _subcategory]) {
       c.dispose();
     }
@@ -232,6 +344,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
       // Step 2/2: no profile yet, so the profile screen comes first.
       final who = session.me?.id;
       session.listingToFinish = _draft();
+      // As it is, before 10c goes over it: the app closed or killed there
+      // opens on this form again.
+      unawaited(_keepNow());
       await pushOverBar<bool>(context, const CreateProfileScreen(continuingToListing: true));
       // Signed in on 10c rather than making a profile there: somebody else
       // now, whose new app has this form in it, and lists it from there. Not
@@ -246,8 +361,22 @@ class _PostItemScreenState extends State<PostItemScreen> {
       _error = null;
       _refused = null;
     });
+    // On its way out while its pictures go up, and kept so: the app closed or
+    // killed meanwhile finishes it on the next start instead of leaving half
+    // of it on the server and the rest on the phone.
+    if (_photos.any((photo) => !photo.onServer)) {
+      _finishing = true;
+      unawaited(_keepNow());
+    }
     try {
       await _sendHeldPhotos();
+      if (!mounted) return;
+      // And no longer, kept so before the listing is asked for: one that
+      // reaches the server while the app is killed before the answer does
+      // must not go out a second time on the next start. The form comes back
+      // instead, and 13 says whether it went.
+      _finishing = false;
+      await _keepNow();
       if (!mounted) return;
       await context.read<SwaplyApi>().createItem({
         'kind': _kind,
@@ -260,6 +389,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
         if (_postal.text.trim().isNotEmpty) 'postalCode': _postal.text.trim(),
         'media': [for (final photo in _photos) photo.stored!.path],
       });
+      // Listed: the draft is done with, on the phone as well.
+      _listed = true;
+      _keepAfter?.cancel();
+      if (_owner case final owner?) unawaited(_session.drafts.forget(owner));
       if (!mounted) return;
       await context.read<Session>().refresh();
       if (!mounted) return;
@@ -275,6 +408,12 @@ class _PostItemScreenState extends State<PostItemScreen> {
       if (mounted) setState(() => _error = noContact);
     } finally {
       if (mounted) setState(() => _busy = false);
+      // It did not go, and the person has been told: the next start does not
+      // send it behind their back.
+      if (_finishing) {
+        _finishing = false;
+        unawaited(_keepNow());
+      }
     }
   }
 
@@ -283,12 +422,27 @@ class _PostItemScreenState extends State<PostItemScreen> {
   /// first is the cover — and one at a time, so that when one fails the ones
   /// before it are the server's and the rest are still on the phone. Each is
   /// marked the moment it lands: a second «Legg ut» sends only what is left.
+  ///
+  /// And any sent so long ago that the server may have swept it, since no
+  /// listing took it up — a draft kept over a couple of days, or a form left
+  /// open that long; see [ListingPhoto.serverKeeps]. Sent again from the
+  /// bytes kept for it. One kept only by its path — a browser whose storage
+  /// had no room for the bytes — has nothing to send it from, and is refused
+  /// here, with its coral edge, rather than listed as a broken picture.
   Future<void> _sendHeldPhotos() async {
     final api = context.read<SwaplyApi>();
     for (final photo in [..._photos]) {
-      if (photo.stored != null) continue;
+      if (photo.onServer) continue;
+      final bytes = photo.bytes, name = photo.name;
+      if (bytes == null || name == null) {
+        _refused = photo;
+        throw ApiException(400, 'image_gone', _imageGone);
+      }
       try {
-        photo.stored = await api.uploadImage(photo.bytes!, filename: photo.name!);
+        photo.sent(await api.uploadImage(bytes, filename: name));
+        // Kept with its path, so a start after a kill here does not send it
+        // again.
+        unawaited(_keepNow());
       } on ApiException catch (e) {
         // Too big, not a picture the server reads, or empty: this one, and
         // not the connection or the session. Marked, so the ✕ that fixes it
@@ -307,8 +461,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _refused = null;
     });
     try {
+      // A picture added while correcting is sent as it is picked, and one
+      // that has waited in an open form long enough to be swept goes again.
+      await _sendHeldPhotos();
+      if (!mounted) return;
       await context.read<SwaplyApi>().updateItem(item.id, {
         'kind': _kind,
         'title': _title.text.trim(),
@@ -363,6 +522,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
         _error = null;
         _refused = null;
       });
+      _changed(now: true);
       return;
     }
 
@@ -373,7 +533,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
     try {
       final image =
           await context.read<SwaplyApi>().uploadImage(picked.bytes, filename: picked.name);
-      if (mounted) setState(() => _photos.add(ListingPhoto.stored(image)));
+      if (mounted) {
+        // The bytes are kept with the path: the draft keeps them on the
+        // phone, and the server lets go of an upload no listing takes up
+        // within a day — a draft finished later sends them again.
+        setState(() => _photos.add(ListingPhoto.held(picked.bytes, picked.name)..sent(image)));
+        _changed(now: true);
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -488,7 +654,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _pick('Gjenstand', _kind == 'item', () => setState(() => _kind = 'item')),
+                        _pick('Gjenstand', _kind == 'item', () {
+                          setState(() => _kind = 'item');
+                          _changed();
+                        }),
                         const SizedBox(width: Insets.sm),
                         _pick('Tjeneste', _kind == 'service', () {
                           // A service has no condition, and it is never reserved.
@@ -496,6 +665,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                             _kind = 'service';
                             _condition = null;
                           });
+                          _changed();
                         }),
                       ],
                     ),
@@ -529,7 +699,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
                                     value: e.key,
                                     child: Text(e.value, overflow: TextOverflow.ellipsis)))
                                 .toList(),
-                            onChanged: (v) => setState(() => _category = v ?? _category),
+                            onChanged: (v) {
+                              setState(() => _category = v ?? _category);
+                              _changed();
+                            },
                           ),
                         ),
                       ),
@@ -580,7 +753,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 30),
+            // The export's 30 under «Neste» is room over the home indicator,
+            // on a 10b drawn without the bar. With the bar under the form —
+            // the Legg ut tab — the bar keeps that room itself, and the 30 on
+            // top of it cut «Kun by vises for andre» off at the edge of the
+            // form, which the export shows whole: 12 under, as over.
+            padding: EdgeInsets.fromLTRB(22, 12, 22,
+                TabShell.maybeOf(context) == null || TabShell.contains(context) ? 12 : 30),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -711,7 +890,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
           children: conditionLabels.entries
               .map((e) => Expanded(
                     child: TapArea(
-                      onTap: () => setState(() => _condition = e.key),
+                      onTap: () {
+                        setState(() => _condition = e.key);
+                        _changed();
+                      },
                       child: Container(
                         height: 31,
                         alignment: Alignment.center,
@@ -821,10 +1003,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           // Held still while «Legg ut» is sending the strip.
                           onTap: _busy
                               ? null
-                              : () => setState(() {
+                              : () {
+                                  setState(() {
                                     final gone = _photos.removeAt(entry.key);
                                     if (identical(gone, _refused)) _refused = null;
-                                  }),
+                                  });
+                                  _changed(now: true);
+                                },
                           child: const CircleAvatar(
                             radius: 11,
                             backgroundColor: Colors.white,

@@ -85,6 +85,42 @@ Future<void> mount(WidgetTester tester, Widget screen) async {
   await tester.pumpAndSettle();
 }
 
+/// [screen] opened over a first page, so it has somewhere to go back to. Less
+/// motion, so 06a's confetti holds still and the frames settle.
+Future<void> openOver(WidgetTester tester, Widget screen) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await session.login('ola@epost.no', 'passord');
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        Provider<SwaplyApi>.value(value: api),
+        ChangeNotifierProvider<Session>.value(value: session),
+      ],
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () =>
+                    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen)),
+                child: const Text('Oppdag'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Oppdag'));
+  await tester.pumpAndSettle();
+}
+
 /// The heart on [item]'s card, by what it says.
 Finder heartOn(String item, {required bool liked}) => find.descendant(
     of: find.byKey(ValueKey(item)),
@@ -324,6 +360,50 @@ void main() {
         shows: 'Kari N.'
       ),
     ];
+
+    testWidgets('7. 06a: no contact is «Fikk ikke kontakt», with «Prøv igjen» and a way back',
+        (tester) async {
+      // The match screen said it in a toast and then went on spinning on deep
+      // green with no header: no «Prøv igjen», and no way out but the phone's.
+      server.overrides['GET /trades/trade-1'] = unreachable;
+      await openOver(tester, const MatchScreen(tradeId: 'trade-1'));
+
+      expect(find.text('Fikk ikke kontakt'), findsOneWidget);
+      expect(find.text(noContact), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.bySemanticsLabel('Tilbake'), findsOneWidget);
+
+      server.overrides.remove('GET /trades/trade-1');
+      await tester.tap(find.text('Prøv igjen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Dere kan swappe!'), findsOneWidget);
+      expect(find.text('Fikk ikke kontakt'), findsNothing);
+    });
+
+    testWidgets('8. 06a: a refusal is «Fant ikke byttet», and «‹» goes back', (tester) async {
+      server.overrides['GET /trades/trade-1'] = 404;
+      await openOver(tester, const MatchScreen(tradeId: 'trade-1'));
+
+      expect(find.text('Fant ikke byttet'), findsOneWidget);
+      expect(find.text('Prøv igjen'), findsNothing);
+      await tester.tap(find.bySemanticsLabel('Tilbake'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MatchScreen), findsNothing);
+      expect(find.text('Oppdag'), findsOneWidget);
+    });
+
+    testWidgets('9. 05b: no answer about the subcategories leaves them out, and the search stands',
+        (tester) async {
+      // They had no catch at all, so no contact was an error nothing caught,
+      // thrown into the zone while the rest of the page carried on.
+      server.overrides['GET /discover/subcategories'] = unreachable;
+      await mount(tester,
+          const AdvancedSearchScreen(initial: SearchFilters(category: 'verktoy'), query: ''));
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Underkategori i'), findsNothing);
+      expect(find.text('Vis 2 treff'), findsOneWidget);
+    });
 
     for (final page in pages) {
       testWidgets('5. ${page.name}: no contact is not «${page.missing}», and asks again',

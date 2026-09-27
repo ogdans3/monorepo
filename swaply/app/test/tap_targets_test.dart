@@ -152,10 +152,13 @@ class _PushesOnceState extends State<_PushesOnce> {
 /// A target as the screen reader has it: its node, and where it is on screen
 /// in logical points.
 class _Target {
-  _Target(this.node, this.rect, {required this.scrolledPart});
+  _Target(this.node, this.rect, {required this.scrolledPart, this.owner});
 
   final SemanticsNode node;
   final Rect rect;
+
+  /// The render object the node belongs to, where one could be found.
+  final RenderObject? owner;
 
   /// Cut by the edge of a scroll view: only part of it is on screen, and the
   /// part that is says nothing about its size.
@@ -227,7 +230,7 @@ List<_Target> _targets(WidgetTester tester) {
     final whole = owners[node]?.semanticBounds.size;
     final cut = whole != null &&
         (node.rect.width < whole.width - 0.5 || node.rect.height < whole.height - 0.5);
-    found.add(_Target(node, onScreen, scrolledPart: cut));
+    found.add(_Target(node, onScreen, scrolledPart: cut, owner: owners[node]));
   }
 
   for (final view in tester.binding.renderViews) {
@@ -355,6 +358,25 @@ List<String> _faults(WidgetTester tester, String screen, _Frame frame) {
     }
   }
   return faults;
+}
+
+/// Whether [target] is in a list — anything built in a scroll view — which
+/// is the list's content and not the screen's foot. A toast lifted over a
+/// foot may lie over the last of it, as it lies over the grid above the bar.
+bool _inAList(_Target target) {
+  for (RenderObject? o = target.owner?.parent; o != null; o = o.parent) {
+    if (o is RenderAbstractViewport) return true;
+  }
+  return false;
+}
+
+/// Whether [target] is the toast's own: «Angre».
+bool _inTheToast(_Target target) {
+  for (RenderObject? o = target.owner; o != null; o = o.parent) {
+    final creator = o.debugCreator;
+    if (creator is DebugCreator && creator.element.widget is SwaplyToast) return true;
+  }
+  return false;
 }
 
 bool _below(SemanticsNode node, SemanticsNode ancestor) {
@@ -1026,6 +1048,40 @@ void main() {
       expect(tester.getSemantics(find.bySemanticsLabel('Vurdering av Kari')).value, '5 av 5');
       semantics.dispose();
     });
+  });
+
+  group('a toast over any screen lies over none of the actions at its foot', () {
+    // A refusal is said where the thumb is, and it stays up for five seconds,
+    // which is when the person wants to press the button again. Every target
+    // outside a list is the screen's own and counts — the trade screen's foot
+    // is outlined buttons only in most of its states, and 06c's «Avbryt» and
+    // the words under 06a's button are targets as much as the button. What is
+    // in a list is the list's content, which a toast lifted over the foot may
+    // lie over the last of, as it lies over the grid over 13's «+ Legg ut».
+    for (final screen in _screens) {
+      testWidgets(screen.name, (tester) async {
+        final semantics = await _open(tester, screen, _Frame.phone);
+        // A sheet or a dialog is over the page, and a toast is the page's.
+        final covered = find.byType(BottomSheet).evaluate().isNotEmpty ||
+            find.byType(Dialog).evaluate().isNotEmpty;
+        if (!covered) {
+          showToastOn(ScaffoldMessenger.of(tester.element(find.byType(Scaffold).last)),
+              ToastTone.error, 'Noe gikk galt hos oss. Prøv igjen om litt, så ser vi på det.');
+          await tester.pumpAndSettle();
+          final toast = tester.getRect(find.byType(SwaplyToast));
+          final under = [
+            for (final target in _targets(tester))
+              if (!_inAList(target) &&
+                  !_inTheToast(target) &&
+                  target.rect.intersect(toast).width > 0.5 &&
+                  target.rect.intersect(toast).height > 0.5)
+                target.name,
+          ];
+          expect(under, isEmpty, reason: 'under the toast at $toast');
+        }
+        semantics.dispose();
+      });
+    }
   });
 
   for (final frame in _Frame.values) {

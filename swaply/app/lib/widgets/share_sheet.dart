@@ -103,7 +103,7 @@ class _ShareSheetState extends State<_ShareSheet> {
           Text(widget.title, style: Type.title),
           const SizedBox(height: Insets.md),
           if (_error != null)
-            Text(_error!, style: const TextStyle(color: SwaplyColors.red, fontSize: 13.5))
+            Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13.5))
           else if (_link == null)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: Insets.xl),
