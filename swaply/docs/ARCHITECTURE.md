@@ -138,17 +138,28 @@ appear because an item became free again after a trade was cancelled. So:
 
 ### Serialisation is not optional
 
-Two concurrent likes can each find a cycle using the same item. Lock the involved
-item rows with `SELECT … FOR UPDATE` **in sorted id order** — any other order
-deadlocks — confirm they are all still available, then create the trade and set
-the reservation in one transaction.
+Two acceptances can want the same listing, and a yes can land in the moment the
+trade it pushes out is being ended by somebody else. Everything that changes a
+trade or what it holds takes its row locks in **one order: the trades first,
+lowest id first, then the listings, lowest id first, in one batch.**
+`backend/src/trades/index.ts` states it and argues it; `trades/locks.ts` is the
+only way in. Any other order deadlocks.
 
-Ending a trade takes its locks in one order too: **what the trade holds, then the
-trade.** Cancelling, completing and erasure all release the items and then write
-the trade row, so the withdrawal answers on 08b — which read the trade's state
-under a lock before deciding — lock its items first as well. Taken the other way
-round, a yes to a withdrawal and a deletion in the same moment each held what the
-other needed next (`withdrawal-after-close.test.ts`, step 10).
+A trade's row is the lock on what it holds: every reservation, release and
+completion happens with that trade held, so once a transaction has its trades,
+the listings they hold are a fixed set one sorted statement can take. An
+acceptance locks its own trade and every trade its yes will push out, then its
+own listings and whatever the pushed-out trades were holding; an ending —
+cancelling, completing, erasure, a yes to a withdrawal — locks the trade, then
+what it holds. Each reads the state again under the lock, so a yes into a trade
+that ended while it waited is refused in words instead of bringing the trade
+back to `accepted`, and a trade that has ended keeps the reason it ended with.
+
+Until 27.09 the endings took the listings first and an acceptance took them in
+between, and three pairs met halfway, each holding what the other needed next: a
+yes to a withdrawal and a deletion, an acceptance and a deletion covering both
+the trades it touched, and two acceptances pushing out each other's trades
+(`withdrawal-after-close.test.ts` step 10, `lock-order.test.ts`).
 
 ### The queries and the indexes
 
@@ -198,11 +209,54 @@ discipline. Null means free.
 **The loser needs a path.** When an item is locked by trade A, any other trade
 holding it must be closed with a reason in words — `trades.close_reason` exists
 for that, and the trade screen reads it: a cancelled trade says «Byttet er
-avsluttet» and then why, rather than going quiet.
+avsluttet» and then why, rather than going quiet. The why is a code as well,
+`trades.close_code` (`closeCode` on the trade), and the app picks its words from
+the code: one sentence cannot be true for everybody reading it — the one who
+pulled out and the ones left behind, a pair and a ring of three.
+`backend/src/trades/close.ts` has the words each code is stored with, which are
+the record.
 
 **A service is never reserved.** One person can paint three living rooms, so
 exclusivity is wrong for it; a database constraint enforces that a service never
 holds `active_trade_id`.
+
+## «Legg ut» twice is one listing
+
+A phone loses answers: the listing is written, the reply dies in a tunnel, and
+the draft is still on the screen with its button. So the app makes an
+`Idempotency-Key` (a uuid) once per draft and sends it with `POST /items`, and
+the server keeps it on the row, `items.idempotency_key`, unique per owner. The
+same key from the same account within 48 hours is answered with the first
+listing — 200 rather than 201, the same body — instead of a second one; two
+presses landing at once meet on the index and the second waits for the first.
+The window is checked when the key is looked up, not held in the index, and a
+key past it, or on a listing deleted since, is let go of so the draft can list
+again. A key that is not a uuid is refused in words, because ignoring it would
+quietly take away the one thing standing between a second press and a
+duplicate. The header is in the CORS allow-list, or a browser refuses the
+listing before it is sent. `backend/test/flows/listing-twice.test.ts` is the
+contract.
+
+The second press's body is not compared with the first: the answer is the
+listing the key made, as it stands. But a draft can change between the two —
+the title put right after «Vi får ikke kontakt», a picture added — and handing
+the old listing back under «Lagt ut» threw those changes away without a word.
+So the app reads the 200 as «made earlier» and sends the form as a correction,
+the same `PATCH /items/:id` «Rediger annonsen» sends, before it lets go of the
+draft; no answer to the correction keeps the form and the draft, and the next
+press asks for both again. The correction can do what «Rediger annonsen» can
+and no more: it does not turn a thing into a service, or empty the value.
+
+That includes the refusal «Rediger annonsen» gets on a listing a trade holds.
+If the owner has accepted a trade with the listing since — from another phone,
+or from 13 while the form waited — no correction can land, and a draft kept
+for another press was handed the same listing and refused the same way every
+time, until the key ran out after 48 hours and the same press listed the thing
+twice. So a reservation ends the draft as a listing made does: said by
+`reserved` in the listing handed back, or by `item_reserved` when it came
+between that answer and the correction. The app lets the draft go, lands on
+13, and says the listing stands as it was first listed and cannot be changed
+until the trade is over, instead of «Lagt ut».
 
 ## Chat: one thread per trade, and the first message creates the trade
 
@@ -289,6 +343,18 @@ behind 01 and goes on to 02, so nobody meets a sign-in before they have seen
 anything. Signing out forgets the device id along with the token, and a start
 refused as `device_claimed` makes a new id, so the next person on a phone is a
 new stranger rather than the last one's device.
+
+On the web every tab of the site keeps one device id, and when one tab signs
+out or lets go of a refused token, every tab becomes a stranger in the same
+moment. So the app replaces the id, rather than forgetting it, and keeps the
+new one just before the token changes, since the token change is what the
+other tabs hear. It does this on «Logg ut», and on a profile made on the device's own
+account, which spends the id. A stranger's token is kept with the id it was
+made with. Forgotten, each tab made an id of its own: two device accounts,
+one left for the sweep, and often the id kept was the one nobody used.
+`POST /auth/anonymous` inserts with `on conflict (device_id) do nothing` and
+then lets the second of two simultaneous starts into the row the first made,
+where the second insert used to be a 500.
 
 **Signing in folds the device into the account.** Starting without asking means
 somebody with an account elsewhere arrives as a stranger, and may wish for

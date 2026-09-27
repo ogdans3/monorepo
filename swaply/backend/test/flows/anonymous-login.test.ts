@@ -133,6 +133,31 @@ describe('signing in on a phone that has been looking around', () => {
     lookingAgain = again.body!['token']
   })
 
+  test('1b. and one that asks twice at the same moment is one stranger too', async () => {
+    // Every tab of the site in a browser keeps one device id, and a tab that
+    // hears another sign out starts its stranger in the same moment as that
+    // tab. The id is the credential, so both are the same account. The second
+    // insert used to walk into the unique index and get a 500, and the tab
+    // that got it stood on a splash saying there was no answer.
+    const tabs = 'device-two-tabs-0123456789abcdef'
+    const [first, second] = await Promise.all([
+      call('POST', '/auth/anonymous', { body: { deviceId: tabs } }),
+      call('POST', '/auth/anonymous', { body: { deviceId: tabs } }),
+    ])
+
+    expect([first.status, second.status].sort()).toEqual([200, 201])
+    expect(first.body!['user']['id']).toBe(second.body!['user']['id'])
+    expect(first.body!['user']['anonymous']).toBe(true)
+    // Two sessions for one account, and both of them open it.
+    expect(first.body!['token']).not.toBe(second.body!['token'])
+    for (const { body } of [first, second]) {
+      const me = await call('GET', '/me', { token: body!['token'] })
+      expect(me.body!['id']).toBe(first.body!['user']['id'])
+    }
+    const rows = await db.execute(sql`select 1 from users where device_id = ${tabs}`)
+    expect(rows).toHaveLength(1)
+  })
+
   test('2. the stranger picks what it is into and wishes for six things', async () => {
     const picked = await call('PUT', '/me/interests', {
       token: looking, body: { interests: ['friluft', 'verktoy', 'sykling'] },

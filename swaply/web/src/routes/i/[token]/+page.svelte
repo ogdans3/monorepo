@@ -166,7 +166,10 @@
   {/if}
 </main>
 
-<Footer />
+<!-- The town is the one thing on this page from Bring's postcode register, so
+     the credit NLOD asks for comes with it: when the listing has a town, and
+     not on a plain invitation, which names none. -->
+<Footer postcodes={Boolean(item?.town)} />
 
 <style>
   header {

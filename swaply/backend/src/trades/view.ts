@@ -4,6 +4,7 @@ import type { Database } from '../db/index.js'
 import { mediaUrl } from '../lib/media.js'
 import { coverSql, iso, many, num, one } from '../lib/rows.js'
 import { publicItem, publicUser } from '../routes/serialize.js'
+import type { CloseCode } from './close.js'
 
 /**
  * Everything the trade screens render, from one viewer's point of view.
@@ -106,7 +107,13 @@ export async function tradeView(db: Database, tradeId: string, viewerId: string)
     // Two participants is a swap; three is the chain we cannot facilitate.
     kind: n > 2 ? 'chain' : 'direct',
     closedAt: iso(trade['closed_at']),
+    // The words it was closed with, for the record, and the code the app
+    // picks its own words from: one sentence cannot be right for everybody
+    // reading it — the one who pulled out and the one left behind, a pair
+    // and a ring of three (`trades/close.ts`). Null until it is cancelled,
+    // and on a trade cancelled with words no code was ever written for.
     closeReason: trade['close_reason'],
+    closeCode: (trade['close_code'] as CloseCode | null) ?? null,
     offerId: offer?.['id'] ?? null,
     offerSeq: offer ? Number(offer['seq']) : null,
     counterOfferBy: offer?.['proposed_by'] ?? null,

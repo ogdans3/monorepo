@@ -2,7 +2,10 @@ import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { conflict } from '../lib/errors.js'
+import { uuidArray } from '../lib/rows.js'
+import { closeReasonSql, type CloseCode } from './close.js'
 import type { Cycle } from './cycles.js'
+import { lockItems, lockTrades } from './locks.js'
 
 type Row = Record<string, string | null>
 
@@ -173,6 +176,11 @@ export type AcceptResult = {
  * The lock is the point of this function. An owner's acceptance is what turns a
  * listing from available into spoken for, and two people accepting at the same
  * moment must not both walk away with the same drill.
+ *
+ * In the one order (`index.ts`): this trade and every trade the yes will push
+ * out, then this person's listings and whatever the pushed-out trades hold.
+ * The trades are decided before anything is locked and judged again once they
+ * are held, because each of them may have moved while this waited.
  */
 export async function acceptOffer(
   db: Database,
@@ -186,15 +194,55 @@ export async function acceptOffer(
     )
     const tradeId = offer!['trade_id']!
 
-    // Sorted, so two concurrent acceptances queue instead of deadlocking.
-    const mine = await tx.execute<Row>(sql`
-      select i.id, i.active_trade_id, i.kind
-      from trade_offer_items oi
-      join items i on i.id = oi.item_id
-      where oi.offer_id = ${offerId} and i.owner_id = ${userId}
-      order by i.id
-      for update of i
+    // What this person gives in this version. Offer rows never change and
+    // neither does who owns a listing, so this needs no lock.
+    const offered = (
+      await tx.execute<Row>(sql`
+        select oi.item_id as id from trade_offer_items oi
+        join items i on i.id = oi.item_id
+        where oi.offer_id = ${offerId} and i.owner_id = ${userId}
+      `)
+    ).map((row) => row['id']!)
+
+    // The trades this yes can push out: every other one with one of the
+    // things it reserves on the table, in any version. A service is never
+    // reserved, so it pushes nothing out.
+    const rivals = await tx.execute<Row>(sql`
+      select distinct o.trade_id as id
+      from items i
+      join trade_offer_items oi on oi.item_id = i.id
+      join trade_offers o on o.id = oi.offer_id
+      join trades t on t.id = o.trade_id
+      where i.id = any(${uuidArray(offered)}) and i.kind = 'item'
+        and o.trade_id <> ${tradeId} and t.state not in ('completed', 'cancelled')
     `)
+    const states = await lockTrades(tx, [tradeId, ...rivals.map((row) => row['id']!)])
+
+    // Read under the lock. A yes into a trade that ended while it waited — the
+    // other side deleted their account, or another yes pushed this one out —
+    // reserved things for a trade nobody would ever free them from, and put a
+    // cancelled trade back to `accepted` when it was the last yes.
+    const state = states.get(tradeId)
+    if (state === 'completed' || state === 'cancelled') {
+      throw conflict('trade_closed', 'Byttet er avsluttet.')
+    }
+    if (state === 'paused') {
+      throw conflict('trade_paused', 'Byttet er pauset mens noen svarer på en forespørsel.')
+    }
+    // Only a negotiation loses its things to another trade's yes, judged as
+    // it stands now that it is held. An agreed trade holding one of them is
+    // refused below, as `item_reserved`.
+    const displaced = [...states]
+      .filter(([id, now]) => id !== tradeId && ['talking', 'pending', 'countered'].includes(now))
+      .map(([id]) => id)
+
+    // Every listing this is going to write, in one sorted batch: the ones this
+    // person gives, and the ones the pushed-out trades were holding.
+    const locked = await lockItems(
+      tx,
+      sql`i.id = any(${uuidArray(offered)}) or i.active_trade_id = any(${uuidArray(displaced)})`,
+    )
+    const mine = locked.filter((row) => offered.includes(row['id']))
 
     for (const row of mine) {
       const held = row['active_trade_id']
@@ -208,49 +256,21 @@ export async function acceptOffer(
       }
     }
 
-    const reserved: string[] = []
-    const displaced = new Set<string>()
-    const freed = new Set<string>()
-
-    for (const row of mine) {
-      // A service is never exclusive: one person can paint three living rooms.
-      if (row['kind'] === 'service') continue
-
-      const itemId = row['id']!
+    // A service is never exclusive: one person can paint three living rooms.
+    const reserved = mine.filter((row) => row['kind'] !== 'service').map((row) => row['id'] as string)
+    if (reserved.length > 0) {
       await tx.execute(
         sql`update items set active_trade_id = ${tradeId}, status = 'reserved'
-            where id = ${itemId}`,
+            where id = any(${uuidArray(reserved)})`,
       )
-      reserved.push(itemId)
-
-      // The loser gets a reason in words, never a silent disappearance.
-      const closed = await tx.execute<Row>(sql`
-        update trades set state = 'cancelled', closed_at = now(),
-               close_reason = 'En gjenstand i byttet ble reservert av et annet bytte'
-        where id <> ${tradeId}
-          and state in ('talking', 'pending', 'countered')
-          and exists (
-            select 1 from trade_offers o
-            join trade_offer_items oi on oi.offer_id = o.id
-            where o.trade_id = trades.id and oi.item_id = ${itemId}
-          )
-        returning id
-      `)
-      for (const row of closed) displaced.add(row['id']!)
-
-      // A displaced trade may have been holding things of its own — whoever
-      // else had already accepted in it locked theirs. Closing the trade
-      // without letting go of them would leave a listing reserved by a trade
-      // that no longer exists, and nothing would ever free it.
-      for (const row of closed) {
-        const released = await tx.execute<Row>(
-          sql`update items set active_trade_id = null, status = 'available'
-              where active_trade_id = ${row['id']!}
-              returning id`,
-        )
-        for (const item of released) freed.add(item['id']!)
-      }
     }
+
+    // The losers get a reason in words, never a silent disappearance — and
+    // let go of whatever they were holding, because whoever else had already
+    // accepted in one of them locked their things, and a listing reserved by
+    // a trade that no longer exists is one nothing would ever free.
+    const freed: string[] = []
+    for (const loser of displaced) freed.push(...(await endTrade(tx, loser, 'displaced')))
 
     await tx.execute(
       sql`insert into trade_acceptances (offer_id, user_id, terms_version)
@@ -274,7 +294,7 @@ export async function acceptOffer(
       await tx.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
     }
 
-    return { reserved, displaced: [...displaced], freed: [...freed], everyoneAccepted }
+    return { reserved, displaced, freed, everyoneAccepted }
   })
 }
 
@@ -299,6 +319,10 @@ export async function revokeAcceptance(
       sql`select trade_id from trade_offers where id = ${offerId}`,
     )
     const tradeId = offer!['trade_id']!
+
+    // The one order (`index.ts`): the trade, then what it holds.
+    await lockTrades(tx, [tradeId])
+    await lockItems(tx, sql`i.active_trade_id = ${tradeId} and i.owner_id = ${userId}`)
 
     await tx.execute(
       sql`update trade_acceptances set revoked_at = now()
@@ -327,9 +351,20 @@ export async function revokeAcceptance(
  * The snapshot is what lets a listing be deleted, or its owner erased, without
  * taking the counterparty's history with it — and it stops an edit to an item
  * quietly rewriting what was traded.
+ *
+ * Only an agreed trade finishes, judged under its lock. The last «Mottatt»
+ * can land in the same moment as a deletion that ends the trade, and
+ * completing it after that would mark as traded what the deletion had just
+ * put back on the market; and a marker set again on a finished trade must not
+ * move the day it finished, which is where the retention clock starts.
  */
 export async function completeTrade(db: Database, tradeId: string) {
   await db.transaction(async (tx) => {
+    // The one order (`index.ts`): the trade, then what it holds.
+    const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+    if (state !== 'accepted' && state !== 'paused') return
+    await lockItems(tx, sql`i.active_trade_id = ${tradeId}`)
+
     await tx.execute(sql`
       insert into trade_item_snapshots
         (trade_id, item_id, giver_position, title, kind, category, estimated_value_nok, cover_url)
@@ -370,30 +405,43 @@ export async function completeTrade(db: Database, tradeId: string) {
 export async function cancelTrade(
   db: Database,
   tradeId: string,
-  reason: string,
+  code: CloseCode,
 ): Promise<string[]> {
-  return db.transaction((tx) => endTrade(tx, tradeId, reason))
+  return db.transaction((tx) => endTrade(tx, tradeId, code))
 }
 
 /**
  * `cancelTrade` inside a transaction the caller already holds — for a caller
  * that has locked the trade and decided on its state, and must not let go of
  * the lock before the trade has ended.
+ *
+ * The code says why (`close.ts` has the words it is stored with). A trade ends
+ * once: one that has already ended keeps the reason it ended with, and this
+ * writes nothing — a decline landing just after a deletion must not tell the
+ * others the trade was declined.
  */
-export async function endTrade(tx: Tx, tradeId: string, reason: string): Promise<string[]> {
+export async function endTrade(tx: Tx, tradeId: string, code: CloseCode): Promise<string[]> {
+  // The one order (`index.ts`): the trade, then what it holds. A caller that
+  // holds them already — an answer to a withdrawal, an acceptance pushing
+  // this trade out — takes nothing new here.
+  const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+  if (!state || state === 'completed' || state === 'cancelled') return []
+  await lockItems(tx, sql`i.active_trade_id = ${tradeId}`)
+
   const freed = await tx.execute<Row>(
     sql`update items set active_trade_id = null, status = 'available'
         where active_trade_id = ${tradeId}
         returning id`,
   )
   await tx.execute(
-    sql`update trades set state = 'cancelled', closed_at = now(), close_reason = ${reason}
+    sql`update trades set state = 'cancelled', closed_at = now(),
+               close_code = ${code}::trade_close_code, close_reason = ${closeReasonSql(code)}
         where id = ${tradeId}`,
   )
   // A withdrawal question still waiting is moot: the trade it asked about has
-  // ended under it. Closed as lapsed, the way erasure closes one, because an
-  // answer given later to a waiting row — a no, or «Angre forespørselen» —
-  // puts the trade back to `accepted`.
+  // ended under it. Closed as lapsed, because an answer given later to a
+  // waiting row — a no, or «Angre forespørselen» — puts the trade back to
+  // `accepted`.
   await tx.execute(
     sql`update trade_withdrawals set state = 'expired', resolved_at = now()
         where trade_id = ${tradeId} and state = 'waiting'`,

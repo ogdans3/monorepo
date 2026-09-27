@@ -64,6 +64,27 @@
       "when": 1790480344124,
       "tag": "0008_close_lapsed_withdrawals",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790494456109,
+      "tag": "0009_listing_idempotency_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790494472471,
+      "tag": "0010_trade_close_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790494482578,
+      "tag": "0011_test_account_owner_restrict",
+      "breakpoints": true
     }
   ]
 }

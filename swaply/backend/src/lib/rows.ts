@@ -33,3 +33,10 @@ export const coverSql = (alias: string) =>
  */
 export const textArray = (values: string[]) =>
   sql`${`{${values.map((v) => `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')}}`}::text[]`
+
+/**
+ * A `uuid[]` parameter, for `= any(...)`. Sent as one array literal and cast by
+ * the database, so a value that is not a uuid is an error rather than part of
+ * the statement.
+ */
+export const uuidArray = (values: string[]) => sql`${`{${values.join(',')}}`}::uuid[]`

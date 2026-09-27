@@ -2,7 +2,9 @@ import { sql, type SQL } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { removeStored } from '../lib/media.js'
-import { many } from '../lib/rows.js'
+import { many, uuidArray } from '../lib/rows.js'
+import { lockItems, lockTradesWhere } from './locks.js'
+import { endTrade } from './trades.js'
 
 type Row = Record<string, string | null>
 
@@ -59,35 +61,42 @@ export async function anonymiseUser(
     }
 
     // You cannot anonymise someone the counterparty is still waiting on, so the
-    // live trades end first, with a reason the other side can read. `paused`
-    // is one of them: an accepted trade with a withdrawal question open.
-    const live = await tx.execute<Row>(sql`
-      select distinct t.id from trades t
-      join trade_participants p on p.trade_id = t.id
-      where p.user_id = ${userId}
-        and t.state in ('talking', 'pending', 'countered', 'accepted', 'paused')
-    `)
-    for (const row of live) {
-      const tradeId = row['id']!
-      const released = await tx.execute<Row>(
-        sql`update items set active_trade_id = null, status = 'available'
-            where active_trade_id = ${tradeId}
-            returning id, owner_id`,
-      )
-      for (const item of released) if (item['owner_id'] !== userId) freed.push(item['id']!)
-      await tx.execute(
-        sql`update trades set state = 'cancelled', closed_at = now(),
-                   close_reason = 'Den andre parten slettet kontoen sin'
-            where id = ${tradeId}`,
-      )
-      // A withdrawal question still waiting is moot: the trade it asked about
-      // has ended under it. Closed as lapsed, because an answer given later
-      // to a waiting row — a no puts the trade back to `accepted` — would
-      // bring a cancelled trade back to life with a tombstone in it.
-      await tx.execute(
-        sql`update trade_withdrawals set state = 'expired', resolved_at = now()
-            where trade_id = ${tradeId} and state = 'waiting'`,
-      )
+    // live trades end first, with a reason the others can read. `paused` is
+    // one of them: an accepted trade with a withdrawal question open.
+    //
+    // In the one order (`index.ts`): every one of them, lowest id first,
+    // before any listing, and then every listing this will write in one
+    // sorted batch — what those trades hold, and the account's own. They used
+    // to be ended one at a time, a trade's things and then the trade, which
+    // held one trade while reaching for the next one's things: the other half
+    // of a yes that held the next and was reaching for the first.
+    const live = [
+      ...(
+        await lockTradesWhere(
+          tx,
+          sql`t.state in ('talking', 'pending', 'countered', 'accepted', 'paused')
+              and exists (select 1 from trade_participants p
+                          where p.trade_id = t.id and p.user_id = ${userId})`,
+        )
+      ).keys(),
+    ]
+    const owners = new Map(
+      (
+        await lockItems(
+          tx,
+          sql`i.active_trade_id = any(${uuidArray(live)})
+              or (i.owner_id = ${userId} and i.status <> 'traded')`,
+        )
+      ).map((row) => [row['id'] as string, row['owner_id'] as string]),
+    )
+
+    for (const tradeId of live) {
+      // Through the one way a trade is cancelled, which also closes a
+      // withdrawal question still waiting on it as lapsed — an answer given
+      // later to a waiting row would bring the trade back to life with a
+      // tombstone in it.
+      const released = await endTrade(tx, tradeId, 'account_deleted')
+      for (const id of released) if (owners.get(id) !== userId) freed.push(id)
       // And the others are told, the way they are told a trade opened or
       // moved. The reason is on the trade, so the payload is the trade and a
       // code for why, never the words — they are the app's to write, and a

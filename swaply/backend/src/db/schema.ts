@@ -36,6 +36,27 @@ export const tradeState = pgEnum('trade_state', [
   'cancelled',
 ])
 
+// Why a trade was cancelled, as a code the app picks its own words from.
+// `close_reason` keeps the words it was closed with, for the record; this is
+// what a screen switches on, because the right sentence depends on who is
+// reading it and how many are in the trade. `endTrade` writes both, and
+// `trades/close.ts` has the words each code is stored with — which is where a
+// new way for a trade to end gets its code.
+export const tradeCloseCode = pgEnum('trade_close_code', [
+  // Another trade reserved one of the listings in it (`acceptOffer`).
+  'displaced',
+  // «Avslå» on 09f, before everybody had accepted.
+  'declined',
+  // «Trekk deg» on 09g, before everybody had accepted.
+  'withdrawn_early',
+  // The others said yes to a withdrawal on 08b.
+  'withdrawal_approved',
+  // Somebody in it deleted their account, or was erased as an idle device.
+  'account_deleted',
+  // The test tooling's «Nullstill → bytter».
+  'ended_by_admin',
+])
+
 export const itemStatus = pgEnum('item_status', ['available', 'reserved', 'traded', 'withdrawn'])
 
 export const listingKind = pgEnum('listing_kind', ['item', 'service'])
@@ -110,6 +131,13 @@ export const users = pgTable(
     // admin may act as, reset or delete — never a real person's account. Set
     // when the row is created and never adopted afterwards, which is also the
     // trigger's business.
+    //
+    // A foreign key to `users.id`, ON DELETE RESTRICT, written by hand in the
+    // migrations because drizzle-kit emits no self-reference (0004, 0011). An
+    // admin is anonymised and never deleted, so it should never fire; if a
+    // delete ever reached one, SET NULL would have quietly made every account
+    // in the ring an ordinary one, and a device among them fair game for the
+    // idle sweep.
     testAccountOf: uuid('test_account_of'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     // The last time the account did anything itself: any request with its own
@@ -212,6 +240,10 @@ export const trades = pgTable('trades', {
   // Says why in words, because "the drill was reserved by another trade" is a
   // screen, not a silent disappearance.
   closeReason: text('close_reason'),
+  // The same, as a code (`tradeCloseCode` above). Null on a trade that has
+  // not been cancelled, and on one cancelled with words from before the codes
+  // that drizzle/0010 could not map.
+  closeCode: tradeCloseCode('close_code'),
 })
 
 export const tradeParticipants = pgTable(
@@ -271,9 +303,21 @@ export const items = pgTable(
     ),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    // The `Idempotency-Key` the app sent with «Legg ut», made once per draft.
+    // An answer lost after the listing was written leaves the draft on the
+    // phone, and pressing again sends the same key: `POST /items` hands back
+    // this row instead of a second copy of the listing. It answers for 48
+    // hours, checked when it is looked up; after that, or once the listing is
+    // deleted, the key is let go of and the same draft lists again.
+    idempotencyKey: uuid('idempotency_key'),
   },
   (t) => [
     check('condition_for_items', sql`${t.kind} = 'service' or ${t.condition} is not null`),
+    // Per owner: a key is somebody's draft, and two people's phones may well
+    // make the same one. `POST /items` names this index in `on conflict`.
+    uniqueIndex('items_owner_idempotency_key')
+      .on(t.ownerId, t.idempotencyKey)
+      .where(sql`idempotency_key is not null`),
     // A service is not exclusive. One person can paint three living rooms, so it
     // never holds a reservation the way a drill does.
     check('exclusive_only_for_items', sql`${t.kind} = 'item' or ${t.activeTradeId} is null`),

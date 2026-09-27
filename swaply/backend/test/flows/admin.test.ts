@@ -377,4 +377,48 @@ describe('the test tooling', () => {
     const readers = files.filter((name) => source(name).includes('is_admin'))
     expect(readers.sort()).toEqual(['discovery.ts', 'serialize.ts'])
   })
+
+  test('17. the account that owns a ring can never be deleted out from under it', async () => {
+    // An admin is anonymised, never deleted, so this should never happen. If
+    // it did, the key used to be ON DELETE SET NULL, and every account in the
+    // ring became an ordinary one without anybody deciding it — shown to
+    // everybody, out of the switcher's reach, and a device among them fair
+    // game for the idle sweep. drizzle/0011 made it RESTRICT.
+    const [key] = await db.execute<{ confdeltype: string }>(
+      sql`select confdeltype from pg_constraint where conname = 'users_test_account_of_users_id_fk'`,
+    )
+    expect(key!.confdeltype).toBe('r')
+
+    const [owned] = await db.execute<{ n: number }>(
+      sql`select count(*)::int as n from users where test_account_of = ${gabrielId}`,
+    )
+    expect(owned!.n).toBeGreaterThan(0)
+
+    expect(await refusal(db.execute(sql`delete from users where id = ${gabrielId}`))).toMatch(
+      /users_test_account_of_users_id_fk/,
+    )
+    const [still] = await db.execute<{ n: number }>(
+      sql`select count(*)::int as n from users where test_account_of = ${gabrielId}`,
+    )
+    expect(still!.n).toBe(owned!.n)
+  })
+
+  test('18. and the guard in front of the column is as it was: letting go needs no ceremony', async () => {
+    // The key changed; the trigger did not. Adoption is still refused (step 9),
+    // and releasing an account — the direction that is never dangerous — still
+    // passes without the CLI's transaction.
+    const made = await call('POST', '/admin/accounts', {
+      token: gabriel, body: { displayName: 'Slippes fri', withItems: 0 },
+    })
+    const id = made.body!['id'] as string
+
+    await db.execute(sql`update users set test_account_of = null where id = ${id}`)
+    const [row] = await db.execute<{ test_account_of: string | null }>(
+      sql`select test_account_of from users where id = ${id}`,
+    )
+    expect(row!.test_account_of).toBeNull()
+    expect(
+      await refusal(db.execute(sql`update users set test_account_of = ${gabrielId} where id = ${id}`)),
+    ).toMatch(/never adopted/)
+  })
 })

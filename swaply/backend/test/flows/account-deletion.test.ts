@@ -147,6 +147,8 @@ describe('deleting your own account', () => {
 
     expect(res.body!['state']).toBe('cancelled')
     expect(res.body!['closeReason']).toBe('Den andre parten slettet kontoen sin')
+    // The code is what the app picks its words from (closing-words.test.ts).
+    expect(res.body!['closeCode']).toBe('account_deleted')
   })
 
   test('5b. and she is told, in the list 12a draws, rather than finding out when she looks', async () => {

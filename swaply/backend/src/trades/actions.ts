@@ -4,6 +4,7 @@ import type { Database } from '../db/index.js'
 import { WITHDRAWAL_RESPONSE_HOURS } from '../lib/constants.js'
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
 import { many, one, type Row } from '../lib/rows.js'
+import { lockTrades } from './locks.js'
 import { cancelTrade, endTrade, type Tx } from './trades.js'
 
 export async function participantOf(db: Database, tradeId: string, userId: string) {
@@ -35,7 +36,7 @@ export async function declineTrade(db: Database, tradeId: string, userId: string
   if (!NEGOTIABLE.includes(trade['state'])) {
     throw conflict('needs_permission', 'Alle har godtatt. Du må spørre de andre først.')
   }
-  return cancelTrade(db, tradeId, 'Byttet ble avslått')
+  return cancelTrade(db, tradeId, 'declined')
 }
 
 /**
@@ -56,7 +57,7 @@ export async function withdrawEarly(db: Database, tradeId: string, userId: strin
   if (!NEGOTIABLE.includes(trade['state'])) {
     throw conflict('needs_permission', 'Alle har godtatt. Du må spørre de andre først.')
   }
-  return cancelTrade(db, tradeId, 'Den andre parten trakk seg før byttet var godtatt')
+  return cancelTrade(db, tradeId, 'withdrawn_early')
 }
 
 /**
@@ -70,24 +71,23 @@ export async function withdrawEarly(db: Database, tradeId: string, userId: strin
  * to a completed one, it un-completed it. The lock is what keeps a
  * cancellation from landing between the check and the write.
  *
- * What the trade holds is locked before the trade, because that is the order
- * every other way a trade ends takes them in: `endTrade`, `completeTrade` and
- * the erasure all let go of the items and then write the trade. A yes that
- * took the trade first and then reached for the items met a deletion that
- * held the items and was reaching for the trade, and Postgres ended one of
- * them as a deadlock — a 500 for Tor, or «Slett kontoen» failing for Siri.
- * By the same condition as theirs, so the rows are met in the same order too.
+ * Only the trade is locked, and that is the whole of the one order
+ * (`index.ts`) for a step that writes nothing but the trade and its question:
+ * the trade's row is the lock on what it holds, so a yes that goes on to end
+ * the trade takes the listings after it, inside `endTrade`. The first version
+ * of this took the listings first, to match endings that let go of the
+ * listings before they wrote the trade; every ending now takes the trade
+ * first, and a yes and a deletion in the same moment queue on it instead of
+ * each holding what the other needed next — a 500 for Tor, or «Slett
+ * kontoen» failing for Siri.
  */
 async function openTradeFor(tx: Tx, tradeId: string): Promise<string> {
-  await tx.execute(sql`select id from items where active_trade_id = ${tradeId} for update`)
-  const [trade] = await tx.execute<Row>(
-    sql`select state from trades where id = ${tradeId} for update`,
-  )
-  if (!trade) throw notFound('Fant ikke byttet.')
-  if (['completed', 'cancelled'].includes(trade['state'])) {
+  const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+  if (!state) throw notFound('Fant ikke byttet.')
+  if (['completed', 'cancelled'].includes(state)) {
     throw conflict('trade_closed', 'Byttet er allerede avsluttet.')
   }
-  return trade['state']
+  return state
 }
 
 /**
@@ -195,7 +195,7 @@ export async function respondToWithdrawal(
       // Inside the lock: the trade was open when this was decided, and it
       // ends with the reason this answer gives rather than one written over
       // somebody else's.
-      const freed = await endTrade(tx, tradeId, 'Byttet ble avbrutt etter avtale mellom partene')
+      const freed = await endTrade(tx, tradeId, 'withdrawal_approved')
       return { state: 'approved', blockedBySent: false, freed }
     }
 

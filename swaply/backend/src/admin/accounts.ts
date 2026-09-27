@@ -4,8 +4,9 @@ import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
-import { many, one, type Row } from '../lib/rows.js'
+import { many, one, uuidArray, type Row } from '../lib/rows.js'
 import { anonymiseUser } from '../trades/erasure.js'
+import { lockItems } from '../trades/locks.js'
 import { cancelTrade } from '../trades/trades.js'
 import { CATALOGUE, INTERESTS, PEOPLE } from './fixtures.js'
 
@@ -204,7 +205,7 @@ export async function resetAccount(
       }
       // Through cancelTrade, so the counterparty gets a reason in words and the
       // listings are released rather than left locked to a dead trade.
-      freed.push(...(await cancelTrade(db, row['id'], 'Byttet ble avsluttet fra testverktøyet')))
+      freed.push(...(await cancelTrade(db, row['id'], 'ended_by_admin')))
       ended++
     }
     done.push(`${ended} bytter avsluttet`)
@@ -217,12 +218,21 @@ export async function resetAccount(
   }
 
   if (parts.includes('items')) {
-    const items = await many(
-      db,
-      sql`update items set deleted_at = now(), status = 'withdrawn'
-          where owner_id = ${userId} and deleted_at is null and active_trade_id is null
-          returning id`,
-    )
+    const items = await db.transaction(async (tx) => {
+      // Listings lowest id first, the way everything that writes them takes
+      // them (`trades/index.ts`). A bare multi-row UPDATE locks in whatever
+      // order it scans, and an acceptance by the same account in that moment
+      // takes its own in sorted order.
+      const free = sql`i.owner_id = ${userId} and i.deleted_at is null and i.active_trade_id is null`
+      const locked = await lockItems(tx, free)
+      if (locked.length === 0) return []
+      return tx.execute(
+        sql`update items set deleted_at = now(), status = 'withdrawn'
+            where id = any(${uuidArray(locked.map((row) => row['id'] as string))})
+              and deleted_at is null and active_trade_id is null
+            returning id`,
+      )
+    })
     done.push(`${items.length} gjenstander trukket`)
   }
 

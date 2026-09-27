@@ -56,7 +56,7 @@ describe('the sweep', () => {
   })
 
   test('3. cancelling it says which listings came back', async () => {
-    const freed = await cancelTrade(db, first, 'Ola trakk seg')
+    const freed = await cancelTrade(db, first, 'withdrawn_early')
 
     expect(freed).toEqual([drill])
     expect(await tradeState(first)).toBe('cancelled')

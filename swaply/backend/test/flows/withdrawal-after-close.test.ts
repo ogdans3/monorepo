@@ -15,9 +15,9 @@
 // un-completed it. Wherever a trade ends now, a question still waiting closes
 // as lapsed with it — and the refusal holds even for a row that did not.
 //
-// The lock that check is read under is taken in the order every ending takes
-// its locks — what the trade holds, then the trade — so a yes and a deletion
-// in the same moment queue instead of deadlocking.
+// The lock that check is read under is the trade's own, taken first, the way
+// everything that changes a trade takes its locks (`backend/src/trades/index.ts`)
+// — so a yes and a deletion in the same moment queue instead of deadlocking.
 import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
@@ -113,7 +113,7 @@ describe('a trade ended while the question waits', () => {
     // Through the function every cancellation goes through — the tool's
     // «Nullstill → bytter» is one. Erasure has closed the question since it was
     // written; this did not.
-    await cancelTrade(db, trade.tradeId, 'Byttet ble avsluttet fra testverktøyet')
+    await cancelTrade(db, trade.tradeId, 'ended_by_admin')
 
     expect(await tradeState(trade.tradeId)).toBe('cancelled')
     expect(await question(trade.tradeId)).toBe('expired')
@@ -141,6 +141,7 @@ describe('a trade ended while the question waits', () => {
     const view = await call('GET', `/trades/${trade.tradeId}`, { token: tor })
     expect(view.body!['state']).toBe('cancelled')
     expect(view.body!['closeReason']).toBe('Byttet ble avsluttet fra testverktøyet')
+    expect(view.body!['closeCode']).toBe('ended_by_admin')
   })
 
   test('5. and so is asking again', async () => {
@@ -216,11 +217,13 @@ describe('a trade that completes while the question waits', () => {
 })
 
 describe('a yes given in the same moment the other side deletes the account', () => {
-  // The erasure lets go of what the trade holds and then ends the trade, the
-  // order every other way a trade ends takes them in. Tor's yes used to take
-  // the trade first and then reach for the things, and the two met halfway:
-  // each held what the other needed next, and Postgres ended one of them as
-  // a deadlock — a 500 for Tor, or a deletion that failed.
+  // The deletion takes the trade first and then what it holds, the order
+  // everything that changes a trade takes its locks in, and so does Tor's
+  // yes. Before that order was one order, the deletion let go of the things
+  // and then reached for the trade while the yes held the trade and reached
+  // for the things; the two met halfway and Postgres ended one of them as a
+  // deadlock — a 500 for Tor, or a deletion that failed. Now the yes waits
+  // for the trade and finds it ended.
   test('10. the deletion finishes, and Tor is told the trade has already ended', async () => {
     const { tradeId, guitar } = await agreedTrade(4)
     await call('POST', `/trades/${tradeId}/withdrawal`, { token: siri })
@@ -230,28 +233,33 @@ describe('a yes given in the same moment the other side deletes the account', ()
     try {
       let answering: ReturnType<typeof call> | undefined
       await other.db.transaction(async (tx) => {
-        // What `anonymiseUser` does first for each live trade.
-        await tx.execute(
-          sql`update items set active_trade_id = null, status = 'available'
-              where active_trade_id = ${tradeId}`,
-        )
+        // What `anonymiseUser` takes first: the trade.
+        await tx.execute(sql`select 1 from trades where id = ${tradeId} for no key update`)
         answering = call('POST', `/trades/${tradeId}/withdrawal/respond`, {
           token: tor, body: { approve: true },
         })
-        // Held until Tor's yes is waiting on something this has.
+        // Held until Tor's yes is waiting on it. Postgres answers
+        // `pg_stat_activity` from a snapshot it keeps for the transaction, so
+        // it is let go of before every look.
         for (let tries = 0; ; tries++) {
+          await tx.execute(sql`select pg_stat_clear_snapshot()`)
           const [waiting] = await tx.execute<{ n: number }>(
             sql`select count(*)::int as n from pg_stat_activity
                 where datname = current_database() and wait_event_type = 'Lock'`,
           )
           if (waiting!.n > 0) break
-          if (tries > 500) throw new Error('the yes never came to the things the trade holds')
+          if (tries > 500) throw new Error('the yes never came to the trade')
           await new Promise((resolve) => setTimeout(resolve, 10))
         }
-        // …and then what it does next: the trade, which the yes must not
-        // be holding by now.
+        // …and then what it does next: the things the trade holds, and the
+        // trade, with nothing of either in the yes's hands.
+        await tx.execute(
+          sql`update items set active_trade_id = null, status = 'available'
+              where active_trade_id = ${tradeId}`,
+        )
         await tx.execute(
           sql`update trades set state = 'cancelled', closed_at = now(),
+                     close_code = 'account_deleted',
                      close_reason = 'Den andre parten slettet kontoen sin'
               where id = ${tradeId}`,
         )

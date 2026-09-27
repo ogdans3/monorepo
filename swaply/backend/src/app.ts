@@ -49,7 +49,10 @@ export async function buildApp(
     // sets interests, retires a listing or takes back a like is one of the
     // others, and a browser refuses them without this.
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['content-type', 'authorization'],
+    // `idempotency-key` is what «Legg ut» sends so that pressing it again
+    // after a lost answer does not list the thing twice (`POST /items`). Left
+    // out, a browser refuses the listing before it is sent.
+    allowedHeaders: ['content-type', 'authorization', 'idempotency-key'],
   })
   // One file per request, cut off at the ceiling rather than read into memory
   // and rejected afterwards.

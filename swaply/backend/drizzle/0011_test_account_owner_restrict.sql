@@ -1,0 +1,23 @@
+-- A test account's owner can never be deleted out from under it.
+--
+-- `users.test_account_of` was ON DELETE SET NULL. Had an admin's row ever been
+-- hard-deleted, every test account in their ring would have become an
+-- ordinary account without anyone deciding it: no badge, out of the
+-- switcher's reach, shown on Oppdag to everybody — and, for one that never
+-- made a profile, eligible for the idle-device sweep, which spares test
+-- accounts by this column alone.
+--
+-- It should never fire. An admin is erased like anybody, by anonymisation,
+-- and the row stays as a tombstone; the one DELETE in the code is the merge
+-- that folds a phone's account into the one signed in to, and it refuses an
+-- account that owns test accounts (`users.test_account_of: 'refuses'` in
+-- backend/src/auth/merge.ts). RESTRICT makes that a fact the database holds
+-- rather than a habit: a delete that would orphan the ring is refused, and it
+-- is refused for as long as any row points at the owner — a retired test
+-- account is a tombstone that still does.
+--
+-- Hand-written, like the key it replaces: drizzle-kit emits no
+-- self-referencing foreign keys (see 0004). The trigger in front of the column
+-- is not touched — it guards INSERT and UPDATE, and neither changes here.
+ALTER TABLE "users" DROP CONSTRAINT "users_test_account_of_users_id_fk";--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_test_account_of_users_id_fk" FOREIGN KEY ("test_account_of") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;

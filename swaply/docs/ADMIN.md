@@ -48,6 +48,15 @@ the same trigger refuses adoption, so an account may be *born* a test account
 Without that, the tool could take ownership of a real person's account and then
 act as them.
 
+The ring cannot be orphaned either. `test_account_of` is a foreign key with
+`ON DELETE RESTRICT` (`backend/drizzle/0011_test_account_owner_restrict.sql`):
+an admin is anonymised and never deleted, so it should never fire, but had a
+delete ever reached an admin's row, the `SET NULL` it used to be would have made
+every account in the ring an ordinary one without anybody deciding it — shown to
+everybody, out of the switcher's reach, and an unclaimed one fair game for the
+idle-device sweep. Now the delete is refused for as long as any account, a
+retired tombstone included, points at the owner.
+
 There is no endpoint that enumerates the userbase, and no way to mint a session
 for an account you did not make. An ordinary account gets **404** from every
 admin route — whether this deployment has an admin section is not something the
@@ -152,7 +161,8 @@ Beyond the ring, three things:
 
 `backend/test/flows/admin.test.ts` — the key: that nothing over HTTP can cut
 one, that the set cannot grow sideways, that a switched session is not admin,
-that an ordinary account gets 404, and that no route assigns to the column.
+that an ordinary account gets 404, that no route assigns to the column, and that
+the owner of a ring cannot be deleted out from under it.
 
 `backend/test/flows/admin-scenarios.test.ts` — every named state, asserted by
 the *consequences* a real journey leaves behind (offers, acceptances,

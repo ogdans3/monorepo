@@ -48,32 +48,53 @@ export default async function authRoutes(app: FastifyInstance) {
 
     // An erased account has no device id left, so a device whose account was
     // deleted comes back here as a stranger, which is the right answer.
-    const existing = await one(
-      app.db,
-      sql`select *, ${hiddenCountColumn} from users
-          where device_id = ${body.deviceId} and anonymised_at is null`,
-    )
-
-    if (existing?.['email']) {
-      throw conflict(
-        'device_claimed',
-        'Denne enheten hører allerede til en konto. Logg inn med e-post og passord.',
+    const lookUp = () =>
+      one(
+        app.db,
+        sql`select *, ${hiddenCountColumn} from users
+            where device_id = ${body.deviceId} and anonymised_at is null`,
       )
-    }
-    if (existing) {
+    const letIn = async (existing: Record<string, any>) => {
+      if (existing['email']) {
+        throw conflict(
+          'device_claimed',
+          'Denne enheten hører allerede til en konto. Logg inn med e-post og passord.',
+        )
+      }
       return { token: await issueSession(app.db, existing['id']), user: publicMe(existing) }
     }
 
+    const existing = await lookUp()
+    if (existing) return letIn(existing)
+
+    // `on conflict do nothing`, because the same id can arrive twice at once:
+    // every tab of the site in one browser keeps one device id, and a tab that
+    // hears another sign out starts its stranger in the same moment as that
+    // one. Both looked and found nobody; the second insert walked into the
+    // unique index and was a 500. The id is the credential, so the second is
+    // let into the account the first has just made. It waits for the first
+    // insert to commit or roll back, so an account whose invitation turned out
+    // spent is gone by then, and this one is made instead.
     const userId = await app.db.transaction(async (tx) => {
       const rows = await tx.execute<Record<string, any>>(
-        sql`insert into users (device_id) values (${body.deviceId}) returning id`,
+        sql`insert into users (device_id) values (${body.deviceId})
+            on conflict (device_id) do nothing
+            returning id`,
       )
-      const id = rows[0]!['id'] as string
+      const id = rows[0]?.['id'] as string | undefined
+      if (!id) return null
       // Inside the transaction on purpose: if the invitation turns out to be
       // spent, the account it would have made goes away with it.
       await admit(tx, body.invite ?? undefined, id, app.inviteOnly)
       return id
     })
+    if (userId === null) {
+      const made = await lookUp()
+      // Only gone again if it was erased in the same instant, and then there
+      // is nothing sensible to let this device into.
+      if (!made) throw new Error('a device account vanished while it was being made')
+      return letIn(made)
+    }
 
     const user = await one(app.db, sql`select *, ${hiddenCountColumn} from users where id = ${userId}`)
     reply.code(201)

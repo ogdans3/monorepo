@@ -89,7 +89,7 @@ describe('two trades wanting the same drill', () => {
   })
 
   test('6. cancelling the winner puts the drill back on the market', async () => {
-    await cancelTrade(db, withKari, 'Ola trakk seg')
+    await cancelTrade(db, withKari, 'withdrawal_approved')
 
     const row = await itemRow(drill)
     expect(row['active_trade_id']).toBeNull()

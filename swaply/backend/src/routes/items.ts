@@ -2,12 +2,13 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
+import type { Database } from '../db/index.js'
 import { blockedBetween } from '../lib/blocks.js'
-import { CATEGORIES, CONDITIONS } from '../lib/constants.js'
-import { badRequest, forbidden, notFound } from '../lib/errors.js'
+import { CATEGORIES, CONDITIONS, LISTING_KEY_HOURS } from '../lib/constants.js'
+import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
 import { storedExists, toStoredPath } from '../lib/media.js'
 import { townFor, townOf } from '../lib/postcodes.js'
-import { coverSql, many, one } from '../lib/rows.js'
+import { coverSql, many, one, type Row } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
 
 const itemBody = z.object({
@@ -60,12 +61,65 @@ async function assertStored(media: string[], kept: string[] = []) {
   }
 }
 
+/**
+ * The `Idempotency-Key` header, or null when none was sent.
+ *
+ * A uuid the app makes once per draft. Anything else is refused rather than
+ * ignored: ignoring it would quietly take away the one thing that stops a
+ * second press from listing the thing twice.
+ */
+function listingKey(header: string | string[] | undefined): string | null {
+  if (header === undefined || header === '') return null
+  if (typeof header !== 'string' || !z.string().uuid().safeParse(header).success) {
+    throw badRequest(
+      'invalid_idempotency_key',
+      'Utkastet har en ugyldig nøkkel. Start annonsen på nytt.',
+    )
+  }
+  return header
+}
+
+const listingBody = (item: Row, media: string[]) =>
+  publicItem({ ...item, cover: media[0] ?? null, media })
+
+/**
+ * The listing an earlier press with this key made, answered the way that
+ * press was, or null. Only while the key still answers: for
+ * `LISTING_KEY_HOURS`, and only while the listing stands — a listing deleted
+ * since is not handed back as if it had been made just now.
+ */
+async function listedWith(db: Database, ownerId: string, key: string) {
+  const item = await one(
+    db,
+    sql`select * from items
+        where owner_id = ${ownerId} and idempotency_key = ${key} and deleted_at is null
+          and created_at >= now() - ${`${LISTING_KEY_HOURS} hours`}::interval`,
+  )
+  if (!item) return null
+  const media = await many(
+    db,
+    sql`select url from item_media where item_id = ${item['id']} order by position`,
+  )
+  return listingBody(item, media.map((m) => m['url']))
+}
+
 export default async function itemRoutes(app: FastifyInstance) {
   app.post('/items', async (request, reply) => {
     // 10c stands between looking around and listing something: a thing on the
     // market has to belong to somebody with a name.
     const userId = app.requireClaimedUser(request)
+    const key = listingKey(request.headers['idempotency-key'])
     const body = itemBody.parse(request.body)
+
+    // «Legg ut» pressed again after the answer to the first press was lost on
+    // the way back. The listing exists, the draft is still on the phone, and
+    // without this the second press listed the thing twice. The answer is the
+    // first listing as it stands, with 200 rather than 201: nothing new was
+    // made. Asked before the checks below, which the first press has passed.
+    if (key) {
+      const first = await listedWith(app.db, userId, key)
+      if (first) return first
+    }
 
     if (body.kind === 'item' && !body.condition) {
       throw badRequest('condition_required', 'Velg tilstand for gjenstanden.')
@@ -81,27 +135,59 @@ export default async function itemRoutes(app: FastifyInstance) {
     const owner = await one(app.db, sql`select town, postal_code from users where id = ${userId}`)
     const town = body.town ?? typed ?? owner?.['town'] ?? townFor(owner?.['postal_code'])
 
-    const item = await one(
-      app.db,
-      sql`insert into items (owner_id, kind, title, description, category, subcategory,
-                            condition, estimated_value_nok, town)
-          values (${userId}, ${body.kind}, ${body.title}, ${body.description ?? null},
-                  ${body.category}, ${body.subcategory ?? null},
-                  ${body.kind === 'service' ? null : body.condition!},
-                  ${body.estimatedValueNok ?? null},
-                  ${town})
-          returning *`,
-    )
+    const media = body.media.map(toStoredPath)
 
-    for (const [position, url] of body.media.entries()) {
-      await app.db.execute(
-        sql`insert into item_media (item_id, url, position)
-            values (${item!['id']}, ${toStoredPath(url)}, ${position})`,
+    // One transaction, so a listing is never seen without its photos — and so
+    // a second press arriving while the first is still being written waits on
+    // the key's index for it, and then finds it.
+    const item = await app.db.transaction(async (tx) => {
+      if (key) {
+        // A key that no longer answers is let go of, so the same draft can
+        // list again: older than the window, or on a listing deleted since.
+        // The index is per owner and has no clock in it.
+        await tx.execute(
+          sql`update items set idempotency_key = null
+              where owner_id = ${userId} and idempotency_key = ${key}
+                and (deleted_at is not null
+                     or created_at < now() - ${`${LISTING_KEY_HOURS} hours`}::interval)`,
+        )
+      }
+
+      const [row] = await tx.execute<Row>(
+        sql`insert into items (owner_id, kind, title, description, category, subcategory,
+                              condition, estimated_value_nok, town, idempotency_key)
+            values (${userId}, ${body.kind}, ${body.title}, ${body.description ?? null},
+                    ${body.category}, ${body.subcategory ?? null},
+                    ${body.kind === 'service' ? null : body.condition!},
+                    ${body.estimatedValueNok ?? null},
+                    ${town}, ${key})
+            on conflict (owner_id, idempotency_key) where idempotency_key is not null
+            do nothing
+            returning *`,
       )
+      if (!row) return null
+
+      for (const [position, url] of media.entries()) {
+        await tx.execute(
+          sql`insert into item_media (item_id, url, position)
+              values (${row['id']}, ${url}, ${position})`,
+        )
+      }
+      return row
+    })
+
+    if (!item) {
+      // Both presses at once: the other one wrote the listing while this one
+      // waited on the index, and it is the answer to both.
+      const first = await listedWith(app.db, userId, key!)
+      if (first) return first
+      // Deleted, or out of the window, in the moment between the two. Said
+      // rather than guessed at: listing it again now would be the duplicate.
+      throw conflict('already_listed', 'Denne annonsen er allerede lagt ut.')
     }
 
     reply.code(201)
-    return publicItem({ ...item!, cover: body.media[0] ?? null, media: body.media })
+    return listingBody(item, media)
   })
 
   app.get('/items/:id', async (request) => {

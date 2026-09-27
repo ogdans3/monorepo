@@ -38,3 +38,10 @@ export const WITHDRAWAL_RESPONSE_HOURS = 72
  * what the counter-offer screens are drawn for, not a storage limit.
  */
 export const MAX_ITEMS_PER_SIDE = 3
+
+/**
+ * How long the `Idempotency-Key` sent with «Legg ut» answers for. Long enough
+ * to cover a lost answer and a phone that stays offline over a weekend, and
+ * short enough that a draft kept for weeks and sent again is a new listing.
+ */
+export const LISTING_KEY_HOURS = 48
