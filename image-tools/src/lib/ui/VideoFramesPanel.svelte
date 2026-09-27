@@ -12,7 +12,14 @@
 	import { zipBlobs } from '$lib/engine';
 	import { editedFileName } from '$lib/engine';
 	import { videoAcceptAttribute } from '$lib/video/formats';
-	import { extractFrames, isLoaded, loadFfmpeg, resetFfmpeg, type LoadProgress } from '$lib/video/ffmpeg';
+	import {
+		extractFrames,
+		isLoaded,
+		loadFfmpeg,
+		readStill,
+		resetFfmpeg,
+		type LoadProgress
+	} from '$lib/video/ffmpeg';
 	import {
 		FRAME_FORMATS,
 		FRAME_MANY,
@@ -30,10 +37,12 @@
 	import NumberBox from './NumberBox.svelte';
 	import SliderField from './SliderField.svelte';
 	import { downloadBlob } from './download';
+	import { learnDuration } from './videolength';
 
 	let { tool }: { tool: VideoTool } = $props();
 
-	type Stage = 'idle' | 'loading' | 'working' | 'done' | 'error';
+	/** `reading` is ffmpeg reading a clip the browser couldn't play. */
+	type Stage = 'idle' | 'loading' | 'reading' | 'working' | 'done' | 'error';
 
 	let stage = $state<Stage>('idle');
 	let download = $state<LoadProgress>({ ratio: null, loadedBytes: 0, totalBytes: null });
@@ -45,6 +54,14 @@
 	let media = $state({ width: 0, height: 0, duration: 0, fps: 0 });
 	let video = $state<HTMLVideoElement>();
 	let zipping = $state(false);
+	/** The browser couldn't play the clip, so the preview has nothing to show. */
+	let previewFailed = $state(false);
+	/** The clip's first frame, read by ffmpeg, shown in place of the video. */
+	let still = $state<string | null>(null);
+	/** ffmpeg couldn't read it either, or the engine never arrived. */
+	let unreadable = $state<string | null>(null);
+	/** The engine is downloading for that fallback, which nobody pressed a button for. */
+	let fetching = $state(false);
 
 	let format = $state<FrameFormat>('jpg');
 	let rate = $state(1);
@@ -64,13 +81,25 @@
 
 	const baseName = $derived(file ? file.name.replace(/\.[^.]+$/, '') : 'video');
 	const info = $derived(FRAME_FORMATS[format]);
+	/**
+	 * Thumbnails in the clip's own shape. A fixed 16:9 with `cover` cut a phone
+	 * recording down to a strip across its middle.
+	 */
+	const thumbRatio = $derived(
+		media.width && media.height ? `${media.width} / ${media.height}` : undefined
+	);
 
 	const expected = $derived(
 		frameCount({ rate, everyFrame }, media.duration || null, media.fps || null)
 	);
 	const tooMany = $derived(tooManyFrames(expected));
 
-	const ready = $derived(Boolean(file) && expected > 0 && !tooMany && stage !== 'working');
+	/**
+	 * Off for the whole run, not only the encode. It used to come back on while
+	 * the engine downloaded, so a second press started a second run.
+	 */
+	const busy = $derived(stage === 'loading' || stage === 'reading' || stage === 'working');
+	const ready = $derived(Boolean(file) && expected > 0 && !tooMany && !busy);
 
 	function onfiles(list: File[]) {
 		const next = list[0];
@@ -82,6 +111,13 @@
 
 	function onLoadedMetadata() {
 		if (!video) return;
+		// A browser that can decode the sound but not the picture drops the
+		// picture without an error, so the clip loads with no size at all. That
+		// is the same dead end as a clip it can't play, with the same way out.
+		if (!(video.videoWidth > 0 && video.videoHeight > 0)) {
+			void onPreviewFailed();
+			return;
+		}
 		media = {
 			width: video.videoWidth,
 			height: video.videoHeight,
@@ -91,6 +127,92 @@
 			// until then, and the readout says it is an estimate.
 			fps: 0
 		};
+		// A WebM from MediaRecorder has no length in its header, so the element
+		// says Infinity and this sat on "Reading the clip" for ever, the same
+		// dead end with a different cause.
+		if (!media.duration) void findLength(video);
+	}
+
+	/** Seeking past the end makes the browser read to the last frame and say. */
+	async function findLength(el: HTMLVideoElement) {
+		const forUrl = previewUrl;
+		const found = await learnDuration(el);
+		if (found && previewUrl === forUrl) media.duration = found;
+	}
+
+	/** A length the browser only finds later, by playing to the end. */
+	function onDurationChange() {
+		if (!video || !media.width) return;
+		const length = video.duration;
+		if (Number.isFinite(length) && length > 0 && length !== media.duration) media.duration = length;
+	}
+
+	function forgetStill() {
+		if (still) URL.revokeObjectURL(still);
+		still = null;
+		unreadable = null;
+	}
+
+	/**
+	 * The browser can't play the clip. The length and size came from the
+	 * preview alone, so this used to be a dead end: "Reading the clip" for
+	 * ever and the button off, for the HEVC an iPhone records in any browser
+	 * without HEVC, and for AVI everywhere. ffmpeg reads both, so it is asked
+	 * for the first frame and the clip's numbers instead, the way the phone
+	 * frame does it. The engine is the one the run needs anyway, so its
+	 * download is only brought forward, and the probe gives the real frame
+	 * rate, so "every frame" stops being an estimate as well.
+	 *
+	 * Every await is followed by a check that the file is still the one this
+	 * started for, since Start over or a new file can land in between.
+	 */
+	async function onPreviewFailed() {
+		if (previewFailed || !file) return;
+		previewFailed = true;
+		const forFile = file;
+		error = null;
+		// One stage for the whole of it, download included. `loading` belongs to
+		// a run, and would label the button "Working" before anyone pressed it.
+		stage = 'reading';
+		fetching = !isLoaded();
+		let ff: Awaited<ReturnType<typeof loadFfmpeg>>;
+		try {
+			ff = await loadFfmpeg((p) => (download = p));
+		} catch {
+			if (file !== forFile) return;
+			fetching = false;
+			unreadable =
+				"The video engine didn't load, so this clip can't be read. Check the connection and try again.";
+			stage = 'idle';
+			return;
+		}
+		if (file !== forFile) return;
+		fetching = false;
+		try {
+			const { blob, probe } = await readStill(ff, forFile);
+			const url = URL.createObjectURL(blob);
+			const image = new Image();
+			image.src = url;
+			await image.decode();
+			if (file !== forFile) {
+				URL.revokeObjectURL(url);
+				return;
+			}
+			still = url;
+			// The still's own size, since it went through the same decoder and
+			// rotation as the frames will.
+			media = {
+				width: image.naturalWidth,
+				height: image.naturalHeight,
+				duration: probe.durationSeconds ?? 0,
+				fps: probe.fps ?? 0
+			};
+		} catch {
+			if (file !== forFile) return;
+			unreadable =
+				"Neither this browser nor the video engine can read that file, so there are no frames to take.";
+		}
+		stage = 'idle';
 	}
 
 	/** Set by the cancel button, so the run that throws next isn't an error. */
@@ -162,13 +284,20 @@
 	function startOver() {
 		if (previewUrl) URL.revokeObjectURL(previewUrl);
 		releaseThumbs();
+		forgetStill();
 		previewUrl = null;
+		previewFailed = false;
+		fetching = false;
 		file = null;
 		frames = [];
 		error = null;
 		stage = 'idle';
 		workRatio = 0;
 		readBack = 0;
+		// The last clip's numbers must not outlive it. A new clip the browser
+		// can't play used to inherit them, and the button offered a count for
+		// a file nobody had measured.
+		media = { width: 0, height: 0, duration: 0, fps: 0 };
 	}
 
 	/** A rough size, so nobody starts a run that will not fit. */
@@ -193,6 +322,7 @@
 
 	$effect(() => () => {
 		if (previewUrl) URL.revokeObjectURL(previewUrl);
+		if (still) URL.revokeObjectURL(still);
 		releaseThumbs();
 	});
 </script>
@@ -209,14 +339,37 @@
 	{#if file && previewUrl}
 		<div class="stage">
 			<div class="viewer">
-				<!-- svelte-ignore a11y_media_has_caption -->
-				<video bind:this={video} src={previewUrl} controls playsinline onloadedmetadata={onLoadedMetadata}
-				></video>
+				{#if still}
+					<!-- What ffmpeg read, since the browser couldn't play the clip. -->
+					<img class="preview" src={still} alt="First frame of {file.name}" />
+				{:else if previewFailed}
+					<!-- A dead player with a 0:00 on it would promise a video that won't play. -->
+					<div class="preview blank" aria-hidden="true"></div>
+				{:else}
+					<!-- svelte-ignore a11y_media_has_caption -->
+					<video
+						class="preview"
+						bind:this={video}
+						src={previewUrl}
+						controls
+						playsinline
+						onloadedmetadata={onLoadedMetadata}
+						ondurationchange={onDurationChange}
+						onerror={() => void onPreviewFailed()}
+					></video>
+				{/if}
 				<p class="meta mono">
 					{file.name}
 					{#if media.width}· {media.width}×{media.height}{/if}
 					{#if media.duration}· {media.duration.toFixed(1)}s{/if}
+					{#if media.fps}· {media.fps} fps{/if}
 				</p>
+				{#if still}
+					<p class="note">
+						This browser can't play the clip, so here's its first frame instead. The frames come
+						from the video engine, so they're not affected.
+					</p>
+				{/if}
 			</div>
 
 			<div class="controls">
@@ -265,29 +418,42 @@
 					/>
 				{/if}
 
-				<p class="hint" class:warn={tooMany}>
-					{#if !media.duration}
-						Reading the clip…
-					{:else if tooMany}
-						That's about {expected.toLocaleString()} images, past the limit of
-						{FRAME_MAX.toLocaleString()}. Lower the rate, or trim the clip first.
-					{:else}
-						About {expected.toLocaleString()}
-						{expected === 1 ? 'image' : 'images'}{#if humanWeight}, roughly {humanWeight}{/if}.
-						{#if everyFrame}
-							Every frame is an estimate until the clip is read, since the browser won't say
-							what its frame rate is.
+				{#if unreadable}
+					<p class="err" role="alert">{unreadable}</p>
+				{:else}
+					<p class="hint" class:warn={tooMany}>
+						{#if !media.duration}
+							{#if still}
+								The video engine can't tell how long this clip is, so there's no count of frames
+								to take.
+							{:else if previewFailed}
+								This browser can't play the clip, so the video engine is reading it instead.
+							{:else}
+								Reading the clip…
+							{/if}
+						{:else if tooMany}
+							That's about {expected.toLocaleString()} images, past the limit of
+							{FRAME_MAX.toLocaleString()}. Lower the rate, or trim the clip first.
+						{:else}
+							About {expected.toLocaleString()}
+							{expected === 1 ? 'image' : 'images'}{#if humanWeight}, roughly {humanWeight}{/if}.
+							{#if everyFrame && !media.fps}
+								Every frame is an estimate until the clip is read, since the browser won't say
+								what its frame rate is.
+							{/if}
+							{#if expected > FRAME_MANY}
+								That many takes a while and holds a lot of memory.
+							{/if}
 						{/if}
-						{#if expected > FRAME_MANY}
-							That many takes a while and holds a lot of memory.
-						{/if}
-					{/if}
-				</p>
+					</p>
+				{/if}
 
-				{#if stage === 'loading' || stage === 'working'}
+				{#if busy}
 					<p class="hint" role="status">
-						{#if stage === 'loading'}
+						{#if stage === 'loading' || fetching}
 							Fetching the video engine{#if download.ratio !== null}, {Math.round(download.ratio * 100)}%{/if}…
+						{:else if stage === 'reading'}
+							Reading the first frame…
 						{:else if readBack}
 							Read {readBack} of about {expected}…
 						{:else}
@@ -335,7 +501,12 @@
 							onclick={() => downloadBlob(frames[i].blob, frameName(baseName, i, info.extension))}
 							title="Save {frameName(baseName, i, info.extension)}"
 						>
-							<img src={url} alt="Frame {i + 1}" loading="lazy" />
+							<img
+								src={url}
+								alt="Frame {i + 1}"
+								loading="lazy"
+								style:aspect-ratio={thumbRatio}
+							/>
 							<span class="mono">{i + 1}</span>
 						</button>
 					</li>
@@ -399,10 +570,29 @@
 		min-width: 0;
 	}
 
-	video {
+	/*
+	 * Held to a height the screen can take. A phone recording is twice as tall
+	 * as it is wide, and at the column's full width it pushed the controls
+	 * under it, on a narrow screen, more than a screen away from the clip.
+	 */
+	.preview {
+		display: block;
 		width: 100%;
+		max-height: min(70vh, 40rem);
+		object-fit: contain;
 		border-radius: var(--r-s);
 		background: var(--surface-deep);
+	}
+
+	/* One column puts the controls under the clip, where it only has to be recognisable. */
+	@media (max-width: 46rem) {
+		.preview {
+			max-height: 45vh;
+		}
+	}
+
+	.blank {
+		aspect-ratio: 16 / 9;
 	}
 
 	.meta {

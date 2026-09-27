@@ -192,6 +192,12 @@ decisions. This file is the short version of what matters when editing.
   passes proves nothing. The standard tables cost 14 to 19% in file size and
   never failed. `frames.test.ts` pins it. Do not drop it as a size
   optimisation.
+  **The page falls back to a still when the browser can't play the clip**,
+  the same way the phone frame does. The count needs the clip's length, which
+  used to come from the `<video>` element alone, so HEVC in any browser without
+  it and AVI everywhere sat on "Reading the clip" for ever with the button off.
+  Now a failed preview, or one that loads with no picture, has `readStill` read
+  the first frame and the probe supply size, length and the real frame rate.
 - **Two retiming pages, one set of controls, pointed opposite ways.**
   `slow-motion-video` and `speed-up-video` are both `op: 'stretch'` and differ
   only by `direction: 'slower' | 'faster'` in the registry. The panel derives
