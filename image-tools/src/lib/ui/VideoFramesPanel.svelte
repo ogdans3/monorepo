@@ -175,9 +175,10 @@
 	const weight = $derived.by(() => {
 		if (!media.width || !expected) return null;
 		const pixels = media.width * media.height;
-		// Measured rather than guessed at: a 1080p JPG at q4 lands near 300KB
-		// and the same frame as PNG near six times that.
-		const per = info.lossy ? pixels * 0.15 : pixels * 0.9;
+		// Measured rather than guessed at: a 1080p JPG at q4 landed near 300KB
+		// and the same frame as PNG near six times that. The standard Huffman
+		// tables `planFrames` asks for add 14 to 19% to the JPG.
+		const per = info.lossy ? pixels * 0.17 : pixels * 0.9;
 		return expected * per;
 	});
 

@@ -81,6 +81,17 @@ describe('planFrames', () => {
 		expect(planFrames(req({ format: 'png' }), 'input').pattern).toBe('frame_%05d.png');
 	});
 
+	it('writes JPG with the standard tables, because the optimal ones crash the core', () => {
+		// Measured, not guessed: an iPhone HEVC clip and an H.264 clip both
+		// failed to give a single JPG with ffmpeg's default of optimal tables.
+		const plan = planFrames(req({ format: 'jpg' }), 'input');
+		const at = plan.args.indexOf('-huffman');
+		expect(plan.args.slice(at, at + 2)).toEqual(['-huffman', 'default']);
+		// An output option, so it has to come before the file it applies to.
+		expect(at).toBeLessThan(plan.args.indexOf(plan.pattern));
+		expect(planFrames(req({ format: 'png' }), 'input').args).not.toContain('-huffman');
+	});
+
 	it('clamps quality into the scale ffmpeg actually accepts', () => {
 		const q = (quality: number) => {
 			const args = planFrames(req({ quality }), 'input').args;

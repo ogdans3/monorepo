@@ -117,6 +117,15 @@ export function planFrames(request: FrameRequest, input: string): FramePlan {
 			Math.min(FRAME_QUALITY_MAX, Math.max(FRAME_QUALITY_MIN, request.quality))
 		);
 		args.push('-q:v', String(q));
+		// ffmpeg's JPG encoder builds an optimal Huffman table for every picture
+		// unless told otherwise, and in this core that step fails on ordinary
+		// footage with "memory access out of bounds". An iPhone's HEVC recording
+		// stopped on its first frame with "Error submitting video frame to the
+		// encoder", and an H.264 clip took the tab down on its third, while the
+		// same picture as WebM went through. It depends on the picture, so a
+		// passing clip proves nothing. The standard tables never failed, and
+		// cost 14 to 19% in file size on the same frames.
+		args.push('-huffman', 'default');
 	}
 
 	// No sound in a still, and asking for it makes ffmpeg complain rather than

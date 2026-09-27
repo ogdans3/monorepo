@@ -183,6 +183,15 @@ decisions. This file is the short version of what matters when editing.
   assumed. The frames are read back by walking the numbered pattern until one
   is missing rather than by listing the filesystem, because missing is the
   reliable signal and the planned count is not a promise.
+  **JPG goes out with `-huffman default`, and that is load bearing.** ffmpeg
+  builds an optimal Huffman table per picture unless told otherwise, and in
+  this core that step dies with "memory access out of bounds" on ordinary
+  footage. An iPhone's HEVC screen recording stopped on its first frame with
+  "Error submitting video frame to the encoder", an H.264 clip took the tab
+  down on its third, and the same picture as WebM went through, so a clip that
+  passes proves nothing. The standard tables cost 14 to 19% in file size and
+  never failed. `frames.test.ts` pins it. Do not drop it as a size
+  optimisation.
 - **Two retiming pages, one set of controls, pointed opposite ways.**
   `slow-motion-video` and `speed-up-video` are both `op: 'stretch'` and differ
   only by `direction: 'slower' | 'faster'` in the registry. The panel derives
