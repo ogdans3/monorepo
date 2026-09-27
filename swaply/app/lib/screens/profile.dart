@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -389,7 +391,7 @@ class OtherProfileScreen extends StatefulWidget {
 
 class _OtherProfileScreenState extends State<OtherProfileScreen> {
   UserRef? _user;
-  String? _error;
+  ApiException? _error;
 
   @override
   void initState() {
@@ -397,13 +399,31 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     _load();
   }
 
+  /// Asked for when the page opens, and again after an unblock or on coming
+  /// back from one of their things. Only the first asking can fail into [LoadFailure]: after that the
+  /// profile stays and the failure is a toast over it.
   Future<void> _load() async {
     try {
       final user = await context.read<SwaplyApi>().user(widget.userId);
-      if (mounted) setState(() => _user = user);
+      if (mounted) {
+        setState(() {
+          _user = user;
+          _error = null;
+        });
+      }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_user == null) {
+        setState(() => _error = e);
+      } else {
+        showError(context, e);
+      }
     }
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   /// «⋯» on 13b. Reporting is what the export draws behind it; unblocking has
@@ -462,7 +482,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     if (_error != null) {
       return Scaffold(
         appBar: swaplyAppBar(context, 'Profil'),
-        body: EmptyState(title: 'Fant ikke profilen', body: _error!, icon: Icons.error_outline),
+        body: LoadFailure(_error!, missing: 'Fant ikke profilen', onRetry: _retry),
       );
     }
     if (user == null) {
@@ -654,14 +674,13 @@ class SettingsScreen extends StatelessWidget {
           const Kicker('Konto'),
           const SizedBox(height: 7),
           _group([
-          _tile(context, 'Profil', null,
+          _tile('Profil', null,
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
-          _tile(context, 'E-post og telefon', null,
+          _tile('E-post og telefon', null,
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
           _tile(
-            context,
             'BankID-verifisering',
             me?.bankidVerified == true ? 'Verifisert' : 'Ikke verifisert',
             good: me?.bankidVerified == true,
@@ -669,7 +688,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           // Round 5 took the colour off this row: an invitation is an ordinary
           // thing you do, not a promotion.
-          _tile(context, 'Inviter en venn', null,
+          _tile('Inviter en venn', null,
               onTap: () => showShareSheet(context,
                   title: 'Inviter en venn', mint: (api) => api.createInvite())),
           ]),
@@ -681,13 +700,23 @@ class SettingsScreen extends StatelessWidget {
             // lock screen: it never drew a way into the list of them inside
             // the app. The screen exists and was built, and until now nothing
             // in the app could open it.
-            _tile(context, 'Se alle varsler', null,
+            _tile('Se alle varsler', null,
                 onTap: () => Navigator.of(context)
                     .push(MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
             const _NotificationToggle(label: 'Swaps og bytter'),
             const _NotificationToggle(label: 'Meldinger'),
             const _NotificationToggle(label: 'Likes på tingene mine'),
           ]),
+          // «Ikke vis meg slike» is a choice somebody can forget having made,
+          // and the way back from it is here — only while there is something
+          // to bring back, which is also why round 5, whose Ola has hidden
+          // nothing, does not draw it.
+          if ((me?.hiddenCount ?? 0) > 0) ...[
+            const SizedBox(height: 16),
+            const Kicker('Oppdag'),
+            const SizedBox(height: 7),
+            _group([_ShowEverythingRow(hidden: me!.hiddenCount!)]),
+          ],
           if (session.isAdmin) ...[
             const SizedBox(height: 16),
             const Row(
@@ -787,7 +816,11 @@ class SettingsScreen extends StatelessWidget {
           ],
           const SizedBox(height: 16),
           _group([
-            _tile(context, 'Juridisk og personvern', null, onTap: () => _showLegal(context)),
+            // A screen of its own rather than a dialog: it holds the way to
+            // delete the account as well as the words about what that keeps.
+            _tile('Juridisk og personvern', null,
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const LegalScreen()))),
             // A red row in the last card, not a button of its own: that is
             // where the export puts it, and it is not something to advertise.
             ListTile(
@@ -809,69 +842,340 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  /// The export keeps a group of rows inside one card rather than letting them
-  /// float on the background with dividers between.
-  Widget _group(List<Widget> rows) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: SwaplyColors.cardLine),
-        ),
-        child: Column(children: rows),
-      );
+/// The export keeps a group of rows inside one card rather than letting them
+/// float on the background with dividers between.
+///
+/// A card of one row puts it in a node of its own: alone, its tap was folded
+/// into the list's node for the card, and a screen reader, and a finger on
+/// the card's padding, were offered a button the size of the card that
+/// answered only in its middle.
+Widget _group(List<Widget> rows) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: SwaplyColors.cardLine),
+      ),
+      child: rows.length == 1
+          ? Semantics(container: true, child: rows.single)
+          : Column(children: rows),
+    );
 
-  /// A 48-tall row: the label, a word at the right if there is one
-  /// («Verifisert», green), and the chevron.
-  Widget _tile(BuildContext context, String title, String? value,
-          {VoidCallback? onTap, bool good = false}) =>
-      InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: 48,
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(title,
-                    style: const TextStyle(
-                        fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
+/// A 48-tall row: the label, a word at the right if there is one
+/// («Verifisert», green), and the chevron.
+Widget _tile(String title, String? value, {VoidCallback? onTap, bool good = false}) => InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        height: 48,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
+            ),
+            if (value != null && value.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(value,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: good ? SwaplyColors.greenText : SwaplyColors.grey)),
               ),
-              if (value != null && value.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Text(value,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: good ? SwaplyColors.greenText : SwaplyColors.grey)),
-                ),
-              const Icon(Icons.chevron_right, size: 20, color: SwaplyColors.chevron),
-            ],
-          ),
+            const Icon(Icons.chevron_right, size: 20, color: SwaplyColors.chevron),
+          ],
         ),
-      );
+      ),
+    );
 
-  void _showLegal(BuildContext context) => showDialog<void>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Juridisk og personvern', style: Type.heading),
-          content: const SingleChildScrollView(
-            child: Text(
-              'Swaply er ikke part i byttene og fasiliterer verken frakt eller betaling. '
-              'Avtalen er mellom deg og den du bytter med.\n\n'
-              'Vi lagrer aldri fødselsnummer. BankID gir oss en pseudonym referanse og et '
-              'tidspunkt.\n\n'
-              'Sletter du kontoen, tømmes profilen din med en gang. En minimal '
-              'identitetspost beholdes adskilt i tre år etter siste gjennomførte bytte, '
-              'slik at et krav kan fremmes eller forsvares.',
-              style: Type.body,
+/// «Vis alt på Oppdag igjen» on 16b, with how many kinds are hidden beside
+/// it. The server keeps no way to name one kind back, so it is all of them.
+class _ShowEverythingRow extends StatefulWidget {
+  const _ShowEverythingRow({required this.hidden});
+  final int hidden;
+
+  @override
+  State<_ShowEverythingRow> createState() => _ShowEverythingRowState();
+}
+
+class _ShowEverythingRowState extends State<_ShowEverythingRow> {
+  bool _busy = false;
+
+  Future<void> _showEverything() async {
+    // Read now: once the session says nothing is hidden, this row is gone
+    // from the screen, and the toast is said on the screen's behalf.
+    final api = context.read<SwaplyApi>();
+    final session = context.read<Session>();
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await api.showEverything();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _busy = false);
+      showErrorOn(messenger, e);
+      return;
+    }
+    try {
+      // The count this row is drawn from, which takes the row away.
+      await session.refresh();
+    } on ApiException {
+      // Shown again either way; the next refresh brings the count.
+    }
+    if (mounted) setState(() => _busy = false);
+    showDoneOn(messenger, 'Alt vises på Oppdag igjen.');
+  }
+
+  @override
+  Widget build(BuildContext context) => _tile('Vis alt på Oppdag igjen', '${widget.hidden} skjult',
+      onTap: _busy ? null : _showEverything);
+}
+
+/// Juridisk og personvern, opened from the last card on 16b. Round 5 draws
+/// the row and nothing behind it; what is here is what the product already
+/// says about itself, and the way to delete the account, which the export
+/// left no other room for. Drawn without the bar, as 16b is.
+class LegalScreen extends StatelessWidget {
+  const LegalScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<Session>();
+    return Scaffold(
+      appBar: swaplyAppBar(context, 'Juridisk og personvern'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(Insets.screen, 14, Insets.screen, Insets.xl),
+        children: [
+          for (final paragraph in const [
+            'Swaply er ikke part i byttene og fasiliterer verken frakt eller betaling. '
+                'Avtalen er mellom deg og den du bytter med.',
+            'Vi lagrer aldri fødselsnummer. BankID gir oss en pseudonym referanse og et '
+                'tidspunkt.',
+            'Sletter du kontoen, tømmes profilen din med en gang. En minimal '
+                'identitetspost beholdes adskilt i tre år etter siste gjennomførte bytte, '
+                'eller etter slettingen om du aldri har byttet, slik at et krav kan '
+                'fremmes eller forsvares.',
+          ]) ...[
+            Text(paragraph, style: Type.body),
+            const SizedBox(height: 12),
+          ],
+          // A device looking around has no profile to delete, and never gets
+          // this far: 13 is an invitation to make one.
+          if (session.signedIn && !session.anonymous) ...[
+            const SizedBox(height: 8),
+            _group([
+              // A row in a card, the way «Logg ut» is on 16b and in its
+              // colour: something you can do, not something offered.
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Slett kontoen',
+                    style: TextStyle(
+                        fontSize: 14.5, fontWeight: FontWeight.w700, color: SwaplyColors.redText)),
+                onTap: () => _delete(context),
+              ),
+            ]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// The sheet asks, and deletes; what the phone does after is decided here,
+  /// and run even if the sheet was pulled down while the answer was on its
+  /// way — the account is gone by then, and a phone left holding its token
+  /// would be signed in as nobody.
+  Future<void> _delete(BuildContext context) async {
+    final session = context.read<Session>();
+    final messenger = ScaffoldMessenger.of(context);
+    final acting = session.actingAs;
+    await showModalBottomSheet<void>(
+      context: context,
+      // Over the bar, not inside the tab under it; see `pushOverBar`.
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+      builder: (_) => _DeleteAccountSheet(
+        acting: acting,
+        onDeleted: () async {
+          if (acting) {
+            // «Slett kontoen» while acting as a test account is the test
+            // tool retiring it, and the admin is still who is holding the
+            // phone: back to their own account. The server ended the session
+            // with the account, so there is nothing to stay on.
+            try {
+              await session.returnToAdmin();
+            } on ApiException {
+              await session.logout();
+            }
+          } else {
+            // The server has ended every session already, so the sign-out
+            // it is sent here is refused, and that is fine: what matters is
+            // the phone forgetting the token and the device id, so the gate
+            // makes whoever holds it next a new stranger.
+            await session.logout();
+          }
+          if (context.mounted) backThroughGate(context);
+          // Over what the gate shows next, not what it is leaving. A toast
+          // is placed once, as it goes up; put up here at once, it was
+          // measured against the splash, which has nothing at its foot, and
+          // then lay across 02's «Fortsett» for as long as it was up.
+          await _gateDecided(session);
+          showDoneOn(messenger, acting ? 'Testkontoen er slettet.' : 'Kontoen er slettet.');
+        },
+      ),
+    );
+  }
+}
+
+/// Until the gate has decided what comes after a sign-out, and drawn it: a
+/// new stranger's 02, the admin's own app, or the splash saying why neither
+/// came. The same states `RootGate` reads, and none of them is waited on
+/// for long — a start gives up after [Session.patience].
+Future<void> _gateDecided(Session session) async {
+  bool decided() =>
+      !session.loading &&
+      !session.starting &&
+      (session.signedIn ||
+          session.stalled ||
+          session.inviteRequired ||
+          session.pendingInvite != null);
+  if (!decided()) {
+    final done = Completer<void>();
+    void heard() {
+      if (decided() && !done.isCompleted) done.complete();
+    }
+
+    session.addListener(heard);
+    try {
+      await done.future;
+    } finally {
+      session.removeListener(heard);
+    }
+  }
+  // The gate builds it in the next frame, and what a toast keeps clear of is
+  // only measured once it is laid out and painted.
+  await WidgetsBinding.instance.endOfFrame;
+}
+
+/// «Slett kontoen», asked for once more with the password. The sheet owns its
+/// controller; see [_ReportSheet].
+class _DeleteAccountSheet extends StatefulWidget {
+  const _DeleteAccountSheet({required this.acting, required this.onDeleted});
+
+  /// A session the account switcher minted. The server takes the admin's key
+  /// behind it instead of the test account's password, which the admin does
+  /// not know.
+  final bool acting;
+
+  final Future<void> Function() onDeleted;
+
+  @override
+  State<_DeleteAccountSheet> createState() => _DeleteAccountSheetState();
+}
+
+class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
+  final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _delete() async {
+    if (_busy) return;
+    final password = _password.text;
+    if (!widget.acting && password.isEmpty) {
+      setState(() => _error = 'Skriv inn passordet ditt.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await context.read<SwaplyApi>().deleteAccount(password: widget.acting ? null : password);
+    } on ApiException catch (e) {
+      // «Feil passord.», the key to the test tooling still on the account, a
+      // real person in the test account's trade, or no contact: the server's
+      // words, here in the sheet, over the button that was pressed.
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = e.message;
+        });
+      }
+      return;
+    }
+    await widget.onDeleted();
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
+          top: false,
+          // It scrolls: a small phone with the keyboard up has no room for
+          // the sentence, the field and two buttons.
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(Insets.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(widget.acting ? 'Slette testkontoen?' : 'Slette kontoen?', style: Type.title),
+                const SizedBox(height: Insets.sm),
+                // One sentence, and what is true: `anonymiseUser` and
+                // docs/DESIGN.md, «Erasure and retention».
+                Text(
+                  widget.acting
+                      ? 'Testverktøyet sletter den som en ekte konto, og du er deg selv igjen '
+                          'etterpå.'
+                      : 'Profilen din tømmes og tingene dine tas ned med en gang, bytter du er '
+                          'midt i avsluttes, og en minimal identitetspost holdes adskilt i tre '
+                          'år etter siste gjennomførte bytte, eller etter slettingen om du '
+                          'aldri har byttet.',
+                  style: Type.secondary,
+                ),
+                if (!widget.acting) ...[
+                  const SizedBox(height: Insets.lg),
+                  const Text('Passord', style: Type.section),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    enabled: !_busy,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: const InputDecoration(hintText: '••••••••'),
+                    onSubmitted: (_) => _delete(),
+                  ),
+                ],
+                const SizedBox(height: Insets.lg),
+                if (_error != null) ...[
+                  // Coral, the «no» colour, as on 16c: a wrong password is
+                  // not a report or a block.
+                  Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+                  const SizedBox(height: Insets.sm),
+                ],
+                // The app's destructive button — «Avslå», «Trekk deg fra
+                // byttet» — and not the green one: nothing here should look
+                // like the way on.
+                SecondaryButton(_busy ? 'Sletter kontoen …' : 'Slett kontoen',
+                    destructive: true, onPressed: _busy ? null : _delete),
+                const SizedBox(height: Insets.sm),
+                SecondaryButton('Avbryt',
+                    onPressed: _busy ? null : () => Navigator.of(context).pop()),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(context).pop(), child: const Text('Lukk')),
-          ],
         ),
       );
 }
@@ -1021,30 +1325,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 }
 
 /// 16a Rapporter. Reporting and blocking are one gesture here, as in the export.
-Future<void> showReportSheet(
+///
+/// Whether a block went with a report the server has taken — true only once
+/// it has answered. The sheet closes as «Send rapport» is pressed, before the
+/// report is sent, and a caller that asked for its things again as soon as
+/// the sheet had closed was asking before the block was written: the owner's
+/// listings stayed in the grid it meant to take them out of.
+Future<bool> showReportSheet(
   BuildContext context, {
   String? itemId,
   String? userId,
   String? personName,
   bool alreadyBlocked = false,
-}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      // Over the bar, not inside the tab under it; see `pushOverBar`.
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
-      builder: (_) => _ReportSheet(
-        itemId: itemId,
-        userId: userId,
-        personName: personName,
-        alreadyBlocked: alreadyBlocked,
-        api: context.read<SwaplyApi>(),
-        messenger: ScaffoldMessenger.of(context),
-      ),
-    );
+}) async {
+  final landed = Completer<bool>();
+  final sent = await showModalBottomSheet<bool>(
+    context: context,
+    // Over the bar, not inside the tab under it; see `pushOverBar`.
+    useRootNavigator: true,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+    builder: (_) => _ReportSheet(
+      itemId: itemId,
+      userId: userId,
+      personName: personName,
+      alreadyBlocked: alreadyBlocked,
+      api: context.read<SwaplyApi>(),
+      messenger: ScaffoldMessenger.of(context),
+      landed: landed,
+    ),
+  );
+  // Pulled down, or closed some other way: nothing was sent.
+  if (sent != true) return false;
+  return landed.future;
+}
 
 /// The sheet owns its text controller. Disposing one from the caller after
 /// `showModalBottomSheet` returns tears it down while the exit animation is
@@ -1057,12 +1373,16 @@ class _ReportSheet extends StatefulWidget {
     this.userId,
     this.personName,
     this.alreadyBlocked = false,
+    required this.landed,
   });
 
   final SwaplyApi api;
   final ScaffoldMessengerState messenger;
   final String? itemId, userId, personName;
   final bool alreadyBlocked;
+
+  /// Completed once the server has answered: whether a block went with it.
+  final Completer<bool> landed;
 
   @override
   State<_ReportSheet> createState() => _ReportSheetState();
@@ -1082,18 +1402,22 @@ class _ReportSheetState extends State<_ReportSheet> {
 
   Future<void> _send() async {
     setState(() => _busy = true);
-    Navigator.of(context).pop();
+    // Popped with «sent», so [showReportSheet] waits for the answer.
+    Navigator.of(context).pop(true);
+    final block = _block;
     try {
       await widget.api.report(
         targetItem: widget.itemId,
         targetUser: widget.userId,
         reason: _reason,
         detail: _detail.text.trim().isEmpty ? null : _detail.text.trim(),
-        block: _block,
+        block: block,
       );
       showDoneOn(widget.messenger, 'Takk. Vi ser på rapporten.');
+      widget.landed.complete(block);
     } on ApiException catch (e) {
       showErrorOn(widget.messenger, e);
+      widget.landed.complete(false);
     }
   }
 

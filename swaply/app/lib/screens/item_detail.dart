@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,12 +16,11 @@ import 'discover.dart';
 import 'onboarding.dart';
 import 'post_item.dart';
 import 'profile.dart';
-import 'trade_detail.dart';
 
 /// 04 Gjenstand detalj. The gallery, the owner strip, the conversation box that
 /// opens a negotiation, and the two big buttons at the bottom.
 class ItemDetailScreen extends StatefulWidget {
-  const ItemDetailScreen({super.key, required this.itemId, this.onHeart});
+  const ItemDetailScreen({super.key, required this.itemId, this.onHeart, this.onSeen});
 
   final String itemId;
 
@@ -30,19 +31,27 @@ class ItemDetailScreen extends StatefulWidget {
   /// empty as the page slid away, then filled.
   final void Function(bool liked, {required bool answered})? onHeart;
 
+  /// Told once, with whether the heart is on as the server said when this
+  /// page asked — which is later than the collage the card was drawn from, so
+  /// the card can take it and not go on disagreeing with the page it opened.
+  final ValueChanged<bool>? onSeen;
+
   @override
   State<ItemDetailScreen> createState() => _ItemDetailScreenState();
 }
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Item? _item;
-  String? _error;
+  ApiException? _error;
 
   /// The heart as this phone has it, which runs ahead of [_item]: it turns on
   /// the tap, the way the card's does, and goes back only if the server says
   /// no. [_liking] is a heart on its way, and a second tap waits for it.
   bool _liked = false;
   bool _liking = false;
+
+  /// Whether [ItemDetailScreen.onSeen] has been told.
+  bool _seen = false;
   int _photo = 0;
   final _message = TextEditingController();
   bool _sending = false;
@@ -60,18 +69,34 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     super.dispose();
   }
 
+  /// Asked for when the page opens, and again after the listing is edited or
+  /// the test tooling has made somebody want it. Only the first asking can fail into [LoadFailure]:
+  /// after that the listing stays and the failure is a toast over it.
   Future<void> _load() async {
     try {
       final item = await context.read<SwaplyApi>().item(widget.itemId);
       if (mounted) {
         setState(() {
           _item = item;
+          _error = null;
           if (!_liking) _liked = item.likedByMe;
         });
+        if (!_seen && !_liking) widget.onSeen?.call(item.likedByMe);
+        _seen = true;
       }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_item == null) {
+        setState(() => _error = e);
+      } else {
+        showError(context, e);
+      }
     }
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   Future<void> _like() async {
@@ -89,24 +114,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     // Taken now: the answer can come after ‹, and the card still wants it.
     final heard = widget.onHeart;
     heard?.call(wish, answered: false);
-    final api = context.read<SwaplyApi>();
-    // Taken now, for 10a. The server offers it on one heart — the fifth, the
-    // fifteenth — and not on the next, so a ‹ pressed before the answer came
-    // cost it for ten hearts. It goes up over wherever the person went.
+    // Taken now, for what comes after: the match screen, or 10a, which go up
+    // over wherever the person went if ‹ came before the answer; see
+    // [followWish]. And the heart goes through the session, which holds a
+    // sign-in back until it lands.
     final session = context.read<Session>();
+    final by = session.me?.id;
     final root = Navigator.of(context, rootNavigator: true);
 
     // What comes after a wish — the match screen, or 10a — is a screen on top
     // of this one and not part of the heart, which is done with and free to
     // be pressed again before either goes up. So the call finishes first and
     // the follow-up comes after.
-    ({String? tradeId, bool promptToList, int likedCount})? wished;
+    LikeAnswer? wished;
     var landed = false;
     try {
       if (wish) {
-        wished = await api.like(item.id);
+        wished = await session.like(item.id);
       } else {
-        await api.unlike(item.id);
+        await session.unlike(item.id);
       }
       landed = true;
     } on ApiException catch (e) {
@@ -124,16 +150,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       }
     }
 
-    if (wished == null) return;
-    if (wished.tradeId != null) {
-      if (mounted) await pushOverBar<void>(context, MatchScreen(tradeId: wished.tradeId!));
-      return;
-    }
-    // 10a comes on the same hearts here as on the collage, and asks the same
-    // session whether it has been shown at this count already.
-    final due = await session.listingPromptDue(
-        promptToList: wished.promptToList, likedCount: wished.likedCount);
-    if (due) await showListingPrompt(mounted ? context : root.context, wished.likedCount);
+    if (wished != null) await followWish(mounted ? context : null, root, session, wished, by: by);
   }
 
   Future<void> _send() async {
@@ -165,7 +182,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     if (_error != null) {
       return Scaffold(
         appBar: swaplyAppBar(context, 'Gjenstand'),
-        body: EmptyState(title: 'Fant ikke gjenstanden', body: _error!, icon: Icons.error_outline),
+        body: LoadFailure(_error!, missing: 'Fant ikke gjenstanden', onRetry: _retry),
       );
     }
     if (item == null) {
@@ -312,6 +329,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   Future<void> _pickWanter(Item item) async {
     final api = context.read<SwaplyApi>();
+    final session = context.read<Session>();
     final messenger = ScaffoldMessenger.of(context);
     List<TestAccount> accounts;
     try {
@@ -361,6 +379,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     } else {
                       showDoneOn(messenger,
                           '${account.displayName} vil ha den — og sirkelen lukket seg!');
+                      // A trade of yours opened, and the bar counts them.
+                      unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
                     }
                     await _load();
                   } on ApiException catch (e) {
@@ -699,37 +719,41 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   /// Two circles, centred. The heart is the biggest thing on the screen because
   /// it is the only action that means anything — the ✕ beside it just goes back.
-  Widget _actionBar(Item item) => Container(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
-        decoration: const BoxDecoration(
-          color: SwaplyColors.surface,
-          border: Border(top: BorderSide(color: Color(0xFFF0F2EE))),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircleAction(
-              icon: Icons.close,
-              size: 58,
-              iconSize: 22,
-              color: SwaplyColors.badge,
-              borderColor: SwaplyColors.declineLine,
-              semanticLabel: 'Ikke interessert',
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-            const SizedBox(width: 26),
-            // Never busy: the heart has already turned by the time the call
-            // goes, so a spinner in it would only hide that it had.
-            CircleAction(
-              icon: _liked ? Icons.favorite : Icons.favorite_border,
-              size: 62,
-              iconSize: 26,
-              filled: true,
-              semanticLabel: _liked ? 'Du vil ha denne' : 'Jeg vil ha',
-              onPressed: _like,
-            ),
-          ],
+  /// A toast goes up over it rather than on it: the refusal of a heart used to
+  /// lie across the heart.
+  Widget _actionBar(Item item) => KeepClear(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
+          decoration: const BoxDecoration(
+            color: SwaplyColors.surface,
+            border: Border(top: BorderSide(color: Color(0xFFF0F2EE))),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAction(
+                icon: Icons.close,
+                size: 58,
+                iconSize: 22,
+                color: SwaplyColors.badge,
+                borderColor: SwaplyColors.declineLine,
+                semanticLabel: 'Ikke interessert',
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              const SizedBox(width: 26),
+              // Never busy: the heart has already turned by the time the call
+              // goes, so a spinner in it would only hide that it had.
+              CircleAction(
+                icon: _liked ? Icons.favorite : Icons.favorite_border,
+                size: 62,
+                iconSize: 26,
+                filled: true,
+                semanticLabel: _liked ? 'Du vil ha denne' : 'Jeg vil ha',
+                onPressed: _like,
+              ),
+            ],
+          ),
         ),
       );
 }

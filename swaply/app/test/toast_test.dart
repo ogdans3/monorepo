@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/design/tokens.dart';
-import 'package:swaply_app/widgets/toast.dart';
+import 'package:swaply_app/widgets/common.dart';
 
 /// A screen with one button on it, so a toast can be asked for the way a
 /// screen asks for one.
@@ -98,5 +98,208 @@ void main() {
 
     expect(find.text('Andre'), findsOneWidget);
     expect(find.text('Første'), findsNothing);
+  });
+
+  group('where it goes up', () {
+    // It used to sit 14 above the foot of whatever screen it was on. On a
+    // screen drawn without the bar that is where the button is, so a refusal
+    // of «Fortsett» on 02 lay across «Fortsett» for as long as it was up —
+    // exactly when the person wanted to press it again.
+
+    /// A phone the size the export draws one, with [screen] on it.
+    Future<void> hold(WidgetTester tester, Widget screen) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(home: screen));
+      await tester.pumpAndSettle();
+    }
+
+    /// …and a toast asked for over it.
+    Future<void> sayOver(WidgetTester tester, Widget screen,
+        {String message = 'Noe gikk galt hos oss.'}) async {
+      await hold(tester, screen);
+      showToastOn(ScaffoldMessenger.of(tester.element(find.byType(Scaffold).last)),
+          ToastTone.error, message);
+      await tester.pumpAndSettle();
+    }
+
+    /// 02's foot: the button with 34 under it, on a screen with no bar.
+    Widget footed({double under = 34, PreferredSizeWidget? bar}) => Scaffold(
+          bottomNavigationBar: bar,
+          body: Column(
+            children: [
+              const Expanded(child: TextField()),
+              Padding(
+                padding: EdgeInsets.fromLTRB(24, 12, 24, under),
+                child: PrimaryButton('Fortsett', onPressed: () {}),
+              ),
+            ],
+          ),
+        );
+
+    Rect toast(WidgetTester tester) => tester.getRect(find.byType(SwaplyToast));
+    Rect button(WidgetTester tester) => tester.getRect(find.byType(PrimaryButton));
+
+    testWidgets('1. over the button at the foot of a screen without the bar, not on it',
+        (tester) async {
+      await sayOver(tester, footed());
+
+      expect(toast(tester).bottom, button(tester).top - 14);
+      // The same card, as wide as ever: only where it lies has changed.
+      expect(toast(tester).width, 390 - 2 * 14);
+      final decoration = _decoration(tester);
+      expect(decoration.color, Colors.white);
+      expect(decoration.borderRadius, BorderRadius.circular(18));
+    });
+
+    testWidgets('…however long the sentence', (tester) async {
+      await sayOver(tester, footed(),
+          message: 'Swaply er invitasjonsbasert. Du trenger en invitasjon fra noen som '
+              'allerede er med, og den du har er brukt av noen andre allerede.');
+
+      expect(toast(tester).height, greaterThan(70));
+      expect(toast(tester).bottom, button(tester).top - 14);
+    });
+
+    testWidgets('…and the button still answers under the room the toast leaves', (tester) async {
+      var pressed = 0;
+      await sayOver(
+          tester,
+          Scaffold(
+            body: Column(children: [
+              const Spacer(),
+              PrimaryButton('Fortsett', onPressed: () => pressed++),
+            ]),
+          ));
+
+      await tester.tap(find.text('Fortsett'));
+      expect(pressed, 1);
+    });
+
+    testWidgets('2. with nothing at the foot it stays where it was, 14 above it', (tester) async {
+      await sayOver(tester, const Scaffold(body: Center(child: Text('Oppdag'))));
+      expect(toast(tester).bottom, 844 - 14);
+    });
+
+    testWidgets('3. over the keyboard, and over a button standing on it', (tester) async {
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await sayOver(tester, footed(under: 10));
+
+      expect(button(tester).bottom, 844 - 300 - 10);
+      expect(toast(tester).bottom, button(tester).top - 14);
+    });
+
+    testWidgets('4. over a bottom bar, and over a button above the bar', (tester) async {
+      await sayOver(
+          tester,
+          footed(
+            under: 8,
+            bar: const PreferredSize(
+                preferredSize: Size.fromHeight(60), child: SizedBox(height: 60)),
+          ));
+
+      expect(button(tester).bottom, 844 - 60 - 8);
+      expect(toast(tester).bottom, button(tester).top - 14);
+    });
+
+    testWidgets('5. a button that is not on screen is not kept clear of', (tester) async {
+      // Under another page: the one on top has nothing at its foot.
+      await hold(
+          tester,
+          Builder(
+            builder: (context) => Scaffold(
+              body: Column(children: [
+                const Spacer(),
+                PrimaryButton('Fortsett',
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                        builder: (_) => const Scaffold(body: Center(child: Text('Neste')))))),
+              ]),
+            ),
+          ));
+      await tester.tap(find.text('Fortsett'));
+      await tester.pumpAndSettle();
+      showToastOn(ScaffoldMessenger.of(tester.element(find.text('Neste'))), ToastTone.note, 'Ok.');
+      await tester.pumpAndSettle();
+      expect(toast(tester).bottom, 844 - 14);
+    });
+
+    testWidgets('…nor one in a list, laid out below where the list ends', (tester) async {
+      await sayOver(
+          tester,
+          Scaffold(
+            body: Column(children: [
+              Expanded(
+                child: ListView(children: [
+                  const SizedBox(height: 800),
+                  PrimaryButton('Fortsett', onPressed: () {}),
+                ]),
+              ),
+              const SizedBox(height: 54),
+            ]),
+          ));
+
+      // Laid out, in the list's cache below the fold, and out of sight.
+      expect(find.byType(PrimaryButton, skipOffstage: false), findsOneWidget);
+      expect(toast(tester).bottom, 844 - 14);
+    });
+
+    testWidgets('…nor one so high that clearing it would take the toast off the screen',
+        (tester) async {
+      await sayOver(
+          tester,
+          Scaffold(
+            body: Column(children: [
+              SizedBox(
+                  height: 844, child: PrimaryButton('Fortsett', onPressed: () {}, height: 844)),
+            ]),
+          ));
+      expect(toast(tester).bottom, 844 - 14);
+    });
+
+    testWidgets('6. anything else can ask to be kept clear of — the composer on 06g',
+        (tester) async {
+      await sayOver(
+          tester,
+          const Scaffold(
+            body: Column(children: [
+              Spacer(),
+              KeepClear(child: SizedBox(height: 60, child: TextField())),
+            ]),
+          ));
+      expect(toast(tester).bottom, 844 - 60 - 14);
+    });
+  });
+
+  group('a way back', () {
+    testWidgets('is one word on the card, and pressing it takes the toast down', (tester) async {
+      var undone = 0;
+      await mount(
+          tester,
+          (context) => showDone(context, 'Vi viser deg ikke flere slike.',
+              action: ToastAction('Angre', () => undone++)));
+      await tester.pumpAndSettle();
+
+      final word = tester.widget<Text>(find.text('Angre'));
+      expect(word.style!.color, SwaplyColors.greenText);
+      expect(find.descendant(of: find.byType(SwaplyToast), matching: find.text('Angre')),
+          findsOneWidget);
+      // A finger's worth of it, inside the card.
+      final card = tester.getRect(find.byType(SwaplyToast));
+      final area = tester
+          .getRect(find.ancestor(of: find.text('Angre'), matching: find.byType(TapArea)));
+      expect(card.contains(area.center), isTrue);
+
+      await tester.tap(find.text('Angre'));
+      await tester.pumpAndSettle();
+      expect(undone, 1);
+      expect(find.byType(SwaplyToast), findsNothing);
+    });
+
+    testWidgets('and without one the card is the one it always was', (tester) async {
+      await mount(tester, (context) => showDone(context, 'Lagt ut.'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TapArea), findsNothing);
+    });
   });
 }

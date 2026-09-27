@@ -576,11 +576,6 @@ class SignInRow extends StatelessWidget {
       );
 }
 
-/// What the splash says when the server does not answer, and what a form says
-/// for the same fault. Not «Ingen nettverk»: the phone may be online and the
-/// server not, and this cannot tell which.
-const noContact = 'Vi får ikke kontakt med Swaply akkurat nå.';
-
 /// Back to the gate in `main.dart`, which decides what comes next: 02, the
 /// app, or the splash while a new stranger is made.
 ///

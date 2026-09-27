@@ -663,6 +663,16 @@ final _screens = <_Screen>[
       act: (t) => _tap(t, find.text('Inviter en venn'))),
   _Screen('16b legal', () => const SettingsScreen(),
       act: (t) => _tap(t, find.text('Juridisk og personvern'))),
+  _Screen('16b deleting the account', () => const SettingsScreen(), act: (t) async {
+    await _tap(t, find.text('Juridisk og personvern'));
+    await t.pumpAndSettle();
+    await _tap(t, find.text('Slett kontoen'));
+  }),
+  _Screen('16b with something hidden', () => const SettingsScreen(), before: () async {
+    final hiding = {...fx.me, 'hiddenCount': 2};
+    server.overrides['POST /auth/login'] = {'token': 'tok', 'user': hiding};
+    server.overrides['GET /me'] = hiding;
+  }),
   _Screen('16b BankID', () => const SettingsScreen(), before: () async {
     final unverified = {...fx.me, 'bankidVerified': false};
     server.overrides['POST /auth/login'] = {'token': 'tok', 'user': unverified};
@@ -686,10 +696,12 @@ final _screens = <_Screen>[
     server.overrides['POST /auth/login'] = {'token': 'tok', 'user': FakeServer.admin};
     server.overrides['GET /me'] = FakeServer.admin;
   }),
-  // The tool's sheet for which test account wants your thing. Its other
-  // sheet, what to reset on an account, is not here: at 844 tall its column
-  // overflows the sheet by a quarter of a point, which fails any test that
-  // opens it and is a layout fault of its own.
+  // The tool's two sheets: what to reset on an account, and which test
+  // account wants your thing.
+  _Screen('admin, «Nullstill eller slett»', () => const AdminScreen(), before: () async {
+    server.overrides['POST /auth/login'] = {'token': 'tok', 'user': FakeServer.admin};
+    server.overrides['GET /me'] = FakeServer.admin;
+  }, act: (t) => _tap(t, find.byTooltip('Nullstill eller slett'))),
   _Screen('04 as admin, «Velg konto»', () => const ItemDetailScreen(itemId: 'item-drill'),
       before: () async {
     server.overrides['POST /auth/login'] = {'token': 'tok', 'user': FakeServer.admin};

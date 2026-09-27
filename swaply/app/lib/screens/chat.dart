@@ -32,15 +32,33 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
   @override
   void onTabReturn() => _load();
 
-  Future<void> _load() async {
+  /// Asked for on opening, on coming back to the tab or from a conversation,
+  /// and on a pull. Only with nothing on screen yet can it fail into «Fikk
+  /// ikke kontakt»; otherwise the list stays, and [say] tells a failed pull in
+  /// a toast over it. As on Bytter, the error used to replace a list that was
+  /// there and outlive the connection coming back.
+  Future<void> _load({bool say = false}) async {
     try {
       final result = await context.read<SwaplyApi>().threads();
       if (!mounted) return;
-      setState(() => _threads = result.threads);
+      setState(() {
+        _threads = result.threads;
+        _error = null;
+      });
       await context.read<Session>().refresh();
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_threads == null) {
+        setState(() => _error = e.message);
+      } else if (say) {
+        showError(context, e);
+      }
     }
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   @override
@@ -63,7 +81,7 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
                     body: _error!,
                     icon: Icons.wifi_off,
                     actionLabel: 'Prøv igjen',
-                    onAction: _load)
+                    onAction: _retry)
                 : threads == null
                     ? const Center(child: CircularProgressIndicator())
                     : threads.isEmpty
@@ -74,7 +92,7 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
                                 'samtalen her.',
                           )
                         : RefreshIndicator(
-                            onRefresh: _load,
+                            onRefresh: () => _load(say: true),
                             child: ListView.separated(
                               itemCount: threads.length,
                               separatorBuilder: (_, _) => const Divider(
@@ -165,7 +183,7 @@ class ThreadScreen extends StatefulWidget {
 class _ThreadScreenState extends State<ThreadScreen> {
   Thread? _thread;
   Trade? _trade;
-  String? _error;
+  ApiException? _error;
   final _input = TextEditingController();
   final _scroll = ScrollController();
   bool _sending = false;
@@ -183,6 +201,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
     super.dispose();
   }
 
+  /// Asked for when the page opens, and again after a message or a proposal
+  /// is sent. Only the first asking can fail into [LoadFailure]: after that
+  /// the conversation stays and the failure is a toast over it. A message
+  /// that went, followed by a reload that did not, used to replace the
+  /// conversation with «Fant ikke samtalen».
   Future<void> _load() async {
     final api = context.read<SwaplyApi>();
     try {
@@ -193,12 +216,23 @@ class _ThreadScreenState extends State<ThreadScreen> {
       setState(() {
         _thread = thread;
         _trade = trade;
+        _error = null;
       });
       await context.read<Session>().refresh();
       _scrollToEnd();
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_thread == null) {
+        setState(() => _error = e);
+      } else {
+        showError(context, e);
+      }
     }
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   void _scrollToEnd() {
@@ -231,7 +265,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
     if (_error != null) {
       return Scaffold(
         appBar: swaplyAppBar(context, 'Samtale'),
-        body: EmptyState(title: 'Fant ikke samtalen', body: _error!, icon: Icons.error_outline),
+        body: LoadFailure(_error!, missing: 'Fant ikke samtalen', onRetry: _retry),
       );
     }
     if (thread == null) {
@@ -328,7 +362,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 ),
               ),
             ),
-            _composer(),
+            // What a refusal of «Send» is about, so its toast goes up over
+            // the composer rather than on it.
+            KeepClear(child: _composer()),
           ],
         ),
       ),

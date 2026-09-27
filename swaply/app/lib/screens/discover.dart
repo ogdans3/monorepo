@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -36,7 +38,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   String? _chip;
 
   /// How many times the collage has been asked for, and which asking the one
-  /// on screen is the answer to.
+  /// on screen is the answer to. Only the newest asking is taken: two can be
+  /// on their way at once — a chip tapped while the grid was asked for behind
+  /// it, a search sent while the last one was still out — and the older one,
+  /// landing last, put back a grid for a search nobody was looking at.
   int _asked = 0, _shown = 0;
 
   /// The hearts pressed on this collage, by item: what the person made it,
@@ -58,6 +63,26 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
     return until == null || _shown <= until ? heart.liked : item.likedByMe;
   }
 
+  /// «Ikke vis meg slike» pressed on this collage, kept the way a heart is: a
+  /// collage asked for no later than [until] was asked before the server had
+  /// the kind, and still has its listings in it. They are left out here until
+  /// a collage asked for after it — which the server leaves them out of — is
+  /// on screen. Kept here and not in the grid itself, so the grid goes on
+  /// being the server's answer, and a kind shown again comes straight back.
+  final _hidden = <({HiddenKind kind, int? until})>[];
+
+  /// How many times «Ikke vis meg slike» has been pressed here. «Angre» on a
+  /// toast shows everything again, so it is that hide's to undo only while no
+  /// other has been pressed since: a second kind, hidden while the first
+  /// one's toast was still up, would have come back with it.
+  int _hides = 0;
+
+  List<Item> get _visible => [
+        for (final item in _results)
+          if (!_hidden.any((h) => (h.until == null || _shown <= h.until!) && h.kind.covers(item)))
+            item,
+      ];
+
   @override
   void initState() {
     super.initState();
@@ -77,9 +102,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
 
   /// [quiet] keeps what is on screen while it asks, and keeps it if the asking
   /// fails: coming back to the tab is not the moment to be told the network
-  /// dropped out a minute ago.
-  Future<void> _load({bool quiet = false}) async {
-    final behind = quiet && _results.isNotEmpty;
+  /// dropped out a minute ago. [say] tells it anyway, in a toast over the
+  /// grid, for a pull that asked for the grid in so many words.
+  ///
+  /// Only a grid that is on screen, and is the answer to what is asked, is
+  /// kept. Under a spinner — a chip tapped, a search sent — [_results] is
+  /// still the grid from before, and a quiet asking that overtook the spinner
+  /// and then failed left that grid standing under the new chip, with its
+  /// count and no word of what had happened. Under «Fikk ikke kontakt» there
+  /// is no grid to keep.
+  Future<void> _load({bool quiet = false, bool say = false}) async {
+    if (!mounted) return;
+    final behind = quiet && !_loading && _error == null && _results.isNotEmpty;
     if (!behind) {
       setState(() {
         _loading = true;
@@ -100,17 +134,98 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
         condition: _filters.condition,
         sort: _filters.sort,
       );
-      if (!mounted) return;
+      if (!mounted || asked != _asked) return;
       setState(() {
         _total = res.total;
         _results = res.items;
         _shown = asked;
+        _loading = false;
+        _error = null;
+        // Asked for after the server had them: the answer is its word again.
+        _hidden.removeWhere((h) => h.until != null && h.until! < asked);
       });
     } on ApiException catch (e) {
-      if (mounted && !behind) setState(() => _error = e.message);
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      // A newer asking is on its way, and it is the one that says.
+      if (!mounted || asked != _asked) return;
+      setState(() {
+        _loading = false;
+        if (!behind) _error = e.message;
+      });
+      if (behind && say) showError(context, e);
     }
+  }
+
+  /// Pulled down: asked again behind the grid, which stays where it was with
+  /// the pull's own spinner over it. It used to be the first load over again,
+  /// so the grid went, a spinner stood in its place and the scroll was lost.
+  Future<void> _refresh() => _load(quiet: true, say: true);
+
+  /// «Ikke vis meg slike» from a card's long press. The kind goes from the
+  /// grid at once, the way a heart turns at once, and comes back if the
+  /// server does not take it.
+  Future<void> _hide(Item item) async {
+    final api = context.read<SwaplyApi>();
+    final session = context.read<Session>();
+    final messenger = ScaffoldMessenger.of(context);
+    final by = session.me?.id;
+    final press = ++_hides;
+    final guess = (kind: HiddenKind.of(item), until: null);
+    setState(() => _hidden.add(guess));
+    try {
+      final hid = await api.hide(item.id);
+      if (mounted) {
+        setState(() {
+          _hidden
+            ..remove(guess)
+            ..add((kind: hid.kind, until: _asked));
+        });
+      }
+      // The count 16b shows.
+      unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
+      // Undoing it is «show me everything again», because that is the one way
+      // back the server keeps. So it is offered only when the server, having
+      // just written this down, counts one thing hidden: anything hidden
+      // before it, here or on another phone or brought along by a sign-in,
+      // would come back with it. It used to go by the session's own count,
+      // which could be from before a sign-in whose answer never gave one.
+      final alone = hid.count == 1;
+      showDoneOn(
+          messenger,
+          // A listing with no subcategory is hidden alone, and «flere slike»
+          // promised every other one in its category too.
+          hid.kind.itemId != null
+              ? 'Vi viser deg ikke denne igjen.'
+              : 'Vi viser deg ikke flere slike.',
+          action: alone
+              ? ToastAction(
+                  'Angre', () => _showAgain(api, session, messenger, by: by, press: press))
+              : null);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _hidden.remove(guess));
+      showErrorOn(messenger, e);
+    }
+  }
+
+  /// «Angre» on the toast: everything hidden is shown again, which [_hide]
+  /// only offers while that is this one kind. The toast can outlive the
+  /// account it was said to — it is the app's, not the tab's — and «Angre»
+  /// pressed after a switch would show somebody else everything they hid.
+  /// Nor after another hide here, [press] being the one it was offered for.
+  Future<void> _showAgain(SwaplyApi api, Session session, ScaffoldMessengerState messenger,
+      {required String? by, required int press}) async {
+    if (session.me?.id != by || press != _hides) return;
+    try {
+      await api.showEverything();
+    } on ApiException catch (e) {
+      showErrorOn(messenger, e);
+      return;
+    }
+    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
+    if (!mounted) return;
+    // What the grid still holds comes back at once; what a collage asked for
+    // since left out comes with the next.
+    setState(_hidden.clear);
+    await _load(quiet: true);
   }
 
   Future<void> _openFilters() async {
@@ -241,7 +356,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
       );
     }
 
-    if (_results.isEmpty) {
+    final results = _visible;
+    if (results.isEmpty) {
       final filtered = _search.text.trim().isNotEmpty || _chip != null || _filters.isActive;
       return EmptyState(
         icon: filtered ? Icons.search_off : Icons.explore_outlined,
@@ -259,8 +375,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
     // aspect ratio would line them up in rows and lose that.
     final left = <Item>[];
     final right = <Item>[];
-    for (var i = 0; i < _results.length; i++) {
-      (i.isEven ? left : right).add(_results[i]);
+    for (var i = 0; i < results.length; i++) {
+      (i.isEven ? left : right).add(results[i]);
     }
     Widget column(List<Item> items, int offset) => Expanded(
           child: Column(
@@ -277,6 +393,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
                   // grid's place would redraw every picture and lose how far
                   // down it you were.
                   onChanged: () => _load(quiet: true),
+                  onHide: () => _hide(items[i]),
                   // Three heights, cycling: a collage is made of things that
                   // are not the same shape.
                   // Never taller than square: the export's collage runs from
@@ -289,14 +406,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
           ),
         );
 
+    // Less what is hidden here and still in the answer, so the count is of
+    // the grid under it.
+    final total = _total - (_results.length - results.length);
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: _refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(18, 0, 18, Insets.xl),
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Text('$_total treff', style: const TextStyle(fontSize: 12.5, color: SwaplyColors.grey)),
+            child: Text('$total treff', style: const TextStyle(fontSize: 12.5, color: SwaplyColors.grey)),
           ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,6 +467,7 @@ class ItemCard extends StatefulWidget {
       required this.onChanged,
       this.liked,
       this.onHeart,
+      this.onHide,
       this.aspect});
 
   final Item item;
@@ -360,11 +481,17 @@ class ItemCard extends StatefulWidget {
   /// The collage keeps it, since this card may be gone by the answer.
   final void Function(bool liked, {required bool answered})? onHeart;
 
-  /// When this card's page has been opened and closed again: a block from its
-  /// «⋯» can change what the grid should show. Never for a heart, on the card
-  /// or on the page, which changes the card and nothing else — the page's
-  /// comes back through [onHeart] like the card's own.
+  /// When this card's page, or its owner's profile, has been opened and
+  /// closed again, and when a report from its long press has landed with a
+  /// block: a block changes what the grid should show. Never for a heart, on the card or
+  /// on the page, which changes the card and nothing else — the page's comes
+  /// back through [onHeart] like the card's own.
   final VoidCallback onChanged;
+
+  /// «Ikke vis meg slike» from the long press. The collage takes the kind out
+  /// of the grid; without one there is nowhere to hide it from, and the long
+  /// press leaves it out.
+  final VoidCallback? onHide;
 
   /// Width over height for the picture. Given by the collage so that cards are
   /// not all the same shape; null lets the card fill whatever it is put in.
@@ -377,6 +504,16 @@ class ItemCard extends StatefulWidget {
 class _ItemCardState extends State<ItemCard> {
   late bool _liked = widget.liked ?? widget.item.likedByMe;
   bool _busy = false;
+
+  /// Bumped by every press of this card's heart, here or on its page. An
+  /// answer is the card's to act on only while no press has come since the
+  /// one it answers: a refusal of the card's own heart used to land after the
+  /// page's heart and turn the card back over it — and tell the collage so.
+  int _turns = 0;
+
+  /// Hearts from here or from the page on their way. While any is, what the
+  /// page was told when it opened may be from before it landed.
+  int _inFlight = 0;
 
   @override
   void didUpdateWidget(ItemCard oldWidget) {
@@ -399,6 +536,8 @@ class _ItemCardState extends State<ItemCard> {
   Future<void> _toggle() async {
     if (_busy) return;
     final want = !_liked;
+    final turn = ++_turns;
+    _inFlight++;
     setState(() {
       _busy = true;
       _liked = want;
@@ -406,40 +545,77 @@ class _ItemCardState extends State<ItemCard> {
     final heard = widget.onHeart;
     heard?.call(want, answered: false);
     var answered = false;
-    final api = context.read<SwaplyApi>();
+    // Through the session, which holds a sign-in back until the heart lands.
     final session = context.read<Session>();
-    // For 10a, which is owed to this heart even if the card is gone by the
-    // time the answer comes: the server offers it at five and then not until
-    // fifteen.
+    final by = session.me?.id;
+    // For what comes after, which is owed to this heart even if the card is
+    // gone by the time the answer comes; see [followWish].
     final root = Navigator.of(context, rootNavigator: true);
+    LikeAnswer? wished;
     try {
       if (want) {
-        final result = await api.like(widget.item.id);
-        heard?.call(want, answered: answered = true);
-        if (result.tradeId != null) {
-          if (!mounted) return;
-          await pushOverBar<void>(context, MatchScreen(tradeId: result.tradeId!));
-        } else {
-          final due = await session.listingPromptDue(
-              promptToList: result.promptToList, likedCount: result.likedCount);
-          if (due) await showListingPrompt(mounted ? context : root.context, result.likedCount);
-        }
+        wished = await session.like(widget.item.id);
       } else {
-        await api.unlike(widget.item.id);
-        heard?.call(want, answered: answered = true);
+        await session.unlike(widget.item.id);
       }
+      answered = true;
+      if (turn == _turns) heard?.call(want, answered: true);
     } on ApiException catch (e) {
-      heard?.call(!want, answered: answered = true);
-      if (mounted) {
-        setState(() => _liked = !want);
-        showError(context, e);
+      // Refused, or never heard: [ApiException.noContact] is one of these.
+      answered = true;
+      if (turn == _turns) {
+        heard?.call(!want, answered: true);
+        if (mounted) setState(() => _liked = !want);
       }
+      if (mounted) showError(context, e);
     } finally {
-      // No word either way — the connection went. The card goes on showing
-      // what was pressed, and the next collage asked for says what is so.
-      if (!answered) heard?.call(want, answered: true);
+      // Anything else is a fault in this app, not an answer. The card goes on
+      // showing what was pressed, and the next collage says what is so.
+      if (!answered && turn == _turns) heard?.call(want, answered: true);
+      _inFlight--;
       if (mounted) setState(() => _busy = false);
     }
+    // After the heart is done with, not inside it: what comes next is a
+    // screen on top, and the heart is free to be pressed again under it.
+    if (wished != null) await followWish(mounted ? context : null, root, session, wished, by: by);
+  }
+
+  /// The card's page: its heart is this card's heart, and the card is under
+  /// the page. It turns as the page's does, so the page slides away off the
+  /// heart the person left it with instead of the one from before. The
+  /// collage keeps it too, for an answer asked for before it that lands
+  /// after — the same as a heart pressed on the card.
+  Future<void> _open() async {
+    final heard = widget.onHeart;
+    // The turn the page's heart last took, so an answer to it that comes
+    // after the card's own heart has been pressed again is not taken.
+    var pressed = 0;
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ItemDetailScreen(
+              itemId: widget.item.id,
+              onHeart: (liked, {required answered}) {
+                if (!answered) {
+                  pressed = ++_turns;
+                  _inFlight++;
+                } else {
+                  _inFlight--;
+                  if (pressed != _turns) return;
+                }
+                heard?.call(liked, answered: answered);
+                if (mounted) setState(() => _liked = liked);
+              },
+              // What the server told the page, which was asked for after the
+              // collage this card came from. It used to be the page's alone:
+              // a heart the collage had wrong stayed wrong on the card after
+              // the page had shown it right. Not while a heart is on its way,
+              // which the server may not have heard yet when it answered.
+              onSeen: (liked) {
+                if (_inFlight > 0 || liked == _liked) return;
+                heard?.call(liked, answered: true);
+                if (mounted) setState(() => _liked = liked);
+              },
+            )));
+    widget.onChanged();
   }
 
   @override
@@ -447,24 +623,9 @@ class _ItemCardState extends State<ItemCard> {
     final item = widget.item;
 
     return GestureDetector(
-      onTap: () async {
-        // The page's heart is this card's heart, and the card is under the
-        // page: it turns as the page's does, so the page slides away off the
-        // heart the person left it with instead of the one from before. The
-        // collage keeps it too, for an answer asked for before it that lands
-        // after — the same as a heart pressed on the card.
-        final heard = widget.onHeart;
-        await Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ItemDetailScreen(
-                  itemId: item.id,
-                  onHeart: (liked, {required answered}) {
-                    heard?.call(liked, answered: answered);
-                    if (mounted) setState(() => _liked = liked);
-                  },
-                )));
-        widget.onChanged();
-      },
-      onLongPress: () => _showContextMenu(context, item, widget.onChanged),
+      onTap: _open,
+      onLongPress: () =>
+          _showContextMenu(context, item, onChanged: widget.onChanged, onHide: widget.onHide),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -562,7 +723,14 @@ class _ItemCardState extends State<ItemCard> {
 }
 
 /// Long press keeps the rare actions. The heart is not among them any more.
-Future<void> _showContextMenu(BuildContext context, Item item, VoidCallback onChanged) async {
+///
+/// Each of them can change what the grid should hold, and the grid is told:
+/// [onHide] takes a kind out of it, and [onChanged] asks for it again, behind
+/// it, once a report that blocked has landed or the owner's profile is closed
+/// — a block from either used to leave the owner's things in the grid until
+/// the tab came back.
+Future<void> _showContextMenu(BuildContext context, Item item,
+    {required VoidCallback onChanged, VoidCallback? onHide}) async {
   await showModalBottomSheet<void>(
     context: context,
     // Over the bar, like every sheet: a sheet inside a tab stops at the bar
@@ -575,34 +743,82 @@ Future<void> _showContextMenu(BuildContext context, Item item, VoidCallback onCh
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
-            leading: const Icon(Icons.visibility_off_outlined),
-            title: const Text('Ikke vis meg slike'),
-            onTap: () => Navigator.of(sheet).pop(),
-          ),
+          if (onHide != null)
+            ListTile(
+              leading: const Icon(Icons.visibility_off_outlined),
+              title: const Text('Ikke vis meg slike'),
+              onTap: () {
+                Navigator.of(sheet).pop();
+                onHide();
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: const Text('Se profil'),
-            onTap: () {
+            onTap: () async {
               Navigator.of(sheet).pop();
-              if (item.ownerId != null) {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => OtherProfileScreen(userId: item.ownerId!)));
-              }
+              final owner = item.ownerId;
+              if (owner == null) return;
+              await Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: owner)));
+              onChanged();
             },
           ),
           ListTile(
             leading: const Icon(Icons.flag_outlined, color: SwaplyColors.red),
             title: const Text('Rapporter', style: TextStyle(color: SwaplyColors.red)),
-            onTap: () {
+            onTap: () async {
               Navigator.of(sheet).pop();
-              showReportSheet(context, itemId: item.id, personName: item.owner?.displayName);
+              // Once the report has landed, and only if it blocked: asked for
+              // as the sheet closed, the grid came back from before the block
+              // was written, with the owner's things still in it.
+              final blocked = await showReportSheet(context,
+                  itemId: item.id, personName: item.owner?.displayName);
+              if (blocked) onChanged();
             },
           ),
         ],
       ),
     ),
   );
+}
+
+/// What comes after a wish that landed: the match screen when it opened a
+/// trade, and 10a when this count is one the server offers it at. Both are the
+/// heart's, not the screen's it was pressed on — the server offers 10a on one
+/// heart, the fifth or the fifteenth, and not on the next, and a match is a
+/// trade that has opened either way. A heart on 04 turns on the tap, so ‹ can
+/// come before the answer, and leaving cost the match screen and the sheet.
+/// So they go up over [context] while it is still there, and over whatever is
+/// on screen otherwise — null, or no longer mounted — through [root]: the
+/// root navigator, taken before the heart went. Nothing goes up for somebody
+/// the phone is no longer: a heart answered after a sign-out, or a switch of
+/// account, belongs to whoever pressed it ([by]).
+Future<void> followWish(BuildContext? context, NavigatorState root, Session session,
+    LikeAnswer wished, {required String? by}) async {
+  if (session.me?.id != by) return;
+  BuildContext over() => context != null && context.mounted ? context : root.context;
+  final tradeId = wished.tradeId;
+  if (tradeId != null) {
+    // A heart taken back and pressed again finds the ring its first press
+    // opened, and the server answers with that trade rather than a second
+    // one. 06a is the moment a trade opens, and this one has had it: put up
+    // again, over whatever the offer has become since, it read as a new trade
+    // with the same people. The heart just turns, and the trade is in Bytter
+    // where it was. Nor 10a: somebody in a ring has something to give.
+    if (!wished.tradeIsNew) return;
+    // The bar counts the trades waiting on this person, and this one is new:
+    // it went on counting as before the heart until something else asked.
+    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
+    final on = over();
+    if (on.mounted) await pushOverBar<void>(on, MatchScreen(tradeId: tradeId));
+    return;
+  }
+  // 10a comes on the same hearts from the collage and from 04, and asks the
+  // same session whether it has been shown at this count already.
+  final due = await session.listingPromptDue(
+      promptToList: wished.promptToList, likedCount: wished.likedCount);
+  if (due) await showListingPrompt(over(), wished.likedCount);
 }
 
 /// 05b Avansert søk.
@@ -674,7 +890,13 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     if (mounted) setState(() => _subcategories = list);
   }
 
+  /// How many times the count has been asked for. Typing asks at every
+  /// letter, and the answer for «syk» landing after the one for «sykkel» put
+  /// a number on the button for a search nobody was making any more.
+  int _counted = 0;
+
   Future<void> _countPreview() async {
+    final asked = ++_counted;
     try {
       final res = await context.read<SwaplyApi>().discover(
             q: _text.text.trim(),
@@ -685,9 +907,9 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
             condition: _condition,
             sort: _sort,
           );
-      if (mounted) setState(() => _preview = res.total);
+      if (mounted && asked == _counted) setState(() => _preview = res.total);
     } on ApiException {
-      if (mounted) setState(() => _preview = null);
+      if (mounted && asked == _counted) setState(() => _preview = null);
     }
   }
 

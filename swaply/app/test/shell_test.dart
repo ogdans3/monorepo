@@ -12,6 +12,7 @@
 // because the point is what happens in the middle of one.
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -42,14 +43,16 @@ late Session session;
 /// A phone, the size the export draws one.
 const _phone = Size(390, 844);
 
-Future<void> launch(WidgetTester tester) async {
+/// [lessMotion] stands in for a browser's `prefers-reduced-motion`.
+Future<void> launch(WidgetTester tester, {ValueListenable<bool>? lessMotion}) async {
   tester.view.physicalSize = _phone;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
   await session.login('ola@epost.no', 'passord');
   await tester.pumpWidget(
-    ChangeNotifierProvider<Session>.value(value: session, child: SwaplyApp(api: api)),
+    ChangeNotifierProvider<Session>.value(
+        value: session, child: SwaplyApp(api: api, lessMotion: lessMotion)),
   );
   await tester.pumpAndSettle();
 }
@@ -164,6 +167,36 @@ void main() {
 
       expect(find.byType(TradesScreen), findsOneWidget);
       expect(find.byType(DiscoverScreen), findsNothing);
+    });
+
+    testWidgets('…and for a browser that asked for less motion, which Flutter is not told',
+        (tester) async {
+      // The web engine reports high contrast and nothing else, so the app
+      // reads `prefers-reduced-motion` itself and says it the way a phone's
+      // setting arrives: as MediaQuery's disableAnimations.
+      final asked = ValueNotifier(true);
+      addTearDown(asked.dispose);
+      await launch(tester, lessMotion: asked);
+      final shell = tester.state(find.byType(TabShell));
+      expect(MediaQuery.of(tester.element(find.byType(DiscoverScreen))).disableAnimations, isTrue);
+
+      await tapTab(tester, 'Bytter');
+      await tester.pump();
+      expect(find.byType(TradesScreen), findsOneWidget);
+      expect(find.byType(DiscoverScreen), findsNothing);
+
+      // Turned off with the page open: motion again, in the same app — not
+      // one built again from nothing because the answer changed.
+      asked.value = false;
+      await tester.pump();
+      expect(tester.state(find.byType(TabShell)), same(shell));
+      await tapTab(tester, 'Oppdag');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(find.byType(DiscoverScreen), findsOneWidget);
+      expect(find.byType(TradesScreen), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.byType(TradesScreen), findsNothing);
     });
 
     testWidgets('2. a screen opened inside a tab slides in above a bar that stays put',
@@ -599,6 +632,35 @@ void main() {
       expect(asked('GET /trades'), before + 1);
     });
 
+    testWidgets('…and once, when the trade was opened from the list', (tester) async {
+      // A trade that closes asks for the list again, and so does landing on
+      // the list: «Tilbake til Bytter» from a trade opened there did both.
+      server.overrides['GET /trades/trade-1'] = {
+        ...FakeServer.trade,
+        'state': 'cancelled',
+        'closeReason': 'declined',
+      };
+      await launch(tester);
+      await tapTab(tester, 'Bytter');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Direkte bytte'));
+      await tester.pumpAndSettle();
+      var before = asked('GET /trades');
+
+      await tester.tap(find.text('Tilbake til Bytter'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TradesScreen), findsOneWidget);
+      expect(asked('GET /trades'), before + 1);
+
+      // ‹ lands nowhere, and still asks.
+      await tester.tap(find.text('Direkte bytte'));
+      await tester.pumpAndSettle();
+      before = asked('GET /trades');
+      navigatorOf(tester, find.byType(TradeDetailScreen)).pop();
+      await tester.pumpAndSettle();
+      expect(asked('GET /trades'), before + 1);
+    });
+
     testWidgets('…and so does a review, from the screens that cover the bar', (tester) async {
       server.overrides['GET /trades/trade-1'] = {...FakeServer.trade, 'state': 'completed'};
       await launch(tester);
@@ -614,12 +676,15 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Send vurdering'));
       await tester.pumpAndSettle();
+      final before = asked('GET /trades');
       await tester.tap(find.text('Hopp over'));
       await tester.pumpAndSettle();
 
       expect(find.byType(TradesScreen), findsOneWidget);
       expect(find.byType(TradeDetailScreen, skipOffstage: false), findsNothing);
       expect(bar, findsOneWidget);
+      // Once, though the trade it was sent from was opened from the list.
+      expect(asked('GET /trades'), before + 1);
     });
 
     testWidgets('4. a notification opens its screen where it lives, with the bar under it',

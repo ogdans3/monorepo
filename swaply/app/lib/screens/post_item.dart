@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -71,6 +74,20 @@ class _PostItemScreenState extends State<PostItemScreen> {
   /// until the right ✕ was guessed.
   ListingPhoto? _refused;
 
+  /// What the register said about each postcode typed here: its town, or the
+  /// server's words for one that belongs to none. By code rather than for
+  /// the field, so an answer that lands after the field has moved on is kept
+  /// for what it was asked about and never drawn beside another number. A
+  /// code in neither has not been answered — not yet, or no contact.
+  final _towns = <String, String>{};
+  final _unknown = <String, String>{};
+  final _asking = <String, Future<void>>{};
+
+  /// Held back while the digits are still changing: four digits are asked
+  /// about, and an edit inside them is a new four.
+  Timer? _lookupAfter;
+  static const _lookupDelay = Duration(milliseconds: 300);
+
   Item? get _editing => widget.editing;
 
   @override
@@ -133,13 +150,77 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   @override
   void dispose() {
+    _lookupAfter?.cancel();
     for (final c in [_title, _description, _value, _postal, _subcategory]) {
       c.dispose();
     }
     super.dispose();
   }
 
+  /// The postcode as it is typed: the town beside it once there are four
+  /// digits, as the export draws «7030 Trondheim», and the server's words
+  /// over the button for four that belong to no town. Until now a typo was
+  /// found out by «Legg ut», after 10c had made the profile for it.
+  void _postalTyped(String text) {
+    _lookupAfter?.cancel();
+    final code = text.trim();
+    if (code.length == 4 && !_answered(code)) {
+      _lookupAfter = Timer(_lookupDelay, () => _lookUp(code));
+    }
+    // The town drawn is the one for what is there now, so it goes with the
+    // digit that changed.
+    setState(() {});
+  }
+
+  bool _answered(String code) => _towns.containsKey(code) || _unknown.containsKey(code);
+
+  /// Asks once per code, and a second asking joins the first.
+  Future<void> _lookUp(String code) => _asking[code] ??= () async {
+        final api = context.read<SwaplyApi>();
+        try {
+          _towns[code] = await api.town(code);
+        } on ApiException catch (e) {
+          // No town, or not a postcode at all: the server's own words. Nothing
+          // else — no contact, a server that has no lookup — says anything
+          // about the code, and the listing is still checked when it is sent.
+          if (e.code == ApiException.unknownPostalCode || e.statusCode == 400) {
+            _unknown[code] = e.message;
+          }
+        } finally {
+          _asking.remove(code);
+          if (mounted) setState(() {});
+        }
+      }();
+
+  /// Whether the postcode may go on to 10c and the listing: empty, or not
+  /// refused. Asked now if it has not been answered — «Neste» pressed within
+  /// the lookup's delay, or three digits — and asked again if the digits
+  /// changed while it was out.
+  Future<bool> _postcodeHolds() async {
+    _lookupAfter?.cancel();
+    for (var code = _postal.text.trim(); code.isNotEmpty; code = _postal.text.trim()) {
+      if (!_answered(code)) {
+        setState(() => _busy = true);
+        await _lookUp(code);
+        if (!mounted) return false;
+        setState(() => _busy = false);
+        if (_postal.text.trim() != code) continue;
+      }
+      if (_unknown.containsKey(code)) {
+        // The words are drawn from [_unknown] over the button; an older
+        // reason written there would stand in front of them.
+        setState(() => _error = null);
+        return false;
+      }
+      break;
+    }
+    return true;
+  }
+
   Future<void> _submit() async {
+    // Before 10c, not after it: a stranger whose postcode was wrong used to
+    // make a profile for a listing the server then refused.
+    if (!await _postcodeHolds() || !mounted) return;
     final editing = _editing;
     if (editing != null) return _save(editing);
 
@@ -477,26 +558,22 @@ class _PostItemScreenState extends State<PostItemScreen> {
                       const SizedBox(width: 12),
                     ],
                     Expanded(
-                      child: _labelled(
-                        'Postnummer',
-                        TapArea(
-                          child: TextField(
-                            controller: _postal,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            maxLength: 4,
-                            style: _fieldText,
-                            decoration: _field('7030').copyWith(counterText: ''),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _labelled('Postnummer', TapArea(child: _postcodeField())),
+                          // Under the field it is about, three below it, as
+                          // the export sets it: the town beside the digits is
+                          // what the note means.
+                          const Padding(
+                            padding: EdgeInsets.only(top: 3),
+                            child: Text('Kun by vises for andre',
+                                style: TextStyle(fontSize: 10, color: SwaplyColors.grey)),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text('Kun by vises for andre',
-                      style: TextStyle(fontSize: 10, color: SwaplyColors.grey)),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -513,10 +590,10 @@ class _PostItemScreenState extends State<PostItemScreen> {
                 // reason written down there was never seen — after 10c the
                 // spinner stopped, «Neste» became «Legg ut», and nothing said
                 // why nothing had been listed.
-                if (_error != null) ...[
+                if (_said case final said?) ...[
                   // Coral, the «no» colour. Red is report and block, and an
                   // error here is neither.
-                  Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+                  Text(said, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
                   const SizedBox(height: Insets.sm),
                 ],
                 PrimaryButton(
@@ -545,6 +622,57 @@ class _PostItemScreenState extends State<PostItemScreen> {
   }
 
   static const _fieldText = TextStyle(fontSize: 14, color: SwaplyColors.ink);
+
+  /// What goes over the button: the last thing that went wrong, or else the
+  /// server's words for the postcode in the field. Those stand as long as the
+  /// digits do, so they come and go with the typing and need no clearing.
+  String? get _said => _error ?? _unknown[_postal.text.trim()];
+
+  /// «7030» with «Trondheim» beside it, 11 and grey against the field's right
+  /// edge, where the export draws the town. A code with no town gets the
+  /// coral edge the refused photograph gets, and the reason over the button.
+  Widget _postcodeField() {
+    final code = _postal.text.trim();
+    final town = _towns[code];
+    final refused = _unknown.containsKey(code);
+    // The export draws this one field its own way: 42 tall, corners of 12,
+    // 12 at the sides — the town has to fit beside the digits.
+    OutlineInputBorder edge(Color colour) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colour),
+        );
+    return LayoutBuilder(
+      builder: (context, box) => TextField(
+        controller: _postal,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        maxLength: 4,
+        style: _fieldText,
+        onChanged: _postalTyped,
+        decoration: _field('7030').copyWith(
+          counterText: '',
+          // 14 of text at 1.2 is 16.8; the rest of 42 is the padding.
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12.6),
+          border: edge(SwaplyColors.fieldLine),
+          suffixIcon: town == null
+              ? null
+              : Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 12),
+                  child: Text(town,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: SwaplyColors.grey)),
+                ),
+          // What the four digits leave of the field — the 12 in front of
+          // them, their 32 and a hair — so «Mo i Rana» fits and a longer
+          // name is cut rather than pushing the digits out.
+          suffixIconConstraints: BoxConstraints(maxWidth: math.max(0, box.maxWidth - 46)),
+          enabledBorder: edge(refused ? SwaplyColors.coral : SwaplyColors.fieldLine),
+          focusedBorder: edge(refused ? SwaplyColors.coral : SwaplyColors.greenPressed),
+        ),
+      ),
+    );
+  }
 
   /// The export's fields on this screen are a size smaller than the sign-in
   /// ones: 14px in 11/14 padding on a 14 radius.
@@ -664,12 +792,14 @@ class _PostItemScreenState extends State<PostItemScreen> {
                             ),
                           ),
                         ),
+                      // The cover says so in its top corner, 6 in, where the
+                      // export puts it — across from the ✕.
                       if (entry.key == 0)
                         Positioned(
                           left: 6,
-                          bottom: 6,
+                          top: 6,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
                               color: SwaplyColors.greenDeep,
                               borderRadius: BorderRadius.circular(Radii.pill),

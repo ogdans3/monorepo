@@ -216,69 +216,77 @@ class _AdminScreenState extends State<AdminScreen> {
     await showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
+      // As tall as what is in it. A sheet is held to nine sixteenths of the
+      // screen otherwise, which at 844 is a quarter of a point short of the
+      // eight rows here; the scroll view is for a screen shorter still, and
+      // the safe area keeps the sheet out from under the status bar there.
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AdminColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
       builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
-              child: Text(account.displayName,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w800, color: AdminColors.ink)),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Text(
-                'Nullstill åpner dørene produktet bare lar deg gå gjennom én gang: '
-                'interesser kan ikke tømmes, og BankID kan ikke settes tilbake.',
-                style: TextStyle(fontSize: 12.5, height: 1.4, color: AdminColors.muted),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+                child: Text(account.displayName,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w800, color: AdminColors.ink)),
               ),
-            ),
-            for (final part in const [
-              ('likes', 'Nullstill likes'),
-              ('items', 'Nullstill gjenstander'),
-              ('trades', 'Avslutt åpne bytter'),
-              ('interests', 'Nullstill interesser — skjerm 02 kommer igjen'),
-              ('bankid', 'Nullstill BankID — spørsmålet kommer igjen'),
-              ('notifications', 'Slett varsler'),
-            ])
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  'Nullstill åpner dørene produktet bare lar deg gå gjennom én gang: '
+                  'interesser kan ikke tømmes, og BankID kan ikke settes tilbake.',
+                  style: TextStyle(fontSize: 12.5, height: 1.4, color: AdminColors.muted),
+                ),
+              ),
+              for (final part in const [
+                ('likes', 'Nullstill likes'),
+                ('items', 'Nullstill gjenstander'),
+                ('trades', 'Avslutt åpne bytter'),
+                ('interests', 'Nullstill interesser — skjerm 02 kommer igjen'),
+                ('bankid', 'Nullstill BankID — spørsmålet kommer igjen'),
+                ('notifications', 'Slett varsler'),
+              ])
+                ListTile(
+                  dense: true,
+                  title: Text(part.$2,
+                      style: const TextStyle(fontSize: 14, color: AdminColors.ink)),
+                  onTap: () {
+                    Navigator.of(sheet).pop();
+                    _run('reset', (api) async {
+                      final done = await api.adminReset(account.id, [part.$1]);
+                      // And this phone's memory of having shown 10a: without it
+                      // the count starts over and the sheet does not.
+                      if (part.$1 == 'likes') await session.forgetListingPrompt(account.id);
+                      return '${account.displayName}: ${done.join(', ')}';
+                    });
+                  },
+                ),
+              const Divider(color: AdminColors.hairline, height: 1),
               ListTile(
                 dense: true,
-                title: Text(part.$2,
-                    style: const TextStyle(fontSize: 14, color: AdminColors.ink)),
+                title: const Text('Slett testkontoen',
+                    style: TextStyle(fontSize: 14, color: SwaplyColors.coral)),
+                subtitle: const Text('Går gjennom den ekte sletterutinen og frigjør enhets-id-en',
+                    style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
                 onTap: () {
                   Navigator.of(sheet).pop();
-                  _run('reset', (api) async {
-                    final done = await api.adminReset(account.id, [part.$1]);
-                    // And this phone's memory of having shown 10a: without it
-                    // the count starts over and the sheet does not.
-                    if (part.$1 == 'likes') await session.forgetListingPrompt(account.id);
-                    return '${account.displayName}: ${done.join(', ')}';
+                  _run('delete', (api) async {
+                    await api.adminDeleteAccount(account.id);
+                    await session.forgetListingPrompt(account.id);
+                    return 'Slettet ${account.displayName}';
                   });
                 },
               ),
-            const Divider(color: AdminColors.hairline, height: 1),
-            ListTile(
-              dense: true,
-              title: const Text('Slett testkontoen',
-                  style: TextStyle(fontSize: 14, color: SwaplyColors.coral)),
-              subtitle: const Text('Går gjennom den ekte sletterutinen og frigjør enhets-id-en',
-                  style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
-              onTap: () {
-                Navigator.of(sheet).pop();
-                _run('delete', (api) async {
-                  await api.adminDeleteAccount(account.id);
-                  await session.forgetListingPrompt(account.id);
-                  return 'Slettet ${account.displayName}';
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     );

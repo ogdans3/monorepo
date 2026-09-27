@@ -143,6 +143,19 @@ void main() {
           }));
   testWidgets('09a-motbytte',
       (t) => shoot(t, '09a-motbytte', CounterOfferScreen(trade: _trade())));
+  // 10a is a sheet and not a screen: it comes up over the collage the fifth
+  // heart was pressed on, so that is what is under it — 05 as its golden has
+  // it. It says five where the export says ten, because five is when it
+  // comes; see app/README.md.
+  testWidgets('10a-prompt', (t) => shoot(t, '10a-prompt', const DiscoverScreen(), act: (t) async {
+        await t.enterText(find.byType(TextField).first, 'sykkel');
+        await t.testTextInput.receiveAction(TextInputAction.search);
+        await t.pumpAndSettle();
+        t.testTextInput.hide();
+        FocusManager.instance.primaryFocus?.unfocus();
+        // Not awaited: the sheet's future is its closing.
+        showListingPrompt(t.element(find.byType(DiscoverScreen)), 5);
+      }));
   // Step one of two, as a device that has not made a profile yet.
   testWidgets('10b-legg-ut', (t) => shoot(t, '10b-legg-ut', PostItemScreen(pickImage: _pick),
       signedIn: false, act: (t) async {
@@ -156,6 +169,9 @@ void main() {
         await t.enterText(fields.at(2), '600');
         await t.enterText(fields.at(3), 'Elektroverktøy');
         await t.enterText(fields.at(4), '7030');
+        // The town is asked for once the digits have held still for a moment,
+        // and «Trondheim» is drawn beside them when it comes.
+        await t.pump(const Duration(seconds: 1));
         // Typing scrolls the form to the caret, on a frame after the text
         // lands; let that finish, then put the form back at the top.
         await t.pumpAndSettle();

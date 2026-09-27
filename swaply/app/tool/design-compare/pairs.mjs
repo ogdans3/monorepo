@@ -1,6 +1,7 @@
 // Side-by-side pictures of the export and the app, with a number: how many
-// of the pixels differ once both are scaled to 390×844 and compared with a
-// small tolerance, plus a heat map of where. The number is a compass, not a
+// of the pixels differ once the export's frame is cut to its phone (from
+// y=28, under the label) and both are 390×844, compared with a small
+// tolerance, plus a heat map of where. The number is a compass, not a
 // verdict — photographs and fixture text will never match — but it orders
 // the work. `node pairs.mjs 13 13b` does only those.
 import { chromium } from 'playwright-core'
@@ -40,9 +41,17 @@ for (const [ref, app] of PAIRS) {
     const [a, b] = [document.getElementById('a'), document.getElementById('b')]
     await Promise.all([a, b].map(i => i.complete ? 1 : new Promise(r => i.onload = r)))
     const W = 390, H = 844
-    const draw = img => { const c = document.createElement('canvas'); c.width = W; c.height = H
-      c.getContext('2d').drawImage(img, 0, 0, W, H); return c.getContext('2d').getImageData(0, 0, W, H).data }
-    const [pa, pb] = [draw(a), draw(b)]
+    // A frame in the export is its label row — the badge and the screen's
+    // name, 18 tall and 10 above the phone — then the phone, 844 tall, and on
+    // some frames a note under it. Only the phone is compared: scaled whole
+    // into 844, the drawing sat up to 27 points below the golden at the top
+    // and every row counted twice.
+    const draw = (img, phone) => { const c = document.createElement('canvas'); c.width = W; c.height = H
+      const s = img.naturalWidth / W
+      if (phone) c.getContext('2d').drawImage(img, 0, 28 * s, W * s, H * s, 0, 0, W, H)
+      else c.getContext('2d').drawImage(img, 0, 0, W, H)
+      return c.getContext('2d').getImageData(0, 0, W, H).data }
+    const [pa, pb] = [draw(a, true), draw(b, false)]
     const d = document.getElementById('d'), ctx = d.getContext('2d')
     const out = ctx.createImageData(W, H); let diff = 0
     for (let i = 0; i < pa.length; i += 4) {

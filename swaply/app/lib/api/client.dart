@@ -1,15 +1,52 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import 'models.dart';
 
-/// Thrown for anything the server refused. `code` is what the UI switches on;
-/// `message` is already Norwegian and safe to show.
+/// What the app says when the server does not answer — on the splash, and in
+/// every screen that asked for something and heard nothing. Not «Ingen
+/// nettverk»: the phone may be online and the server not, and this cannot tell
+/// which.
+const noContact = 'Vi får ikke kontakt med Swaply akkurat nå.';
+
+/// What a heart that landed says: the trade it closed a loop into, if any,
+/// whether the heart opened it or found it already going on over the ring,
+/// and whether this count is one 10a is offered at.
+typedef LikeAnswer = ({String? tradeId, bool tradeIsNew, bool promptToList, int likedCount});
+
+/// What `POST /me/hidden` says: what was hidden, and how much is hidden now.
+typedef HideAnswer = ({HiddenKind kind, int? count});
+
+/// Thrown for anything the server refused, and for no answer at all. `code` is
+/// what the UI switches on; `message` is already Norwegian and safe to show.
 class ApiException implements Exception {
   ApiException(this.statusCode, this.code, this.message);
+
+  /// No answer, or none that could be read: no network, no server behind the
+  /// address, a request that took longer than [SwaplyApi.patience], or a page
+  /// that is not JSON — a proxy's error page, a hotel wifi's sign-in. Nothing
+  /// was said about what was asked, so nothing is known about it: a heart may
+  /// or may not have landed. [statusCode] is 0 even where a proxy sent one: it
+  /// is not Swaply's, and a screen that reads a 413 as «this picture is too
+  /// big» must not read it off a page the server never wrote.
+  ApiException.noContact()
+      : statusCode = 0,
+        code = noContactCode,
+        message = noContact;
+
+  static const noContactCode = 'no_contact';
+
+  /// A postcode that belongs to no town, from wherever one is typed.
+  static const unknownPostalCode = 'unknown_postal_code';
+
   final int statusCode;
   final String code, message;
+
+  /// Whether this is [ApiException.noContact] rather than a refusal. A refusal
+  /// is the server's answer about what was asked; this is not an answer.
+  bool get isNoContact => code == noContactCode;
 
   @override
   String toString() => message;
@@ -22,6 +59,18 @@ class SwaplyApi {
   final String baseUrl;
   final http.Client _client;
   String? token;
+
+  /// How long a request is given before it counts as no answer. A host that
+  /// drops packets refuses nothing, and a phone waits a minute or two before
+  /// it gives up on the connection — the heart stayed on, and the button
+  /// stayed spinning, for all of it. Long enough for a slow line to answer
+  /// anything but a photograph.
+  static const patience = Duration(seconds: 20);
+
+  /// A photograph is a few hundred kilobytes going up a phone's slowest
+  /// direction, and one the phone could not shrink — HEIC outside Safari —
+  /// can be several megabytes.
+  static const uploadPatience = Duration(seconds: 90);
 
   Map<String, String> _headers({required bool hasBody}) => {
         // Only when there is one. A request that says it carries JSON and
@@ -36,16 +85,45 @@ class SwaplyApi {
     final request = http.Request(method, Uri.parse('$baseUrl$path'))
       ..headers.addAll(_headers(hasBody: body != null));
     if (body != null) request.body = jsonEncode(body);
+    return _exchange(request, refused: 'Noe gikk galt. Prøv igjen.', patience: patience);
+  }
 
-    final response = await http.Response.fromStream(await _client.send(request));
-    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+  /// Sends [request] and reads the answer, and says every way of not getting
+  /// one as [ApiException.noContact]. Every screen catches [ApiException] and
+  /// nothing else: a dropped connection used to throw past all of them, so a
+  /// heart the server never heard stayed on and a form said nothing at all.
+  ///
+  /// The request is not called off when [patience] runs out — aborting one
+  /// takes a newer `http` than `pubspec.yaml` asks for — so it can still reach
+  /// the server late. Nobody is told it did, which is what «Vi får ikke
+  /// kontakt» already says: nothing is known either way.
+  Future<dynamic> _exchange(http.BaseRequest request,
+      {required String refused, required Duration patience}) async {
+    final http.Response response;
+    try {
+      response = await _client.send(request).then(http.Response.fromStream).timeout(patience);
+    } on Exception {
+      // `ClientException`, the socket's and the handshake's own, and the
+      // timeout: all of them the connection, none of them the server. An
+      // `Error` is a fault in this app and goes on up.
+      throw ApiException.noContact();
+    }
+
+    final Object? decoded;
+    try {
+      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    } on FormatException {
+      // Somebody answered, and it was not Swaply: every answer the API gives
+      // is JSON, a refusal included.
+      throw ApiException.noContact();
+    }
 
     if (response.statusCode >= 400) {
       final map = decoded is Map ? decoded : const {};
       throw ApiException(
         response.statusCode,
         map['code'] as String? ?? 'error',
-        map['message'] as String? ?? 'Noe gikk galt. Prøv igjen.',
+        map['message'] as String? ?? refused,
       );
     }
     return decoded;
@@ -111,14 +189,17 @@ class SwaplyApi {
   /// session's sign-in waits out a start still on its way, so there is a
   /// bearer whenever this phone is, or is about to be, a stranger.
   /// `carriedLikes` is how many of its wishes came along: zero when nothing
-  /// moved, and when the server says nothing at all.
-  Future<({Me me, int carriedLikes})> login(String email, String password) async {
+  /// moved, and when the server says nothing at all. `folded` is whether a
+  /// device was folded in at all — the server says `carried` only then, and
+  /// never for a claimed account or a session the account switcher minted.
+  Future<({Me me, int carriedLikes, bool folded})> login(String email, String password) async {
     final json = await _post('/auth/login', {'email': email, 'password': password});
     token = json['token'] as String;
     final carried = json['carried'] as Map<String, dynamic>?;
     return (
       me: Me.fromJson(json['user'] as Map<String, dynamic>),
       carriedLikes: (carried?['likes'] as num?)?.toInt() ?? 0,
+      folded: carried != null,
     );
   }
 
@@ -143,6 +224,21 @@ class SwaplyApi {
 
   Future<UserRef> user(String id) async => UserRef.fromJson(await _get('/users/$id'));
 
+  /// «Slett kontoen». An account with a password gives it — a phone left
+  /// unlocked on a table is not the person — and a session the account
+  /// switcher minted gives none, since the admin's key is behind it. Every
+  /// session the account had dies with it, this one included, so the phone
+  /// has nobody signed in once this has answered.
+  Future<void> deleteAccount({String? password}) async =>
+      _send('DELETE', '/me', password == null ? null : {'password': password});
+
+  /// The town [code] belongs to, from the register the server carries. Needs
+  /// no session: it is reference data and says nothing about anybody. A code
+  /// that belongs to no town is refused as `unknown_postal_code`, in the
+  /// words 10b shows.
+  Future<String> town(String code) async =>
+      (await _get('/postcodes/${Uri.encodeComponent(code)}'))['town'] as String;
+
   // --- photographs ----------------------------------------------------------
 
   /// 10b — one picture, from the phone to our own disk.
@@ -154,17 +250,8 @@ class SwaplyApi {
       ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
     if (token != null) request.headers['authorization'] = 'Bearer $token';
 
-    final response = await http.Response.fromStream(await _client.send(request));
-    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
-
-    if (response.statusCode >= 400) {
-      final map = decoded is Map ? decoded : const {};
-      throw ApiException(
-        response.statusCode,
-        map['code'] as String? ?? 'error',
-        map['message'] as String? ?? 'Bildet ble ikke lastet opp.',
-      );
-    }
+    final decoded = await _exchange(request,
+        refused: 'Bildet ble ikke lastet opp.', patience: uploadPatience);
     return UploadedImage.fromJson(decoded as Map<String, dynamic>);
   }
 
@@ -233,17 +320,45 @@ class SwaplyApi {
         .toList();
   }
 
+  /// «Ikke vis meg slike» on [itemId]: its kind is left out of Oppdag, its
+  /// rows and its search from now on, for this account. Open to a device with
+  /// no profile, because it is about looking.
+  ///
+  /// With how much the account has hidden now that it is, counting this —
+  /// null if the server did not say. That is what tells whether showing
+  /// everything again would bring back this and nothing else: the count the
+  /// session holds can be from before a sign-in brought other kinds along.
+  Future<HideAnswer> hide(String itemId) async {
+    final json = await _post('/me/hidden', {'itemId': itemId});
+    return (
+      kind: HiddenKind.fromJson(json['hidden'] as Map<String, dynamic>),
+      count: (json['hiddenCount'] as num?)?.round(),
+    );
+  }
+
+  /// Everything hidden, shown again — all of it, since the server keeps no
+  /// way to name one kind back.
+  Future<void> showEverything() async => _send('DELETE', '/me/hidden');
+
   Future<List<String>> subcategories(String category) async {
     final json = await _get('/discover/subcategories?category=$category');
     return (json['subcategories'] as List).cast<String>();
   }
 
   // --- likes ----------------------------------------------------------------
+  //
+  // A heart is sent through `Session.like` and `Session.unlike`, not from
+  // here: a sign-in folds the stranger away on the server, and a heart still
+  // on its way on the stranger's token then lands on nobody. The session
+  // holds a sign-in back until the hearts before it have landed.
 
-  Future<({String? tradeId, bool promptToList, int likedCount})> like(String itemId) async {
+  Future<LikeAnswer> like(String itemId) async {
     final json = await _post('/items/$itemId/like');
     return (
       tradeId: json['tradeId'] as String?,
+      // A server from before it said so opened a new trade every time a loop
+      // closed, a second one over the same ring included.
+      tradeIsNew: json['tradeIsNew'] as bool? ?? true,
       promptToList: json['promptToList'] as bool? ?? false,
       likedCount: (json['likedCount'] as num?)?.toInt() ?? 0,
     );

@@ -186,6 +186,13 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(find.text(noContact), findsOneWidget);
       expect(find.widgetWithText(PrimaryButton, 'Prøv igjen'), findsOneWidget);
+
+      // The request gives up on its own later, and that is not a second
+      // thing to say, nor a reason to ask again.
+      await tester.pump(SwaplyApi.patience);
+      await tester.pumpAndSettle();
+      expect(find.text(noContact), findsOneWidget);
+      expect(asked('POST /auth/anonymous'), 1);
     });
 
     testWidgets('4. a saved token that cannot be checked is kept, not traded for a stranger',
@@ -265,6 +272,9 @@ void main() {
       tester.platformDispatcher.defaultRouteNameTestValue = '/trades';
       addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
       server.overrides['POST /auth/anonymous'] = unreachable;
+      // Who the server says this is when Bytter asks again: the stranger, and
+      // not somebody else whose app would open on a tab of its own.
+      server.overrides['GET /me'] = FakeServer.lookingAround;
       await boot(tester);
       await tester.pumpAndSettle();
 
@@ -281,6 +291,29 @@ void main() {
       expect(find.byType(TradesScreen), findsOneWidget);
       expect(find.byType(TabShell, skipOffstage: false), findsOneWidget);
       expect(find.byType(RootGate, skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('…and only for the first app: the next person through the gate starts at Oppdag',
+        (tester) async {
+      // The gate stays for as long as the app is open, and it remembered the
+      // address: the stranger after «Logg ut» opened on somebody else's
+      // Bytter.
+      tester.platformDispatcher.defaultRouteNameTestValue = '/trades';
+      addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
+      await boot(tester, saved: {'token': 'tok'});
+      await tester.pumpAndSettle();
+      expect(find.byType(TradesScreen), findsOneWidget);
+
+      await tapTab(tester, 'Profil');
+      await tester.tap(find.text('Innstillinger'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Logg ut'));
+      await tester.pumpAndSettle();
+      await skipInterests(tester);
+
+      expect(session.anonymous, isTrue);
+      expect(find.byType(DiscoverScreen), findsOneWidget);
+      expect(find.byType(TradesScreen, skipOffstage: false), findsNothing);
     });
 
     testWidgets('7. a link still opens on the invitation, and nothing is made until asked',
@@ -351,6 +384,59 @@ void main() {
 
       expect(find.text('Vi kjenner ikke igjen denne invitasjonen.'), findsOneWidget);
       expect(session.signedIn, isFalse);
+    });
+
+    testWidgets('…and where there is no way in without one, a key spent meanwhile is said on 10c',
+        (tester) async {
+      // The page opened on a good key; somebody else took it before «Lag
+      // profil». Asked again without it, the server says only that it wants
+      // one — so what was wrong with this one is what 10c says.
+      const spent = Refusal(400, 'invite_used',
+          'Denne invitasjonen er allerede brukt. Be den som sendte den om en ny.');
+      server.overrides['POST /auth/anonymous'] = Refusal.inviteRequired;
+      server.overrides['POST /auth/register'] = (http.Request request) =>
+          (jsonDecode(request.body) as Map)['invite'] == null ? Refusal.inviteRequired : spent;
+      session.pendingInvite = FakeServer.shareToken;
+      await boot(tester);
+      await tester.pumpAndSettle();
+      expect(find.byType(InviteScreen), findsOneWidget);
+
+      await tester.tap(find.text('Lag profil med en gang'));
+      await tester.pumpAndSettle();
+      for (final (field, text) in [
+        (0, 'Siri'),
+        (1, 'siri@epost.no'),
+        (2, '412 34 567'),
+        (3, 'drillbits123'),
+      ]) {
+        await tester.enterText(find.byType(TextField).at(field), text);
+      }
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Lag profil'));
+      await tester.pumpAndSettle();
+
+      // Once with the key, once without it, and nobody made.
+      expect(asked('POST /auth/register'), 2);
+      expect(server.bodies['POST /auth/register']!['invite'], isNull);
+      expect(find.text(spent.message), findsOneWidget);
+      expect(find.text(Refusal.inviteRequired.message), findsNothing);
+      expect(find.byType(CreateProfileScreen), findsOneWidget);
+      expect(session.signedIn, isFalse);
+
+      // Back on the invitation, the way left is an account from before, and
+      // what the link shared still opens once somebody is in.
+      await tester.tap(find.text('‹'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Jeg har konto fra før'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'ola@epost.no');
+      await tester.enterText(find.byType(TextField).last, 'passord');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Logg inn'));
+      await tester.pumpAndSettle();
+
+      expect(session.me?.id, FakeServer.me['id']);
+      expect(server.bodies['POST /auth/login'], isNot(contains('invite')));
+      expect(find.byType(ItemDetailScreen), findsOneWidget);
+      expect(find.byType(DiscoverScreen, skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('6. a device whose account has been claimed starts over as somebody new, once',

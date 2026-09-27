@@ -30,12 +30,16 @@ class _LikedScreenState extends State<LikedScreen> {
     _load();
   }
 
-  Future<void> _load() async {
+  /// Only with nothing on screen yet can this fail into «Fikk ikke kontakt»;
+  /// a failed pull keeps the list and says so in a toast. The error used to
+  /// replace the list, and stayed after «Prøv igjen» had fetched it.
+  Future<void> _load({bool say = false}) async {
     try {
       final rows = await context.read<SwaplyApi>().likedBy();
       if (mounted) {
         setState(() {
           _rows = rows;
+          _error = null;
           // The first thing with likes opens by itself: an accordion where
           // everything is shut says nothing.
           final first = rows.where((r) => r.likers.isNotEmpty).firstOrNull;
@@ -43,8 +47,18 @@ class _LikedScreenState extends State<LikedScreen> {
         });
       }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_rows == null) {
+        setState(() => _error = e.message);
+      } else if (say) {
+        showError(context, e);
+      }
     }
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   @override
@@ -62,7 +76,7 @@ class _LikedScreenState extends State<LikedScreen> {
               body: _error!,
               icon: Icons.wifi_off,
               actionLabel: 'Prøv igjen',
-              onAction: _load)
+              onAction: _retry)
           : rows == null
               ? const Center(child: CircularProgressIndicator())
               : !anyLikes
@@ -78,7 +92,7 @@ class _LikedScreenState extends State<LikedScreen> {
                       onAction: () => openListingForm(context),
                     )
                   : RefreshIndicator(
-                      onRefresh: _load,
+                      onRefresh: () => _load(say: true),
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
                         children: [

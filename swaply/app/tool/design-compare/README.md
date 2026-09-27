@@ -22,8 +22,14 @@ npm run pairs       # out/pairs/<screen>.png — design | app | heat map, and a 
 `CHROME_PATH` may point at any Chromium; `npx playwright install chromium`
 fetches one if the machine has none.
 
-The percentage counts pixels that differ by more than a little after both
-pictures are scaled to 390×844. Photographs, fixture names and the phone's own
+The percentage counts pixels that differ by more than a little between the
+golden and the phone in the frame. A frame is more than its phone — the badge
+and the screen's name above it, 28 points with the gap, and on a few a note
+under it — so `pairs.mjs` cuts the phone out of the frame at 28 and compares
+that. Until 27.09.2026 it squashed the whole frame into 844 instead, which put
+the drawing up to 27 points below the golden and counted every row twice;
+percentages from before then are two to eleven points higher and not
+comparable with these. Photographs, fixture names and the phone's own
 glyphs (★ ♥ ⇄) keep it from ever reaching zero; use it to rank screens, not to
 pass or fail them. The blueprint is what to build from — the pairs are what to
 look at.

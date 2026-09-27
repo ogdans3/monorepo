@@ -108,6 +108,37 @@ class FakeServer {
         'user': {...me, 'id': lookingAround['id']},
       };
     }
+    if (key == 'POST /me/hidden') {
+      // «Ikke vis meg slike»: the kind the server writes down for the listing
+      // — its subcategory, or the listing alone where it has none.
+      final id = (jsonDecode(request.body) as Map)['itemId'];
+      final item = [drill, console].where((i) => i['id'] == id).firstOrNull;
+      if (item == null) return null;
+      final kind = item['subcategory'] as String?;
+      return {
+        'hidden': {
+          'category': item['category'],
+          'subcategory': kind,
+          'itemId': kind == null ? id : null,
+        },
+        'hiddenCount': 1,
+      };
+    }
+    if (key.startsWith('GET /postcodes/')) {
+      // The register, as far as these tests type into it, answered the way
+      // the real route answers: a town, a code that is not four digits, or
+      // one that belongs to no town — in the words 10b shows.
+      final code = key.substring('GET /postcodes/'.length);
+      if (!RegExp(r'^\d{4}$').hasMatch(code)) {
+        return const Refusal(400, 'invalid_request', 'Et postnummer har fire sifre.');
+      }
+      final town = towns[code];
+      if (town == null) {
+        return Refusal(404, 'unknown_postal_code',
+            'Fant ikke postnummer $code. Sjekk det, eller la feltet stå tomt.');
+      }
+      return {'postalCode': code, 'town': town};
+    }
     if (export) {
       final hit = exportCanned(key, this);
       if (hit != null) return hit;
@@ -144,8 +175,12 @@ class FakeServer {
             'shareText': 'Se denne på Swaply: Bosch drill 18V, verdi 600 kr.',
           },
         'GET /me' => me,
-        'PUT /me/interests' => me,
-        'PATCH /me' => me,
+        'PUT /me/interests' => profileOnly(me),
+        'PATCH /me' => profileOnly(me),
+        'DELETE /me/hidden' => {},
+        // «Slett kontoen». The real one answers 204 with no body; a test
+        // that wants the password checked says so with an override.
+        'DELETE /me' => {},
         'GET /discover' => {'total': 2, 'items': [drill, console]},
         'GET /discover/rows' => {
             'rows': [
@@ -274,6 +309,10 @@ class FakeServer {
 
   // --- fixtures -------------------------------------------------------------
 
+  /// The postcodes the tests type, and the towns Bring's register gives them.
+  /// 7030 is the export's own: 10b draws «Trondheim» beside it.
+  static const towns = {'7030': 'Trondheim', '5003': 'Bergen', '8610': 'Mo i Rana'};
+
   /// The token a device gets for looking around. Not the one a sign-in gets,
   /// so a test can tell which of the two a request carried.
   static const deviceToken = 'tok-device';
@@ -294,7 +333,19 @@ class FakeServer {
     'likedByCount': 4,
     'unreadMessages': 2,
     'tradesNeedingYou': 1,
+    'hiddenCount': 0,
   };
+
+  /// The account as every route but `GET /me` answers with it — `publicMe`
+  /// in the backend: the profile, without what only `GET /me` lists and
+  /// counts. Canned with all of it, the answers to 02 and to a change on 16c
+  /// hid a screen that read one of those from them.
+  static Map<String, Object?> profileOnly(Map<String, Object?> account) => {
+        for (final field in account.entries)
+          if (!const {'items', 'likedByCount', 'unreadMessages', 'tradesNeedingYou', 'actingAs'}
+              .contains(field.key))
+            field.key: field.value,
+      };
 
   /// An account the tooling made. Drawn with a badge, never hidden.
   static const testAccount = {

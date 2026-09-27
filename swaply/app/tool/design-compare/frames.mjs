@@ -7,7 +7,7 @@ export const PAIRS = [
   ['01', '01-splash'], ['02', '02-interesser'], ['04', '04-gjenstand'], ['05', '05-oppdag'],
   ['05b', '05b-avansert-sok'], ['06a', '06a-match'], ['06b', '06b-byttedetalj'],
   ['06c', '06c-avtale'], ['06g', '06g-samtale'], ['06h', '06h-vurdering'],
-  ['09a', '09a-motbytte'], ['10b', '10b-legg-ut'], ['10c', '10c-lag-profil'],
+  ['09a', '09a-motbytte'], ['10a', '10a-prompt'], ['10b', '10b-legg-ut'], ['10c', '10c-lag-profil'],
   ['11', '11-mine-handler'], ['11a', '11a-chats'], ['12', '12-likt'], ['12a', '12a-varsler'],
   ['13', '13-profil'], ['13b', '13b-annen-profil'], ['16b', '16b-innstillinger'],
   ['16c', '16c-logg-inn'],

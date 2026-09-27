@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 
 import '../api/client.dart';
@@ -39,18 +40,68 @@ class _TradesScreenState extends State<TradesScreen>
     super.dispose();
   }
 
-  @override
-  void onTabReturn() => _load();
+  /// A trade's page has closed, and the list is to be asked for again once
+  /// the frame is over — unless the tab has landed here meanwhile and asked
+  /// for it already; see [_back].
+  bool _backPending = false;
 
-  Future<void> _load() async {
+  @override
+  void onTabReturn() {
+    _backPending = false;
+    _load();
+  }
+
+  /// Opens a trade, and asks for the list again when it closes: what it says
+  /// has probably changed. A flow finished there — «Tilbake til Bytter», a
+  /// review sent — closes it by landing on this tab, and landing asks as
+  /// well, so the list was fetched twice for one way back. The landing is
+  /// told in the frame the page closes in, so this waits out that frame and
+  /// asks only if nothing else has.
+  Future<void> _openTrade(Trade trade) async {
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id)));
+    await _back();
+  }
+
+  Future<void> _back() async {
+    _backPending = true;
+    await SchedulerBinding.instance.endOfFrame;
+    if (!mounted || !_backPending) return;
+    _backPending = false;
+    await _load();
+  }
+
+  /// Asked for on opening, on coming back to the tab, when a trade page
+  /// closes, and on a pull. Only with nothing on screen yet can it fail into
+  /// «Fikk ikke kontakt»: otherwise the list stays, as the tab's return
+  /// promises — behind what is on screen, not instead of it — and [say] tells
+  /// a failed pull in a toast over it. The error used to replace a list that
+  /// was there, and stayed after the connection came back, since an answer
+  /// never cleared it: «Prøv igjen» fetched the list and went on showing the
+  /// error.
+  Future<void> _load({bool say = false}) async {
     try {
       final data = await context.read<SwaplyApi>().trades();
       if (!mounted) return;
-      setState(() => _data = data);
+      setState(() {
+        _data = data;
+        _error = null;
+      });
       await context.read<Session>().refresh();
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_data == null) {
+        setState(() => _error = e.message);
+      } else if (say) {
+        showError(context, e);
+      }
     }
+  }
+
+  /// «Prøv igjen»: the spinner while it asks, not the error it is asking past.
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   @override
@@ -90,7 +141,7 @@ class _TradesScreenState extends State<TradesScreen>
                     body: _error!,
                     icon: Icons.wifi_off,
                     actionLabel: 'Prøv igjen',
-                    onAction: _load)
+                    onAction: _retry)
                 : data == null
                     ? const Center(child: CircularProgressIndicator())
                     : empty
@@ -125,7 +176,7 @@ class _TradesScreenState extends State<TradesScreen>
       );
     }
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => _load(say: true),
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(22, 16, 22, 16),
         itemCount: trades.length,
@@ -159,11 +210,7 @@ class _TradesScreenState extends State<TradesScreen>
         container: true,
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () async {
-            await Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id)));
-            await _load();
-          },
+          onTap: () => _openTrade(trade),
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -237,11 +284,7 @@ class _TradesScreenState extends State<TradesScreen>
                 ),
                 if (yourTurn) ...[
                   const SizedBox(height: Insets.md),
-                  PrimaryButton('Godta byttet', onPressed: () async {
-                    await Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => TradeDetailScreen(tradeId: trade.id)));
-                    await _load();
-                  }),
+                  PrimaryButton('Godta byttet', onPressed: () => _openTrade(trade)),
                 ],
               ],
             ),

@@ -316,7 +316,7 @@ class TradeDetailScreen extends StatefulWidget {
 
 class _TradeDetailScreenState extends State<TradeDetailScreen> {
   Trade? _trade;
-  String? _error;
+  ApiException? _error;
   bool _busy = false;
   final _message = TextEditingController();
 
@@ -332,13 +332,32 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     super.dispose();
   }
 
+  /// Asked for when the page opens, and again after a pull or anything done
+  /// on it. Only the first asking can fail into [LoadFailure]: after that the
+  /// trade on screen stays and the failure is a toast over it. A pull with no
+  /// connection used to replace the trade with «Fant ikke byttet».
   Future<void> _load() async {
     try {
       final trade = await context.read<SwaplyApi>().trade(widget.tradeId);
-      if (mounted) setState(() => _trade = trade);
+      if (mounted) {
+        setState(() {
+          _trade = trade;
+          _error = null;
+        });
+      }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_trade == null) {
+        setState(() => _error = e);
+      } else {
+        showError(context, e);
+      }
     }
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   Future<void> _run(Future<Trade> Function(SwaplyApi api) action) async {
@@ -362,7 +381,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     if (_error != null) {
       return Scaffold(
         appBar: swaplyAppBar(context, 'Bytte'),
-        body: EmptyState(title: 'Fant ikke byttet', body: _error!, icon: Icons.error_outline),
+        body: LoadFailure(_error!, missing: 'Fant ikke byttet', onRetry: _retry),
       );
     }
     if (trade == null) {

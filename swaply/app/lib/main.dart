@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -12,6 +13,7 @@ import 'screens/notifications.dart';
 import 'screens/onboarding.dart';
 import 'screens/tabs.dart';
 import 'state/session.dart';
+import 'util/reduced_motion.dart';
 import 'widgets/admin_chrome.dart';
 import 'widgets/desk.dart';
 import 'widgets/shell.dart';
@@ -40,9 +42,14 @@ void main() {
 }
 
 class SwaplyApp extends StatefulWidget {
-  const SwaplyApp({super.key, required this.api});
+  const SwaplyApp({super.key, required this.api, this.lessMotion});
 
   final SwaplyApi api;
+
+  /// Whether the person has asked for less motion where the platform does not
+  /// say so itself — the browser's setting; see [askedForLessMotion]. Given
+  /// in a test, which has no browser to ask.
+  final ValueListenable<bool>? lessMotion;
 
   @override
   State<SwaplyApp> createState() => _SwaplyAppState();
@@ -52,6 +59,10 @@ class _SwaplyAppState extends State<SwaplyApp> {
   /// For the admin floor, which sits outside the navigator — under it, on the
   /// screen — and so cannot find it by looking up.
   final _navigator = GlobalKey<NavigatorState>();
+
+  /// Asked once, for the life of the app: the builder below runs on every
+  /// rebuild, and each ask listens to the browser anew.
+  late final _lessMotion = widget.lessMotion ?? askedForLessMotion();
 
   @override
   Widget build(BuildContext context) {
@@ -66,11 +77,16 @@ class _SwaplyAppState extends State<SwaplyApp> {
         // not inside a screen, so that «you are Kari right now» is drawn on
         // every route including the ones with no bottom nav. The shell host is
         // here for the same reason from the other side: a screen pushed over
-        // the tabs is not inside them, and still has to reach them.
-        builder: (context, child) => Desk(
-          child: AdminFloor(
-            navigator: _navigator,
-            child: TabShellHost(child: child!),
+        // the tabs is not inside them, and still has to reach them. Less
+        // motion outermost, so everything under it — the desk's own
+        // MediaQuery included — hears a browser that asked for it.
+        builder: (context, child) => LessMotion(
+          asked: _lessMotion,
+          child: Desk(
+            child: AdminFloor(
+              navigator: _navigator,
+              child: TabShellHost(child: child!),
+            ),
           ),
         ),
         // `/` rather than `home:` so that anything can send a person back
@@ -127,7 +143,8 @@ class _SwaplyAppState extends State<SwaplyApp> {
 class RootGate extends StatefulWidget {
   const RootGate({super.key, this.tab = 0});
 
-  /// The tab the app opens on once it is through.
+  /// The tab the app opens on once it is through — the first time. It comes
+  /// from the address the app was opened at, and that was somebody's.
   final int tab;
 
   @override
@@ -135,6 +152,12 @@ class RootGate extends StatefulWidget {
 }
 
 class _RootGateState extends State<RootGate> {
+  /// Whether the gate has put an app on screen yet. The address's tab is for
+  /// that one: the gate stays for as long as the app is open, and the next
+  /// person through it — a stranger after «Logg ut», an account signed in to
+  /// — opened on Bytter because somebody once came in at #/trades.
+  bool _opened = false;
+
   @override
   Widget build(BuildContext context) {
     final session = context.watch<Session>();
@@ -177,7 +200,11 @@ class _RootGateState extends State<RootGate> {
     // A listing that was waiting on 10c when the person signed in there
     // instead: this is their new app, and it opens where the form is, which
     // finishes it.
-    return AppTabs(tab: session.listingToFinish != null ? 1 : widget.tab);
+    final tab = session.listingToFinish != null ? 1 : (_opened ? 0 : widget.tab);
+    // A shell reads its tab when it is made and not after, so building the
+    // same one again with 0 changes nothing; the next one starts at Oppdag.
+    _opened = true;
+    return AppTabs(tab: tab);
   }
 
   Future<void> _openSharedListing(String token) async {

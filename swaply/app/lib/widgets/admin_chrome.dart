@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../api/client.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
 import 'common.dart';
@@ -70,7 +71,14 @@ class AdminFloor extends StatelessWidget {
                   TapArea(
                     room: const EdgeInsets.fromLTRB(10, 0, 14, 0),
                     onTap: () async {
-                      await session.returnToAdmin();
+                      try {
+                        await session.returnToAdmin();
+                      } on ApiException catch (e) {
+                        // Still them, and the floor says so; a way back the
+                        // server no longer knows has turned into «Logg ut».
+                        if (context.mounted) showError(context, e);
+                        return;
+                      }
                       if (!context.mounted) return;
                       (navigator?.currentState ?? Navigator.maybeOf(context))
                           ?.pushNamedAndRemoveUntil('/', (route) => false);

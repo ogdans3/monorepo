@@ -91,13 +91,25 @@ class Session extends ChangeNotifier {
   Future<void>? _starting;
   bool get starting => _starting != null;
 
-  /// Bumped each time somebody signs in, makes a profile or signs out here.
-  /// An answer about who this phone is that was asked for before and arrives
-  /// after — a start the splash gave up waiting for, a `/me` sent on the
-  /// stranger's token — is about somebody the phone no longer is. Taken, it
-  /// made the person who had just signed in a stranger again, with none of
-  /// what they had brought along.
+  /// Bumped each time somebody signs in, makes a profile, signs out or
+  /// switches accounts here. An answer about who this phone is that was asked
+  /// for before and arrives after — a start the splash gave up waiting for, a
+  /// `/me` sent on the stranger's token or on the admin's — is about somebody
+  /// the phone no longer is. Taken, it made the person who had just signed in
+  /// a stranger again, with none of what they had brought along.
   int _decided = 0;
+
+  /// Hearts on their way to the server; see [like]. A sign-in waits for them
+  /// the way it waits for a start: the server folds the stranger into the
+  /// account and deletes it, so a heart still on its way on the stranger's
+  /// token arrived for nobody and was lost, and one taken back arrived too
+  /// late to keep it from being carried along.
+  final _wishes = <Future<void>>{};
+
+  /// A sign-in or a new profile on its way, from the tap until the phone holds
+  /// the token it brings. A heart pressed meanwhile waits for it and goes to
+  /// the account it lands on, rather than to a stranger it is folding away.
+  Future<void>? _signingIn;
 
   /// How long the splash waits for an answer before it says it has none. A
   /// host that drops packets is not refused, and without this the splash
@@ -131,8 +143,9 @@ class Session extends ChangeNotifier {
       await _recognise().timeout(patience);
       stalled = false;
     } on ApiException catch (e) {
-      // A server that is down has not said anything about the token.
-      if (e.statusCode >= 500) {
+      // A server that is down has not said anything about the token, and nor
+      // has no answer at all.
+      if (e.isNoContact || e.statusCode >= 500) {
         stalled = true;
         return;
       }
@@ -142,9 +155,9 @@ class Session extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('token');
     } catch (_) {
-      // No answer at all. The token may well be good, and dropping it here
-      // would turn somebody with an account into a stranger because a train
-      // went into a tunnel.
+      // No answer within [patience]. The token may well be good, and dropping
+      // it here would turn somebody with an account into a stranger because a
+      // train went into a tunnel.
       stalled = true;
     }
   }
@@ -217,6 +230,64 @@ class Session extends ChangeNotifier {
     }
   }
 
+  /// A heart, sent the way a sign-in can wait for. The card's heart and the
+  /// one on 04 both go through here rather than to [SwaplyApi.like]: the
+  /// answer, and a refusal or [ApiException.noContact], are the api's own.
+  ///
+  /// Pressed while a sign-in is on its way, it goes once that is done, on
+  /// the token it brought — the account the stranger is being folded into.
+  Future<LikeAnswer> like(String itemId) => _wish(() => api.like(itemId));
+
+  /// A heart taken back; see [like].
+  Future<void> unlike(String itemId) => _wish(() => api.unlike(itemId));
+
+  Future<T> _wish<T>(Future<T> Function() send) async {
+    for (var signing = _signingIn; signing != null; signing = _signingIn) {
+      await signing;
+    }
+    // Sent in the same turn as the look above, so no sign-in can start in
+    // between and go without waiting for it.
+    final sending = send();
+    final landed = sending.then<void>((_) {}, onError: (_) {});
+    _wishes.add(landed);
+    unawaited(landed.whenComplete(() => _wishes.remove(landed)));
+    return sending;
+  }
+
+  /// Until no heart is on its way. Bounded by the api's own patience, which
+  /// every heart gets: a line that drops packets holds the sign-in no longer
+  /// than it holds the heart.
+  Future<void> _wishesLanded() async {
+    while (_wishes.isNotEmpty) {
+      await Future.wait(_wishes.toList());
+    }
+  }
+
+  /// Runs a sign-in or a profile being made as [_signingIn], so hearts
+  /// pressed meanwhile wait for it. Set before [step] starts, in the same
+  /// turn as the tap, and cleared before anybody waiting is let go.
+  Future<T> _signIn<T>(Future<T> Function() step) async {
+    final done = Completer<void>();
+    _signingIn = done.future;
+    try {
+      return await step();
+    } finally {
+      if (identical(_signingIn, done.future)) _signingIn = null;
+      done.complete();
+    }
+  }
+
+  /// Whether whoever this phone is has been through 02: anybody it is not
+  /// still owed to. Nobody at all has not. Nor has a kept token the splash
+  /// could not check, unless what was kept beside it says so — the key is
+  /// written for the token's account and removed when nothing is owed.
+  Future<bool> _throughThePicker() async {
+    if (me != null) return !interestsPending;
+    if (api.token == null) return false;
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_pickerKey) == null;
+  }
+
   Future<void> _persist() async {
     // The picker first: a phone that dies between the two writes then comes
     // back to 02 or to no token at all, never to a token without its 02.
@@ -251,32 +322,65 @@ class Session extends ChangeNotifier {
   /// What is remembered here is only the way back.
   Future<void> switchTo(String accountId) async {
     final mine = api.token;
+    final parked = _adminToken;
     final session = await api.adminSession(accountId);
     _adminToken ??= mine;
-    api.token = session.token;
-    await _persist();
-    await refresh();
-    // Their first run, not yours. «Nullstill interesser» is sold as bringing
-    // screen 02 back, and emptying the column is only half of that — somebody
-    // has to walk through the gate again for anybody to see the picker.
-    interestsPending = me!.interests.isEmpty;
-    await _keepPicker();
-    notifyListeners();
+    await _switch(session.token, undo: () {
+      api.token = mine;
+      _adminToken = parked;
+    });
   }
 
   /// Back to your own account. The test account's session is left standing —
   /// it is not a credential anybody else holds, and dropping it would only
   /// cost the next switch a round trip.
+  ///
+  /// A parked token the server no longer knows — signed out from another
+  /// phone, or expired — is no way back any more, and is let go of: the floor
+  /// then offers «Logg ut» instead of a door that is always refused.
   Future<void> returnToAdmin() async {
     final parked = _adminToken;
     if (parked == null) return logout();
+    final acting = api.token;
     _adminToken = null;
-    api.token = parked;
+    await _switch(parked, undo: () {
+      api.token = acting;
+      _adminToken = parked;
+    }, deadToken: () => api.token = acting);
+  }
+
+  /// The account switcher's move, both ways: [token] is who this phone is
+  /// from now on. Asked who that is before anything is kept, so the phone
+  /// keeps the token and whether 02 is owed together — the picker first, as
+  /// [_persist] writes them — and never a token whose 02 was lost on the way.
+  /// [undo] puts everything back when there is no answer, since nothing has
+  /// been kept yet; [deadToken] instead, when the server said [token] opens
+  /// nothing.
+  Future<void> _switch(String token,
+      {required void Function() undo, void Function()? deadToken}) async {
+    // Somebody else from here on, as after a sign-in: a `/me` still on its
+    // way for the account being left would put it back when it landed.
+    _decided++;
+    api.token = token;
+    final Me found;
+    try {
+      found = await api.me();
+    } catch (e) {
+      if (deadToken != null && e is ApiException && e.statusCode == 401) {
+        deadToken();
+        await _persist();
+        notifyListeners();
+      } else {
+        undo();
+      }
+      rethrow;
+    }
+    // Their first run, not yours. «Nullstill interesser» is sold as bringing
+    // screen 02 back, and emptying the column is only half of that — somebody
+    // has to walk through the gate again for anybody to see the picker.
+    interestsPending = found.interests.isEmpty;
+    _become(found);
     await _persist();
-    await refresh();
-    interestsPending = me!.interests.isEmpty;
-    await _keepPicker();
-    notifyListeners();
   }
 
   /// Look around without making anything: the gate does this on its own, and
@@ -376,70 +480,101 @@ class Session extends ChangeNotifier {
     required String password,
     String? postalCode,
     String? town,
-  }) async {
-    // A device claiming its own account has been through 02 already, at the
-    // gate or behind a link. Asking again here, between 10c and the listing it
-    // was made for, is the picker a second time — and the gate, seeing it
-    // pending, would take the app down from under the half-filled form to
-    // show it. Read before the wait below: a stranger made while this form
-    // was open over the invitation has not been through 02 — it is under 10c.
-    final claiming = anonymous;
-    // A stranger on its way is this device's account, and the profile is
-    // made on it, with the bearer that says which.
-    await _settle();
-    final made = await _withInvite((invite) => api.register(
-          displayName: displayName,
-          email: email,
-          phone: phone,
-          password: password,
-          postalCode: postalCode,
-          town: town,
-          // Spent here unless this device already spent it looking around.
-          invite: invite,
-        ));
-    _decided++;
-    me = made;
-    letGoOfInvite();
-    interestsPending = !claiming && me!.interests.isEmpty;
-    await _persist();
-    notifyListeners();
-  }
+  }) =>
+      _signIn(() async {
+        // A stranger on its way is this device's account, and the profile is
+        // made on it, with the bearer that says which — and so are the hearts
+        // it has on their way.
+        await _settle();
+        await _wishesLanded();
+        // A device claiming its own account keeps its 02 with the rest. One
+        // that has been through it, at the gate or behind a link, is not
+        // asked again here, between 10c and the listing it was made for — and
+        // the gate, seeing it pending, would take the app down from under the
+        // half-filled form to show it. One that has not — made while this form
+        // was open over the invitation, and under it since — still is. Read
+        // after the wait, so it is about the stranger that is claimed.
+        final claiming = anonymous;
+        final through = await _throughThePicker();
+        // Claiming is what an unclaimed test account is for, and the session
+        // the switcher minted survives it on the server — the way back to the
+        // admin with it. Any other profile is somebody, and not a test.
+        final acting = claiming && actingAs;
+        final made = await _withInvite((invite) => api.register(
+              displayName: displayName,
+              email: email,
+              phone: phone,
+              password: password,
+              postalCode: postalCode,
+              town: town,
+              // Spent here unless this device already spent it looking around.
+              invite: invite,
+            ));
+        _decided++;
+        me = made;
+        letGoOfInvite();
+        if (!acting) _adminToken = null;
+        interestsPending = made.interests.isEmpty && !(claiming && through);
+        await _persist();
+        notifyListeners();
+        if (acting) {
+          try {
+            // The answer is the account and not the session, so it does not
+            // say who is acting, and the floor is drawn from that: without
+            // this it went until the next refresh, and «Tilbake til …» with it.
+            await refresh();
+          } catch (_) {
+            // The next refresh says it; the profile is made either way.
+          }
+        }
+      });
 
   /// Signing in, from wherever. Comes back with how many things this device
   /// had liked that are now the account's — the server folds a device that
   /// was looking around into the account it signs in to.
-  Future<int> login(String email, String password) async {
-    // 02 is this phone's first run, not the account's. A stranger signing in
-    // has walked through it at the gate: what it picked there has come along
-    // if the account had none, and a skip is a skip on this phone as well.
-    // Asking again showed the picker twice in a row, with the toast about the
-    // likes lying across its «Fortsett». Signing in anywhere else — 16c at an
-    // invite-only gate, or from the invitation page — nobody on this phone has
-    // been through it yet — nor has a stranger made while 16c was waiting for
-    // it below, which is why this is read first.
-    final walkedThrough = anonymous;
-    // The stranger's token is what tells the server which device to fold
-    // in. Sent before the stranger exists, nothing came along, and the
-    // stranger then replaced the account signed in to.
-    await _settle();
-    final signed = await api.login(email, password);
-    _decided++;
-    me = signed.me;
-    interestsPending = !walkedThrough && me!.interests.isEmpty;
-    await _persist();
-    // Signed in from here on, whatever happens next. The server has said so
-    // and the token is kept, and the stranger this phone was is gone: a second
-    // try would sign in with nothing left to fold in, and nothing to tell.
-    notifyListeners();
-    try {
-      // For the bar's badges, which the sign-in's answer does not carry.
-      await refresh();
-    } catch (_) {
-      // They come with the next refresh; failing the sign-in over them told
-      // somebody who was signed in that they were not.
-    }
-    return signed.carriedLikes;
-  }
+  Future<int> login(String email, String password) => _signIn(() async {
+        // The stranger's token is what tells the server which device to fold
+        // in. Sent before the stranger exists, nothing came along, and the
+        // stranger then replaced the account signed in to. Sent before its
+        // hearts had landed, they landed on a stranger already folded away —
+        // and a heart taken back had already been carried along.
+        await _settle();
+        await _wishesLanded();
+        // 02 is this phone's first run, not the account's. A stranger folded
+        // in has walked through it at the gate: what it picked there has come
+        // along if the account had none, and a skip is a skip on this phone as
+        // well. Asking again showed the picker twice in a row, with the toast
+        // about the likes lying across its «Fortsett». Read after the wait, so
+        // it is about the stranger that is folded in — one restored from a
+        // kept token has been through it unless it is still owed, and one made
+        // while 16c waited has not. Where nothing is folded in — 16c at an
+        // invite-only gate or from the invitation page, or from a test
+        // account, whose picks stay in the ring — nobody's walk through it
+        // comes along, and an account with no interests gets it once.
+        final through = await _throughThePicker();
+        final signed = await api.login(email, password);
+        _decided++;
+        me = signed.me;
+        // A sign-in is a session of its own, never one the switcher minted:
+        // the way back to the admin's account went on being parked after it,
+        // for whoever this is, and the next switch went back to it.
+        _adminToken = null;
+        interestsPending = me!.interests.isEmpty && !(signed.folded && through);
+        await _persist();
+        // Signed in from here on, whatever happens next. The server has said
+        // so and the token is kept, and the stranger this phone was is gone: a
+        // second try would sign in with nothing left to fold in, and nothing
+        // to tell.
+        notifyListeners();
+        try {
+          // For the bar's badges, which the sign-in's answer does not carry.
+          await refresh();
+        } catch (_) {
+          // They come with the next refresh; failing the sign-in over them
+          // told somebody who was signed in that they were not.
+        }
+        return signed.carriedLikes;
+      });
 
   Future<void> logout() async {
     try {

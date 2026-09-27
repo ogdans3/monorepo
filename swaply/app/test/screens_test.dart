@@ -30,6 +30,7 @@ import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/common.dart';
+import 'package:swaply_app/widgets/shell.dart';
 
 import 'fake_server.dart';
 
@@ -258,6 +259,25 @@ void main() {
       expect(find.text('Nullstill'), findsOneWidget);
       expect(find.text('Vis 2 treff'), findsOneWidget);
     });
+
+    testWidgets('05b the count on the button is for what was typed last', (tester) async {
+      // Typing asks at every letter, and an answer for an earlier word can
+      // take longer than the one for the word as it stands.
+      await mount(tester, const AdvancedSearchScreen(initial: SearchFilters(), query: ''));
+      server.overrides['GET /discover'] = (http.Request request) {
+        final short = request.url.queryParameters['q'] == 'syk';
+        return Future.delayed(Duration(milliseconds: short ? 600 : 100),
+            () => {'total': short ? 9 : 1, 'items': const []});
+      };
+
+      await tester.enterText(find.byType(TextField).first, 'syk');
+      await tester.pump();
+      await tester.enterText(find.byType(TextField).first, 'sykkel');
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump();
+
+      expect(find.text('Vis 1 treff'), findsOneWidget);
+    });
   });
 
   group('04 item detail', () {
@@ -349,6 +369,112 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Du har likt 5 ting. På tide å legge ut noe selv'), findsOneWidget);
+    });
+
+    testWidgets('04 …and a match found after the page was left still goes up', (tester) async {
+      // The heart turns on the tap, so ‹ can come before the answer. The trade
+      // has opened either way, and the screen that says so was the page's:
+      // leaving it before the answer cost the match screen.
+      final answer = Completer<Object?>();
+      server.overrides['POST /items/item-console/like'] = (http.Request _) => answer.future;
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => const ItemDetailScreen(itemId: 'item-console'))),
+            child: const Text('Oppdag'),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Oppdag'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.favorite_border).last);
+      await tester.pump();
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(ItemDetailScreen), findsNothing);
+
+      answer.complete(
+          {'liked': true, 'tradeId': 'trade-1', 'promptToList': false, 'likedCount': 3});
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MatchScreen), findsOneWidget);
+      expect(find.text('Dere kan swappe!'), findsOneWidget);
+    });
+
+    testWidgets('04 …and so does one for a card that is gone', (tester) async {
+      final answer = Completer<Object?>();
+      server.overrides['POST /items/item-console/like'] = (http.Request _) => answer.future;
+      final showing = ValueNotifier(true);
+      addTearDown(showing.dispose);
+      await mount(
+        tester,
+        Scaffold(
+          body: ValueListenableBuilder<bool>(
+            valueListenable: showing,
+            builder: (_, show, _) => show
+                ? ItemCard(item: Item.fromJson(FakeServer.console), onChanged: () {})
+                : const SizedBox(),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.favorite_border));
+      await tester.pump();
+      showing.value = false;
+      await tester.pumpAndSettle();
+
+      answer.complete(
+          {'liked': true, 'tradeId': 'trade-1', 'promptToList': false, 'likedCount': 3});
+      await tester.pumpAndSettle();
+      expect(find.byType(MatchScreen), findsOneWidget);
+    });
+
+    testWidgets('05 a heart that closes a loop brings the Bytter count up to date',
+        (tester) async {
+      // The bar counts the trades waiting on you, and a match is one more.
+      // It went on counting as before until something else asked.
+      await mount(tester, const DiscoverScreen());
+      Finder onBar(String text) =>
+          find.descendant(of: find.byType(SwaplyNavBar), matching: find.text(text));
+      expect(onBar('1'), findsOneWidget);
+      server.overrides['GET /me'] = {...FakeServer.me, 'tradesNeedingYou': 3};
+
+      await tester.tap(find.descendant(
+          of: find.byKey(const ValueKey('item-console')),
+          matching: find.byIcon(Icons.favorite_border)));
+      await tester.pumpAndSettle();
+      expect(find.byType(MatchScreen), findsOneWidget);
+      expect(session.tradesNeedingYou, 3);
+
+      await tester.tap(find.text('Fortsett å sveipe'));
+      await tester.pumpAndSettle();
+      expect(onBar('3'), findsOneWidget);
+    });
+
+    testWidgets('05 a heart pressed again over a trade already going on is not a second match',
+        (tester) async {
+      // Taken back and pressed again, the heart finds the ring its first
+      // press opened, and the server answers with that trade and says it is
+      // not new. 06a is the moment a trade opens, and this one has had it.
+      server.overrides['POST /items/item-console/like'] = {
+        'liked': true,
+        'tradeId': 'trade-1',
+        'tradeIsNew': false,
+        'promptToList': false,
+        'likedCount': 3,
+      };
+      await mount(tester, const DiscoverScreen());
+      final card = find.byKey(const ValueKey('item-console'));
+
+      await tester.tap(find.descendant(of: card, matching: find.byIcon(Icons.favorite_border)));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MatchScreen), findsNothing);
+      expect(find.text('Dere kan swappe!'), findsNothing);
+      expect(find.descendant(of: card, matching: find.byIcon(Icons.favorite)), findsOneWidget);
     });
 
     testWidgets('a listing with no photo gets a card, not a hole', (tester) async {

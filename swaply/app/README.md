@@ -63,7 +63,7 @@ several rows below point at the same file with a different `state` behind it.
 | 11 Mine handler · 17a Tom | `screens/trades_list.dart` |
 | 12 Likt · 17b Tom | `screens/liked.dart` |
 | 12a Varsler | `screens/notifications.dart` |
-| 13 Profil · 13b Annen profil · 17c Tom · 16a Rapporter · 16b Innstillinger | `screens/profile.dart` |
+| 13 Profil · 13b Annen profil · 17c Tom · 16a Rapporter · 16b Innstillinger, and the «Juridisk og personvern» screen behind it | `screens/profile.dart` |
 | 06h Vurdering · 07l Vurdering B2 · 06i Tilbakemelding · 09h Fullført | `screens/review.dart` |
 
 **10a comes at the fifth heart, not at the tenth** the export's title names.
@@ -82,7 +82,16 @@ count in green, and the last three things liked beside «ting du har likt», fro
 `GET /me/likes` and asked for as the sheet opens. Without an answer the row is
 left out rather than drawn as three empty tiles. A heart whose page or card is
 gone by the time the answer comes still gets its sheet, over wherever the
-person went: the fifth heart asks and the sixth does not.
+person went: the fifth heart asks and the sixth does not. The same goes for
+the match screen when a heart closes a loop — the trade has opened either way
+— and a match asks the session again, so the bar's «Bytter» counts it. A heart
+taken back and pressed again over a ring that already has a trade gets none:
+the server answers with that trade and `tradeIsNew: false`, and it had its
+06a when it opened.
+`followWish` in `screens/discover.dart` is that follow-up, for both hearts.
+Its golden, `10a-prompt`, is the sheet over 05 as 05's golden has it, with the
+white bike, the console and a listing without a photograph in the row, as the
+export draws them.
 
 Three things are here that round 5 did not draw, because the invitations needed
 them: the sheet behind the share button on 04 and the invitation row on 16b
@@ -131,7 +140,14 @@ when there were any. That is somebody else, so it is a fresh shell — and not
 02 again, even for an account with no interests: 02 is the phone's first run,
 and the stranger had it a minute ago. (Its picks come along too, where the
 account had none.) Signing in where nobody has been through the gate yet —
-16c on an invite-only server, or from the invitation — still gets 02 once.
+16c on an invite-only server, or from the invitation — still gets 02 once, and
+so does signing in from a test account, whose picks stay in the ring.
+
+A heart still on its way when the sign-in is pressed is waited for: the fold
+deletes the stranger, and a heart that reached the server after it was lost —
+or, taken back, stayed on the account. So a heart is sent through
+`Session.like` and `Session.unlike`, never straight to the api, and a heart
+pressed while a sign-in is on its way goes after it, to the account.
 
 Signing in on 10c, halfway through a listing, is the same fold into somebody
 else, and the fresh shell would have come without the form: the title, the
@@ -175,6 +191,9 @@ Where a screen goes is decided by the export, not by taste:
   `pushNamedAndRemoveUntil('/trades')`, which threw every tab away. The flow is
   finished in the tab it was started in, not the one on screen: the bar is live
   while 10b waits on the server, and a tab tapped meanwhile is left alone.
+  Bytter also asks again when a trade opened from it closes, so a flow that
+  ends there — «Tilbake til Bytter», a review — would ask twice; the list waits
+  out the frame the trade closes in and asks once.
 
 A tab is built the first time it is opened and then kept, stack and scroll and
 half-typed search included. Tapping the tab you are in goes back to its first
@@ -182,7 +201,9 @@ screen; Android's back and the browser's go back inside the tab first. Kept
 tabs would go stale, so a tab's first screen mixes in `RefetchOnTabReturn` and
 asks again each time the tab comes back — behind what is on screen, not
 instead of it. Changing tabs is a short fade of the content, and a cut for
-somebody who has asked for less motion.
+somebody who has asked for less motion — in a browser too, which does not tell
+Flutter: `util/reduced_motion.dart` reads `prefers-reduced-motion` itself and
+hands it on as the phone's setting would arrive.
 
 A heart asks for nothing again. It turns its own card, or the button on 04,
 on the tap and changes nothing else on the screen: no spinner, no picture
@@ -194,15 +215,42 @@ back. Coming back from a card's page does ask again, behind the grid like a
 returning tab — which leaves the grid live while it is asked for, so the
 collage remembers the hearts pressed on it or on a card's page meanwhile, and
 an answer asked for before one of them does not turn it back by landing after
-it. `test/heart_test.dart` holds all of it
-frame by frame, against a server that takes as long to answer as a network
-does.
+it. The page hands back what the server told it when it opened as well, which
+is newer than the collage the card came from, and a card's own heart that is
+answered after the page's heart was pressed — refused, say — leaves the card
+as the page left it.
+
+Pulling Oppdag down asks again the same way, behind the grid, with only the
+pull's own spinner; a pull that gets no answer says so in a toast over the grid
+it kept. Only the newest asking is taken: a chip tapped while the grid was
+being asked for behind it, or a search sent while the last one was out, is not
+undone by the older answer landing last. Only a grid that is the answer to
+what is asked is kept, though: under a chip's spinner the grid in memory is the
+one from before the chip, and a quiet asking that overtakes the spinner and
+fails ends in «Fikk ikke kontakt», not in the old grid under the new chip.
+
+The long press holds «Ikke vis meg slike», «Se profil» and «Rapporter».
+Hiding takes the kind — the category and the subcategory, or the listing alone
+when it has none — out of the grid on the tap and tells the server
+(`POST /me/hidden`). The toast says «Vi viser deg ikke flere slike.», or «Vi
+viser deg ikke denne igjen.» for a listing hidden alone, with «Angre» only
+while this is the one thing hidden: the server's one way back is
+`DELETE /me/hidden`, which shows everything again, and undoing one card must
+not bring back what was hidden last month. Whether it is the one is the
+server's count in its answer to the hide, not the session's, which can be from
+before a sign-in brought other kinds along or another phone hid one; and a
+second hide on the screen spends the first toast's «Angre». A report that
+blocked, once the server has taken it, or the owner's profile closed again,
+asks for the grid behind it, so a block takes their things away.
+`test/heart_test.dart` holds all of it frame by frame, against a server that
+takes as long to answer as a network does.
 
 The shell is keyed by who is signed in, so switching accounts or signing out
 never leaves the last person's stacks on screen. A tab's old address —
 `#/trades` in a browser, from when the tabs were routes — opens the gate at that
 tab, never the tabs stacked on the gate, which would hide the splash, 02 or a
-sign-in behind an empty shell. A screen mounted on its own —
+sign-in behind an empty shell. Only the first app opens there: the next person
+through the gate, after «Logg ut», starts at Oppdag. A screen mounted on its own —
 in a widget test, in a golden — has no shell above it and draws its own bar, so
 the goldens are still the screens as the export draws them.
 
@@ -283,6 +331,21 @@ tile gets a coral edge, and its ✕ takes it out. Somebody with a profile has ea
 picture sent as it is picked, as before, and «Legg ut» waits while one is on
 its way.
 
+## The town beside the postcode
+
+The export draws 10b's postcode as «7030 Trondheim»: the digits, and the town
+the server keeps in their place, 11 and grey at the field's right edge. The
+form asks `GET /postcodes/<code>` — public reference data, no session — once
+four digits have held still for 300 ms, and draws the town beside them. A
+postcode that belongs to no town gets the coral edge a refused photograph gets,
+and the server's own words over the button, and «Neste» stays on 10b: it used
+to be found out by «Legg ut», after 10c had made a profile for a listing that
+could not go out. «Neste» pressed before the answer asks then, and three digits
+are asked about too, so the server says why. No contact says nothing about the
+postcode and holds nothing up; the listing is checked again when it is sent.
+Answers are kept by code, so one that lands after the digits changed is never
+drawn beside the new ones. `test/postcode_test.dart` holds it.
+
 ## The section the export does not draw at all
 
 `screens/admin.dart` is Testverktøy, reached from a dark card on 16b and drawn
@@ -293,15 +356,52 @@ and borrows the one avatar colour that has never been chrome — and
 screen on every route while you are somebody else. `../docs/ADMIN.md` is the
 whole of it.
 
-## Three rows the export does not draw
+## Rows the export does not draw
 
 The share sheet behind the button on 04 and «Inviter en venn» on 16b: round 5
 drew the invitation as a link somebody already had, not as one you make.
 
-And **«Se alle varsler» on 16b**, which opens 12a. The export drew 12a as a lock
+**«Se alle varsler» on 16b**, which opens 12a. The export drew 12a as a lock
 screen — a push notification, not a screen with a back button — so it never drew
 a door into the list of them inside the app. The screen was built anyway, and
 without that row nothing could open it.
+
+**«Vis alt på Oppdag igjen» on 16b**, under «Oppdag», with how much is hidden
+beside it — kinds, and listings hidden alone while they can still be shown —
+and only while any are, which is why the export's 16b, whose Ola has hidden
+nothing, is still drawn exactly. It is `DELETE /me/hidden`, all of it, since
+the server keeps no way to name one kind back; the session is asked again
+after, so the count and the row go.
+
+## Deleting the account
+
+The export draws «Juridisk og personvern» at the foot of 16b and nothing behind
+it, and it was a dialog. It is a screen of its own now, drawn without the bar
+like 16b: what the product says about itself — the trade is between you, no
+fødselsnummer, what deletion keeps — and at its foot, as a row in a card the
+way «Logg ut» is on 16b, **«Slett kontoen»**. A device looking around never
+gets there: its 13 is an invitation to make a profile, and there is nothing to
+delete.
+
+The row opens a sheet with one sentence of what happens — the profile emptied
+and the things taken down at once, trades under way ended, a minimal record
+kept apart for three years after the last completed trade, or after the
+deletion for somebody who never completed one — and the password,
+because a phone left unlocked on a table is not the person. The button is the
+app's destructive one («Avslå», «Trekk deg»), never the green way on and never
+report-and-block red. `DELETE /me` then ends every session; the phone signs out
+as «Logg ut» does, device id and all, and the gate makes whoever holds it next
+a new stranger. What the server refuses — «Feil passord.», the account holding
+the key to the test tooling — it says in the sheet, over the button. The phone
+lets go even if the sheet was pulled down while the answer was on its way.
+«Kontoen er slettet.» waits until the gate has shown what comes next: a toast
+is placed once, as it goes up, and put up at once it was placed against the
+splash and then lay across 02's «Fortsett».
+
+Acting as a test account, the sheet asks no password — the admin's key is
+behind that session, not the account's — and the tool retires it, as
+`../docs/ADMIN.md` has it; the phone goes back to the admin after.
+`test/account_test.dart` holds both, and the «Vis alt» row.
 
 ## What the app says in passing
 
@@ -315,6 +415,30 @@ The error tone is **coral**, which is the «no» colour. Not
 `SwaplyColors.red`, which belongs to report and block: an error toast is the
 most tempting place in the app to reach for the stronger red, and the two must
 not collapse into one meaning.
+
+A toast never lies over the screen's primary action. It sits 14 above the foot
+of its screen — the bar, in a tab, whose screens end where the bar begins; the
+keyboard, when it is up — unless that is where the action is, which on a screen
+drawn without the bar (02, 10b, 10c, a chat) it is. Then it goes up to 14 above
+it. What counts is measured as the toast goes up: every `PrimaryButton`, and
+anything wrapped in `KeepClear` — the composer on 06g, the heart and ✕ at the
+foot of 04 — that is on screen at that moment. Nothing covering the page, no
+tab out of sight, no button scrolled out of its list. The room under a lifted
+toast is margin, so the button under it still answers. A toast can carry one
+word of a way back at its right edge, «Angre», which takes it down as well.
+
+A page asked for again keeps what it has. Every failure to get an answer is
+`ApiException.noContact`, and it reached error states written for refusals: a
+list tab asked for again behind itself — a pull, the tab coming back — was
+replaced by «Fikk ikke kontakt» and stayed that way after the connection came
+back, and a trade, a conversation, a listing or a profile asked for again was
+replaced by «Fant ikke …», which says the thing is gone. Now only a screen with
+nothing on it yet fails into its empty state, which asks again from «Prøv
+igjen»; after that the page stays, and a pull that fails says so in a toast
+over it (a tab coming back keeps quiet, as Oppdag's does). A detail page that
+could not get its one thing at all says «Fikk ikke kontakt» for no answer and
+«Fant ikke …» only for the server's no — `LoadFailure` in `widgets/common.dart`.
+`test/no_contact_test.dart` holds each of them.
 
 ## Two things that are honest about being unfinished
 

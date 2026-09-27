@@ -19,7 +19,10 @@
 // The races are the other half. A sign-in sent while the stranger was still
 // being made went without its token, and the stranger then landed on top of
 // the account signed in to. The session now waits for a start in flight, and
-// drops an answer about who the phone is that arrives after a sign-in.
+// drops an answer about who the phone is that arrives after a sign-in. It
+// waits for a heart in flight too: one that reached the server after the
+// sign-in found the stranger already folded away, and was lost — or, taken
+// back, stayed on the account.
 //
 // [Ledger] is the server's memory of who liked what, kept by bearer and
 // folded or claimed the way `backend/src/auth/merge.ts` and `/auth/register`
@@ -160,6 +163,21 @@ class Ledger {
       final said = answer(r);
       await release.future;
       return said;
+    };
+    return release;
+  }
+
+  /// [request] reaches the server only when the returned completer is
+  /// completed, and is answered then: sent, and still on its way. Once.
+  /// Unlike [hold], the server knows nothing of it meanwhile — a request sent
+  /// after it can get there first.
+  Completer<void> slow(String request) {
+    final release = Completer<void>();
+    final answer = server.overrides[request] as Object? Function(http.Request);
+    server.overrides[request] = (http.Request r) async {
+      server.overrides[request] = answer;
+      await release.future;
+      return answer(r);
     };
     return release;
   }
@@ -433,6 +451,107 @@ void main() {
       expect(session.isAdmin, isTrue);
       expect(ledger.hearts['me-1'], ['item-console']);
       await expectOlasGridKeepsTheConsole(tester);
+    });
+  });
+
+  group('a heart on its way is not left behind by a sign-in', () {
+    /// Past 02 as a stranger, with nothing liked yet.
+    Future<void> stranger(WidgetTester tester) async {
+      await boot(tester);
+      await tester.pumpAndSettle();
+      await skipInterests(tester);
+    }
+
+    /// 16c from Profil, sent while whatever is on its way still is.
+    Future<void> signInMeanwhile(WidgetTester tester) async {
+      await tapTab(tester, 'Profil');
+      await tester.tap(find.text('Logg inn'));
+      await tester.pumpAndSettle();
+      await send16c(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    testWidgets('1. a heart still on its way is waited for, and comes along', (tester) async {
+      // Sent at once, the sign-in folded the stranger away before the heart
+      // got there, and the heart arrived for nobody.
+      await stranger(tester);
+      final token = ledger.strangerToken;
+      final arriving = ledger.slow('POST /items/item-console/like');
+      await tester.tap(heart('item-console', liked: false));
+      await tester.pump();
+      await signInMeanwhile(tester);
+      expect(asked('POST /auth/login'), 0);
+
+      arriving.complete();
+      await tester.pumpAndSettle();
+
+      expect(server.bearers['POST /items/item-console/like'], 'Bearer $token');
+      expect(server.bearers['POST /auth/login'], 'Bearer $token');
+      expect(ledger.hearts['me-1'], ['item-console']);
+      expect(find.text('Tingen du likte er tatt med.'), findsOneWidget);
+      await expectOlasGridKeepsTheConsole(tester);
+    });
+
+    testWidgets('2. a heart taken back on its way is taken back before the fold', (tester) async {
+      // Sent at once, the sign-in carried the heart along, and taking it back
+      // then reached a stranger that was gone: back on, on the account.
+      await strangerWhoLiked(tester, ['item-console']);
+      final arriving = ledger.slow('DELETE /items/item-console/like');
+      await tester.tap(heart('item-console', liked: true));
+      await tester.pump();
+      await signInMeanwhile(tester);
+      expect(asked('POST /auth/login'), 0);
+
+      arriving.complete();
+      await tester.pumpAndSettle();
+
+      expect(ledger.hearts['me-1'] ?? const <String>[], isEmpty);
+      expect(find.byType(SwaplyToast), findsNothing);
+      await tapTab(tester, 'Oppdag');
+      expect(heart('item-console', liked: false), findsOneWidget);
+    });
+
+    testWidgets('3. a heart pressed while the sign-in is on its way goes to the account',
+        (tester) async {
+      // The server has folded the stranger in by the time its answer comes
+      // back, so the stranger's token opens nothing any more.
+      await stranger(tester);
+      final answering = ledger.hold('POST /auth/login');
+      final signingIn = session.login(Ledger.email, Ledger.password);
+      await tester.pump();
+      final liking = session.like('item-console');
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(asked('POST /items/item-console/like'), 0);
+
+      answering.complete();
+      await tester.pumpAndSettle();
+      await signingIn;
+      final landed = await liking;
+
+      expect(session.me?.id, 'me-1');
+      expect(server.bearers['POST /items/item-console/like'], 'Bearer ${api.token}');
+      expect(landed.likedCount, 1);
+      expect(ledger.hearts['me-1'], ['item-console']);
+    });
+
+    testWidgets('4. a heart that gets no answer holds the sign-in no longer than it holds itself',
+        (tester) async {
+      // Bounded by the api's own patience: the sign-in goes after it, and the
+      // heart turns back on a card that is gone by then.
+      await stranger(tester);
+      server.overrides['POST /items/item-console/like'] =
+          (http.Request _) => Completer<Object?>().future;
+      await tester.tap(heart('item-console', liked: false));
+      await tester.pump();
+      await signInMeanwhile(tester);
+      expect(asked('POST /auth/login'), 0);
+
+      await tester.pump(SwaplyApi.patience);
+      await tester.pumpAndSettle();
+
+      expect(asked('POST /auth/login'), 1);
+      expect(session.me?.id, 'me-1');
+      expect(find.byType(LoginScreen, skipOffstage: false), findsNothing);
     });
   });
 
@@ -764,6 +883,68 @@ void main() {
     });
   });
 
+  group('02 after a sign-in is owed only where nobody has been through it', () {
+    /// Ola's account, with no interests of her own.
+    void olaHasNone() =>
+        ledger.accounts['me-1'] = {...FakeServer.me, 'interests': const <String>[]};
+
+    Future<void> intro(WidgetTester tester, {required bool shown}) async {
+      expect(session.me?.id, 'me-1');
+      expect(find.byType(InterestsScreen), shown ? findsOneWidget : findsNothing);
+      expect((await SharedPreferences.getInstance()).getString('interestsPendingFor'),
+          shown ? 'me-1' : isNull);
+    }
+
+    testWidgets('1. a kept stranger still being checked had its 02, and is folded in with it',
+        (tester) async {
+      // Read before the check had answered, the phone was nobody yet — and
+      // nobody has been through 02 — so the picker came after the sign-in,
+      // a second time for the person holding the phone.
+      olaHasNone();
+      final kept = ledger.stranger(liked: ['item-console']);
+      final check = ledger.hold('GET /me');
+      await boot(tester, saved: {'token': kept}, at: '/login');
+      await tester.pump();
+      await send16c(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      check.complete();
+      await tester.pumpAndSettle();
+
+      await intro(tester, shown: false);
+      await expectOlasGridKeepsTheConsole(tester);
+    });
+
+    testWidgets('2. …and so did one the splash could not check at all', (tester) async {
+      // Nothing was kept beside the token saying 02 was still owed.
+      olaHasNone();
+      final kept = ledger.stranger(liked: ['item-console']);
+      ledger.dropOnce('GET /me');
+      await boot(tester, saved: {'token': kept}, at: '/login');
+      await tester.pumpAndSettle();
+      expect(session.stalled, isTrue);
+      await signInOn16c(tester);
+
+      expect(server.bearers['POST /auth/login'], 'Bearer $kept');
+      await intro(tester, shown: false);
+    });
+
+    testWidgets('3. a kept stranger still owed its 02 gets it, since nobody has been through it',
+        (tester) async {
+      olaHasNone();
+      final kept = ledger.stranger();
+      final check = ledger.hold('GET /me');
+      await boot(tester, saved: {'token': kept, 'interestsPendingFor': ledger.strangerId!},
+          at: '/login');
+      await tester.pump();
+      await send16c(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      check.complete();
+      await tester.pumpAndSettle();
+
+      await intro(tester, shown: true);
+    });
+  });
+
   testWidgets('a question the stranger asked before signing in is not answered after it',
       (tester) async {
     // Profil asks who you are on the way in. On a slow line that answer —
@@ -827,6 +1008,143 @@ void main() {
       expect(ledger.hearts['test-1'], ['item-console']);
       expect(ledger.hearts['me-1'], isNull);
       expect(find.text('Tingen du likte er tatt med.'), findsNothing);
+      // Ola has her interests, and nothing of the test account's came along.
+      expect(find.byType(InterestsScreen, skipOffstage: false), findsNothing);
+    });
+
+    /// Ola, who holds the key, signed in and switched to the unclaimed test
+    /// account, which has no interests and so is shown 02 — skipped here.
+    Future<String> actingAsTheTestAccount(WidgetTester tester,
+        {List<String> interests = const ['verktoy', 'gaming', 'sykling']}) async {
+      ledger.accounts['me-1'] = {...FakeServer.admin, 'interests': interests};
+      final own = ledger.signedIn('me-1');
+      await boot(tester, saved: {'token': own});
+      await tester.pumpAndSettle();
+      await session.switchTo('test-1');
+      await tester.pumpAndSettle();
+      await skipInterests(tester);
+      expect(session.canReturnToAdmin, isTrue);
+      return own;
+    }
+
+    Future<void> signInFromProfile(WidgetTester tester) async {
+      await tapTab(tester, 'Profil');
+      await tester.tap(find.text('Logg inn'));
+      await tester.pumpAndSettle();
+      await signInOn16c(tester);
+    }
+
+    testWidgets('3. a sign-in from there lets go of the way back to the admin', (tester) async {
+      // «Tilbake til Ola N.» stayed parked after it, for whoever that was,
+      // and the next switch went back to that token instead of this one.
+      await actingAsTheTestAccount(tester);
+      await signInFromProfile(tester);
+
+      expect(session.actingAs, isFalse);
+      expect(session.canReturnToAdmin, isFalse);
+      expect((await SharedPreferences.getInstance()).getString('adminToken'), isNull);
+    });
+
+    testWidgets('4. …and gets 02 where the account signed in to has none', (tester) async {
+      // Nothing folds out of the ring, so the test account's walk through 02
+      // is not this account's: it is a sign-in with nobody's 02 behind it.
+      await actingAsTheTestAccount(tester, interests: const []);
+      await signInFromProfile(tester);
+
+      expect(session.me?.id, 'me-1');
+      expect(find.byType(InterestsScreen), findsOneWidget);
+    });
+
+    testWidgets('5. a question asked before a switch is not answered after it, either way',
+        (tester) async {
+      // Screens ask who you are on the way in. Asked as the admin and
+      // answered after the switch, the admin came back over the test
+      // account's token — and the other way round on the way back.
+      ledger.accounts['me-1'] = {...FakeServer.admin};
+      await boot(tester, saved: {'token': ledger.signedIn('me-1')});
+      await tester.pumpAndSettle();
+
+      var late = ledger.hold('GET /me');
+      var asking = session.refresh();
+      await tester.pump();
+      await session.switchTo('test-1');
+      late.complete();
+      await asking;
+      await tester.pumpAndSettle();
+      expect(session.me?.id, 'test-1');
+      expect(session.actingAs, isTrue);
+
+      await skipInterests(tester);
+      late = ledger.hold('GET /me');
+      asking = session.refresh();
+      await tester.pump();
+      await session.returnToAdmin();
+      late.complete();
+      await asking;
+      await tester.pumpAndSettle();
+      expect(session.me?.id, 'me-1');
+      expect(session.actingAs, isFalse);
+    });
+
+    testWidgets('6. nothing is kept until it is known whether 02 is owed', (tester) async {
+      // The test account's token was kept before it was asked who that is,
+      // and 02 after: a phone that died between the two came back as the
+      // test account, past a 02 the lever had promised.
+      ledger.accounts['me-1'] = {...FakeServer.admin};
+      final own = ledger.signedIn('me-1');
+      await boot(tester, saved: {'token': own});
+      await tester.pumpAndSettle();
+      String? keptWhileAsking;
+      final answer = server.overrides['GET /me'] as Object? Function(http.Request);
+      server.overrides['GET /me'] = (http.Request r) async {
+        keptWhileAsking = await keptToken();
+        return answer(r);
+      };
+
+      await session.switchTo('test-1');
+
+      expect(keptWhileAsking, own);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('token'), api.token);
+      expect(prefs.getString('interestsPendingFor'), 'test-1');
+      expect(prefs.getString('adminToken'), own);
+    });
+
+    testWidgets('7. a switch that hears nothing back leaves the admin as they were', (tester) async {
+      ledger.accounts['me-1'] = {...FakeServer.admin};
+      final own = ledger.signedIn('me-1');
+      await boot(tester, saved: {'token': own});
+      await tester.pumpAndSettle();
+      ledger.dropOnce('GET /me');
+
+      await expectLater(session.switchTo('test-1'), throwsA(isA<ApiException>()));
+      await tester.pumpAndSettle();
+
+      expect(api.token, own);
+      expect(session.me?.id, 'me-1');
+      expect(session.canReturnToAdmin, isFalse);
+      expect(await keptToken(), own);
+      expect((await SharedPreferences.getInstance()).getString('adminToken'), isNull);
+    });
+
+    testWidgets('8. a way back the server no longer knows is let go of, and says so',
+        (tester) async {
+      // Signed out on another phone while this one was somebody else: the
+      // parked token opens nothing, and «Tilbake til …» was a door that is
+      // always refused.
+      final own = await actingAsTheTestAccount(tester);
+      final acting = api.token;
+      ledger.sessions.remove(own);
+
+      await tester.tap(find.text('Tilbake til Ola N. ↩'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SwaplyToast), findsOneWidget);
+      expect(api.token, acting);
+      expect(session.actingAs, isTrue);
+      expect(session.canReturnToAdmin, isFalse);
+      expect(find.text('Logg ut ↩'), findsOneWidget);
+      expect((await SharedPreferences.getInstance()).getString('adminToken'), isNull);
     });
   });
 }

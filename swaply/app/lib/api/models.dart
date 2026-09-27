@@ -20,6 +20,7 @@ class Me {
         likedByCount = _int(j['likedByCount']) ?? 0,
         unreadMessages = _int(j['unreadMessages']) ?? 0,
         tradesNeedingYou = _int(j['tradesNeedingYou']) ?? 0,
+        hiddenCount = _int(j['hiddenCount']),
         anonymous = j['anonymous'] as bool? ?? false,
         isAdmin = j['isAdmin'] as bool? ?? false,
         testAccount = j['testAccount'] as bool? ?? false,
@@ -34,6 +35,14 @@ class Me {
   final int ratingCount, likedByCount, unreadMessages, tradesNeedingYou;
   final DateTime? memberSince;
   final List<Item> items;
+
+  /// How many kinds «Ikke vis meg slike» has taken off Oppdag for this
+  /// account. Counted rather than listed: hiding is a choice somebody can
+  /// forget having made, and `DELETE /me/hidden` undoes all of it at once.
+  /// Null when the answer did not say — not zero: read as zero, a sign-in
+  /// from a server that left it out offered to undo one kind by showing
+  /// every kind again.
+  final int? hiddenCount;
 
   /// Looking around on this device, with no profile yet. Everything that puts
   /// you in front of another person — listing, writing, accepting — waits for
@@ -255,6 +264,35 @@ class Item {
   final List<String> media;
   final bool likedByMe, reserved, inOffer, lockedByOtherTrade;
   final UserRef? owner;
+}
+
+/// «Ikke vis meg slike» as the server wrote it down: a kind — the category
+/// and the subcategory under it, compared without regard to case because
+/// whoever listed the thing typed it — or, for a listing with no subcategory,
+/// that listing alone, since a category on its own would hide far more than
+/// was asked. `docs/DESIGN.md` has the rule; the server applies it, and this
+/// is only so a screen can take the same listings away before it asks again.
+class HiddenKind {
+  HiddenKind.fromJson(Map<String, dynamic> j)
+      : category = j['category'] as String? ?? 'diverse',
+        subcategory = j['subcategory'] as String?,
+        itemId = j['itemId'] as String?;
+
+  /// What the server will write down for [item], worked out the same way.
+  HiddenKind.of(Item item)
+      : category = item.category,
+        subcategory = (item.subcategory ?? '').isEmpty ? null : item.subcategory,
+        itemId = (item.subcategory ?? '').isEmpty ? item.id : null;
+
+  final String category;
+  final String? subcategory, itemId;
+
+  bool covers(Item item) {
+    final id = itemId;
+    if (id != null) return item.id == id;
+    return item.category == category &&
+        (item.subcategory ?? '').toLowerCase() == (subcategory ?? '').toLowerCase();
+  }
 }
 
 class TradeCash {

@@ -31,15 +31,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _load();
   }
 
-  Future<void> _load() async {
+  /// Only with nothing on screen yet can this fail into «Fikk ikke kontakt»,
+  /// which asks again from there; a failed pull keeps the list and says so in
+  /// a toast. The error used to replace the list, with no way to ask again.
+  Future<void> _load({bool say = false}) async {
     final api = context.read<SwaplyApi>();
     try {
       final result = await api.notifications();
       await api.markNotificationsRead();
-      if (mounted) setState(() => _items = result.notifications);
+      if (mounted) {
+        setState(() {
+          _items = result.notifications;
+          _error = null;
+        });
+      }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_items == null) {
+        setState(() => _error = e.message);
+      } else if (say) {
+        showError(context, e);
+      }
     }
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   @override
@@ -50,7 +68,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: swaplyAppBar(context, 'Varsler'),
       body: _error != null
           ? EmptyState(
-              title: 'Fikk ikke kontakt', body: _error!, icon: Icons.wifi_off)
+              title: 'Fikk ikke kontakt',
+              body: _error!,
+              icon: Icons.wifi_off,
+              actionLabel: 'Prøv igjen',
+              onAction: _retry)
           : items == null
               ? const Center(child: CircularProgressIndicator())
               : items.isEmpty
@@ -61,7 +83,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           'trenger deg.',
                     )
                   : RefreshIndicator(
-                      onRefresh: _load,
+                      onRefresh: () => _load(say: true),
                       child: ListView.separated(
                         itemCount: items.length,
                         separatorBuilder: (_, _) =>

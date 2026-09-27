@@ -4,8 +4,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../api/client.dart' show ApiException;
 import '../api/models.dart';
 import '../design/tokens.dart';
+import 'toast.dart' show KeepClear;
 
 // Handed on rather than re-exported by hand: every screen that shows an error
 // already imports this file, and the toast itself is its own thing.
@@ -580,7 +582,8 @@ bool _answersTaps(HitTestTarget target) => switch (target) {
       _ => false,
     };
 
-/// The pill button every screen ends with.
+/// The pill button every screen ends with, and so the one thing a toast is
+/// never laid over; see [KeepClear].
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton(this.label,
       {super.key,
@@ -602,38 +605,40 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final on = enabled && !busy && onPressed != null;
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: on ? onPressed : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: SwaplyColors.greenPressed,
-          disabledBackgroundColor: const Color(0xFFD8DEDA),
-          disabledForegroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
-        ),
-        child: busy
-            ? const SizedBox(
-                height: 20, width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
-                  // Norwegian labels run long — «Marker byttet som gjennomført» —
-                  // and a button is not allowed to overflow because of a word.
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+    return KeepClear(
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: on ? onPressed : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: SwaplyColors.greenPressed,
+            disabledBackgroundColor: const Color(0xFFD8DEDA),
+            disabledForegroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+          ),
+          child: busy
+              ? const SizedBox(
+                  height: 20, width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
+                    // Norwegian labels run long — «Marker byttet som gjennomført» —
+                    // and a button is not allowed to overflow because of a word.
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -1009,4 +1014,32 @@ class EmptyState extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// A page that could not get the one thing it shows — a trade, a listing, a
+/// conversation, a profile — drawn in its place. No answer is not an answer:
+/// once every network failure arrived as [ApiException.noContact], a dropped
+/// connection reached these pages, and «Fant ikke byttet» over «Vi får ikke
+/// kontakt med Swaply akkurat nå.» said the trade was gone, with no way to
+/// ask again but to leave and come back. A refusal is still the server's
+/// word about the thing, and says [missing].
+class LoadFailure extends StatelessWidget {
+  const LoadFailure(this.error, {super.key, required this.missing, required this.onRetry});
+
+  final ApiException error;
+
+  /// What the page says when the server answered no: «Fant ikke byttet».
+  final String missing;
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => error.isNoContact
+      ? EmptyState(
+          icon: Icons.wifi_off,
+          title: 'Fikk ikke kontakt',
+          body: error.message,
+          actionLabel: 'Prøv igjen',
+          onAction: onRetry)
+      : EmptyState(icon: Icons.error_outline, title: missing, body: error.message);
 }

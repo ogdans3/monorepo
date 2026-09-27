@@ -410,6 +410,11 @@ Object? exportCanned(String key, FakeServer server) => switch (key) {
           'theirs': [console, rod, kayak],
           'counterparty': kari,
         },
+      // The last three things Ola wanted, for 10a's row, as the export draws
+      // them: the white bike, the console, and a listing with no photograph.
+      'GET /me/likes' => {
+          'items': [mtb, console, rod],
+        },
       'GET /me/liked-by' => {
           'items': [
             {
