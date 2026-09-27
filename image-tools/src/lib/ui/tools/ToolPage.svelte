@@ -65,6 +65,12 @@
 
 {@render children()}
 
+{#if tool.video}
+	<p class="twin">
+		Also for video: <a href="/video/{tool.video.slug}">{tool.video.label}</a>
+	</p>
+{/if}
+
 <section aria-labelledby="howto-heading">
 	<h2 id="howto-heading">How to {tool.h1.toLowerCase()}</h2>
 	<ol class="steps">
@@ -130,6 +136,12 @@
 		border: 1px solid var(--line);
 		border-radius: var(--r-s);
 		background: var(--surface);
+		font-size: 0.875rem;
+		color: var(--muted);
+	}
+
+	.twin {
+		margin: 1rem 0 0;
 		font-size: 0.875rem;
 		color: var(--muted);
 	}

@@ -1,11 +1,20 @@
 <script lang="ts">
 	import { editedFileName, formatBytes, resolveFormat } from '$lib/engine';
 	import { resolveVideoFormat, videoAcceptAttribute, VIDEO_FORMATS } from '$lib/video/formats';
-	import { editVideo, isLoaded, lastFfmpegLines, loadFfmpeg, type LoadProgress } from '$lib/video/ffmpeg';
+	import {
+		editVideo,
+		isLoaded,
+		lastFfmpegLines,
+		loadFfmpeg,
+		readStill,
+		resetFfmpeg,
+		type LoadProgress
+	} from '$lib/video/ffmpeg';
 	import {
 		BLUR_MAX,
 		BLUR_MIN,
 		evenSize,
+		phoneLayout,
 		SPEED_MAX,
 		SPEED_MIN,
 		STRETCH_MAX_SECONDS,
@@ -27,15 +36,25 @@
 		type RampPoint
 	} from '$lib/video/ramp';
 	import { formatTimecode, parseTimecode } from '$lib/video/timecode';
+	import {
+		BEZEL_COLOUR,
+		paintPhoneFrame,
+		phoneFrameDefaults,
+		phoneFrameLimits
+	} from '$lib/tools/phoneframe';
+	import BackgroundPicker from './BackgroundPicker.svelte';
+	import PhoneFrameControls from './PhoneFrameControls.svelte';
 	import RampCurve from './RampCurve.svelte';
 	import SliderField from './SliderField.svelte';
 	import type { VideoTool } from '$lib/video/tools';
 	import { downloadBlob } from './download';
 	import Dropzone from './Dropzone.svelte';
+	import { learnDuration } from './videolength';
 
 	let { tool }: { tool: VideoTool } = $props();
 
-	type Stage = 'idle' | 'loading' | 'working' | 'done' | 'error';
+	/** `reading` is the phone frame asking ffmpeg for a still the browser couldn't show. */
+	type Stage = 'idle' | 'loading' | 'reading' | 'working' | 'done' | 'error';
 
 	let stage = $state<Stage>('idle');
 	let download = $state<LoadProgress>({ ratio: null, loadedBytes: 0, totalBytes: null });
@@ -119,8 +138,47 @@
 	let textPosition = $state<TextPosition>('bottom');
 	let textBox = $state(true);
 
-	/** The container the file arrived in, so an edit gives back the same kind. */
+	/**
+	 * The phone frame, with the screenshot page's controls and geometry. The
+	 * border moves in pixel pairs here, because a video puts its picture on
+	 * even pixels and an odd border would leave a line down one edge.
+	 */
+	let phoneBezelOn = $state(true);
+	let phoneBezel = $state(40);
+	let phoneRadius = $state(129);
+	let phoneBackground = $state('#ffffff');
+	let phoneTransparent = $state(false);
+	/** Set by hand, so the next recording keeps it. Same rule as the image page. */
+	let phoneBezelTouched = false;
+	let phoneRadiusTouched = false;
+	/** The browser could not play the file, so the preview has nothing to show. */
+	let previewFailed = $state(false);
+	/**
+	 * The recording's first frame, read by ffmpeg, as an object URL. The phone
+	 * preview shows it in place of the video when the browser can't play the
+	 * file, and the frame is sized from it.
+	 */
+	let still = $state<string | null>(null);
+	/** ffmpeg couldn't read it either, so there really is nothing to frame. */
+	let unreadable = $state<string | null>(null);
+	let playing = $state(false);
+	/** Set by the cancel button, so the run that throws next isn't an error. */
+	let cancelled = false;
+
+	const phoneDefaults = $derived(
+		media.width ? phoneFrameDefaults(media.width, media.height, { even: true }) : null
+	);
+	const phoneLimits = $derived(
+		media.width ? phoneFrameLimits(media.width, media.height, { even: true }) : null
+	);
+
+	/**
+	 * The container the file arrived in, so an edit gives back the same kind.
+	 * The one exception is a phone frame with see-through corners, which only a
+	 * WebM can carry.
+	 */
 	const target = $derived.by(() => {
+		if (tool.op === 'phone' && phoneTransparent) return VIDEO_FORMATS.webm;
 		if (!file) return VIDEO_FORMATS.mp4;
 		const ext = file.name.slice(file.name.lastIndexOf('.'));
 		return resolveVideoFormat(ext.replace('.', '')) ?? VIDEO_FORMATS.mp4;
@@ -179,14 +237,60 @@
 				return { kind: 'text', text, size: textSize, colour: textColour, position: textPosition, box: textBox };
 			case 'compress':
 				return { kind: 'compress', quality };
+			case 'phone':
+				return {
+					kind: 'phone',
+					width: media.width,
+					height: media.height,
+					bezelOn: phoneBezelOn,
+					bezel: phoneBezel,
+					radius: phoneRadius,
+					background: phoneBackground,
+					transparent: phoneTransparent
+				};
 			default:
 				return { kind: 'mute' };
 		}
 	});
 
+	/**
+	 * The frame the preview draws and the export encodes, from the one function
+	 * both use, so what is on screen is what comes out.
+	 */
+	const phone = $derived(
+		op.kind === 'phone' && media.width && (!previewFailed || still) ? phoneLayout(op) : null
+	);
+
+	/**
+	 * The same phone with its border on, whatever the switch says, for the
+	 * preview's column to be sized by. The column is as wide as the phone, so
+	 * turning the border off narrowed it and pulled the controls beside it
+	 * 11 px to the left, the switch included, from under the pointer that had
+	 * just clicked it.
+	 */
+	const phoneBordered = $derived(op.kind === 'phone' && phone ? phoneLayout({ ...op, bezelOn: true }) : null);
+
+	/**
+	 * A phone preview is as tall as the screen allows, which puts anything
+	 * under it out of sight. So its progress and its errors go where the button
+	 * was, beside the preview, rather than below it where nobody would see the
+	 * bar move.
+	 */
+	const statusBesideControls = $derived(
+		tool.op === 'phone' && Boolean(file && previewUrl) && stage !== 'done'
+	);
+
+	/**
+	 * While the engine loads or the file encodes. The phone frame's controls
+	 * are held still for it, because its preview claims to be the export and
+	 * a slider moved mid-run would draw a frame the file won't have.
+	 */
+	const busy = $derived(stage === 'loading' || stage === 'working');
+
 	/** Nothing to do yet, so the button says so rather than producing a copy. */
 	const ready = $derived.by(() => {
 		if (!file) return false;
+		if (tool.op === 'phone') return phone !== null;
 		if (tool.op === 'text') return text.trim().length > 0;
 		if (tool.op === 'trim') return startSeconds > 0 || (endSeconds > 0 && endSeconds < media.duration);
 		if (tool.op === 'stretch') {
@@ -233,6 +337,12 @@
 		}
 		error = null;
 		result = null;
+		previewFailed = false;
+		forgetStill();
+		playing = false;
+		// The last file's size must not outlive it. The phone frame is built
+		// from this, so a stale one framed a new recording at the old size.
+		media = { width: 0, height: 0, duration: 0 };
 		if (previewUrl) URL.revokeObjectURL(previewUrl);
 		file = dropped;
 		previewUrl = URL.createObjectURL(dropped);
@@ -242,6 +352,14 @@
 	/** Defaults that need the file: the whole frame, the whole clip, its width. */
 	function onLoadedMetadata() {
 		if (!video) return;
+		// A browser that can decode the sound but not the picture drops the
+		// picture without an error and plays the rest, so the recording loads
+		// with no size at all. The frame has nothing to fit, which is the same
+		// dead end as a file it can't play at all, and it gets the same way out.
+		if (tool.op === 'phone' && !(video.videoWidth > 0 && video.videoHeight > 0)) {
+			void onPreviewFailed();
+			return;
+		}
 		media = {
 			width: video.videoWidth,
 			height: video.videoHeight,
@@ -271,6 +389,189 @@
 		playhead = 0;
 		resizeWidth = Math.min(1280, media.width || 1280);
 		textSize = Math.max(16, Math.round((media.height || 720) * 0.06));
+		fitPhone();
+		if (tool.op === 'phone' && !media.duration) void findLength(video);
+	}
+
+	/**
+	 * A recording MediaRecorder made has no length in its header. Chrome writes
+	 * the WebM as it records and never goes back to fill the length in, so the
+	 * element reports Infinity, and ffmpeg prints "Duration: N/A" for the same
+	 * file, so it can't say either. The phone preview has no controls of its
+	 * own, which left it stuck on the first frame with nothing under it.
+	 *
+	 * Seeking far past the end makes the browser read to the last frame and
+	 * work the length out, and the preview goes back to the start. If that
+	 * fails the transport still plays and pauses, it just has no scrubber, and
+	 * a length the browser finds by playing to the end arrives through
+	 * `onDurationChange`. Only the phone frame asks: the other pages show the
+	 * browser's own controls.
+	 */
+	async function findLength(el: HTMLVideoElement) {
+		const forUrl = previewUrl;
+		const found = await learnDuration(el);
+		if (found && previewUrl === forUrl && tool.op === 'phone') media.duration = found;
+	}
+
+	function onDurationChange() {
+		if (!video || tool.op !== 'phone' || !media.width) return;
+		const length = video.duration;
+		if (Number.isFinite(length) && length > 0 && length !== media.duration) media.duration = length;
+	}
+
+	/**
+	 * A phone for this recording's own size, unless a value was set by hand,
+	 * which is kept as far as the new recording has room for it.
+	 */
+	function fitPhone() {
+		if (tool.op !== 'phone' || !media.width) return;
+		const start = phoneFrameDefaults(media.width, media.height, { even: true });
+		const room = phoneFrameLimits(media.width, media.height, { even: true });
+		phoneBezel = phoneBezelTouched ? Math.min(phoneBezel, room.bezelMax) : start.bezel;
+		phoneRadius = phoneRadiusTouched ? Math.min(phoneRadius, room.radiusMax) : start.radius;
+	}
+
+	function forgetStill() {
+		if (still) URL.revokeObjectURL(still);
+		still = null;
+		unreadable = null;
+	}
+
+	/**
+	 * The browser can't play the file, which for the phone frame used to be a
+	 * dead end: the frame is fitted to what the preview shows. Every browser
+	 * refuses AVI and many refuse the HEVC an iPhone records, and ffmpeg reads
+	 * both, so it is asked for the first frame instead. It needs the engine
+	 * the export needs anyway, so the download is only brought forward.
+	 *
+	 * Every await is followed by a check that the file is still the one this
+	 * started for, since Start over or a new file can land in between.
+	 */
+	async function onPreviewFailed() {
+		if (previewFailed) return;
+		previewFailed = true;
+		if (tool.op !== 'phone' || !file) return;
+		const forFile = file;
+		error = null;
+		stage = isLoaded() ? 'reading' : 'loading';
+		let ff: Awaited<ReturnType<typeof loadFfmpeg>>;
+		try {
+			ff = await loadFfmpeg((p) => (download = p));
+		} catch {
+			if (file !== forFile) return;
+			unreadable = "The video engine didn't load, so this file can't be read. Check the connection and try again.";
+			stage = 'idle';
+			return;
+		}
+		if (file !== forFile) return;
+		stage = 'reading';
+		try {
+			const { blob, probe } = await readStill(ff, forFile);
+			const url = URL.createObjectURL(blob);
+			const image = new Image();
+			image.src = url;
+			await image.decode();
+			if (file !== forFile) {
+				URL.revokeObjectURL(url);
+				return;
+			}
+			still = url;
+			media = {
+				width: image.naturalWidth,
+				height: image.naturalHeight,
+				duration: probe.durationSeconds ?? 0
+			};
+			fitPhone();
+		} catch {
+			if (file !== forFile) return;
+			unreadable =
+				"Neither this browser nor the video engine can read that file, so there's nothing to fit the frame to.";
+		}
+		stage = 'idle';
+	}
+
+	function resetPhoneSizes() {
+		if (!phoneDefaults) return;
+		phoneBezel = phoneDefaults.bezel;
+		phoneRadius = phoneDefaults.radius;
+		phoneBezelTouched = false;
+		phoneRadiusTouched = false;
+	}
+
+	/**
+	 * Two corrections the preview needs and the export doesn't, because there
+	 * the frame and the picture are one image and here they are two layers.
+	 *
+	 * The video layer snaps to whole device pixels and the canvas's hole does
+	 * not, so at 125, 150 or 200 percent zoom one device pixel along each side
+	 * of the screen was covered by neither, and the light stage showed through
+	 * as a line. So the phone's body is laid under the video in black, the way
+	 * `paintPhoneFrame` fills the whole body before it draws the screen, and a
+	 * pixel the two layers leave open blends into black as it does in the file.
+	 * Its only edge is the phone's outline, where the canvas has the same one.
+	 *
+	 * The video's own rounding is for see-through corners only. Anywhere else
+	 * the canvas covers its square corners, and rounding it anyway put its soft
+	 * edge on the same curve as the hole's, which let the stage through there.
+	 */
+	const phoneBody = $derived(
+		phone && phone.bezel > 0
+			? `${(phone.outerRadius / phone.width) * 100}% / ${(phone.outerRadius / phone.height) * 100}%`
+			: null
+	);
+	const phoneVideoRadius = $derived(
+		phone && phoneTransparent
+			? `${(phone.innerRadius / phone.screen.width) * 100}% / ${(phone.innerRadius / phone.screen.height) * 100}%`
+			: undefined
+	);
+
+	/**
+	 * The browser couldn't play the file and there is no still yet, or never
+	 * will be. Nothing to preview, so only the controls column is laid out.
+	 */
+	const phoneBlank = $derived(tool.op === 'phone' && previewFailed && !still);
+
+	/** Where the video, or the still standing in for it, sits in the frame. */
+	const phoneScreenStyle = $derived(
+		phone
+			? [
+					`left: ${(phone.screen.x / phone.width) * 100}%`,
+					`top: ${(phone.screen.y / phone.height) * 100}%`,
+					`width: ${(phone.screen.width / phone.width) * 100}%`,
+					`height: ${(phone.screen.height / phone.height) * 100}%`,
+					phoneVideoRadius ? `border-radius: ${phoneVideoRadius}` : ''
+				]
+					.filter(Boolean)
+					.join('; ')
+			: 'left: 0; top: 0; width: 100%; height: 100%'
+	);
+
+	/*
+	 * The frame over the preview is painted by the same function that paints
+	 * the PNG ffmpeg lays over the video, at the same size, and scaled down by
+	 * CSS. Queued to the next frame so dragging a slider paints once per frame
+	 * rather than once per input event.
+	 */
+	let phoneCanvas = $state<HTMLCanvasElement>();
+	let phoneQueued = false;
+	$effect(() => {
+		if (!phone || !phoneCanvas) return;
+		void phoneBackground;
+		void phoneTransparent;
+		if (phoneQueued) return;
+		phoneQueued = true;
+		requestAnimationFrame(() => {
+			phoneQueued = false;
+			const ctx = phoneCanvas?.getContext('2d');
+			if (!ctx || !phone) return;
+			paintPhoneFrame(ctx, phone, { outside: phoneTransparent ? undefined : phoneBackground });
+		});
+	});
+
+	function togglePlay() {
+		if (!video) return;
+		if (video.paused) void video.play();
+		else video.pause();
 	}
 
 	/** Move the marks and the boxes together, so neither can drift. */
@@ -361,6 +662,7 @@
 	async function run() {
 		if (!file || !ready) return;
 		error = null;
+		cancelled = false;
 		stage = isLoaded() ? 'working' : 'loading';
 		startClock();
 		try {
@@ -379,6 +681,12 @@
 			ffmpegSaid = lastFfmpegLines(12);
 			stage = 'done';
 		} catch (thrown) {
+			if (cancelled) {
+				// Not an error, and the settings are all still there to change.
+				stage = 'idle';
+				workRatio = 0;
+				return;
+			}
 			const detail = thrown instanceof Error ? thrown.message : '';
 			error = detail || 'That file could not be edited';
 			stage = 'error';
@@ -387,9 +695,24 @@
 		}
 	}
 
+	/**
+	 * Stop an encode. ffmpeg.wasm has no way to interrupt a run, so this ends
+	 * the worker it runs in, and the next run starts a new one out of the
+	 * browser's cache. The file and every setting stay as they were.
+	 */
+	function cancelRun() {
+		if (stage !== 'working') return;
+		cancelled = true;
+		resetFfmpeg();
+	}
+
 	function startOver() {
 		if (previewUrl) URL.revokeObjectURL(previewUrl);
 		previewUrl = null;
+		previewFailed = false;
+		forgetStill();
+		playing = false;
+		media = { width: 0, height: 0, duration: 0 };
 		file = null;
 		result = null;
 		error = null;
@@ -448,8 +771,58 @@
 	$effect(() => () => {
 		stopClock();
 		if (previewUrl) URL.revokeObjectURL(previewUrl);
+		if (still) URL.revokeObjectURL(still);
 	});
 </script>
+
+{#snippet status()}
+	{#if stage === 'loading'}
+		<div class="working" role="status">
+			<p class="working-title">Getting the video engine</p>
+			<div class="bar"><div class="fill" style:width="{(download.ratio ?? 0) * 100}%"></div></div>
+			<p class="working-note">
+				{#if download.totalBytes}
+					{formatBytes(download.loadedBytes)} of {formatBytes(download.totalBytes)}
+				{:else}
+					{formatBytes(download.loadedBytes)} so far
+				{/if}
+				· This is a one time download of about 7MB. Your browser keeps it, so the next video
+				starts straight away.
+			</p>
+		</div>
+	{/if}
+
+	{#if stage === 'reading'}
+		<div class="working" role="status">
+			<p class="working-title">Reading {file?.name}</p>
+			<p class="working-note">
+				This browser can't play it, so the video engine is reading its first frame to fit the
+				phone to.
+			</p>
+		</div>
+	{/if}
+
+	{#if stage === 'working'}
+		<div class="working" role="status">
+			<p class="working-title">Working on {file?.name}</p>
+			<div class="bar"><div class="fill" style:width="{workRatio * 100}%"></div></div>
+			<div class="working-row">
+				<p class="working-note">{Math.round(workRatio * 100)}% · {elapsed}s</p>
+				<button class="btn-ghost cancel" onclick={cancelRun}>Cancel</button>
+			</div>
+		</div>
+	{/if}
+
+	{#if stage === 'error' && error}
+		<p class="error" role="alert">
+			{error}
+			<!-- A tool with a picture twin links to it straight under the panel. -->
+			{#if error.includes('picture') && !tool.image}
+				<a href="/tools">Use the image tools instead</a>.
+			{/if}
+		</p>
+	{/if}
+{/snippet}
 
 <div class="panel">
 	{#if !file}
@@ -467,8 +840,122 @@
 			tools are happy in. In that mode the preview goes full width and the
 			curve sits under it.
 		-->
-		<div class="stage" class:full={tool.op === 'stretch' && stretchMode === 'curve'}>
+		<div
+			class="stage"
+			class:phone-tool={tool.op === 'phone'}
+			class:full={(tool.op === 'stretch' && stretchMode === 'curve') ||
+				(tool.op === 'phone' && !!phone && phone.width > phone.height)}
+			class:blank={phoneBlank}
+		>
+			<!--
+				The phone's own settings sit apart from the rest of the controls so
+				that on a phone they can go above the preview, which is as tall as
+				the screen allows. Below it they would be a scroll away from the
+				corners they change. On a wider screen they head the column beside it.
+			-->
+			{#if tool.op === 'phone' && phone && phoneDefaults && phoneLimits}
+				<div class="phone-settings">
+					<PhoneFrameControls
+						bind:bezelOn={phoneBezelOn}
+						bind:bezel={phoneBezel}
+						bind:radius={phoneRadius}
+						defaults={phoneDefaults}
+						limits={phoneLimits}
+						bezelStep={2}
+						ontouch={(which) =>
+							which === 'bezel' ? (phoneBezelTouched = true) : (phoneRadiusTouched = true)}
+						onreset={resetPhoneSizes}
+						disabled={busy}
+					/>
+				</div>
+			{/if}
 			<div class="viewer">
+			{#if tool.op === 'phone'}
+				<!--
+					The recording plays under a canvas with the frame painted on it,
+					the same frame ffmpeg is handed, so the preview is the export
+					rather than an impression of it. No native controls: their bar
+					would sit under the rounded corners, so the transport is below.
+				-->
+				<div class="phone-stage" class:gone={phoneBlank}>
+					{#if phoneBordered}
+						<!-- Holds the column at the bordered phone's size. Never drawn on. -->
+						<canvas class="room" width={phoneBordered.width} height={phoneBordered.height} aria-hidden="true"></canvas>
+					{/if}
+					<div
+						class="phone"
+						class:checker={phoneTransparent}
+						role="group"
+						aria-label="Preview of the recording in its phone frame"
+					>
+						{#if phoneBody}
+							<span class="phone-body" style:border-radius={phoneBody} style:background={BEZEL_COLOUR}></span>
+						{/if}
+						{#if still}
+							<!-- What ffmpeg read, since the browser couldn't play the file. -->
+							<img class="screen" src={still} alt="" style={phoneScreenStyle} />
+						{:else}
+							<!-- svelte-ignore a11y_media_has_caption, a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+							<video
+								class="screen"
+								bind:this={video}
+								src={previewUrl}
+								playsinline
+								loop
+								onloadedmetadata={onLoadedMetadata}
+								ondurationchange={onDurationChange}
+								ontimeupdate={onTimeUpdate}
+								onplay={() => (playing = true)}
+								onpause={() => (playing = false)}
+								onerror={() => void onPreviewFailed()}
+								onclick={togglePlay}
+								style={phoneScreenStyle}
+							></video>
+						{/if}
+						<canvas
+							bind:this={phoneCanvas}
+							width={phone?.width ?? 900}
+							height={phone?.height ?? 1950}
+							aria-hidden="true"
+						></canvas>
+					</div>
+				</div>
+				<!--
+					Whenever the recording plays, whether or not its length is known.
+					Only the scrubber needs the length, so only the scrubber waits.
+				-->
+				{#if media.width && !previewFailed}
+					<div class="transport">
+						<button class="chip" onclick={togglePlay}>{playing ? 'Pause' : 'Play'}</button>
+						{#if media.duration}
+							<input
+								type="range"
+								min="0"
+								max={media.duration}
+								step="0.01"
+								value={playhead}
+								aria-label="Move through the video"
+								oninput={(e) => video && (video.currentTime = Number(e.currentTarget.value))}
+							/>
+						{/if}
+						<span class="mono">{formatTimecode(playhead)}</span>
+					</div>
+				{/if}
+				{#if phone && still}
+					<p class="hint">
+						This browser can't play the file, so the preview is its first frame. The whole
+						recording goes in the frame.
+					</p>
+				{/if}
+				{#if phone}
+					<p class="readout phone-readout">
+						<span class="mono">{media.width} × {media.height}</span>
+						<span class="arrow" aria-hidden="true">→</span>
+						<span class="mono size">{phone.width} × {phone.height} px</span>
+						<span class="mono">· {target.name}</span>
+					</p>
+				{/if}
+			{:else}
 			<!-- svelte-ignore a11y_media_has_caption -->
 			<div class="preview" bind:this={frame}>
 				<video
@@ -538,6 +1025,7 @@
 						oninput={() => video && (video.currentTime = scrubAt)}
 					/>
 				</label>
+			{/if}
 			{/if}
 			</div>
 
@@ -797,9 +1285,37 @@
 					<p class="hint">Nothing to set. The picture is copied untouched and the sound is left out.</p>
 				{/if}
 
-				{#if stage === 'idle' || stage === 'error'}
+				{#if tool.op === 'phone' && unreadable}
+					<p class="error" role="alert">{unreadable}</p>
+					<div class="row">
+						<button class="btn-ghost" onclick={startOver}>Try another video</button>
+					</div>
+				{/if}
+
+				{#if tool.op === 'phone' && phone}
+					<!-- A fieldset so one attribute holds the colour chips still too. -->
+					<fieldset class="corners" disabled={busy}>
+						{#if !phoneTransparent}
+							<BackgroundPicker bind:value={phoneBackground} label="Corners" />
+						{/if}
+						<label class="check">
+							<input type="checkbox" bind:checked={phoneTransparent} />
+							<span>See-through corners, saved as WebM</span>
+						</label>
+						<p class="hint">
+							{#if phoneTransparent}
+								Chrome and Edge play it with the corners see-through. Safari doesn't.
+							{:else}
+								Match the colour to the slide or page the video will sit on.
+							{/if}
+						</p>
+					</fieldset>
+				{/if}
+
+				<!-- A phone frame has nothing to set until the recording has a size. -->
+				{#if (stage === 'idle' || stage === 'error') && (tool.op !== 'phone' || phone)}
 					<button class="btn" onclick={run} disabled={!ready}>
-						{ready ? tool.name : 'Set something first'}
+						{ready ? (tool.action ?? tool.name) : 'Set something first'}
 					</button>
 					{#if !tool.keepsFrames}
 						<p class="hint">
@@ -807,40 +1323,12 @@
 						</p>
 					{/if}
 				{/if}
+				{#if statusBesideControls}{@render status()}{/if}
 			</div>
 		</div>
 	{/if}
 
-	{#if stage === 'loading'}
-		<div class="working" role="status">
-			<p class="working-title">Getting the video engine</p>
-			<div class="bar"><div class="fill" style:width="{(download.ratio ?? 0) * 100}%"></div></div>
-			<p class="working-note">
-				{#if download.totalBytes}
-					{formatBytes(download.loadedBytes)} of {formatBytes(download.totalBytes)}
-				{:else}
-					{formatBytes(download.loadedBytes)} so far
-				{/if}
-				· This is a one time download of about 7MB. Your browser keeps it, so the next video
-				starts straight away.
-			</p>
-		</div>
-	{/if}
-
-	{#if stage === 'working'}
-		<div class="working" role="status">
-			<p class="working-title">Working on {file?.name}</p>
-			<div class="bar"><div class="fill" style:width="{workRatio * 100}%"></div></div>
-			<p class="working-note">{Math.round(workRatio * 100)}% · {elapsed}s</p>
-		</div>
-	{/if}
-
-	{#if stage === 'error' && error}
-		<p class="error" role="alert">
-			{error}
-			{#if error.includes('picture')}<a href="/tools">Use the image tools instead</a>.{/if}
-		</p>
-	{/if}
+	{#if !statusBesideControls}{@render status()}{/if}
 
 	{#if stage === 'done' && result && file}
 		<div class="result">
@@ -914,6 +1402,25 @@
 		max-width: 60ch;
 	}
 
+	/* The count on the left and the way out on the right, under the bar. */
+	.working-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem 1rem;
+		margin-top: 0.55rem;
+	}
+
+	.working-row .working-note {
+		margin: 0;
+	}
+
+	.cancel {
+		padding: 0.3rem 0.75rem;
+		font-size: 0.8125rem;
+	}
+
 	.result {
 		display: flex;
 		flex-wrap: wrap;
@@ -973,14 +1480,75 @@
 		align-items: start;
 	}
 
-	.stage.full {
+	/*
+	 * A portrait phone is narrow, so its column is the phone's width rather
+	 * than a share of the row. At 1.4fr the column was a third wider than the
+	 * phone and squeezed the controls until they wrapped, which pushed the
+	 * button and the progress bar under the fold on a 1280 × 800 laptop.
+	 */
+	.stage.phone-tool {
+		grid-template-columns: auto minmax(16rem, 1fr);
+		/* The phone's settings over the rest of the controls, the preview beside both. */
+		grid-template-rows: auto 1fr;
+		grid-template-areas:
+			'viewer settings'
+			'viewer controls';
+	}
+
+	.stage.phone-tool > .viewer {
+		grid-area: viewer;
+	}
+
+	.stage.phone-tool > .phone-settings {
+		grid-area: settings;
+	}
+
+	.stage.phone-tool > .controls {
+		grid-area: controls;
+	}
+
+	.stage.full,
+	.stage.phone-tool.full {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
+	.stage.phone-tool.full {
+		grid-template-rows: none;
+		grid-template-areas: 'viewer' 'settings' 'controls';
+	}
+
 	@media (max-width: 46rem) {
-		.stage {
+		.stage,
+		.stage.phone-tool {
 			grid-template-columns: 1fr;
 		}
+
+		/*
+		 * A portrait phone on a phone: the settings go above the preview. Under
+		 * it they started 1,060 px down a 844 px screen, so nothing that could
+		 * be changed was in view once a recording was loaded. Above it, the
+		 * sliders are in view and the top corners they change are just below.
+		 * A wide recording's preview is short enough to keep first.
+		 */
+		.stage.phone-tool:not(.full) {
+			grid-template-rows: none;
+			grid-template-areas: 'settings' 'viewer' 'controls';
+		}
+	}
+
+	/*
+	 * Nothing to preview yet, or at all. The empty viewer and settings rows
+	 * each still cost a gap, which left a blank band above the status line.
+	 * After the phone rules, so this wins at every width.
+	 */
+	.stage.phone-tool.blank {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: none;
+		grid-template-areas: 'controls';
+	}
+
+	.stage.phone-tool.blank > .viewer {
+		display: none;
 	}
 
 	/*
@@ -1195,5 +1763,143 @@
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--muted);
+	}
+
+	/*
+	 * The phone preview. Sized by the canvas, the way the screenshot page is:
+	 * a canvas the size of the output, scaled down to fit, which keeps its own
+	 * proportions under both limits. The video sits underneath it at the
+	 * screen's place as a share of the whole, so the two scale together.
+	 */
+	.phone-stage {
+		/* One cell, so the phone sits over the space kept for it. */
+		display: grid;
+		place-items: center;
+		padding: 1rem;
+		background-color: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--r-m);
+	}
+
+	/* Kept in the page so the video element stays put, but an empty box the
+	   height of the screen is no use to anybody. */
+	.phone-stage.gone {
+		display: none;
+	}
+
+	.phone-stage > * {
+		grid-area: 1 / 1;
+	}
+
+	.phone {
+		position: relative;
+		line-height: 0;
+		max-width: 100%;
+	}
+
+	/* Sized by the same rules as the phone's own canvas below. */
+	.phone canvas,
+	.room {
+		position: relative;
+		display: block;
+		max-width: 100%;
+		max-height: 62vh;
+		pointer-events: none;
+	}
+
+	.room {
+		visibility: hidden;
+	}
+
+	/* Under the video, so a pixel the two layers leave open is black. */
+	.phone-body {
+		position: absolute;
+		inset: 0;
+	}
+
+	.phone .screen {
+		position: absolute;
+		object-fit: cover;
+		object-position: 0 0;
+	}
+
+	.phone video {
+		cursor: pointer;
+	}
+
+	@media (max-width: 40rem) {
+		.phone canvas,
+		.room {
+			max-height: 52vh;
+		}
+	}
+
+	.transport {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-size: 0.8125rem;
+		color: var(--muted);
+	}
+
+	.transport input {
+		flex: 1;
+		accent-color: var(--primary);
+	}
+
+	.transport .chip {
+		min-width: 4.2rem;
+	}
+
+	.phone-readout {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0 0.45rem;
+	}
+
+	.readout .size {
+		color: var(--ink);
+		font-weight: 600;
+	}
+
+	.corners {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		min-width: 0;
+		margin: 0;
+		padding: 0.85rem 0 0;
+		border: 0;
+		border-top: 1px solid var(--line);
+	}
+
+	/* The same olive tick as the border switch above it. */
+	.corners .check input {
+		margin: 0.15rem 0 0;
+		accent-color: var(--primary);
+	}
+
+	.phone-settings {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+
+	/* Across the page under a wide recording: the two sliders share a row. */
+	.stage.full .phone-settings {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+		gap: 0.9rem 1.5rem;
+	}
+
+	.stage.full .phone-settings > :global(*:not(.field)) {
+		grid-column: 1 / -1;
+	}
+
+	/* Its own row, but the width of its words like every other main button. */
+	.stage.phone-tool.full .controls > .btn {
+		align-self: flex-start;
 	}
 </style>

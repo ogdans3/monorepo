@@ -6,12 +6,20 @@
 
 	let {
 		headline,
+		dropping = 'Drop to open',
 		onfiles,
 		onintent,
 		multiple = true,
 		accept = acceptAttribute()
 	}: {
 		headline: string;
+		/**
+		 * The headline while a file is dragged over the page. "Drop to open"
+		 * suits every tool, and the conversion pages say "Drop to convert".
+		 * That used to be the only wording, so a crop or a phone frame promised
+		 * a conversion it was never going to do.
+		 */
+		dropping?: string;
 		onfiles: (files: File[]) => void;
 		/** Fires once when a drag starts, to warm up heavy decoders early. */
 		onintent?: () => void;
@@ -127,7 +135,7 @@
 
 <label class="zone" class:dragging onpointerenter={signalIntent}>
 	<input bind:this={input} type="file" {multiple} {accept} onchange={pick} />
-	<span class="zone-headline">{dragging ? 'Drop to convert' : headline}</span>
+	<span class="zone-headline">{dragging ? dropping : headline}</span>
 	<span class="zone-hint">or click to browse. Paste works too</span>
 </label>
 

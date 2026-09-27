@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { editedFileName, formatBytes, resolveFormat } from '$lib/engine';
 	import { resolveVideoFormat, videoAcceptAttribute, VIDEO_FORMATS } from '$lib/video/formats';
-	import { isLoaded, lastFfmpegLines, loadFfmpeg, mergeVideos, type LoadProgress } from '$lib/video/ffmpeg';
+	import {
+		isLoaded,
+		lastFfmpegLines,
+		loadFfmpeg,
+		mergeVideos,
+		resetFfmpeg,
+		type LoadProgress
+	} from '$lib/video/ffmpeg';
 	import type { VideoTool } from '$lib/video/tools';
 	import { downloadBlob } from './download';
 	import Dropzone from './Dropzone.svelte';
@@ -98,9 +105,23 @@
 		ticker = null;
 	}
 
+	/** Set by the cancel button, so the run that throws next isn't an error. */
+	let cancelled = false;
+
+	/**
+	 * Stop a run. ffmpeg.wasm can't interrupt one, so this ends the worker it
+	 * runs in, and the next run starts a new one out of the browser's cache.
+	 */
+	function cancelRun() {
+		if (stage !== 'working') return;
+		cancelled = true;
+		resetFfmpeg();
+	}
+
 	async function run() {
 		if (!ready) return;
 		error = null;
+		cancelled = false;
 		stage = isLoaded() ? 'working' : 'loading';
 		startClock();
 		try {
@@ -121,6 +142,12 @@
 			ffmpegSaid = lastFfmpegLines(12);
 			stage = 'done';
 		} catch (thrown) {
+			if (cancelled) {
+				// Not an error, and the list is still there to change.
+				stage = 'idle';
+				workRatio = 0;
+				return;
+			}
 			const detail = thrown instanceof Error ? thrown.message : '';
 			error = detail || 'Those videos could not be joined';
 			stage = 'error';
@@ -222,7 +249,10 @@
 		<div class="working" role="status">
 			<p class="working-title">Joining {items.length} videos</p>
 			<div class="bar"><div class="fill" style:width="{workRatio * 100}%"></div></div>
-			<p class="working-note">{Math.round(workRatio * 100)}% · {elapsed}s</p>
+			<div class="working-row">
+				<p class="working-note">{Math.round(workRatio * 100)}% · {elapsed}s</p>
+				<button class="btn-ghost cancel" onclick={cancelRun}>Cancel</button>
+			</div>
 		</div>
 	{/if}
 
@@ -382,6 +412,25 @@
 		font-size: 0.8125rem;
 		color: var(--muted);
 		max-width: 60ch;
+	}
+
+	/* The count on the left and the way out on the right, under the bar. */
+	.working-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem 1rem;
+		margin-top: 0.55rem;
+	}
+
+	.working-row .working-note {
+		margin: 0;
+	}
+
+	.cancel {
+		padding: 0.3rem 0.75rem;
+		font-size: 0.8125rem;
 	}
 
 	.result {

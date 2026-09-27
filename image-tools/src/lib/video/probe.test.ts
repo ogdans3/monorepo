@@ -26,6 +26,54 @@ const SILENT_MOV = [
 ];
 
 describe('parseProbe', () => {
+	it('reads the colour tags the phone frame has to match', () => {
+		// Stream lines copied out of the site's own ffmpeg core (5.1.4).
+		const line = (pixels: string) => [
+			`  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), ${pixels}, 460x1000 [SAR 1:1 DAR 23:50], 12 kb/s, 30 fps, 30 tbr, 15360 tbn (default)`
+		];
+		expect(parseProbe(line('yuv420p(tv, bt709, progressive)'))).toMatchObject({ colourMatrix: 'bt709', fullRange: false });
+		expect(parseProbe(line('yuvj420p(pc, bt709, progressive)'))).toMatchObject({ colourMatrix: 'bt709', fullRange: true });
+		expect(parseProbe(line('yuv420p(tv, smpte170m, progressive)'))).toMatchObject({ colourMatrix: 'smpte170m' });
+		expect(parseProbe(line('yuv420p10le(tv, bt2020nc/bt2020/arib-std-b67)'))).toMatchObject({
+			colourMatrix: 'bt2020nc',
+			colourPrimaries: 'bt2020',
+			colourTransfer: 'arib-std-b67'
+		});
+		// one name is all three
+		expect(parseProbe(line('yuv420p(tv, bt709, progressive)'))).toMatchObject({
+			colourPrimaries: 'bt709',
+			colourTransfer: 'bt709'
+		});
+		// Chrome's own H.264 recordings, full range and sRGB transfer
+		expect(parseProbe(line('yuvj420p(pc, bt709/bt709/iec61966-2-1, progressive)'))).toMatchObject({
+			colourMatrix: 'bt709',
+			colourPrimaries: 'bt709',
+			colourTransfer: 'iec61966-2-1',
+			fullRange: true
+		});
+		// a VP9 in an MP4 whose box says BT.709: the decoder wiped the matrix only
+		expect(parseProbe(line('yuv420p(tv, unknown/bt709/bt709, progressive)'))).toMatchObject({
+			colourMatrix: null,
+			colourPrimaries: 'bt709',
+			colourTransfer: 'bt709'
+		});
+		// untagged, and tagged as unknown, are the same thing
+		expect(parseProbe(line('yuv420p(progressive)'))).toMatchObject({
+			colourMatrix: null,
+			colourPrimaries: null,
+			colourTransfer: null,
+			fullRange: false
+		});
+		expect(parseProbe(line('yuv420p(tv, unknown/bt709/unknown, progressive)')).colourMatrix).toBeNull();
+		expect(parseProbe(MP4)).toMatchObject({ colourMatrix: null, fullRange: false });
+		expect(parseProbe(WEBM)).toMatchObject({ colourMatrix: null, fullRange: false });
+		// a yuvj format is full range even when the parentheses don't say so
+		expect(parseProbe(SILENT_MOV)).toMatchObject({ colourMatrix: null, fullRange: true });
+		expect(
+			parseProbe(['  Stream #0:0: Video: vp8, yuv420p(tv, bt470bg/unknown/unknown, progressive), 500x1040, SAR 1:1 DAR 25:52, 30 fps'])
+		).toMatchObject({ colourMatrix: 'bt470bg', fullRange: false });
+	});
+
 	it('reads an MP4 the way ffmpeg actually prints it', () => {
 		const probe = parseProbe(MP4);
 		expect(probe.videoCodec).toBe('h264');

@@ -1,3 +1,4 @@
+import type { ColourTag } from './colourtag';
 import type { VideoFormat } from './formats';
 
 /**
@@ -39,6 +40,30 @@ export interface ProbeResult {
 	 * would let a run start that gets silently truncated at the ceiling.
 	 */
 	fps: number | null;
+	/**
+	 * The Y'CbCr matrix the picture is tagged with, as ffmpeg names it
+	 * ("bt709", "smpte170m", "bt2020nc"), or null when it carries no tag.
+	 * Only the phone frame needs it, to write its painted colours into the
+	 * video the way a player will read them back out. Optional, because
+	 * nothing else looks at it.
+	 */
+	colourMatrix?: string | null;
+	/**
+	 * The primaries and transfer beside the matrix, as ffmpeg names them, so
+	 * the phone frame can write the whole tag back out. ffmpeg's VP8 decoder
+	 * labels every frame BT.601 whatever the file said, so leaving the tag to
+	 * ride through on the frames is not enough.
+	 */
+	colourPrimaries?: string | null;
+	colourTransfer?: string | null;
+	/** Full range ("pc", or a yuvj format), where black is 0 rather than 16. */
+	fullRange?: boolean;
+	/**
+	 * The tag the MP4 or MOV itself declares, read by `readColourTag` rather
+	 * than by ffmpeg, whose VP9 decoder throws it away. Filled in only for the
+	 * phone frame, and only when `colourMatrix` came back empty.
+	 */
+	declaredColour?: ColourTag | null;
 }
 
 /**

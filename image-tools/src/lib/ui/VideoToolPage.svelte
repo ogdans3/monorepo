@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { SITE_URL } from '$lib/site';
 	import { pageFaq } from '$lib/faq';
-	import { nextVideoTools, videoToolPath, type VideoTool } from '$lib/video/tools';
+	import { nextVideoTools, videoToolFaqSubject, videoToolPath, type VideoTool } from '$lib/video/tools';
 	import VideoToolPanel from './VideoToolPanel.svelte';
 	import VideoMergePanel from './VideoMergePanel.svelte';
 	import VideoFramesPanel from './VideoFramesPanel.svelte';
@@ -49,6 +49,12 @@
 	<VideoToolPanel {tool} />
 {/if}
 
+{#if tool.image}
+	<p class="twin">
+		Also for pictures: <a href="/tools/{tool.image.slug}">{tool.image.label}</a>
+	</p>
+{/if}
+
 <section aria-labelledby="howto-heading">
 	<h2 id="howto-heading">How to {tool.h1.toLowerCase()}</h2>
 	<ol class="steps">
@@ -77,7 +83,7 @@
 	{/if}
 </section>
 
-<Faq items={pageFaq(tool.h1.toLowerCase(), tool.faq)} />
+<Faq items={pageFaq(videoToolFaqSubject(tool), tool.faq)} />
 
 {#if next.length}
 	<section aria-labelledby="next-heading">
@@ -92,6 +98,12 @@
 {/if}
 
 <style>
+	.twin {
+		margin: 1rem 0 0;
+		font-size: 0.875rem;
+		color: var(--muted);
+	}
+
 	.next-links {
 		margin: 0.6rem 0 0;
 		padding-left: 1.1rem;

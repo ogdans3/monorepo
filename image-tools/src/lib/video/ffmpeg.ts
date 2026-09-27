@@ -1,6 +1,21 @@
 import type { FFmpeg } from '@ffmpeg/ffmpeg';
 import type { VideoFormat } from './formats';
-import { FONT_FILE, needsFont, planEdit, type EditOp, type EditOptions } from './edit';
+import {
+	FONT_FILE,
+	needsFont,
+	PHONE_FRAME_FILE,
+	PHONE_MASK_FILE,
+	phoneLayout,
+	phoneOverlayOutside,
+	planEdit,
+	STILL_FILE,
+	stillArgs,
+	stillColour,
+	type EditOp,
+	type EditOptions
+} from './edit';
+import { paintPhoneFrame, paintPhoneMask, type PhoneFrame } from '../tools/phoneframe';
+import { readFileColourTag } from './colourtag';
 import { fallbackPlan, planConversion, type PlanOptions, type ProbeResult } from './plan';
 import {
 	copyPlan,
@@ -237,6 +252,72 @@ async function ensureFont(ff: FFmpeg): Promise<void> {
 	fontWritten = true;
 }
 
+/** A canvas painted by `paint` as PNG bytes, for writing into ffmpeg's filesystem. */
+async function paintedPng(
+	frame: PhoneFrame,
+	paint: (ctx: CanvasRenderingContext2D) => void
+): Promise<Uint8Array> {
+	const canvas = document.createElement('canvas');
+	canvas.width = frame.width;
+	canvas.height = frame.height;
+	const ctx = canvas.getContext('2d');
+	if (!ctx) throw new Error('This browser cannot draw the phone frame');
+	paint(ctx);
+	const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+	if (!blob) throw new Error('This browser cannot draw the phone frame');
+	return new Uint8Array(await blob.arrayBuffer());
+}
+
+/**
+ * The frame a phone edit lays over the video, painted once as a PNG by the
+ * same function the image tool and the panel's preview use, and the mask for a
+ * see-through result. Returns the names written, so they can be cleaned up.
+ *
+ * For see-through corners this PNG is not the preview's canvas: the preview
+ * leaves the outside clear for the checkerboard, and this one is black there
+ * so the soft edge of the outline can't show the recording. See
+ * `phoneOverlayOutside`.
+ */
+async function writePhoneFrame(ff: FFmpeg, op: Extract<EditOp, { kind: 'phone' }>): Promise<string[]> {
+	const frame = phoneLayout(op);
+	await ff.writeFile(
+		PHONE_FRAME_FILE,
+		await paintedPng(frame, (ctx) =>
+			paintPhoneFrame(ctx, frame, { outside: phoneOverlayOutside(op) })
+		)
+	);
+	if (!op.transparent) return [PHONE_FRAME_FILE];
+	await ff.writeFile(PHONE_MASK_FILE, await paintedPng(frame, (ctx) => paintPhoneMask(ctx, frame)));
+	return [PHONE_FRAME_FILE, PHONE_MASK_FILE];
+}
+
+/**
+ * The first frame of a recording as a PNG, for a phone frame whose preview
+ * the browser can't play. See `stillArgs`. The file stays in ffmpeg's
+ * filesystem afterwards, where the edit writes it again anyway.
+ */
+export async function readStill(ff: FFmpeg, file: File): Promise<{ blob: Blob; probe: ProbeResult }> {
+	const info = await probe(ff, file);
+	// The same second look for a tag that `editVideo` takes, so the still is
+	// converted with the colours the framed copy will have.
+	if (!info.colourMatrix) {
+		info.declaredColour = await readFileColourTag(file).catch(() => null);
+	}
+	logLines = [];
+	try {
+		const code = await ff.exec(stillArgs(INPUT, stillColour(info)));
+		if (code !== 0) throw new Error('ffmpeg could not read a frame out of that file');
+		const data = await ff.readFile(STILL_FILE);
+		if (typeof data === 'string' || data.length === 0) {
+			throw new Error('ffmpeg could not read a frame out of that file');
+		}
+		const bytes = new Uint8Array(data);
+		return { blob: new Blob([bytes as unknown as ArrayBuffer], { type: 'image/png' }), probe: info };
+	} finally {
+		await ff.deleteFile(STILL_FILE).catch(() => {});
+	}
+}
+
 /**
  * One edit, keeping the file in the container it arrived in.
  *
@@ -258,7 +339,16 @@ export async function editVideo(
 	const info = await probe(ff, file);
 	const outName = `output${target.extensions[0]}`;
 
+	// A tag ffmpeg lost on the way in, which the phone frame has to write back
+	// out. Read from the file's own boxes, so it costs a few small reads.
+	if (op.kind === 'phone' && !info.colourMatrix) {
+		info.declaredColour = await readFileColourTag(file).catch(() => null);
+	}
 	if (needsFont(op)) await ensureFont(ff);
+	// Planned before anything is painted, so an impossible request fails before
+	// two full size PNGs are drawn for it.
+	const plan = planEdit(op, target, info, outName, opts);
+	const extras = op.kind === 'phone' ? await writePhoneFrame(ff, op) : [];
 
 	const report = ({ progress }: { progress: number }) => {
 		opts.onProgress?.(Math.max(0, Math.min(1, progress)));
@@ -266,7 +356,6 @@ export async function editVideo(
 	ff.on('progress', report);
 
 	try {
-		const plan = planEdit(op, target, info, outName, opts);
 		logLines = [];
 		const code = await ff.exec(plan.args);
 		if (code !== 0) {
@@ -290,6 +379,7 @@ export async function editVideo(
 	} finally {
 		ff.off('progress', report);
 		await ff.deleteFile(outName).catch(() => {});
+		for (const name of extras) await ff.deleteFile(name).catch(() => {});
 	}
 }
 
@@ -495,7 +585,13 @@ export async function mergeVideos(
 	}
 }
 
-/** For tests and for freeing 32MB when a page is done with it. */
+/**
+ * Ends the worker ffmpeg runs in, which is also the only way to stop a run:
+ * ffmpeg.wasm has no interrupt. Every video panel's Cancel button calls this.
+ * Whatever was waiting on the run rejects, the files in its filesystem go with
+ * it, and the next `loadFfmpeg` starts a fresh one out of the browser's cache,
+ * which is why the font has to be written again.
+ */
 export function resetFfmpeg(): void {
 	instance?.terminate();
 	instance = null;

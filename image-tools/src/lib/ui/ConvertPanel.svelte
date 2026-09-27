@@ -52,6 +52,7 @@
 <section class="panel">
 	<Dropzone
 		headline={sourceName ? `Drop ${sourceName} files here` : 'Drop images here'}
+		dropping="Drop to convert"
 		onfiles={(files) => conv.add(files)}
 		onintent={warmSource}
 	/>

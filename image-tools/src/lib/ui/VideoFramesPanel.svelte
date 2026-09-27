@@ -12,7 +12,7 @@
 	import { zipBlobs } from '$lib/engine';
 	import { editedFileName } from '$lib/engine';
 	import { videoAcceptAttribute } from '$lib/video/formats';
-	import { extractFrames, isLoaded, loadFfmpeg, type LoadProgress } from '$lib/video/ffmpeg';
+	import { extractFrames, isLoaded, loadFfmpeg, resetFfmpeg, type LoadProgress } from '$lib/video/ffmpeg';
 	import {
 		FRAME_FORMATS,
 		FRAME_MANY,
@@ -93,9 +93,23 @@
 		};
 	}
 
+	/** Set by the cancel button, so the run that throws next isn't an error. */
+	let cancelled = false;
+
+	/**
+	 * Stop a run. ffmpeg.wasm can't interrupt one, so this ends the worker it
+	 * runs in, and the next run starts a new one out of the browser's cache.
+	 */
+	function cancelRun() {
+		if (stage !== 'working') return;
+		cancelled = true;
+		resetFfmpeg();
+	}
+
 	async function run() {
 		if (!file || !ready) return;
 		error = null;
+		cancelled = false;
 		readBack = 0;
 		workRatio = 0;
 		stage = isLoaded() ? 'working' : 'loading';
@@ -114,6 +128,13 @@
 			media = { ...media, fps: result.probe.fps ?? media.fps };
 			stage = 'done';
 		} catch (thrown) {
+			if (cancelled) {
+				// Not an error, and the settings are all still there to change.
+				stage = 'idle';
+				workRatio = 0;
+				readBack = 0;
+				return;
+			}
 			error = thrown instanceof Error ? thrown.message : 'Those frames could not be read';
 			stage = 'error';
 		}
@@ -282,7 +303,11 @@
 					<button class="btn" onclick={run} disabled={!ready}>
 						{stage === 'working' || stage === 'loading' ? 'Working…' : 'Extract frames'}
 					</button>
-					<button class="btn-ghost" onclick={startOver}>Start over</button>
+					{#if stage === 'working'}
+						<button class="btn-ghost" onclick={cancelRun}>Cancel</button>
+					{:else}
+						<button class="btn-ghost" onclick={startOver}>Start over</button>
+					{/if}
 				</div>
 			</div>
 		</div>

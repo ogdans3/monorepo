@@ -20,7 +20,7 @@ convert when the bytes turn out not to be a JPEG after all. Conversion
 happens entirely on the user's device; the Node server only serves the
 static build.
 
-There are also 47 tools in two sections: 32 image tools under `/tools/`
+There are also 49 tools in two sections: 34 image tools under `/tools/`
 (hub at `/tools`, grouped into Crop and combine, Size and orientation,
 Colour and light, Borders and effects, Text and marks, Privacy, Inspect
 and For the web) and 15 PDF tools under `/pdf/` (hub at `/pdf`). Both hubs
@@ -42,9 +42,10 @@ every frame and take roughly as long as the video runs. Each page says which
 kind it is. The 32MB core is fetched only when a file is dropped, is about
 7MB over the wire once brotli has it, and is then cached by the browser.
 
-Twelve video editing pages sit beside the conversions, driven by their own
+Fifteen video editing pages sit beside the conversions, driven by their own
 registry in `src/lib/video/tools.ts`: trim, crop, resize, speed, slow motion,
-frame rate, rotate, blur, add text, remove sound, compress and merge.
+speed up, frame rate, rotate, blur, add text, phone frame, remove sound,
+compress, merge and frame extraction.
 Merging is the one that takes several files rather than one, so it has a
 panel of its own and a third planner in `src/lib/video/merge.ts`. Clips that
 already agree are joined without being decoded at all, and clips that do not
@@ -61,14 +62,21 @@ worth knowing about: trimming on a keyframe copies both streams, and removing
 the sound copies the picture, so both finish in about a second with every
 frame identical to the original. Adding text needs a font written into
 ffmpeg's filesystem, since a browser sandbox has none, so
-`static/fonts/caption.ttf` ships with the site.
+`static/fonts/caption.ttf` ships with the site. The phone frame writes a PNG instead: the
+frame is painted once by the same code the image tool uses, and ffmpeg pads
+the recording out and lays it over the top. It is also the one edit that can
+change the container, because see-through corners only fit in a WebM, and the
+one that can frame a file the browser won't play: when the preview fails, as
+it does for AVI everywhere and HEVC in many browsers, ffmpeg reads the first
+frame and the frame is fitted to that. Every run in the video section can be
+cancelled, which ends ffmpeg's worker, since there is no other way to stop it.
 
 Everything runs client-side. The image tools cover crop, combine, split,
 trim, extend canvas, resize, bulk resize, rotate, flip, adjust, black and
 white, sepia, invert, replace colour, sharpen, border, round corners, drop
-shadow, vignette, blend, add text, watermark, blur, redact, pixelate, EXIF
-removal, transparent background, colour picker, histogram, compress,
-favicon and Base64. The PDF tools cover image→PDF, PDF→image, merge,
+shadow, phone frame, vignette, blend, add text, watermark, blur, redact,
+pixelate, EXIF removal, transparent background, colour picker, histogram,
+compress, favicon and Base64. The PDF tools cover image→PDF, PDF→image, merge,
 split, extract pages, delete pages, reorder, rotate, watermark, page
 numbers and PDF→text, plus four format-specific landing pages (JPG, PNG
 and HEIC to PDF, and PDF to PNG) that share those editors but arrive
@@ -76,7 +84,9 @@ preconfigured for the format they name.
 
 Shared pure logic lives in `src/lib/tools/`: `pixels.ts` (luma greyscale,
 sepia matrix, colour replacement, edge trimming), `pdf.ts` (page ranges,
-document rebuilding), plus flood fill, crop geometry and layout maths. The
+document rebuilding), `phoneframe.ts` (the phone frame's sizes and the
+painter that draws it, shared by the screenshot page and the screen recording
+page so both draw the same phone), plus flood fill, crop geometry and layout maths. The
 editors in `src/lib/ui/tools/` are the only DOM-bound parts, and several
 are shared by variant (one filter editor serves four tools, one frame
 editor three, one PDF page-selector two).

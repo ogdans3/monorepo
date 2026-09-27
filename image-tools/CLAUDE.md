@@ -129,7 +129,7 @@ decisions. This file is the short version of what matters when editing.
 - **WASM codecs are lazy.** Keep them behind dynamic imports, and keep
   `optimizeDeps.exclude` in `vite.config.ts` in sync when adding one.
 - **Video tools are a second registry, and re-encode by definition.**
-  `src/lib/video/tools.ts` mirrors `src/lib/tools/registry.ts` for the eleven
+  `src/lib/video/tools.ts` mirrors `src/lib/tools/registry.ts` for the
   editing pages under `/video/<slug>`. A parallel table rather than a
   `takes: 'video'` column, because the two sections share nothing past the
   words: different input, ffmpeg instead of a canvas, and a warning about the
@@ -139,8 +139,9 @@ decisions. This file is the short version of what matters when editing.
   copies the picture. `keepsFrames` in the registry is what says so, and a test
   pins it to exactly those two.
 - **Slowing one section down is a concat of three, and the frames are not
-  repeated.** `slow-motion-video` is the only edit that builds a
-  `-filter_complex` rather than a `-vf`: `stretchFilter` in `edit.ts` trims the
+  repeated.** The retiming pages (`slow-motion-video`, `speed-up-video`, and
+  the curve mode on both) build a `-filter_complex` rather than a `-vf`, and
+  so does the phone frame. `stretchFilter` in `edit.ts` trims the
   clip into head, section and tail, retimes the middle with `setpts` and joins
   them with `concat`, so everything outside the marks keeps its own pace.
   `-fps_mode vfr` beside it is load bearing. Left to itself ffmpeg makes the
@@ -265,6 +266,129 @@ decisions. This file is the short version of what matters when editing.
   typed as `EditOp['kind']`. Every function in `edit.ts` takes one probe and
   one input. A join routed through there would fall past every branch and come
   out as a plain re-encode of one file, which looks like it worked.
+- **The phone frame is one geometry on two pages, and video needs it on a
+  two pixel grid.** `src/lib/tools/phoneframe.ts` sizes and paints the frame
+  for both `/tools/phone-frame` and `/video/phone-frame-video`, and the video
+  side only ever uses `evenPhoneFrame`. Even output for H.264 is the obvious
+  half. The other half was found by reading pixels out of a real encode:
+  yuv420p keeps colour per 2 × 2 block, so ffmpeg's `pad` and `overlay` round
+  a position down to an even number and say nothing. A 19 px border put the
+  video at x = 18 while the painted frame's hole was at 19, and the result had
+  a 1 px line of the background colour down the right of the screen. So the
+  border is rounded up to even there, and the video panel's slider moves in
+  twos so the number in the box is the number in the file. `phoneFrameGraph`
+  always crops to the screen before padding, a no-op that costs a pointer
+  move, because the frame is sized from what the browser reports and Chromium
+  reported a 461 × 999 WebM as 460 × 998, which padded is an error.
+  **An odd recording loses its last column or row, border on or off.** The
+  first version kept the pixel and widened the right and bottom border by one
+  instead, which ffmpeg can't do: `crop` and `pad` both round a yuv420p
+  picture down to even without saying so, so a 461 × 1001 recording went into
+  its 461 × 1001 hole as 460 × 1000 and the hole's last column and row showed
+  the pad's black, (15, 15, 15) out of Chrome where the screen should have
+  been. Keeping the pixel would take the whole video through 4:4:4 and back,
+  and the kept column would still share its colour samples with the border.
+  So `evenPhoneFrame` crops the screen to even and the border stays the same
+  on all four sides (461 × 1001 becomes 500 × 1040 with a 20 px border).
+  `src/lib/video/phonepixels.test.ts` runs the graph through the real core and
+  reads every pixel of the hole back, so do not replace it with a filter
+  string check: the filter string was exactly what was meant both times.
+- **A see-through phone frame is VP8 with alpha, and it needs a mask.** VP9
+  with alpha crashes the tab, so do not "upgrade" it. Tried twice, the second
+  time in both browsers: Playwright's Chromium crashed the page, and Chrome
+  154 threw "memory access out of bounds" on the first frame, where VP8 with
+  alpha encoded the same two seconds in 2.4 s. VP8 in
+  `yuva420p` encodes in this build and plays in Chromium with the corners at
+  alpha 0, and `-auto-alt-ref 0` is required: without it libvpx refuses with
+  "Transparency encoding with auto_alt_ref does not work". An overlay can only
+  paint over the video, never make any of it transparent, so with the border
+  off nothing would round the video's own corners. `alphamerge` takes the
+  alpha from `paintPhoneMask` instead. The copy says Chrome and Edge show it
+  see-through and Safari does not, and claims nothing about any other player.
+  With a border, the PNG ffmpeg gets is painted **black outside the outline**,
+  not clear like the preview's canvas (`phoneOverlayOutside`). The mask's edge
+  is soft, so those pixels are partly opaque and show whatever colour the
+  frame gave them, and a radius more than about 2.4 times the border (every
+  default) puts the recording's square corner past the outer curve. Left
+  clear, every corner's outline came out in the recording's colours, up to 71
+  levels bright over a black page. With no border it stays clear, because then
+  the outline is the screen's own edge.
+- **The phone frame falls back to a still when the browser can't play the
+  file.** The frame is fitted to the preview, and every browser refuses AVI
+  and many refuse the HEVC an iPhone records, which used to be a dead end.
+  Now the engine is loaded early and `readStill` has ffmpeg read the first
+  frame, the preview shows it in place of the video, and the size comes from
+  that still, which went through the same decoder and rotation as the edit.
+  It is converted with `stillColour`, the matrix the framed copy plays back
+  with: ffmpeg's own default made an untagged green 23 levels brighter in the
+  preview than in the file. Only a file ffmpeg can't read either is refused.
+- **Cancel ends the worker, because nothing else can.** ffmpeg.wasm has no
+  interrupt, so every video panel's Cancel calls `resetFfmpeg`, which
+  terminates it. The run's promise rejects, and a `cancelled` flag is what
+  keeps that from being shown as an error. The next run loads a fresh core out
+  of the browser's cache, which is why `resetFfmpeg` also forgets the font:
+  it went with the old filesystem. Offered only while a run is encoding, not
+  while the core downloads.
+- **`-fps_mode vfr` on the phone frame is load bearing too.** Screen recordings
+  are usually variable frame rate, and an MP4 is written at a constant rate
+  unless told otherwise. A test clip of 69 frames came out as 240 without it,
+  every still moment filled with repeats to encode.
+- **The phone frame handles colour by hand, in both directions.** The PNG is
+  converted to Y'CbCr with the recording's own matrix and range, because the
+  converter ffmpeg slips in before `overlay` is always BT.601 limited range.
+  Measured in this core: on a BT.709 recording (every iPhone) `#52A152`
+  played back as (76, 148, 79), and on a full range recording the black
+  border came out (16, 16, 16) and white corners light grey. Do not drop the
+  `scale` in front of the frame input as redundant.
+  The output's tag is always written by `setparams`, never left to ride
+  through on the frames, because the frames lie. ffmpeg's VP8 decoder labels
+  every frame BT.601 whatever the file says, so a WebM tagged BT.709 came out
+  tagged BT.601. Its VP9 decoder throws away the tag Chrome's MP4 recordings
+  keep in their `vpcC` box (version 0, which ffmpeg 5.1 skips anyway), so
+  `colourtag.ts` reads it back out of the file. `phoneColour` in `edit.ts`
+  writes the recording's own tag, from the stream line or the box, and an
+  untagged recording is written back out **untagged**, explicitly, so every
+  player reads the copy with the same guess it read the original with. The
+  first version wrote its own guess down instead, and Chrome showed an
+  untagged VP8 WebM as BT.709 and its framed copy as BT.601, a red 18 levels
+  off in the browser that had just previewed it. A guess is written only
+  where Chrome would guess the two differently, and `untaggedMatrix` holds
+  what was measured in Chrome 131 and 154: H.264 and VP8 are BT.709 from 720
+  lines up and BT.601 below, whatever the width, and VP9 is BT.601 at every
+  size. A browser test framed ten recordings (untagged, tagged, full range,
+  VP8, VP9 in WebM and MP4, H.264 from Chrome and from ffmpeg) and Chrome drew
+  every flat colour on the screen exactly as it drew the source, with a mean
+  difference under one level across the whole screen.
+  **The range is part of the tag, and it is pinned before anything converts
+  it.** ffmpeg's VP8 decoder labels every frame limited range, and Chrome's
+  MediaRecorder writes VP8 in full range and says so in the WebM. With the
+  range left to the frames the framed copy was tagged limited over full range
+  pixels, and Chrome showed a grey of 176 as 186, a mean of 7.9 levels off
+  across the screen, in both the default and the see-through export. Worse,
+  where the range came out depended on the decoder: ffmpeg's converter to
+  yuva420p for the alpha turned a VP9 MP4's pixels limited and left a VP8
+  WebM's alone. So `phoneFrameGraph` opens with
+  `scale=in_range=R:out_range=R,format=yuv420p` (or `yuva420p`), which states
+  the stream line's range both ways and is a passthrough for an ordinary
+  yuv420p file, and `setparams` writes `range=R` with the rest. The painted
+  frame goes in with `out_range=R`, so the border is 0 in a full range file
+  and 16 in a limited one. The pad's black is ffmpeg's 16 either way, which is
+  fine only because nothing is left for it to show through. Measured through
+  the page in Chrome 154, mean difference from the source: Chrome's full range
+  VP8 WebM 0.04 (was 7.92), see-through 0.04, its VP9 MP4 0.13, a yuvj H.264
+  0.14 (it used to be converted to limited, 1.58), limited H.264 and VP8 0.13
+  and 0.03, Chromium 131 the same on everything it can decode. Carrying full
+  range beat converting to limited, which measured 1.52 for the WebM.
+- **The phone preview always has a transport, and keeps its column still.**
+  A WebM from MediaRecorder has no length in its header, so the element says
+  Infinity and ffmpeg says "Duration: N/A". `learnDuration` in
+  `src/lib/ui/videolength.ts` seeks far past the end, which makes the browser
+  read to the last frame and fire `durationchange`, then rewinds. Play and
+  pause show whenever the recording plays, and only the scrubber waits for a
+  length. The preview's column is as wide as the phone, so both phone pages
+  lay an invisible canvas the size of the phone with its border on under the
+  preview (`.room`). Without it, turning the border off narrowed the column
+  and moved the controls, the switch included, 11 px to the left.
 - **drawtext: escape the colon, never the percent.** Verified one character at
   a time in a real browser, because the failure modes are opposite and both are
   silent. An unescaped `:` ends the option list and ffmpeg fails with "Error

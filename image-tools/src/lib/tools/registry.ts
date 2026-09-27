@@ -81,6 +81,16 @@ export interface ImageTool {
 	 * finished result can go next, and what each dropzone will take.
 	 */
 	takes?: 'image' | 'pdf';
+	/**
+	 * The same job done to a video, as a slug in `src/lib/video/tools.ts`, and
+	 * the words for the link to it, which sits just under the editor where
+	 * somebody holding a recording rather than a picture will see it. The label
+	 * lives here so the image pages never have to load the video registry for
+	 * one line. A test insists the slug resolves, because the prerender fails
+	 * the build on a link to a page that does not exist, so set it only once
+	 * the video page does.
+	 */
+	video?: { slug: string; label: string };
 }
 
 export const TOOLS: ImageTool[] = [
@@ -560,7 +570,7 @@ export const TOOLS: ImageTool[] = [
 			'The corners become truly transparent, not painted white, so the image sits cleanly on any background. Circle mode first cuts a square from the middle, which is what avatar pictures need.',
 			'Download as PNG or WebP to keep the transparent corners. JPG can\'t store them, so it fills them with the colour you pick in the download bar.'
 		],
-		next: ['drop-shadow', 'transparent-background'],
+		next: ['drop-shadow', 'transparent-background', 'phone-frame'],
 		keywords: ['rounded', 'circle', 'avatar', 'radius'],
 		faq: [
 			{
@@ -1037,7 +1047,7 @@ export const TOOLS: ImageTool[] = [
 			'The border is drawn around your image, so nothing is covered up and no detail is lost. A wide white border is the classic look for prints and social posts.',
 			'The inner line sits just inside the border, which is the trick that makes a plain frame look considered.'
 		],
-		next: ['drop-shadow', 'extend-canvas', 'round-corners'],
+		next: ['drop-shadow', 'extend-canvas', 'round-corners', 'phone-frame'],
 		keywords: ['frame', 'outline', 'edge', 'white border'],
 		faq: [
 			{
@@ -1071,7 +1081,7 @@ export const TOOLS: ImageTool[] = [
 			'Room is added around the image so the shadow has somewhere to land, and that space stays transparent unless you fill it.',
 			'Download as PNG or WebP to keep it transparent. JPG can\'t, so it fills the space with the colour you pick, which is white by default.'
 		],
-		next: ['add-border', 'round-corners'],
+		next: ['add-border', 'round-corners', 'phone-frame'],
 		keywords: ['shadow', 'depth', 'mockup', 'lift'],
 		faq: [
 			{
@@ -1084,6 +1094,46 @@ export const TOOLS: ImageTool[] = [
 			}
 		],
 		suffix: '-shadow'
+	},
+	{
+		slug: 'phone-frame',
+		category: 'decorate',
+		name: 'Phone frame',
+		h1: 'Put a screenshot in a phone frame',
+		title: 'Add a Phone Frame to a Screenshot - Free, No Upload',
+		description:
+			'Put a screenshot in a phone frame online free. Rounded corners and a black border sized like an iPhone, both adjustable. Runs in your browser with no upload.',
+		lede: 'Drop a screenshot and it comes back looking like it\'s on a phone: rounded corners and a black border, sized like a real one. Change either, or turn the border off.',
+		blurb: 'Rounded corners and a black border, like a real phone.',
+		steps: [
+			'Drop a screenshot in the box above. Any format this site can read works, HEIC included.',
+			'The corners and the border start at a phone\'s proportions for your screenshot. Drag a slider or type an exact number, or turn the border off to keep only the rounded corners.',
+			'Download as PNG or WebP to keep the corners transparent. The file keeps its name, with -phone added.'
+		],
+		aboutHeading: 'About phone frames here',
+		about: [
+			'The starting sizes come from a current iPhone Pro, whose screen corners are about 14 percent of its width and whose black border is about 4 percent. They\'re worked out from your screenshot\'s own width, so a full size capture and a shrunk one get the same phone. A landscape capture is measured on its short side, which is the width of the phone that took it.',
+			'Your screenshot isn\'t scaled. The border is added around it, so the file comes out larger by twice the border and every pixel of the screen is the one you captured. The border is pure black, so a dark mode app runs straight into it the way it does on a phone with an OLED screen.',
+			'Outside the rounded frame is transparent, so the phone sits cleanly on a slide, a web page or a coloured background. JPG can\'t store that, so it fills the corners with white unless you pick another colour in the download bar.'
+		],
+		next: ['drop-shadow', 'combine-images', 'extend-canvas'],
+		keywords: ['iphone', 'android', 'mockup', 'screenshot', 'device', 'bezel', 'app store', 'rounded'],
+		faq: [
+			{
+				q: 'How do I put a screenshot in an iPhone frame?',
+				a: 'Drop the screenshot on this page. The corners are rounded and a black border is added at the proportions of a current iPhone, worked out from the width of your screenshot, so there\'s nothing to set unless you want to. Download as PNG and it drops onto a slide or a web page with the corners clear.'
+			},
+			{
+				q: 'Does the phone frame make my screenshot smaller or blurry?',
+				a: 'No. The screenshot is never scaled. The border is added outside it, so the file grows by twice the border\'s thickness and every pixel of the screen stays the one you captured. If you need a smaller file for a web page, resize it afterwards, which shrinks the frame and the screen together and keeps them in proportion.'
+			},
+			{
+				q: 'Will it work for an Android screenshot or a tablet?',
+				a: 'Yes. The starting sizes are an iPhone\'s, but they\'re only a starting point. Android phones vary, so match yours by eye: pull the corners in for a squarer screen and thin the border if your phone has a narrow one. A tablet looks right with much smaller corners, because its screen is far wider than its corners are round.'
+			}
+		],
+		suffix: '-phone',
+		video: { slug: 'phone-frame-video', label: 'Put a screen recording in a phone frame' }
 	},
 	{
 		slug: 'vignette-image',

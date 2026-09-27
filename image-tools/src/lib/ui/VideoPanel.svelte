@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { formatBytes, outputFileName, resolveFormat } from '$lib/engine';
 	import { videoAcceptAttribute, type VideoFormat } from '$lib/video/formats';
-	import { convertVideo, isLoaded, loadFfmpeg, type LoadProgress } from '$lib/video/ffmpeg';
+	import { convertVideo, isLoaded, loadFfmpeg, resetFfmpeg, type LoadProgress } from '$lib/video/ffmpeg';
 	import { downloadBlob } from './download';
 	import Dropzone from './Dropzone.svelte';
 
@@ -56,9 +56,23 @@
 		return Boolean(format) || dropped.type.startsWith('image/');
 	}
 
+	/** Set by the cancel button, so the run that throws next isn't an error. */
+	let cancelled = false;
+
+	/**
+	 * Stop a run. ffmpeg.wasm can't interrupt one, so this ends the worker it
+	 * runs in, and the next run starts a new one out of the browser's cache.
+	 */
+	function cancelRun() {
+		if (stage !== 'working') return;
+		cancelled = true;
+		resetFfmpeg();
+	}
+
 	async function onfiles(files: File[]) {
 		const dropped = files[0];
 		if (!dropped) return;
+		cancelled = false;
 
 		if (imageMistake(dropped)) {
 			file = null;
@@ -89,6 +103,11 @@
 			};
 			stage = 'done';
 		} catch (e) {
+			if (cancelled) {
+				// Back to the dropzone, since a conversion has nothing else to set.
+				startOver();
+				return;
+			}
 			// ffmpeg rejects with plain strings and with numbers as well as with
 			// Errors, and "something went wrong" helps nobody work out whether
 			// their file is the problem or we are.
@@ -116,6 +135,7 @@
 	{#if stage === 'idle' || stage === 'error'}
 		<Dropzone
 			headline={sourceName ? `Drop a ${sourceName} file here` : 'Drop a video here'}
+			dropping="Drop to convert"
 			multiple={false}
 			accept={videoAcceptAttribute()}
 			{onfiles}
@@ -146,9 +166,10 @@
 		<div class="working" role="status">
 			<p class="working-title">Converting {file?.name}</p>
 			<div class="bar"><div class="fill" style:width="{workRatio * 100}%"></div></div>
-			<p class="working-note">
-				{Math.round(workRatio * 100)}% · {elapsed}s
-			</p>
+			<div class="working-row">
+				<p class="working-note">{Math.round(workRatio * 100)}% · {elapsed}s</p>
+				<button class="btn-ghost cancel" onclick={cancelRun}>Cancel</button>
+			</div>
 		</div>
 	{/if}
 
@@ -236,6 +257,25 @@
 		font-size: 0.8125rem;
 		color: var(--muted);
 		max-width: 60ch;
+	}
+
+	/* The count on the left and the way out on the right, under the bar. */
+	.working-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem 1rem;
+		margin-top: 0.55rem;
+	}
+
+	.working-row .working-note {
+		margin: 0;
+	}
+
+	.cancel {
+		padding: 0.3rem 0.75rem;
+		font-size: 0.8125rem;
 	}
 
 	.result {

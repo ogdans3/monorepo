@@ -11,6 +11,7 @@ import {
 	toolsInCategory
 } from './registry';
 import { parsePairSlug } from '$lib/engine';
+import { videoToolBySlug } from '$lib/video/tools';
 
 describe('tools registry', () => {
 	it('sorts every tool into a defined category, and none is lonely', () => {
@@ -44,6 +45,8 @@ describe('tools registry', () => {
 		expect(find('black and white')).toContain('grayscale-image');
 		expect(find('remove background')).toContain('transparent-background');
 		expect(find('combine pdf')).toContain('merge-pdf');
+		expect(find('iphone mockup')).toContain('phone-frame');
+		expect(find('screenshot frame')).toContain('phone-frame');
 		// every word must match, so two words narrow the list
 		expect(find('pdf page').every((s) => s.includes('pdf'))).toBe(true);
 		expect(find('')).toHaveLength(TOOLS.length);
@@ -100,6 +103,17 @@ describe('tools registry', () => {
 				expect(seen.has(q), `${q} is used by both ${seen.get(q)} and ${t.slug}`).toBe(false);
 				seen.set(q, t.slug);
 			}
+		}
+	});
+
+	it('links to a video twin only once that page exists', () => {
+		// A link to a missing page fails the prerender, and the image pages
+		// carry the label themselves so they never load the video registry.
+		for (const t of TOOLS) {
+			if (!t.video) continue;
+			expect(videoToolBySlug(t.video.slug), `${t.slug} → ${t.video.slug}`).toBeDefined();
+			expect(t.video.label.trim(), t.slug).not.toBe('');
+			expect(t.video.label, t.slug).not.toMatch(/[—;]/);
 		}
 	});
 

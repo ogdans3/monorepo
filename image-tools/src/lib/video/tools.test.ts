@@ -5,10 +5,12 @@ import {
 	VIDEO_TOOLS,
 	nextVideoTools,
 	videoToolBySlug,
+	videoToolFaqSubject,
 	videoToolPath,
 	videoToolsInCategory
 } from './tools';
-import { TOOLS } from '../tools/registry';
+import { TOOLS, toolBySlug } from '../tools/registry';
+import { trustFaq } from '../faq';
 
 describe('the video tools table', () => {
 	it('sorts every tool into a defined category, and none is lonely', () => {
@@ -98,6 +100,51 @@ describe('the video tools table', () => {
 	it('only claims frames are kept for the two edits that copy the picture', () => {
 		const keeps = VIDEO_TOOLS.filter((t) => t.keepsFrames).map((t) => t.slug);
 		expect(keeps.sort()).toEqual(['mute-video', 'trim-video']);
+	});
+
+	it('links to a picture twin only when that page exists, and the twin links back', () => {
+		for (const tool of VIDEO_TOOLS) {
+			if (!tool.image) continue;
+			const twin = toolBySlug(tool.image.slug);
+			expect(twin, `${tool.slug} → ${tool.image.slug}`).toBeDefined();
+			expect(twin?.video?.slug, `${tool.image.slug} links back`).toBe(tool.slug);
+			expect(tool.image.label, tool.slug).not.toMatch(/[—;]/);
+		}
+		expect(videoToolBySlug('phone-frame-video')?.image?.slug).toBe('phone-frame');
+	});
+
+	it('asks the shared questions about a tool, not about a sentence', () => {
+		for (const tool of VIDEO_TOOLS) {
+			const subject = videoToolFaqSubject(tool);
+			const [free] = trustFaq(subject);
+			// The h1 once went in here and every page asked "Is the crop a video free?".
+			expect(free.q, tool.slug).not.toMatch(/ a video free\?$/);
+			expect(subject, tool.slug).toMatch(/video/);
+			expect(subject, tool.slug).toBe(subject.toLowerCase());
+		}
+		expect(trustFaq(videoToolFaqSubject(videoToolBySlug('crop-video')!))[0].q).toBe(
+			'Is the crop video tool free?'
+		);
+		expect(trustFaq(videoToolFaqSubject(videoToolBySlug('speed-up-video')!))[0].q).toBe(
+			'Is the video speed up tool free?'
+		);
+		expect(trustFaq(videoToolFaqSubject(videoToolBySlug('extract-video-frames')!))[0].q).toBe(
+			'Is the video frame extractor free?'
+		);
+	});
+
+	it('gives the phone frame a verb for its button and names its controls as the page does', () => {
+		const phone = videoToolBySlug('phone-frame-video')!;
+		expect(phone.action).toBe('Add phone frame');
+		const copy = [...phone.about, ...phone.faq.map((f) => f.a)].join(' ');
+		// The checkbox reads "See-through corners, saved as WebM". There is no
+		// control called transparent to tick.
+		expect(copy).not.toMatch(/transparent option/i);
+		expect(copy).toMatch(/Tick see-through corners/);
+		// MOV can carry alpha (ProRes 4444, PNG). What can't is the H.264 this page writes.
+		expect(copy).not.toMatch(/MP4 and MOV (can't|have no way to) store/);
+		// Measured at three to seven times the clip's length in the browser.
+		expect(copy).not.toMatch(/as long as the recording runs/);
 	});
 
 	it('resolves by slug', () => {

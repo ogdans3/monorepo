@@ -19,7 +19,7 @@ export type VideoToolCategory = 'frame' | 'time' | 'look' | 'sound';
 export const VIDEO_CATEGORIES: { id: VideoToolCategory; label: string; blurb: string }[] = [
 	{ id: 'frame', label: 'Frame and size', blurb: 'Change what is in the picture.' },
 	{ id: 'time', label: 'Length and speed', blurb: 'Change how long it runs.' },
-	{ id: 'look', label: 'Look and finish', blurb: 'Blur it, caption it, shrink it.' },
+	{ id: 'look', label: 'Look and finish', blurb: 'Blur it, caption it, frame it, shrink it.' },
 	{ id: 'sound', label: 'Sound', blurb: 'What comes out of the speakers.' }
 ];
 
@@ -58,6 +58,26 @@ export interface VideoTool {
 	 * to tell somebody deciding whether to bother.
 	 */
 	keepsFrames?: boolean;
+	/**
+	 * The same job done to a picture, as a slug in `src/lib/tools/registry.ts`,
+	 * and the words for the link to it. The mirror of the image registry's
+	 * `video` field, and kept as words here for the same reason: a video page
+	 * should not load the whole image registry for one line. A test insists
+	 * the slug resolves.
+	 */
+	image?: { slug: string; label: string };
+	/**
+	 * The words on the page's one button, when the name isn't a verb. Most
+	 * names already say what pressing does (Trim, Crop, Compress), and a noun
+	 * like "Phone frame" on a button that starts a long encode doesn't.
+	 */
+	action?: string;
+	/**
+	 * What the two shared trust questions call this page, when the name with
+	 * "video tool" after it doesn't read as English. "Is the speed up part
+	 * video tool free?" is the case this exists for.
+	 */
+	faqSubject?: string;
 }
 
 export const VIDEO_TOOLS: VideoTool[] = [
@@ -82,7 +102,7 @@ export const VIDEO_TOOLS: VideoTool[] = [
 			"Trimming is the one video edit that doesn't have to touch the picture. The cut lands on the nearest keyframe and both streams are copied straight into a new file, so a clip of any length is done in about a second and every frame that survives is bit for bit the one you started with.",
 			"Keyframes are typically a second or two apart, so the start can land slightly before where you asked. If you need the cut exactly where you put it, turn on the exact option and the clip is re-encoded, which takes as long as any other edit here but puts the first frame precisely where you said."
 		],
-		next: ['mute-video', 'compress-video', 'resize-video'],
+		next: ['mute-video', 'compress-video', 'resize-video', 'phone-frame-video'],
 		keywords: ['cut', 'clip', 'shorten', 'split'],
 		faq: [
 			{
@@ -286,6 +306,7 @@ export const VIDEO_TOOLS: VideoTool[] = [
 		op: 'stretch',
 		direction: 'faster',
 		name: 'Speed up part',
+		faqSubject: 'video speed up tool',
 		h1: 'Speed up part of a video',
 		title: 'Speed Up Part of a Video - Free, No Upload',
 		description:
@@ -327,6 +348,7 @@ export const VIDEO_TOOLS: VideoTool[] = [
 		category: 'frame',
 		op: 'frames',
 		name: 'Frames to images',
+		faqSubject: 'video frame extractor',
 		h1: 'Split a video into images',
 		title: 'Video to JPG - Extract Frames Free, No Upload',
 		description:
@@ -503,6 +525,48 @@ export const VIDEO_TOOLS: VideoTool[] = [
 		suffix: '-text'
 	},
 	{
+		slug: 'phone-frame-video',
+		category: 'look',
+		op: 'phone',
+		name: 'Phone frame',
+		action: 'Add phone frame',
+		h1: 'Put a screen recording in a phone frame',
+		title: 'Add a Phone Frame to a Video - Free, No Upload',
+		description:
+			'Put a screen recording in a phone frame online free. Rounded corners and a black border sized like an iPhone, both adjustable, and nothing is uploaded.',
+		lede: "Drop a screen recording and it comes back looking like it's playing on a phone: rounded corners and a black border, sized like a real one. Change either, or turn the border off.",
+		blurb: 'Rounded corners and a black border, like a real phone.',
+		steps: [
+			'Drop a screen recording in the box above. MP4, MOV, WebM, MKV and AVI all work.',
+			"The corners and the border start at a phone's proportions for your video. Drag a slider or type an exact number, and pick the colour that fills the corners.",
+			'Download. The file keeps its name and its format, with -phone added, unless you asked for see-through corners, which come back as a WebM.'
+		],
+		aboutHeading: 'About phone frames for video here',
+		about: [
+			"It's the same frame the screenshot version of this tool draws, taken from a current iPhone Pro: corners about 14 percent of the screen's width and a black border about 4 percent. Both are worked out from your recording's own size, so a full resolution capture and a shrunk one get the same phone.",
+			"Your recording isn't scaled. The border is added around it, so the video comes out larger by twice the border and every pixel of the screen is the one that was recorded. The border moves in steps of two pixels, because video stores colour in two by two blocks and an odd border would leave a thin line down one edge of the screen. The same blocks are why a recording with an odd width or height gives up its last column or row.",
+			"The MP4 and MOV files this page makes are H.264, which can't store see-through pixels, so the corners outside the frame are filled with a colour. Match it to the slide or the page the video will sit on. For a web page there's also a WebM with the corners left see-through, which Chrome and Edge play that way and Safari doesn't."
+		],
+		next: ['compress-video', 'resize-video', 'trim-video'],
+		keywords: ['iphone', 'android', 'mockup', 'screen recording', 'device frame', 'bezel', 'rounded corners', 'app preview'],
+		faq: [
+			{
+				q: 'How do I put a screen recording in an iPhone frame?',
+				a: "Drop the recording on this page and press the button. The frame is sized from your video's own width to match a current iPhone, so there's nothing to set unless you want a different border or corner. The sound is kept. The whole clip is encoded on your own device, and a full size phone recording takes several times as long as it runs, so a thirty second clip can take a few minutes or more."
+			},
+			{
+				q: 'Can a framed video have transparent corners?',
+				a: "Yes, as a WebM. The MP4 and MOV files this page makes are H.264, which has no way to store see-through pixels, so by default the corners are filled with a colour you pick. Tick see-through corners and you get a WebM with an alpha channel instead, which Chrome and Edge play with the corners see-through. Safari doesn't, so for a video that has to work everywhere, match the colour to the page."
+			},
+			{
+				q: 'Why is the framed video bigger than the recording?',
+				a: "Because the border is added around the recording rather than drawn over it. Nothing on the screen is covered or scaled, so the video comes out wider and taller by twice the border. If you need it smaller for a page or a message, run it through the resize tool afterwards, which shrinks the frame and the screen together."
+			}
+		],
+		suffix: '-phone',
+		image: { slug: 'phone-frame', label: 'Put a screenshot in a phone frame' }
+	},
+	{
 		slug: 'mute-video',
 		category: 'sound',
 		op: 'mute',
@@ -577,6 +641,15 @@ export const VIDEO_TOOLS: VideoTool[] = [
 
 export function videoToolBySlug(slug: string): VideoTool | undefined {
 	return VIDEO_TOOLS.find((tool) => tool.slug === slug);
+}
+
+/**
+ * What the shared trust questions call a video tool's page: "Is the crop
+ * video tool free?". Built from the name rather than the h1, which is a
+ * sentence and once made every page ask "Is the crop a video free?".
+ */
+export function videoToolFaqSubject(tool: VideoTool): string {
+	return tool.faqSubject ?? `${tool.name.toLowerCase()} video tool`;
 }
 
 export function videoToolPath(tool: VideoTool): string {
