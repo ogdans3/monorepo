@@ -82,9 +82,25 @@ the subject to the provider.
 
 **Erasure is anonymisation plus a sealed record.** The profile is emptied at
 once; a minimal identity survives in the `retained` schema for the claim window
-(completed trade plus three years). The application must never read from
-`retained`. A trade owns a snapshot of what was traded, which is what lets a
+(completed trade plus three years, or the deletion plus three years when there
+was none), and a daily job deletes it when that window closes. A device that
+never made a profile leaves no sealed record: it had nothing to seal. The
+application must never read from `retained` — deleting a row by its date is not
+reading it. A trade owns a snapshot of what was traded, which is what lets a
 listing be deleted without erasing the counterparty's history.
+
+**A device nobody uses is erased after twelve months, strictly.** Unclaimed,
+not a test account, and no request from its own token for more than twelve
+months, and the daily job erases it through the same engine as anybody.
+*Activity* means an authenticated request made with the account's own token —
+opening the app sends one — or a sign-in with its own credential, and nothing
+else: somebody else liking what it liked, an admin looking at it or acting as
+it through the switcher, or a job passing over it is not the account doing
+anything. `backend/src/auth/sessions.ts` is the only file that writes
+`users.last_active_at`; keep it the only one. The sweep asks two witnesses and
+both must say idle: that column, and `last_seen_at` on every session the
+account signed in for itself. Aging only the column by hand erases nothing —
+age its sessions too.
 
 **Optional means «not given», and `null` is how a client says so.** Optional
 fields in a request body are `.nullish()`, never `.optional()`: a form encodes

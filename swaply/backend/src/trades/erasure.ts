@@ -1,7 +1,8 @@
-import { sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { removeStored } from '../lib/media.js'
+import { many } from '../lib/rows.js'
 
 type Row = Record<string, string | null>
 
@@ -18,13 +19,24 @@ type Row = Record<string, string | null>
  * three years from the deletion instead, because a trade that went wrong — one
  * side sent, the other deleted — is one that never completed, and that is the
  * claim this record exists for. Once a claim can no longer be brought, the
- * purpose is spent and the purge job takes the row.
+ * purpose is spent and `purgeRetained` takes the row.
+ *
+ * An account that never made a profile leaves no sealed record at all. It had
+ * no name, no address, no number and no BankID — a profile is what holds
+ * those — and it could not have been in a trade, so there is neither anything
+ * a court could use nor a claim it could be used in. The row it used to get
+ * was every column null, kept three years for nothing.
+ *
+ * `onlyIf` is a condition on the account's row (as `u`), checked under a lock
+ * before anything is touched; when it no longer holds nothing is, and
+ * `erased` says so. It is for a caller that chose the account a moment
+ * earlier and must not act on a choice the account has since changed.
  */
 export async function anonymiseUser(
   db: Database,
   userId: string,
-  opts: { reason?: string } = {},
-): Promise<{ freed: string[] }> {
+  opts: { reason?: string; onlyIf?: SQL } = {},
+): Promise<{ freed: string[]; erased: boolean }> {
   // Filled inside the transaction, spent after it: unlinking a file cannot be
   // rolled back, so it does not happen until the rows are certainly gone.
   let orphaned: string[] = []
@@ -33,7 +45,19 @@ export async function anonymiseUser(
   // after the commit, the way every other cancellation does.
   const freed: string[] = []
 
-  await db.transaction(async (tx) => {
+  const erased = await db.transaction(async (tx) => {
+    if (opts.onlyIf) {
+      // `of u`: the row that decides, and not what the condition reads beside
+      // it. Held to the commit, so a request from the account that lands now
+      // either wrote its activity first and is seen here, or comes after the
+      // decision — its write skips a locked row (`resolveSession`) — and does
+      // not undo it; its session is deleted under it below.
+      const [still] = await tx.execute<Row>(
+        sql`select 1 from users u where u.id = ${userId} and ${opts.onlyIf} for update of u`,
+      )
+      if (!still) return false
+    }
+
     // You cannot anonymise someone the counterparty is still waiting on, so the
     // live trades end first, with a reason the other side can read. `paused`
     // is one of them: an accepted trade with a withdrawal question open.
@@ -64,6 +88,18 @@ export async function anonymiseUser(
         sql`update trade_withdrawals set state = 'expired', resolved_at = now()
             where trade_id = ${tradeId} and state = 'waiting'`,
       )
+      // And the others are told, the way they are told a trade opened or
+      // moved. The reason is on the trade, so the payload is the trade and a
+      // code for why, never the words — they are the app's to write, and a
+      // push must not carry them through Google or Apple. Nobody already
+      // erased: a tombstone has no list to read it in.
+      await tx.execute(sql`
+        insert into notifications (user_id, type, payload)
+        select p.user_id, 'trade_cancelled',
+               jsonb_build_object('tradeId', ${tradeId}::text, 'reason', 'account_deleted')
+        from trade_participants p join users u on u.id = p.user_id
+        where p.trade_id = ${tradeId} and p.user_id <> ${userId} and u.anonymised_at is null
+      `)
     }
 
     await tx.execute(sql`
@@ -77,7 +113,10 @@ export async function anonymiseUser(
                  where p.user_id = u.id and t.state = 'completed'),
                 current_date
               ) + interval '3 years')::date
-      from users u where u.id = ${userId}
+      from users u
+      where u.id = ${userId}
+        -- Nothing to seal, no row: a device that never made a profile.
+        and num_nonnulls(u.bankid_subject, u.email, u.phone, u.display_name) > 0
       on conflict (user_id) do nothing
     `)
 
@@ -130,8 +169,96 @@ export async function anonymiseUser(
         interests = '{}', bankid_subject = null, anonymised_at = now()
       where id = ${userId}
     `)
+    return true
   })
 
   for (const path of orphaned) await removeStored(path)
-  return { freed }
+  return { freed, erased }
+}
+
+/**
+ * How long a device nobody claimed is kept without being used. The product
+ * owner's rule, and a strict one: twelve months with no request from its own
+ * token, opening the app included, and it is gone.
+ */
+const DEVICE_IDLE = '12 months'
+
+/**
+ * A device account that has been left alone longer than `DEVICE_IDLE`.
+ *
+ * Unclaimed and still here, and never the test tooling's: a test account is
+ * somebody's fixture, whatever its age, and the admin's key is taken away
+ * outside the building. Idle by `last_active_at`, which only the account's own
+ * requests write — and by its sessions too, as a second witness, so a value
+ * that failed to move once is not the only thing standing between somebody
+ * and the sweep. Both in the database's clock, with the calendar's months.
+ *
+ * The witness is the account's own sessions only, the ones it signed in for.
+ * A session the switcher minted is the admin at the controls, which the mark
+ * does not count either (`resolveSession`), so neither witness counts it.
+ */
+const idleDevice = sql`
+  u.email is null and u.anonymised_at is null
+  and u.test_account_of is null and not u.is_admin
+  and u.last_active_at < now() - ${DEVICE_IDLE}::interval
+  and not exists (select 1 from sessions s
+                  where s.user_id = u.id and s.issued_by is null
+                    and s.last_seen_at >= now() - ${DEVICE_IDLE}::interval)`
+
+/**
+ * Erase every device account nobody has used for twelve months.
+ *
+ * Through `anonymiseUser`, the way every other erasure goes, so each column
+ * that points at the account meets the fate it meets for anybody: its likes,
+ * what it hid and its interests go, and its device id goes with the rest — the
+ * phone, if it ever comes back, is a stranger. Each account is looked at again
+ * under a lock before it is touched, because it may have opened the app since
+ * the list was made.
+ *
+ * A device is in no trade — writing, listing and accepting all need a profile
+ * — so nothing goes back on the market and there is no search to run after it.
+ *
+ * `failed` is handed an account that could not be erased, and the rest go on;
+ * without it the error is thrown, which is what a test wants.
+ */
+export async function eraseInactiveDevices(
+  db: Database,
+  opts: { failed?: (userId: string, err: unknown) => void } = {},
+): Promise<number> {
+  const idle = await many<{ id: string }>(
+    db,
+    sql`select u.id from users u where ${idleDevice} order by u.last_active_at`,
+  )
+
+  let erased = 0
+  for (const { id } of idle) {
+    try {
+      const done = await anonymiseUser(db, id, { reason: 'inactive_device', onlyIf: idleDevice })
+      if (done.erased) erased++
+    } catch (err) {
+      if (!opts.failed) throw err
+      opts.failed(id, err)
+    }
+  }
+  return erased
+}
+
+/**
+ * Delete the sealed records whose claim window has closed.
+ *
+ * `purge_after` is the last day a claim could still be brought; once it has
+ * passed, the purpose the record was kept for is spent, and keeping it anyway
+ * is keeping personal data for nothing. The day itself still counts.
+ *
+ * This is the one statement outside the erasure above that names `retained`,
+ * and it is not a read: it compares the date the row was sealed with, deletes,
+ * and hands back a count. No content leaves the schema, and nothing the
+ * application does depends on what was in it — which is the rule
+ * (`CLAUDE.md`: the application must never read from `retained`).
+ */
+export async function purgeRetained(db: Database): Promise<number> {
+  const result = await db.execute(
+    sql`delete from retained.identities where purge_after < current_date`,
+  )
+  return result.count
 }

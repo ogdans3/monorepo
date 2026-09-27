@@ -112,6 +112,14 @@ export const users = pgTable(
     // trigger's business.
     testAccountOf: uuid('test_account_of'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // The last time the account did anything itself: any request with its own
+    // token, and a sign-in with its own credential. Written in
+    // `auth/sessions.ts` and nowhere else, because nothing else is the account
+    // doing anything — an admin looking at it, a job passing over it, somebody
+    // liking what it liked. A device nobody has claimed is erased once this is
+    // twelve months old (`eraseInactiveDevices`), so a write that went missing
+    // is somebody deleted who opened the app.
+    lastActiveAt: timestamp('last_active_at', { withTimezone: true }).notNull().defaultNow(),
     // Erasure is anonymisation, not DELETE: the counterparty keeps their own
     // trade history. The row lives on as a tombstone with nothing personal in it.
     anonymisedAt: timestamp('anonymised_at', { withTimezone: true }),
@@ -675,8 +683,9 @@ export const retainedIdentities = retained.table('identities', {
   reason: text('reason').notNull().default('legal_claims'),
   sealedAt: timestamp('sealed_at', { withTimezone: true }).notNull().defaultNow(),
   // Completed trade plus three years — the general limitation period in
-  // foreldelsesloven § 2. Once a claim can no longer be brought the purpose is
-  // spent and the row goes.
+  // foreldelsesloven § 2 — or the deletion plus three years when there was
+  // none. Once a claim can no longer be brought the purpose is spent and the
+  // daily job deletes the row (`purgeRetained`).
   purgeAfter: date('purge_after').notNull(),
 })
 

@@ -7,15 +7,17 @@
 // somebody with database access; App Store review asks for it in the app.
 //
 // What the engine decides, seen from outside: the trades still going on end
-// first, with a reason the other side can read, and whatever of theirs those
-// trades were holding goes back on the market; the profile is emptied and the
-// row stays as a tombstone in other people's histories; a sealed record keeps
-// what a claim would need; every session dies; and the address and the number
-// are free to make a new account with.
+// first, with a reason the other side can read and a notification telling
+// them so, and whatever of theirs those trades were holding goes back on the
+// market; the profile is emptied and the row stays as a tombstone in other
+// people's histories; a sealed record keeps what a claim would need; every
+// session dies; and the address and the number are free to make a new
+// account with.
 //
 // An account with a password is deleted with its password, because a phone
 // left unlocked on a table is not the person. A phone that never made a
-// profile has nothing but its token, and that is enough. The key to the test
+// profile has nothing but its token, and that is enough — and it leaves no
+// sealed record, because it had nothing to seal. The key to the test
 // tooling is taken away outside the building before its account can go, and
 // a test account is retired by the tool, which never ends a trade a real
 // person is standing in.
@@ -147,6 +149,18 @@ describe('deleting your own account', () => {
     expect(res.body!['closeReason']).toBe('Den andre parten slettet kontoen sin')
   })
 
+  test('5b. and she is told, in the list 12a draws, rather than finding out when she looks', async () => {
+    const res = await call('GET', '/notifications', { token: kari })
+
+    // A code for why and the trade it happened to, never the words: those are
+    // the app's, and a push carries only ids.
+    const cancelled = (res.body!['notifications'] as Json[]).filter(
+      (n) => n['type'] === 'trade_cancelled',
+    )
+    expect(cancelled).toHaveLength(1)
+    expect(cancelled[0]!['payload']).toEqual({ tradeId: trade, reason: 'account_deleted' })
+  })
+
   test('6. her tent is back on the market, and the ring that was waiting for it opens', async () => {
     const [row] = await db.execute<Record<string, string | null>>(
       sql`select status, active_trade_id from items where id = ${tent}`,
@@ -221,6 +235,16 @@ describe('deleting your own account', () => {
       expect(again.status).toBe(201)
       expect(again.body!['user']['id']).not.toBe(phoneId)
     })
+
+    test('11b. it leaves no sealed record, because it never had anything to seal', async () => {
+      // No name, no address, no number, no BankID, and no trade a claim could
+      // be about. The row it used to leave was every column null, for three
+      // years.
+      const sealed = await db.execute(
+        sql`select 1 from retained.identities where user_id = ${phoneId}`,
+      )
+      expect(sealed).toHaveLength(0)
+    })
   })
 
   describe('in the middle of a withdrawal', () => {
@@ -241,11 +265,17 @@ describe('deleting your own account', () => {
       const gone = await call('DELETE', '/me', { token: siri.token, body: { password: 'byttehandel1' } })
       expect(gone.status).toBe(204)
 
+      // Refused because the trade has ended, and said so: a no to a waiting
+      // question puts the trade back to `accepted`.
       const answer = await call('POST', `/trades/${paused}/withdrawal/respond`, {
         token: tor.token,
         body: { approve: false },
       })
-      expect(answer.status).toBe(404)
+      expect(answer.status).toBe(409)
+      expect(answer.body).toMatchObject({
+        code: 'trade_closed',
+        message: 'Byttet er allerede avsluttet.',
+      })
       const view = await call('GET', `/trades/${paused}`, { token: tor.token })
       expect(view.body!['state']).toBe('cancelled')
       expect(view.body!['closeReason']).toBe('Den andre parten slettet kontoen sin')

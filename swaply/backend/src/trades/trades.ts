@@ -6,6 +6,9 @@ import type { Cycle } from './cycles.js'
 
 type Row = Record<string, string | null>
 
+/** A transaction's handle, for the steps that have to share one with their caller. */
+export type Tx = Parameters<Parameters<Database['transaction']>[0]>[0]
+
 /**
  * Turn a found cycle into a trade with its first offer on the table.
  *
@@ -347,6 +350,14 @@ export async function completeTrade(db: Database, tradeId: string) {
     await tx.execute(
       sql`update trades set state = 'completed', closed_at = now() where id = ${tradeId}`,
     )
+    // Handover is open while a withdrawal question waits, so everybody can
+    // have sent and received with one still unanswered. It is moot now, and
+    // it closes as lapsed rather than staying open for an answer that would
+    // put a finished trade back to `accepted`.
+    await tx.execute(
+      sql`update trade_withdrawals set state = 'expired', resolved_at = now()
+          where trade_id = ${tradeId} and state = 'waiting'`,
+    )
   })
 }
 
@@ -361,16 +372,31 @@ export async function cancelTrade(
   tradeId: string,
   reason: string,
 ): Promise<string[]> {
-  return db.transaction(async (tx) => {
-    const freed = await tx.execute<Row>(
-      sql`update items set active_trade_id = null, status = 'available'
-          where active_trade_id = ${tradeId}
-          returning id`,
-    )
-    await tx.execute(
-      sql`update trades set state = 'cancelled', closed_at = now(), close_reason = ${reason}
-          where id = ${tradeId}`,
-    )
-    return freed.map((row) => row['id']!)
-  })
+  return db.transaction((tx) => endTrade(tx, tradeId, reason))
+}
+
+/**
+ * `cancelTrade` inside a transaction the caller already holds — for a caller
+ * that has locked the trade and decided on its state, and must not let go of
+ * the lock before the trade has ended.
+ */
+export async function endTrade(tx: Tx, tradeId: string, reason: string): Promise<string[]> {
+  const freed = await tx.execute<Row>(
+    sql`update items set active_trade_id = null, status = 'available'
+        where active_trade_id = ${tradeId}
+        returning id`,
+  )
+  await tx.execute(
+    sql`update trades set state = 'cancelled', closed_at = now(), close_reason = ${reason}
+        where id = ${tradeId}`,
+  )
+  // A withdrawal question still waiting is moot: the trade it asked about has
+  // ended under it. Closed as lapsed, the way erasure closes one, because an
+  // answer given later to a waiting row — a no, or «Angre forespørselen» —
+  // puts the trade back to `accepted`.
+  await tx.execute(
+    sql`update trade_withdrawals set state = 'expired', resolved_at = now()
+        where trade_id = ${tradeId} and state = 'waiting'`,
+  )
+  return freed.map((row) => row['id']!)
 }

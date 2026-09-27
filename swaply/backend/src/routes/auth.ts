@@ -7,7 +7,7 @@ import { hashPassword, verifyPassword } from '../auth/passwords.js'
 import { issueSession, revokeSession } from '../auth/sessions.js'
 import { hiddenCountColumn } from '../lib/hidden.js'
 import { admit } from '../lib/invites.js'
-import { badRequest, conflict, unauthorized } from '../lib/errors.js'
+import { ApiError, badRequest, conflict } from '../lib/errors.js'
 import { townOf } from '../lib/postcodes.js'
 import { one } from '../lib/rows.js'
 import { emailAddress } from '../lib/validation.js'
@@ -184,9 +184,11 @@ export default async function authRoutes(app: FastifyInstance) {
       sql`select *, ${hiddenCountColumn} from users where lower(email) = ${body.email}`,
     )
     // Same answer either way: telling someone the address exists is telling them
-    // half of a credential.
+    // half of a credential. Not the generic 401, whose «Du må logge inn.» is
+    // for a request with no session behind it — said under «Logg inn» to
+    // somebody who just tried to, it reads as the button doing nothing.
     if (!user?.['password_hash'] || !(await verifyPassword(body.password, user['password_hash']))) {
-      throw unauthorized()
+      throw new ApiError(401, 'wrong_credentials', 'Feil e-post eller passord.')
     }
 
     // The app starts without asking, so somebody signing in to the account

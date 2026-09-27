@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { blockedBetween } from '../lib/blocks.js'
 import { CATEGORIES, CONDITIONS } from '../lib/constants.js'
 import { badRequest, forbidden, notFound } from '../lib/errors.js'
-import { toStoredPath } from '../lib/media.js'
+import { storedExists, toStoredPath } from '../lib/media.js'
 import { townFor, townOf } from '../lib/postcodes.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
@@ -42,6 +42,24 @@ const itemBody = z.object({
     .default([]),
 })
 
+/**
+ * Refuses a photograph of ours whose bytes are gone, before the listing is
+ * written. An upload nobody listed within a day is swept, and a phone that
+ * kept a half-written 10b across that day still holds its path — which the
+ * pattern above accepts, and which would go on the market as a broken
+ * picture. `kept` are the paths the listing already has: a picture that went
+ * missing under a live listing is not the reason an edit of it should fail.
+ */
+async function assertStored(media: string[], kept: string[] = []) {
+  for (const value of media) {
+    const path = toStoredPath(value)
+    if (!path.startsWith('/media/') || kept.includes(path)) continue
+    if (!(await storedExists(path))) {
+      throw badRequest('image_gone', 'Et av bildene er ikke lagret lenger. Legg det til på nytt.')
+    }
+  }
+}
+
 export default async function itemRoutes(app: FastifyInstance) {
   app.post('/items', async (request, reply) => {
     // 10c stands between looking around and listing something: a thing on the
@@ -52,6 +70,7 @@ export default async function itemRoutes(app: FastifyInstance) {
     if (body.kind === 'item' && !body.condition) {
       throw badRequest('condition_required', 'Velg tilstand for gjenstanden.')
     }
+    await assertStored(body.media)
 
     // Where the thing is: the postcode typed on 10b, and only then wherever
     // the owner is (a town sent as words wins over both, and no screen sends
@@ -134,6 +153,10 @@ export default async function itemRoutes(app: FastifyInstance) {
     if (existing['owner_id'] !== userId) throw forbidden('Dette er ikke din gjenstand.')
     if (existing['active_trade_id']) {
       throw badRequest('item_reserved', 'Gjenstanden er reservert i et bytte og kan ikke endres.')
+    }
+    if (body.media) {
+      const kept = await many(app.db, sql`select url from item_media where item_id = ${id}`)
+      await assertStored(body.media, kept.map((row) => row['url']))
     }
 
     const item = await one(

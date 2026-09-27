@@ -93,6 +93,15 @@ and no snapshot points at. Without it the volume only grows, and it grows with
 photographs of the inside of people's homes — which is what makes it a data
 protection problem rather than a disk one.
 
+A half-written 10b now lives on the phone for as long as the person leaves it,
+which is longer than a day, so the two have to agree. The app keeps the bytes of
+every picture in a draft beside the path, trusts a path for twenty hours, and
+sends the picture again after that. And the server does not take a path's word
+for it: a listing made or edited with a `/media/` path whose file is gone is
+refused, `image_gone`, rather than put on the market with a broken picture —
+except a path the listing already had, whose loss is no reason to refuse an
+edit of the title.
+
 **Erasure reaches the bytes.** Anonymising somebody unlinks the photographs on
 their listings, except one a completed trade snapshotted: that is the
 counterparty's record of what they got, and it lives to the retention horizon
@@ -133,6 +142,13 @@ Two concurrent likes can each find a cycle using the same item. Lock the involve
 item rows with `SELECT … FOR UPDATE` **in sorted id order** — any other order
 deadlocks — confirm they are all still available, then create the trade and set
 the reservation in one transaction.
+
+Ending a trade takes its locks in one order too: **what the trade holds, then the
+trade.** Cancelling, completing and erasure all release the items and then write
+the trade row, so the withdrawal answers on 08b — which read the trade's state
+under a lock before deciding — lock its items first as well. Taken the other way
+round, a yes to a withdrawal and a deletion in the same moment each held what the
+other needed next (`withdrawal-after-close.test.ts`, step 10).
 
 ### The queries and the indexes
 
@@ -291,6 +307,45 @@ waiting for the hourly sweep: each is now a wish from somebody who has
 something to give. A test account is never folded, in either direction, and
 neither is a session the switcher minted.
 
+**A device nobody uses is erased after twelve months.** The product owner's
+rule, 27.09.2026, and a strict one: an unclaimed account with no request from
+its own token for more than twelve months is erased, opening the app included.
+*Activity* is an authenticated request made with the account's own token, or a
+sign-in with its own credential, and nothing else — so it is recorded where
+every such request passes and nowhere else. `users.last_active_at` is written
+in `backend/src/auth/sessions.ts`: by `resolveSession`, in the same statement
+that touches the session's `last_seen_at`, and by `issueSession` at a sign-in
+that was not the account switcher's. A request on a session the switcher minted
+moves that session's `last_seen_at` and not the account's mark: it is the admin
+at the controls. Somebody liking what the device liked, an admin reading it and
+a job passing over it write nothing, and a flow test holds that only that one
+file writes the column.
+
+The write is throttled to one per five minutes per account, because the value
+is only ever asked whether it is a year old, and a write to `users` behind every
+read is a cost for nothing. It takes its row lock with `skip locked`: the two
+updates in one `with` run in no fixed order, and a merge or an erasure holds the
+user row before it deletes the sessions under it, so waiting there would be one
+half of a deadlock. A skipped write is picked up by the next request, because
+the value is still stale; for a device, whatever held the row was its own
+request or the end of the account.
+
+The sweep is `eraseInactiveDevices`, in the daily job in `jobs.ts`. Twelve
+months is `interval '12 months'` in the database's clock, and «more than» is
+`<`. The sessions are a second witness — a session seen inside the window keeps
+the account even if its own mark failed to move, and a session the switcher
+minted is no witness, for the reason above — and each account is looked at
+again under a row lock before it is erased, because it may have opened the app
+since the list was made. So to watch the sweep take a device by hand, age the
+account's `last_active_at` and its sessions' `last_seen_at` both; the column
+alone erases nothing. The erasure is `anonymiseUser`, as for anybody,
+with the reason `inactive_device`: the wishes, what it hid and its interests go,
+the device id goes, and a phone that comes back is a stranger. Claimed accounts,
+test accounts and the admin are never swept. The job runs a minute after the
+process starts as well as every day, because an interval starts again from
+nothing on every deploy, and a job a day away is one a daily deploy never lets
+run.
+
 ## Data protection
 
 Norway is in the EEA, so the GDPR applies in full. This is our reading and not a
@@ -323,8 +378,17 @@ limitation period in foreldelsesloven § 2, **or the deletion plus three years
 when there was no completed trade.** A trade that went wrong — one side sent,
 the other deleted — never completed, and it is exactly the claim the record is
 kept for. When a claim can no longer be brought the purpose is spent and the
-row goes. Messages follow the same window, because
+row goes: `purgeRetained`, in the same daily job, deletes every row whose
+`purge_after` has passed, and the day itself is still inside. Nothing did until
+27.09.2026. That is not a read of `retained` — it compares a date, deletes and
+returns a count, and a flow test holds that no code under `src/` selects from
+the schema. Messages follow the same window, because
 the evidence in a dispute is almost always in the chat.
+
+**A device that never made a profile leaves no sealed record.** Nothing
+identifies it to a court — a name, a contact channel and a BankID subject all
+come with a profile — and it cannot have been in a trade, so there is no claim
+either. `anonymiseUser` writes a row only when there is something to put in it.
 
 **Reports and blocks survive the reported user's deletion**, or
 delete-and-re-register is a free wash of the record. For the same reason a
@@ -339,7 +403,10 @@ ten; at the retention horizon the image goes and the text stays, which is what a
 history actually needs.
 
 **Deleting an account cancels its active trades first**, with a clear reason to
-the other side. You cannot anonymise someone the counterparty is waiting on.
+the other side. You cannot anonymise someone the counterparty is waiting on. The
+others are told with a notification of type `trade_cancelled`, whose payload is
+the trade and a reason code (`account_deleted`) and never the words, like every
+other push.
 
 **The door is `DELETE /me`**, which runs the same `anonymiseUser` the test
 tooling retires its accounts with. The password is asked for when there is one
@@ -354,7 +421,9 @@ carries a name through Google and Apple; the app fetches the words itself.
 **Anonymous users have rights too.** A device id is personal data, so there has
 to be a route to access and erasure that does not require an account. Erasure
 has one: `DELETE /me` with a device's token and nothing else. Access does not
-yet, for a device or for anybody.
+yet, for a device or for anybody. And a device is not kept for ever on the
+chance it comes back: twelve months without a request from it, and it is
+erased (see *Anonymous, and why a wish waits*).
 
 **Age.** Norway set the digital age of consent at 13. Unless we intend to write
 the chapter on children's data, the terms say 16 or over.

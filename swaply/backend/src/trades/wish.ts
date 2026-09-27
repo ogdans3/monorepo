@@ -220,3 +220,48 @@ async function openTradeOver(db: Database, ring: Cycle): Promise<string | null> 
   )
   return row ? (row['id'] as string) : null
 }
+
+/**
+ * A ring still going on in which this wish is answered, or null.
+ *
+ * The same test as `openTradeOver`, seen from one edge instead of a whole
+ * ring: a trade in any state short of completed or cancelled, with some
+ * version of the offer in which the listing goes to this person — handed on
+ * by whoever sits before them, the way every ring hands things round — and in
+ * which everybody gives something. The last part is what makes it a ring and
+ * not «Jeg vil ha», which names the listing and nothing back.
+ *
+ * For the test tooling, whose heart is pressed on a listing the account may
+ * already want: a repeat press searches for nothing, and «Ingen sirkel ennå»
+ * said over a trade that is open is a tool telling its user something false.
+ * Found without the cycle search, because an agreed ring has reserved its
+ * listings and the search only walks free ones.
+ */
+export async function openRingCovering(
+  db: Database,
+  userId: string,
+  itemId: string,
+): Promise<string | null> {
+  const row = await one(
+    db,
+    sql`select t.id from trade_participants mine
+        join trades t on t.id = mine.trade_id
+        where mine.user_id = ${userId}
+          and t.state not in ('completed', 'cancelled')
+          and exists (
+            select 1 from trade_offers o
+            join trade_offer_items oi on oi.offer_id = o.id and oi.item_id = ${itemId}
+            where o.trade_id = t.id
+              and (oi.giver_position + 1)
+                  % (select count(*) from trade_participants n where n.trade_id = t.id)
+                  = mine.position
+              and not exists (
+                select 1 from trade_participants p
+                where p.trade_id = t.id
+                  and not exists (select 1 from trade_offer_items g
+                                  where g.offer_id = o.id and g.giver_position = p.position)))
+        order by t.created_at
+        limit 1`,
+  )
+  return row ? (row['id'] as string) : null
+}

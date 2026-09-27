@@ -411,6 +411,27 @@ describe('building a trade in a named state', () => {
       expect(res.body!['message']).toContain('En Fremmed')
     })
 
+  test('14i. pressed on a listing the account already wants, it names the ring already open',
+    async () => {
+      // A repeat press searches for nothing, which is right for a person, and
+      // the tool said «Ingen sirkel ennå» with a trade open over the very
+      // wish. Agreed, so its listings are reserved and the cycle search, which
+      // only walks free ones, could not have found it either.
+      const built = await scenario('accepted')
+      const tradeId = built.body!['tradeId']
+      const view = await call('GET', `/trades/${tradeId}`, { token: gabriel })
+      const yours = view.body!['youGive'][0]['id']
+      const other = view.body!['receivingFrom']['id']
+
+      const res = await call('POST', `/admin/items/${yours}/want`, {
+        token: gabriel, body: { as: other },
+      })
+
+      expect(res.status).toBe(200)
+      // Not new: 06a is for the moment a trade opens, and this one had it.
+      expect(res.body).toMatchObject({ tradeId, tradeIsNew: false })
+    })
+
   test('15. and a stranger can reach none of it', async () => {
     for (const [method, url] of [
       ['POST', '/admin/scenarios'],

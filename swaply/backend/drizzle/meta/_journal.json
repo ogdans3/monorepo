@@ -50,6 +50,20 @@
       "when": 1790465524849,
       "tag": "0006_hidden_listings",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790480084011,
+      "tag": "0007_last_active",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790480344124,
+      "tag": "0008_close_lapsed_withdrawals",
+      "breakpoints": true
     }
   ]
 }

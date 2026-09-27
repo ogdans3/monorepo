@@ -27,7 +27,7 @@ import { validateOffer } from '../trades/offer.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import { acceptTrade } from '../trades/accept.js'
 import { completeTrade, proposeCounterOffer } from '../trades/trades.js'
-import { expressWish } from '../trades/wish.js'
+import { expressWish, openRingCovering } from '../trades/wish.js'
 import { publicItem } from './serialize.js'
 
 const idParam = z.object({ id: z.string().uuid() })
@@ -347,7 +347,13 @@ export default async function adminRoutes(app: FastifyInstance) {
     }
 
     const wish = await expressWish(app.db, as, id)
-    return wish
+    if (wish.tradeId) return wish
+    // Pressed on something the account already wants, the heart searches for
+    // nothing and names no trade — which is right for a person, who has had
+    // their answer. The tool's answer is a sentence about the ring, so it
+    // looks for the one already open over this wish, and says it is not new.
+    const open = await openRingCovering(app.db, as, id)
+    return open ? { ...wish, tradeId: open, tradeIsNew: false } : wish
   })
 
   /**

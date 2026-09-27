@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises'
 import { join, normalize } from 'node:path'
 
 import { env } from '../env.js'
@@ -104,6 +104,20 @@ export async function storeImage(bytes: Buffer): Promise<{ path: string; bytes: 
 export function toStoredPath(value: string): string {
   const match = /^https?:\/\/[^/]+(\/media\/[0-9a-f]{32}\.(?:jpg|png|webp))$/.exec(value)
   return match ? match[1]! : value
+}
+
+/**
+ * Whether the bytes behind a stored path are still here. An upload that no
+ * listing took up within a day is swept (`media-sweep.ts`), and a phone can
+ * keep a half-written listing for longer than that, holding the path it was
+ * given; listed with it, the listing would show everybody a broken picture.
+ */
+export async function storedExists(path: string): Promise<boolean> {
+  const name = path.startsWith('/media/') ? path.slice('/media/'.length) : ''
+  const file = mediaPath(name)
+  if (!file) return false
+  const info = await stat(file).catch(() => null)
+  return info?.isFile() ?? false
 }
 
 /**

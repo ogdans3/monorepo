@@ -262,6 +262,76 @@ describe('a photograph on a listing', () => {
     await expect(stat(file)).rejects.toThrow()
   })
 
+  test('8b. a listing made with a swept picture is refused, and nothing is listed', async () => {
+    // A phone keeps a half-written 10b for as long as it likes, with the
+    // paths of what it had uploaded. A day later the sweep has had them, and
+    // the path still matches the pattern — so the file is looked for.
+    const swept = (await upload(kari, PNG)).body!['path']
+    const old = new Date(Date.now() - 25 * 60 * 60 * 1000)
+    await utimes(join(env.MEDIA_DIR, swept.split('/').pop()!), old, old)
+    expect(await sweepOrphanedMedia(db)).toBe(1)
+    const fresh = (await upload(kari, PNG)).body!['path']
+    const before = await db.execute(sql`select 1 from items where title = 'Pulk'`)
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { title: 'Pulk', category: 'friluft', condition: 'good', media: [fresh, swept] },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toEqual({
+      code: 'image_gone',
+      message: 'Et av bildene er ikke lagret lenger. Legg det til på nytt.',
+    })
+    expect(await db.execute(sql`select 1 from items where title = 'Pulk'`)).toHaveLength(
+      before.length,
+    )
+    // With the picture sent again, it goes.
+    const again = (await upload(kari, PNG)).body!['path']
+    const listed = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { title: 'Pulk', category: 'friluft', condition: 'good', media: [fresh, again] },
+    })
+    expect(listed.statusCode).toBe(201)
+  })
+
+  test('8c. an edit is refused a swept picture too, but not one the listing already had', async () => {
+    const kept = (await upload(kari, PNG)).body!['path']
+    const listed = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { title: 'Snøsko', category: 'friluft', condition: 'good', media: [kept] },
+    })
+    const itemId = listed.json()['id']
+    const gone = (await upload(kari, PNG)).body!['path']
+    await rm(join(env.MEDIA_DIR, gone.split('/').pop()!))
+
+    const added = await app.inject({
+      method: 'PATCH',
+      url: `/items/${itemId}`,
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { media: [kept, gone] },
+    })
+    expect(added.statusCode).toBe(400)
+    expect(added.json()['code']).toBe('image_gone')
+
+    // The listing's own picture lost under it is not a reason the owner
+    // cannot correct the title.
+    await rm(join(env.MEDIA_DIR, kept.split('/').pop()!))
+    const corrected = await app.inject({
+      method: 'PATCH',
+      url: `/items/${itemId}`,
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { title: 'Truger', media: [`http://test.local${kept}`] },
+    })
+    expect(corrected.statusCode).toBe(200)
+  })
+
   test('9. except the one a completed trade remembers', async () => {
     const kept = (await upload(kari, PNG)).body!['path']
     const file = join(env.MEDIA_DIR, kept.split('/').pop()!)

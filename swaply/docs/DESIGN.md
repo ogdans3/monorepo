@@ -95,7 +95,7 @@ Photos are optional for both. Discovery is a collage, so a listing without one n
 
 The same lookup answers everywhere a postcode is typed. Signing up and editing the profile keep the town the postcode belongs to, over a town sent alongside it, and refuse one that belongs to none in the same words 10b uses; `GET /postcodes/:code` answers without a session, so a form can show the town while it is typed. It is reference data and says nothing about anybody.
 
-**The register's licence is NLOD 2.0.** bring.no publishes the file with no terms beside it; Posten Bring AS has registered it in the national data catalogue (data.norge.no, «Postnummer i Norge») under the Norwegian licence for Open Government data 2.0, which allows copying and distributing it, commercially too, with attribution. Checked 26.09.2026. The attribution NLOD asks for — *Contains data under the Norwegian licence for Open Government data (NLOD) distributed by Posten Bring AS*, with links to the licence and the source and a note that we changed it (sentence case, postcode and place only) — is in the header of the generated file. The licence says it must not be hidden or hard to find; a line on a page people can read (an «Om Swaply» or the landing page) is still owed.
+**The register's licence is NLOD 2.0.** bring.no publishes the file with no terms beside it; Posten Bring AS has registered it in the national data catalogue (data.norge.no, «Postnummer i Norge») under the Norwegian licence for Open Government data 2.0, which allows copying and distributing it, commercially too, with attribution. Checked 26.09.2026. The attribution NLOD asks for — *Contains data under the Norwegian licence for Open Government data (NLOD) distributed by Posten Bring AS*, with links to the licence and the source and a note that we changed it (sentence case, postcode and place only) — is in the header of the generated file. The licence says it must not be hidden or hard to find, so since 27.09.2026 it is also on a page people can read: in the app, in small type at the foot of «Juridisk og personvern», which an account with a profile reaches from 16b and a device that is only looking around from its own 13. The web still carries none: the landing page names no town, but the page behind a shared listing does, and a line is still owed there.
 
 ### Lifecycle
 
@@ -174,6 +174,8 @@ Making the profile **claims the account the device already has**, rather than st
 
 Which means somebody with an account on another phone arrives as a stranger first. **Signing in from there folds the device's account into theirs**: in one transaction, and only after the password, the wishes move across, blocks and reports follow them, so does what it asked not to be shown, the invitation the device took names the account, and the device's account is deleted. A wish the account could not have made itself — for its own listing, one it already has, one across a block — stays behind, and each wish that moves gets the same loop search a heart gets, because it now belongs to somebody with something to give. Test accounts are never folded, in either direction.
 
+**A device nobody uses is erased after twelve months, and strictly.** An account that never made a profile, and has not made a single request with its own token for more than twelve months, is erased by a daily job. Opening the app counts: the app asks the server who it is when it starts and when it comes back from the background, and that request is activity, so a phone opened once a year keeps its wishes. *Activity* means an authenticated request made with the account's own token, or a sign-in with its own credential — its device id coming back without a token is one — and nothing else. Somebody liking what it liked, the owner of a listing it wished for looking at who wants it, an admin reading its profile, the cycle sweep passing over its wish: none of that is the account doing anything, and none of it keeps it. Twelve months is the calendar's, in the database's clock, and «more than» means more than. It is erased the way anybody is — its wishes, what it hid and its interests go, and so does the device id, so the phone that comes back is a stranger — and it leaves no sealed record, because it never had anything to seal. A claimed account and a test account are never swept, however quiet. Decided by the product owner 27.09.2026. The app says so to the device, on the one screen of its own a device has — its 13, «Du ser deg rundt» — which also says the likes are kept on an account for the device and not on the phone, and links to «Juridisk og personvern», where the rule is written out.
+
 ## Feedback
 
 Two separate things after a completed trade, and they are not the same screen:
@@ -229,11 +231,38 @@ said only the first half until 27.09.2026; `anonymiseUser` has always done
 both.) Messages follow the same window, because the evidence in a dispute is
 almost always in the chat.
 
+**The record goes when the window closes.** A daily job deletes every sealed
+identity whose last day has passed; the day itself is still inside. Until
+27.09.2026 nothing did, and a record meant to last three years lasted for
+ever. Deleting by date is not reading: the purge compares the date the row was
+sealed with and hands nothing back, and the application still never reads
+`retained`.
+
+**A device that never made a profile leaves no sealed record.** It had no name,
+contact channel or BankID subject — those come with a profile — and it could
+not have been in a trade, so there is nothing a court could use and no claim to
+use it in. It used to leave a row of nothing but nulls, kept three years.
+
 Reports and blocks outlive the reported user, or delete-and-re-register is a free
 wash of the record. Deleting an account cancels its active trades first, with a
-reason to the other side — a trade paused on a withdrawal question included, and
-the question closes with it — and whatever of theirs those trades held goes back
-on the market and into the cycle search.
+reason to the other side and a notification that tells them so — a trade paused
+on a withdrawal question included, and the question closes with it — and
+whatever of theirs those trades held goes back on the market and into the cycle
+search. A question that outlives its trade in any other way closes too, and an
+answer to one on a trade that has ended is refused in words rather than putting
+the trade back to `accepted`.
+
+**A half-written listing is kept on the phone, and only there.** 10b as it was
+left — the words, and the pictures, which are of somebody's things and often of
+their home — is kept per account in the app's own storage, so closing the app,
+or the phone killing it with 10c open, loses nothing. It goes when the listing
+is published, when the form is emptied (there is no «Forkast»: emptying the form
+is how a draft is thrown away), on «Logg ut», which takes every draft on the
+phone and not only the account's, on «Slett kontoen», and when the phone is made
+a new stranger because the account it had is gone. A picture already uploaded
+for a draft is the server's for a day only unless a listing takes it up, so the
+phone keeps the bytes too and sends it again when the draft is finished later.
+Asked for by the product owner 27.09.2026.
 
 **A person deletes their own account with `DELETE /me`** («Slett kontoen»), built
 26.09.2026. An account with a password gives the password, because a phone left
@@ -275,4 +304,4 @@ What is left is held up by an account we do not have.
 7. ~~Chat + read state~~ — push notifications still need the FCM and APNs accounts
 8. ~~Invite deep link + share link + public item page + anonymous account flow~~ — done 09.09.2026
 9. ~~Report/block, reviews~~
-10. ~~Erasure~~ — done 26.09.2026. `DELETE /me` runs `anonymiseUser` for the person themselves, with the password for an account that has one and the token alone for a device; see *Erasure and retention*. The screen that asks is the app's «Slett kontoen», at the foot of «Juridisk og personvern» in settings. Access — handing a person a copy of what we hold — still has no door of its own.
+10. ~~Erasure~~ — done 26.09.2026. `DELETE /me` runs `anonymiseUser` for the person themselves, with the password for an account that has one and the token alone for a device; see *Erasure and retention*. The screen that asks is the app's «Slett kontoen», at the foot of «Juridisk og personvern» in settings. The daily job that erases devices idle for twelve months and purges sealed records past their window followed on 27.09.2026. Access — handing a person a copy of what we hold — still has no door of its own.

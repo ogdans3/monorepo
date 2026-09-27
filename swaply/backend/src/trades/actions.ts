@@ -3,8 +3,8 @@ import { sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { WITHDRAWAL_RESPONSE_HOURS } from '../lib/constants.js'
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
-import { many, one } from '../lib/rows.js'
-import { cancelTrade } from './trades.js'
+import { many, one, type Row } from '../lib/rows.js'
+import { cancelTrade, endTrade, type Tx } from './trades.js'
 
 export async function participantOf(db: Database, tradeId: string, userId: string) {
   const row = await one(
@@ -60,6 +60,48 @@ export async function withdrawEarly(db: Database, tradeId: string, userId: strin
 }
 
 /**
+ * The trade a withdrawal action is about, locked until the action is written.
+ *
+ * Every one of them reads the state first and refuses a trade that has ended,
+ * in words. A question can outlive its trade — the other side deleted their
+ * account, the tool ended it, everybody sent and received while it waited —
+ * and each answer ends by putting the trade back to `accepted`. Given to a
+ * cancelled trade that brought it back to life with nothing reserved; given
+ * to a completed one, it un-completed it. The lock is what keeps a
+ * cancellation from landing between the check and the write.
+ *
+ * What the trade holds is locked before the trade, because that is the order
+ * every other way a trade ends takes them in: `endTrade`, `completeTrade` and
+ * the erasure all let go of the items and then write the trade. A yes that
+ * took the trade first and then reached for the items met a deletion that
+ * held the items and was reaching for the trade, and Postgres ended one of
+ * them as a deadlock — a 500 for Tor, or «Slett kontoen» failing for Siri.
+ * By the same condition as theirs, so the rows are met in the same order too.
+ */
+async function openTradeFor(tx: Tx, tradeId: string): Promise<string> {
+  await tx.execute(sql`select id from items where active_trade_id = ${tradeId} for update`)
+  const [trade] = await tx.execute<Row>(
+    sql`select state from trades where id = ${tradeId} for update`,
+  )
+  if (!trade) throw notFound('Fant ikke byttet.')
+  if (['completed', 'cancelled'].includes(trade['state'])) {
+    throw conflict('trade_closed', 'Byttet er allerede avsluttet.')
+  }
+  return trade['state']
+}
+
+/**
+ * Back to `accepted`, from the pause and from nothing else. The lock in
+ * `openTradeFor` already says the trade is open; this says it twice, because
+ * a line that can resurrect a trade should not depend on a caller remembering.
+ */
+async function resume(tx: Tx, tradeId: string) {
+  await tx.execute(
+    sql`update trades set state = 'accepted' where id = ${tradeId} and state = 'paused'`,
+  )
+}
+
+/**
  * «Spør om å trekke meg» after everyone accepted — screens 08a and 08b.
  *
  * Once the other side has marked something sent, the answer is already no: they
@@ -68,49 +110,47 @@ export async function withdrawEarly(db: Database, tradeId: string, userId: strin
 export async function requestWithdrawal(db: Database, tradeId: string, userId: string) {
   await participantOf(db, tradeId, userId)
 
-  const trade = await one(db, sql`select state from trades where id = ${tradeId}`)
-  if (trade?.['state'] !== 'accepted') {
-    throw conflict('not_accepted', 'Byttet er ikke godtatt ennå.')
-  }
+  return db.transaction(async (tx) => {
+    const state = await openTradeFor(tx, tradeId)
+    // Paused is what an open question looks like from the trade's side.
+    if (state === 'paused') throw conflict('already_asked', 'Det ligger allerede en forespørsel inne.')
+    if (state !== 'accepted') throw conflict('not_accepted', 'Byttet er ikke godtatt ennå.')
 
-  const sent = await one(
-    db,
-    sql`select 1 from trade_participants
-        where trade_id = ${tradeId} and user_id <> ${userId} and sent_at is not null`,
-  )
+    const [sent] = await tx.execute<Row>(
+      sql`select 1 from trade_participants
+          where trade_id = ${tradeId} and user_id <> ${userId} and sent_at is not null`,
+    )
 
-  const open = await one(
-    db,
-    sql`select 1 from trade_withdrawals where trade_id = ${tradeId} and state = 'waiting'`,
-  )
-  if (open) throw conflict('already_asked', 'Det ligger allerede en forespørsel inne.')
+    const [open] = await tx.execute<Row>(
+      sql`select 1 from trade_withdrawals where trade_id = ${tradeId} and state = 'waiting'`,
+    )
+    if (open) throw conflict('already_asked', 'Det ligger allerede en forespørsel inne.')
 
-  if (sent) {
-    // Screen 08c. Recorded rather than refused, so the record shows it was asked.
-    const row = await one(
-      db,
-      sql`insert into trade_withdrawals (trade_id, requested_by, responds_by, state,
-                                         resolved_at, blocked_by_sent)
-          values (${tradeId}, ${userId}, now(), 'rejected', now(), true)
+    if (sent) {
+      // Screen 08c. Recorded rather than refused, so the record shows it was asked.
+      const [row] = await tx.execute<Row>(
+        sql`insert into trade_withdrawals (trade_id, requested_by, responds_by, state,
+                                           resolved_at, blocked_by_sent)
+            values (${tradeId}, ${userId}, now(), 'rejected', now(), true)
+            returning *`,
+      )
+      return { ...row!, blocked: true }
+    }
+
+    const [row] = await tx.execute<Row>(
+      sql`insert into trade_withdrawals (trade_id, requested_by, responds_by)
+          values (${tradeId}, ${userId},
+                  now() + ${`${WITHDRAWAL_RESPONSE_HOURS} hours`}::interval)
           returning *`,
     )
-    return { ...row!, blocked: true }
-  }
-
-  const row = await one(
-    db,
-    sql`insert into trade_withdrawals (trade_id, requested_by, responds_by)
-        values (${tradeId}, ${userId},
-                now() + ${`${WITHDRAWAL_RESPONSE_HOURS} hours`}::interval)
-        returning *`,
-  )
-  await db.execute(sql`update trades set state = 'paused' where id = ${tradeId}`)
-  await db.execute(sql`
-    insert into notifications (user_id, type, payload)
-    select p.user_id, 'withdrawal_requested', jsonb_build_object('tradeId', ${tradeId}::text)
-    from trade_participants p where p.trade_id = ${tradeId} and p.user_id <> ${userId}
-  `)
-  return { ...row!, blocked: false }
+    await tx.execute(sql`update trades set state = 'paused' where id = ${tradeId}`)
+    await tx.execute(sql`
+      insert into notifications (user_id, type, payload)
+      select p.user_id, 'withdrawal_requested', jsonb_build_object('tradeId', ${tradeId}::text)
+      from trade_participants p where p.trade_id = ${tradeId} and p.user_id <> ${userId}
+    `)
+    return { ...row!, blocked: false }
+  })
 }
 
 export async function respondToWithdrawal(
@@ -120,62 +160,73 @@ export async function respondToWithdrawal(
   approve: boolean,
 ) {
   await participantOf(db, tradeId, userId)
-  const req = await one(
-    db,
-    sql`select * from trade_withdrawals
-        where trade_id = ${tradeId} and state = 'waiting' order by requested_at desc limit 1`,
-  )
-  if (!req) throw notFound('Ingen forespørsel å svare på.')
-  if (req['requested_by'] === userId) {
-    throw badRequest('own_request', 'Du kan ikke svare på din egen forespørsel.')
-  }
 
-  const mine = await one(
-    db,
-    sql`select sent_at from trade_participants where trade_id = ${tradeId} and user_id = ${userId}`,
-  )
-  // Saying yes after you have sent is not a thing you can do — the screen says
-  // as much, and the answer flips to no with the reason recorded.
-  if (approve && mine?.['sent_at']) {
-    await db.execute(
-      sql`update trade_withdrawals set state = 'rejected', resolved_at = now(),
-                 blocked_by_sent = true where id = ${req['id']}`,
+  return db.transaction(async (tx) => {
+    await openTradeFor(tx, tradeId)
+
+    const [req] = await tx.execute<Row>(
+      sql`select * from trade_withdrawals
+          where trade_id = ${tradeId} and state = 'waiting' order by requested_at desc limit 1`,
     )
-    await db.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
-    return { state: 'rejected', blockedBySent: true, freed: [] as string[] }
-  }
+    if (!req) throw notFound('Ingen forespørsel å svare på.')
+    if (req['requested_by'] === userId) {
+      throw badRequest('own_request', 'Du kan ikke svare på din egen forespørsel.')
+    }
 
-  if (approve) {
-    await db.execute(
-      sql`update trade_withdrawals set state = 'approved', resolved_at = now()
+    const [mine] = await tx.execute<Row>(
+      sql`select sent_at from trade_participants where trade_id = ${tradeId} and user_id = ${userId}`,
+    )
+    // Saying yes after you have sent is not a thing you can do — the screen says
+    // as much, and the answer flips to no with the reason recorded.
+    if (approve && mine?.['sent_at']) {
+      await tx.execute(
+        sql`update trade_withdrawals set state = 'rejected', resolved_at = now(),
+                   blocked_by_sent = true where id = ${req['id']}`,
+      )
+      await resume(tx, tradeId)
+      return { state: 'rejected', blockedBySent: true, freed: [] as string[] }
+    }
+
+    if (approve) {
+      await tx.execute(
+        sql`update trade_withdrawals set state = 'approved', resolved_at = now()
+            where id = ${req['id']}`,
+      )
+      // Inside the lock: the trade was open when this was decided, and it
+      // ends with the reason this answer gives rather than one written over
+      // somebody else's.
+      const freed = await endTrade(tx, tradeId, 'Byttet ble avbrutt etter avtale mellom partene')
+      return { state: 'approved', blockedBySent: false, freed }
+    }
+
+    await tx.execute(
+      sql`update trade_withdrawals set state = 'rejected', resolved_at = now()
           where id = ${req['id']}`,
     )
-    const freed = await cancelTrade(db, tradeId, 'Byttet ble avbrutt etter avtale mellom partene')
-    return { state: 'approved', blockedBySent: false, freed }
-  }
-
-  await db.execute(
-    sql`update trade_withdrawals set state = 'rejected', resolved_at = now()
-        where id = ${req['id']}`,
-  )
-  await db.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
-  return { state: 'rejected', blockedBySent: false, freed: [] as string[] }
+    await resume(tx, tradeId)
+    return { state: 'rejected', blockedBySent: false, freed: [] as string[] }
+  })
 }
 
 /** «Angre forespørselen» on screen 08b. */
 export async function cancelWithdrawalRequest(db: Database, tradeId: string, userId: string) {
-  const req = await one(
-    db,
-    sql`select * from trade_withdrawals
-        where trade_id = ${tradeId} and state = 'waiting' and requested_by = ${userId}`,
-  )
-  if (!req) throw notFound('Ingen forespørsel å angre.')
+  await participantOf(db, tradeId, userId)
 
-  await db.execute(
-    sql`update trade_withdrawals set state = 'withdrawn', resolved_at = now()
-        where id = ${req['id']}`,
-  )
-  await db.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
+  await db.transaction(async (tx) => {
+    await openTradeFor(tx, tradeId)
+
+    const [req] = await tx.execute<Row>(
+      sql`select * from trade_withdrawals
+          where trade_id = ${tradeId} and state = 'waiting' and requested_by = ${userId}`,
+    )
+    if (!req) throw notFound('Ingen forespørsel å angre.')
+
+    await tx.execute(
+      sql`update trade_withdrawals set state = 'withdrawn', resolved_at = now()
+          where id = ${req['id']}`,
+    )
+    await resume(tx, tradeId)
+  })
 }
 
 /** The deadline decides it if nobody answers: the trade simply carries on. */

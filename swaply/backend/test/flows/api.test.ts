@@ -83,7 +83,18 @@ describe('the whole journey over HTTP', () => {
 
   test('16c — the same address and password logs you back in, a wrong one does not', async () => {
     expect((await call('POST', '/auth/login', { body: { email: 'ola@epost.no', password: 'drillbits123' } })).status).toBe(200)
-    expect((await call('POST', '/auth/login', { body: { email: 'ola@epost.no', password: 'feil' } })).status).toBe(401)
+
+    // Said as what it is, and not as «Du må logge inn.», which is the answer
+    // to a request with no session and reads like the button doing nothing.
+    const wrong = await call('POST', '/auth/login', { body: { email: 'ola@epost.no', password: 'feil' } })
+    expect(wrong.status).toBe(401)
+    expect(wrong.body).toEqual({ code: 'wrong_credentials', message: 'Feil e-post eller passord.' })
+
+    // And word for word the same for an address nobody has: telling them
+    // apart is telling somebody half of a credential.
+    const nobody = await call('POST', '/auth/login', { body: { email: 'ingen@epost.no', password: 'feil' } })
+    expect(nobody.status).toBe(401)
+    expect(nobody.body).toEqual(wrong.body)
   })
 
   test('02 — interests are three to five', async () => {
