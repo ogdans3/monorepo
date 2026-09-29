@@ -149,6 +149,8 @@ class CheckpostApi {
       snapshot: Snapshot.fromJson({
         'list': json['list'],
         'items': json['items'],
+        // Empty for a new list. Only a copy brings tags with it.
+        'tags': json['tags'],
       }),
       token: json['token'] as String,
       url: json['url'] as String,
@@ -199,6 +201,7 @@ class CheckpostApi {
     required String text,
     String? afterId,
     Object? beforeId = _absent,
+    List<String> tagIds = const [],
   }) async {
     final json = await _send(
       'POST',
@@ -211,11 +214,16 @@ class CheckpostApi {
         'text': text,
         'afterId': ?afterId,
         if (beforeId != _absent) 'beforeId': beforeId,
+        // A list looked at through a tag filter adds its rows with the
+        // filter's tags, or they would vanish from the view as they landed.
+        if (tagIds.isNotEmpty) 'tagIds': tagIds,
       },
     );
     return ChecklistItem.fromJson(json as Map<String, dynamic>);
   }
 
+  /// [tagIds] is the whole set the row carries afterwards, not a change to it.
+  /// An empty list takes every tag off; null leaves them alone.
   Future<ChecklistItem> updateItem(
     String token,
     String itemId, {
@@ -224,6 +232,7 @@ class CheckpostApi {
     bool? checked,
     String? afterId,
     Object? beforeId = _absent,
+    List<String>? tagIds,
   }) async {
     final json = await _send(
       'PATCH',
@@ -235,6 +244,7 @@ class CheckpostApi {
         'checked': ?checked,
         'afterId': ?afterId,
         if (beforeId != _absent) 'beforeId': beforeId,
+        'tagIds': ?tagIds,
       },
     );
     return ChecklistItem.fromJson(json as Map<String, dynamic>);
@@ -254,6 +264,50 @@ class CheckpostApi {
         id as String,
     ];
   }
+
+  // ---------------------------------------------------------------------------
+  // Tags
+  // ---------------------------------------------------------------------------
+
+  /// Makes a tag, or finds the one the list already has by that name.
+  ///
+  /// The answer is 201 for a new tag and 200 for one that was already there,
+  /// under whatever id it already had. **Use the id that comes back**, not the
+  /// one sent: a row tagged with ours when the list had its own would be
+  /// tagged with nothing.
+  Future<Tag> createTag(
+    String token, {
+    String? id,
+    required String name,
+    TagColor? color,
+  }) async {
+    final json = await _send(
+      'POST',
+      AppConfig.api('/list/tags'),
+      token: token,
+      body: {'id': ?id, 'name': name, 'color': ?color?.wire},
+    );
+    return Tag.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<Tag> updateTag(
+    String token,
+    String tagId, {
+    String? name,
+    TagColor? color,
+  }) async {
+    final json = await _send(
+      'PATCH',
+      AppConfig.api('/list/tags/$tagId'),
+      token: token,
+      body: {'name': ?name, 'color': ?color?.wire},
+    );
+    return Tag.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Takes the tag off every row too. Deleting one twice is fine.
+  Future<void> deleteTag(String token, String tagId) =>
+      _send('DELETE', AppConfig.api('/list/tags/$tagId'), token: token);
 }
 
 const _absent = Object();

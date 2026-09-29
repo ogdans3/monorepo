@@ -7,6 +7,7 @@ import 'data/api_client.dart';
 import 'data/ids.dart';
 import 'data/library_store.dart';
 import 'data/models.dart';
+import 'data/view_store.dart';
 import 'design/theme.dart';
 import 'design/tokens.dart';
 import 'state/library_controller.dart';
@@ -22,7 +23,11 @@ Future<void> main() async {
   // caused ourselves.
   final clientId = await ClientIdStore().read(newClientId);
   final api = CheckpostApi(clientId: clientId);
-  final library = LibraryController(store: PrefsLibraryStore(), api: api);
+  final library = LibraryController(
+    store: PrefsLibraryStore(),
+    api: api,
+    views: PrefsDeviceViewStore(),
+  );
   await library.load();
 
   runApp(CheckpostApp(api: api, library: library));

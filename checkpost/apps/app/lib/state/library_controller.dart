@@ -5,18 +5,29 @@ import 'package:flutter/foundation.dart';
 import '../data/api_client.dart';
 import '../data/library_store.dart';
 import '../data/models.dart';
+import '../data/view_store.dart';
 
 /// "Your lists": the index of every list this device knows a link to.
 ///
 /// Ordered most-recently-opened first, because the list you want is almost
 /// always the one you just had.
 class LibraryController extends ChangeNotifier {
-  LibraryController({required LibraryStore store, required CheckpostApi api})
-    : _store = store,
-      _api = api;
+  LibraryController({
+    required LibraryStore store,
+    required CheckpostApi api,
+    DeviceViewStore? views,
+  }) : _store = store,
+       _api = api,
+       views = views ?? MemoryDeviceViewStore();
 
   final LibraryStore _store;
   final CheckpostApi _api;
+
+  /// How this device looks at each list: grouped by tag or not, done shelf
+  /// folded or not. Kept beside the index rather than in it, under a key of
+  /// its own, and written by the open list directly. Nothing here notifies for
+  /// it, so changing a list's view never rebuilds the home screen underneath.
+  final DeviceViewStore views;
 
   List<SavedList> _lists = const [];
   bool _loading = true;

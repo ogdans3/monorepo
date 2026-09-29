@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../data/models.dart' show TagColor;
+
 /// The palette, the scale and the motion, in one place.
 ///
 /// These are the same values as `DESIGN.md` and `apps/web/src/app.css`. Three
@@ -19,6 +21,7 @@ class CheckpostColors {
     required this.primaryQuiet,
     required this.onPrimary,
     required this.scrim,
+    required this.tags,
   });
 
   final Color bg;
@@ -37,6 +40,13 @@ class CheckpostColors {
   final Color onPrimary;
   final Color scrim;
 
+  /// The eight tag colours, DESIGN.md's "Tag tints". Quiet on purpose: one
+  /// lightness for all eight, on hues kept clear of the rose, so a tagged list
+  /// still has one accent on it.
+  final Map<TagColor, TagTone> tags;
+
+  TagTone tag(TagColor color) => tags[color]!;
+
   /// Daylight on a kitchen counter. The design's home.
   static const light = CheckpostColors(
     bg: Color(0xFFFFFFFF),
@@ -52,6 +62,48 @@ class CheckpostColors {
     primaryQuiet: Color(0xFFFFE8EE),
     onPrimary: Color(0xFFFFFFFF),
     scrim: Color(0x661A1417),
+    tags: {
+      TagColor.clay: TagTone(
+        tint: Color(0xFFFEEAE0),
+        ink: Color(0xFF763F25),
+        dot: Color(0xFFC16D45),
+      ),
+      TagColor.ochre: TagTone(
+        tint: Color(0xFFF8EDD7),
+        ink: Color(0xFF654B07),
+        dot: Color(0xFFA77F19),
+      ),
+      TagColor.olive: TagTone(
+        tint: Color(0xFFEBF2DA),
+        ink: Color(0xFF4A561A),
+        dot: Color(0xFF7D9034),
+      ),
+      TagColor.sage: TagTone(
+        tint: Color(0xFFDDF6E7),
+        ink: Color(0xFF195E3F),
+        dot: Color(0xFF339C6D),
+      ),
+      TagColor.teal: TagTone(
+        tint: Color(0xFFD7F6F7),
+        ink: Color(0xFF005C60),
+        dot: Color(0xFF03999F),
+      ),
+      TagColor.steel: TagTone(
+        tint: Color(0xFFE1F1FF),
+        ink: Color(0xFF21547B),
+        dot: Color(0xFF3E8CC9),
+      ),
+      TagColor.iris: TagTone(
+        tint: Color(0xFFECEDFF),
+        ink: Color(0xFF4B487C),
+        dot: Color(0xFF7F7BCB),
+      ),
+      TagColor.plum: TagTone(
+        tint: Color(0xFFF8E8FC),
+        ink: Color(0xFF643F6D),
+        dot: Color(0xFFA66DB3),
+      ),
+    },
   );
 
   static const dark = CheckpostColors(
@@ -68,7 +120,65 @@ class CheckpostColors {
     primaryQuiet: Color(0xFF401E28),
     onPrimary: Color(0xFF110E0F),
     scrim: Color(0x99000000),
+    tags: {
+      TagColor.clay: TagTone(
+        tint: Color(0xFF41261A),
+        ink: Color(0xFFFAC8B1),
+        dot: Color(0xFFE08C66),
+      ),
+      TagColor.ochre: TagTone(
+        tint: Color(0xFF382C11),
+        ink: Color(0xFFE8D2A4),
+        dot: Color(0xFFC69F47),
+      ),
+      TagColor.olive: TagTone(
+        tint: Color(0xFF2B3116),
+        ink: Color(0xFFCEDBAB),
+        dot: Color(0xFF9BAF58),
+      ),
+      TagColor.sage: TagTone(
+        tint: Color(0xFF173526),
+        ink: Color(0xFFB0E2C6),
+        dot: Color(0xFF5BBB8C),
+      ),
+      TagColor.teal: TagTone(
+        tint: Color(0xFF0A3537),
+        ink: Color(0xFFA1E2E5),
+        dot: Color(0xFF28BAC1),
+      ),
+      TagColor.steel: TagTone(
+        tint: Color(0xFF193043),
+        ink: Color(0xFFB1DAFD),
+        dot: Color(0xFF62ACE8),
+      ),
+      TagColor.iris: TagTone(
+        tint: Color(0xFF2B2A44),
+        ink: Color(0xFFCFCFFE),
+        dot: Color(0xFF9D9AEA),
+      ),
+      TagColor.plum: TagTone(
+        tint: Color(0xFF38263C),
+        ink: Color(0xFFE8C7EF),
+        dot: Color(0xFFC58CD1),
+      ),
+    },
   );
+}
+
+/// One tag colour's three roles. **Tint** is a chip's fill, **ink** its text,
+/// and **dot** the 8dp mark that stands for the tag where there is no chip: a
+/// group heading, a filter that is off, a done row, the colour picker.
+///
+/// Measured, not eyeballed: ink on its tint is 6.78:1 at worst in light and
+/// 9.17:1 in dark, and a dot clears the 3:1 a mark needs on the page and on
+/// `surface` in both.
+@immutable
+class TagTone {
+  const TagTone({required this.tint, required this.ink, required this.dot});
+
+  final Color tint;
+  final Color ink;
+  final Color dot;
 }
 
 /// 8dp base with a 4dp half-step.
@@ -121,4 +231,8 @@ abstract final class Motion {
 
   /// How long a change someone else made stays highlighted.
   static const remoteWash = Duration(milliseconds: 900);
+
+  /// The done shelf's chevron turning a quarter as it folds. The rows go at
+  /// once: animating a list's height is layout work for no information.
+  static const fold = Duration(milliseconds: 180);
 }

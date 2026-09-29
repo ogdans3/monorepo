@@ -107,6 +107,19 @@ The custom scheme and the "Open a link" paste both work without either.
   and error mapping are all exercised.
 - `widget_test.dart` covers the screens, including "a tick is on screen before
   the network answers" and "checked text is struck through, not just dimmed".
+- `tag_order_test.dart` holds `tagKey`, `compareTags` and `nextTagColor` to
+  vectors produced by `packages/contract` under Node, and checks the
+  JavaScript-compatible lowercasing in `data/js_case.dart` against the whole
+  of JavaScript's lowercase table. Dart's own `toLowerCase` and `trim` differ
+  from JavaScript's past Latin-1, and two clients that fold a name differently
+  file it under two tags.
+- `tags_api_test.dart`, `tags_controller_test.dart` and `tags_widget_test.dart`
+  cover tags end to end: a name the list already has answers with the tag it
+  has, a new tag on a row is made before the row is told, the filter, grouping,
+  the Tags sheet and the ten-a-row and fifty-a-list limits. Grouping and the
+  folded done shelf are this device's view of a list, kept per list under
+  their own `shared_preferences` key (`data/view_store.dart`); the filter is
+  deliberately not kept at all.
 - `golden_test.dart` holds pixel snapshots of every screen in both colour
   schemes. Read a golden diff as a design review, and regenerate deliberately.
 

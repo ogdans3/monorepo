@@ -9,10 +9,19 @@ import '../../design/tokens.dart';
 /// common thing anyone does here, and it usually happens five times in a row.
 /// Submitting keeps the keyboard up and the focus in the field.
 class Composer extends StatefulWidget {
-  const Composer({required this.onSubmit, this.enabled = true, super.key});
+  const Composer({
+    required this.onSubmit,
+    this.enabled = true,
+    this.hint = 'Add something',
+    super.key,
+  });
 
   final void Function(String text) onSubmit;
   final bool enabled;
+
+  /// While a tag filter is on, new rows are made with its tags, and the
+  /// placeholder says so: "Add to Kitchen".
+  final String hint;
 
   @override
   State<Composer> createState() => _ComposerState();
@@ -98,7 +107,7 @@ class _ComposerState extends State<Composer> {
                   onSubmitted: (_) => _submit(),
                   style: text.bodyLarge,
                   decoration: InputDecoration(
-                    hintText: 'Add something',
+                    hintText: widget.hint,
                     hintStyle: text.bodyLarge?.copyWith(color: colors.inkMuted),
                     contentPadding: const EdgeInsets.symmetric(
                       vertical: Space.md + 2,

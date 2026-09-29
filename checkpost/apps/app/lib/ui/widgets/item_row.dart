@@ -4,12 +4,14 @@ import '../../data/models.dart';
 import '../../design/theme.dart';
 import '../../design/tokens.dart';
 import 'check_mark.dart';
+import 'tags.dart';
 
 /// One line of the checklist.
 ///
-/// Anatomy: grip · checkbox · text · right-edge affordance. **The box ticks it
-/// off and nothing else does.** Tapping anywhere else on the row opens it, as
-/// does swiping it or tapping the right edge.
+/// Anatomy: grip · checkbox · text · right-edge affordance, with the row's tags
+/// under the text and the note. **The box ticks it off and nothing else
+/// does.** Tapping anywhere else on the row opens it, as does swiping it or
+/// tapping the right edge.
 ///
 /// That split is deliberate and it used to be the other way round: the whole
 /// row toggled and only a 44dp chevron opened. Which made the cheap accident,
@@ -28,10 +30,14 @@ class ItemRow extends StatelessWidget {
     this.readOnly = false,
     this.reorderIndex,
     this.reserveGrip = false,
+    this.tags = const [],
     super.key,
   });
 
   final ChecklistItem item;
+
+  /// The row's tags, in [compareTags] order.
+  final List<Tag> tags;
   final VoidCallback onToggle;
   final VoidCallback onOpen;
 
@@ -152,6 +158,10 @@ class ItemRow extends StatelessWidget {
                             color: colors.inkMuted,
                           ),
                         ),
+                      ],
+                      if (tags.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        TagChips(tags: tags, done: item.checked),
                       ],
                     ],
                   ),

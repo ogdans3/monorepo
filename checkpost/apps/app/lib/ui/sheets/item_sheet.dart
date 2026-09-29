@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import '../../data/models.dart';
 import '../../design/theme.dart';
 import '../../design/tokens.dart';
+import '../../state/list_controller.dart';
 import '../widgets/check_mark.dart';
+import '../widgets/tags.dart';
 import 'confirm_sheet.dart';
 import 'sheet_scaffold.dart';
+import 'tags_sheet.dart';
 
 /// What the right-hand edge of a row opens: the item itself.
 ///
@@ -25,6 +28,7 @@ class ItemSheetResult {
 Future<ItemSheetResult?> itemSheet(
   BuildContext context, {
   required ChecklistItem item,
+  required ListController controller,
   required VoidCallback onToggle,
   void Function(int direction)? onMove,
   bool canMoveUp = false,
@@ -34,6 +38,7 @@ Future<ItemSheetResult?> itemSheet(
     context: context,
     builder: (context) => _ItemSheet(
       item: item,
+      controller: controller,
       onToggle: onToggle,
       onMove: onMove,
       canMoveUp: canMoveUp,
@@ -45,6 +50,7 @@ Future<ItemSheetResult?> itemSheet(
 class _ItemSheet extends StatefulWidget {
   const _ItemSheet({
     required this.item,
+    required this.controller,
     required this.onToggle,
     this.onMove,
     this.canMoveUp = false,
@@ -52,9 +58,15 @@ class _ItemSheet extends StatefulWidget {
   });
 
   final ChecklistItem item;
+
+  /// Where the row's tags are read from and written to. Unlike the text
+  /// fields, a tag lands at a tap, so what the chips show has to be the row as
+  /// it is now rather than as it was when the sheet opened.
+  final ListController controller;
   final VoidCallback onToggle;
 
-  /// Step the item one place. Absent on a checked item and on a read link.
+  /// Step the item one place. Absent on a checked item, on a read link, and
+  /// when the list is grouped by tag, which is not showing your order.
   final void Function(int direction)? onMove;
   final bool canMoveUp;
   final bool canMoveDown;
@@ -154,6 +166,8 @@ class _ItemSheetState extends State<_ItemSheet> {
               maxLength: 4000,
               minLines: 3,
             ),
+            const SizedBox(height: Space.lg),
+            _TagsSection(item: widget.item, controller: widget.controller),
             if (widget.onMove != null) ...[
               const SizedBox(height: Space.lg),
               // The same job as the grip, without the drag. The handle is a
@@ -266,6 +280,147 @@ class _Field extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The row's tags: every tag on the list as a toggle that lands at a tap, and
+/// a field that makes a new one or finds the one the list already has.
+class _TagsSection extends StatefulWidget {
+  const _TagsSection({required this.item, required this.controller});
+
+  final ChecklistItem item;
+  final ListController controller;
+
+  @override
+  State<_TagsSection> createState() => _TagsSectionState();
+}
+
+class _TagsSectionState extends State<_TagsSection> {
+  final _name = TextEditingController();
+  final _focus = FocusNode();
+
+  /// The list changing, or the name being typed. Made once, so the builder
+  /// below is not handed a new listenable, and resubscribed, on every frame.
+  late final _changes = Listenable.merge([widget.controller, _name]);
+
+  ListController get _controller => widget.controller;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  ChecklistItem get _row => _controller.itemById(widget.item.id) ?? widget.item;
+
+  void _add() {
+    if (!_addable(_row)) return;
+    _controller.addTagToItem(_row, _name.text);
+    _name.clear();
+    // Straight back to an empty field, like the composer, so three tags are
+    // three names and three presses of Enter.
+    _focus.requestFocus();
+  }
+
+  bool _addable(ChecklistItem row) {
+    if (normaliseTagName(_name.text).isEmpty) return false;
+    if (row.tagIds.length >= Limits.tagsPerItem) return false;
+    final known = _controller.tagNamed(_name.text);
+    if (known != null) return !row.tagIds.contains(known.id);
+    return _controller.tags.length < Limits.tagsPerList;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CheckpostTheme.of(context);
+    final text = Theme.of(context).textTheme;
+
+    return ListenableBuilder(
+      listenable: _changes,
+      builder: (context, _) {
+        final row = _row;
+        final tags = _controller.tags;
+        final atLimit = row.tagIds.length >= Limits.tagsPerItem;
+        final typed = normaliseTagName(_name.text);
+        final known = typed.isEmpty ? null : _controller.tagNamed(typed);
+        final listFull = tags.length >= Limits.tagsPerList;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Tags', style: text.bodySmall),
+            // The toggles are padded out to 48dp for a finger, and that
+            // padding already makes the gap every other label here has.
+            SizedBox(height: tags.isEmpty ? Space.xs + 2 : 0),
+            if (tags.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Space.sm),
+                child: Text(
+                  'Tags group the list and filter it, for everyone on it.',
+                  style: text.bodySmall?.copyWith(color: colors.inkMuted),
+                ),
+              )
+            else
+              Wrap(
+                spacing: Space.sm,
+                children: [
+                  for (final tag in tags)
+                    TagToggle(
+                      tag: tag,
+                      on: row.tagIds.contains(tag.id),
+                      // At ten, only the ones already on can be taken off.
+                      enabled: row.tagIds.contains(tag.id) || !atLimit,
+                      onTap: () => _controller.toggleItemTag(row, tag),
+                    ),
+                ],
+              ),
+            const SizedBox(height: Space.xs),
+            Row(
+              children: [
+                Expanded(
+                  child: TagNameField(
+                    controller: _name,
+                    focusNode: _focus,
+                    hint: 'Add a tag',
+                    enabled: !atLimit,
+                    onSubmitted: _add,
+                  ),
+                ),
+                const SizedBox(width: Space.sm),
+                FieldButton(
+                  label: 'Add',
+                  onPressed: _addable(row) ? _add : null,
+                ),
+              ],
+            ),
+            if (atLimit)
+              const TagHint('A row holds ${Limits.tagsPerItem} tags.')
+            else if (listFull && typed.isNotEmpty && known == null)
+              const TagHint(
+                'This list holds ${Limits.tagsPerList} tags. Delete one in '
+                'Edit tags to make room.',
+              ),
+            if (tags.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => tagsSheet(context, controller: _controller),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.inkMuted,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, Space.minTarget),
+                    textStyle: text.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: const Text('Edit tags'),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

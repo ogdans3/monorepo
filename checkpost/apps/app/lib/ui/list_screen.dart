@@ -14,10 +14,12 @@ import 'sheets/item_sheet.dart';
 import 'sheets/share_sheet.dart';
 import 'sheets/sheet_scaffold.dart';
 import 'scope.dart';
+import 'sheets/tags_sheet.dart';
 import 'sheets/text_sheet.dart';
 import 'widgets/bits.dart';
 import 'widgets/composer.dart';
 import 'widgets/item_row.dart';
+import 'widgets/tags.dart';
 
 /// One open list.
 class ListScreen extends StatefulWidget {
@@ -68,6 +70,11 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
       api: _apiOf(context),
       token: saved.token,
       realtimeFactory: widget.realtimeFactory,
+      // Grouping and the folded shelf are this device's view of the list.
+      // They go to a store of their own, never through the library, which
+      // notifies the home screen underneath every time it changes.
+      views: widget.library.views,
+      listId: widget.listId,
     );
     _messages = _controller.messages.listen(_say);
     _tokens = _controller.tokenChanges.listen((token) {
@@ -139,15 +146,22 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------------
 
   Future<void> _openItem(ChecklistItem item) async {
-    final open = _controller.openItems;
+    final open = _controller.visibleOpen;
     final at = open.indexWhere((candidate) => candidate.id == item.id);
     // A checked item is not in the open list, and the done shelf is ordered by
-    // being done rather than by hand, so it gets no position controls.
-    final movable = _controller.canWrite && at >= 0 && open.length > 1;
+    // being done rather than by hand, so it gets no position controls. Nor
+    // does a list grouped by tag: Move up and Move down move rows in your
+    // order, which that view is not showing.
+    final movable =
+        _controller.canWrite &&
+        !_controller.groupByTag &&
+        at >= 0 &&
+        open.length > 1;
 
     final result = await itemSheet(
       context,
       item: item,
+      controller: _controller,
       onToggle: () => _controller.toggle(item),
       onMove: movable
           ? (direction) => _controller.stepItem(item, direction)
@@ -192,15 +206,23 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _editTags() => tagsSheet(context, controller: _controller);
+
   Future<void> _clearChecked() async {
     final count = _controller.doneCount;
     if (count == 0) return;
+    // Clear takes every done row, not only the ones a filter is showing, and
+    // the heading it sits beside counts only those. Say so.
+    final hidden = count - _controller.visibleDone.length;
     final confirmed = await confirmSheet(
       context,
       title: 'Clear $count done ${count == 1 ? 'item' : 'items'}?',
-      consequence:
-          'They are removed for everyone on the list, straight away. There is '
-          'no undo.',
+      consequence: hidden > 0
+          ? 'They are removed for everyone on the list, straight away, '
+                'including ${hidden == 1 ? 'one' : '$hidden'} the tag filter is '
+                'hiding. There is no undo.'
+          : 'They are removed for everyone on the list, straight away. There is '
+                'no undo.',
       confirmLabel: 'Clear them',
     );
     if (!confirmed) return;
@@ -266,8 +288,6 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
         }
 
         final list = _controller.list;
-        final open = _controller.openItems;
-        final done = _controller.doneItems;
 
         return Scaffold(
           appBar: AppBar(
@@ -337,6 +357,13 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
           body: Column(
             children: [
               if (status == ListStatus.offline) const OfflineBanner(),
+              // Only once the list has a tag, so an untagged list looks
+              // exactly as it did before there were tags.
+              if (list != null && _controller.tags.isNotEmpty)
+                _TagBar(
+                  controller: _controller,
+                  onEditTags: _controller.canWrite ? _editTags : null,
+                ),
               Expanded(
                 child: status == ListStatus.loading && list == null
                     ? const Padding(
@@ -349,8 +376,6 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
                         backgroundColor: colors.bg,
                         child: _Body(
                           scroll: _scroll,
-                          open: open,
-                          done: done,
                           controller: _controller,
                           onOpenItem: _openItem,
                           onClearChecked: _clearChecked,
@@ -384,6 +409,7 @@ class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
               else
                 Composer(
                   enabled: list != null,
+                  hint: composerHintFor(_controller.filterTags),
                   onSubmit: (text) {
                     // Whether to follow the new row down, decided before
                     // anything moves.
@@ -427,16 +453,12 @@ const double _stickSlack = 72;
 class _Body extends StatelessWidget {
   const _Body({
     required this.scroll,
-    required this.open,
-    required this.done,
     required this.controller,
     required this.onOpenItem,
     required this.onClearChecked,
   });
 
   final ScrollController scroll;
-  final List<ChecklistItem> open;
-  final List<ChecklistItem> done;
   final ListController controller;
   final Future<void> Function(ChecklistItem) onOpenItem;
   final Future<void> Function() onClearChecked;
@@ -445,7 +467,7 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = CheckpostTheme.of(context);
 
-    if (open.isEmpty && done.isEmpty) {
+    if (controller.items.isEmpty) {
       return ListView(
         controller: scroll,
         children: const [
@@ -460,13 +482,20 @@ class _Body extends StatelessWidget {
       );
     }
 
+    final byTag = controller.groupByTag;
+    final open = controller.visibleOpen;
+    final done = controller.visibleDone;
+
     // Declared before rowFor so the done rows can reserve the same left column
-    // the open rows spend on their handle.
-    final canReorder = controller.canWrite && open.length > 1;
+    // the open rows spend on their handle. Grouped by tag there is nothing to
+    // drag, since the groups are the order, so no grips and no reserved
+    // column to line up with.
+    final canReorder = controller.canWrite && !byTag && open.length > 1;
 
     Widget rowFor(ChecklistItem item, {int? reorderIndex}) => ItemRow(
       key: ValueKey(item.id),
       item: item,
+      tags: controller.tagsOf(item),
       washing: controller.isWashing(item.id),
       readOnly: !controller.canWrite,
       reorderIndex: reorderIndex,
@@ -475,13 +504,32 @@ class _Body extends StatelessWidget {
       onOpen: () => onOpenItem(item),
     );
 
-    // Only the open items reorder. A reorderable list draws its own
-    // separators, so the divider rides along under each row rather than
-    // between them, which is what keeps the hairline where it was.
+    Widget separated(List<ChecklistItem> rows) => SliverList.separated(
+      itemCount: rows.length,
+      separatorBuilder: (_, _) => Divider(color: colors.line, height: 1),
+      itemBuilder: (_, index) => rowFor(rows[index]),
+    );
+
+    final groups = byTag ? controller.groups : const <TagGroup>[];
+
     return CustomScrollView(
       controller: scroll,
       slivers: [
-        if (canReorder)
+        if (byTag)
+          for (final (index, group) in groups.indexed) ...[
+            SliverToBoxAdapter(
+              child: TagGroupHeading(
+                tag: group.tag,
+                count: group.items.length,
+                first: index == 0,
+              ),
+            ),
+            separated(group.items),
+          ]
+        // Only the open items reorder. A reorderable list draws its own
+        // separators, so the divider rides along under each row rather than
+        // between them, which is what keeps the hairline where it was.
+        else if (canReorder)
           SliverReorderableList(
             itemCount: open.length,
             onReorder: (from, to) {
@@ -505,37 +553,200 @@ class _Body extends StatelessWidget {
             ),
           )
         else
-          SliverList.separated(
-            itemCount: open.length,
-            separatorBuilder: (_, _) => Divider(color: colors.line, height: 1),
-            itemBuilder: (_, index) => rowFor(open[index]),
+          separated(open),
+        if (controller.isFiltering && open.isEmpty)
+          SliverToBoxAdapter(
+            child: _NothingLeft(
+              message: nothingLeftFor(controller.filterTags),
+              onShowEveryRow: controller.clearFilter,
+            ),
           ),
         if (done.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(top: Space.xl),
-              child: ShelfHeader(
-                label: 'Done · ${done.length}',
-                trailing: TextButton(
-                  onPressed: onClearChecked,
-                  style: TextButton.styleFrom(
-                    foregroundColor: colors.inkMuted,
-                    minimumSize: const Size(Space.minTarget, 36),
-                    textStyle: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  child: const Text('Clear'),
-                ),
+              child: DoneShelfHeader(
+                count: done.length,
+                folded: controller.doneFolded,
+                onFold: () => controller.setDoneFolded(!controller.doneFolded),
+                trailing: controller.canWrite
+                    ? TextButton(
+                        onPressed: onClearChecked,
+                        style: TextButton.styleFrom(
+                          foregroundColor: colors.inkMuted,
+                          minimumSize: const Size(Space.minTarget, 36),
+                          textStyle: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        child: const Text('Clear'),
+                      )
+                    : null,
               ),
             ),
           ),
-          SliverList.separated(
-            itemCount: done.length,
-            separatorBuilder: (_, _) => Divider(color: colors.line, height: 1),
-            itemBuilder: (_, index) => rowFor(done[index]),
-          ),
+          // Folded, the rows go at once rather than sliding shut.
+          if (!controller.doneFolded) separated(done),
         ],
         const SliverToBoxAdapter(child: SizedBox(height: Space.giant)),
       ],
+    );
+  }
+}
+
+/// A filter that leaves nothing open says which, and offers the way back,
+/// rather than showing a blank that reads as an empty list.
+class _NothingLeft extends StatelessWidget {
+  const _NothingLeft({required this.message, required this.onShowEveryRow});
+
+  final String message;
+  final VoidCallback onShowEveryRow;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CheckpostTheme.of(context);
+    final text = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        Space.gutter,
+        28,
+        Space.gutter,
+        Space.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: text.bodyLarge?.copyWith(color: colors.inkMuted),
+          ),
+          const SizedBox(height: Space.xs),
+          TextButton(
+            onPressed: onShowEveryRow,
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, Space.minTarget),
+            ),
+            child: const Text('Show every row'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Between the header and the list, once the list has a tag: the order, the
+/// filter, and the way to the tags themselves, on one row that scrolls
+/// sideways rather than two that stack. Every line this takes is a line the
+/// list does not get, on a screen that is mostly list.
+class _TagBar extends StatefulWidget {
+  const _TagBar({required this.controller, required this.onEditTags});
+
+  final ListController controller;
+
+  /// Null on a link that can only look.
+  final VoidCallback? onEditTags;
+
+  @override
+  State<_TagBar> createState() => _TagBarState();
+}
+
+class _TagBarState extends State<_TagBar> {
+  /// One per chip, so a chip keeps its place in the tree when Clear arrives in
+  /// front of it, and can be found afterwards to be scrolled back into view.
+  final _chips = <String, GlobalKey>{};
+
+  void _toggle(Tag tag) {
+    widget.controller.toggleFilter(tag);
+    // Turning the first filter on puts Clear in front of the chips, and
+    // turning the last one off takes it away, which moves every chip along.
+    // The one just tapped is kept in view, or its tick lands off the edge of
+    // the screen, out of reach of the finger that would take it off again.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final chip = _chips[tag.id]?.currentContext;
+      if (chip == null || !chip.mounted) return;
+      final viewport = Scrollable.of(chip).context.findRenderObject();
+      final box = chip.findRenderObject();
+      if (viewport is! RenderBox || box is! RenderBox) return;
+      final left = box.localToGlobal(Offset.zero, ancestor: viewport).dx;
+      final right = left + box.size.width;
+      final ScrollPositionAlignmentPolicy policy;
+      if (right > viewport.size.width) {
+        policy = ScrollPositionAlignmentPolicy.keepVisibleAtEnd;
+      } else if (left < 0) {
+        policy = ScrollPositionAlignmentPolicy.keepVisibleAtStart;
+      } else {
+        return;
+      }
+      Scrollable.ensureVisible(
+        chip,
+        alignmentPolicy: policy,
+        duration: MediaQuery.disableAnimationsOf(chip)
+            ? Duration.zero
+            : Motion.base,
+        curve: Motion.curve,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final colors = CheckpostTheme.of(context);
+    final label = Theme.of(
+      context,
+    ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600);
+
+    Widget quiet(String text, Color color, VoidCallback onPressed) =>
+        TextButton(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            foregroundColor: color,
+            minimumSize: const Size(Space.minTarget, Space.minTarget),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            textStyle: label,
+          ),
+          child: Text(text),
+        );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: colors.line)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.gutter - Space.xs,
+          vertical: Space.xs,
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: Space.xs),
+            TwoWayChoice(
+              first: 'Your order',
+              second: 'By tag',
+              secondChosen: controller.groupByTag,
+              onChanged: controller.setGroupByTag,
+            ),
+            const SizedBox(width: Space.sm),
+            if (controller.isFiltering) ...[
+              quiet('Clear', colors.primary, controller.clearFilter),
+              const SizedBox(width: Space.xs),
+            ],
+            for (final tag in controller.tags) ...[
+              TagToggle(
+                key: _chips.putIfAbsent(tag.id, GlobalKey.new),
+                tag: tag,
+                on: controller.filter.contains(tag.id),
+                semanticLabel: 'Show rows tagged ${tag.name}',
+                onTap: () => _toggle(tag),
+              ),
+              const SizedBox(width: Space.sm),
+            ],
+            if (widget.onEditTags != null)
+              quiet('Edit tags', colors.inkMuted, widget.onEditTags!),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -10,6 +10,7 @@ import 'package:checkpost/ui/home_screen.dart';
 import 'package:checkpost/ui/list_screen.dart';
 import 'package:checkpost/ui/scope.dart';
 import 'package:checkpost/ui/sheets/share_sheet.dart';
+import 'package:checkpost/ui/widgets/tags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,6 +66,7 @@ void main() {
     String name,
     Widget Function() build, {
     Size size = const Size(390, 844),
+    Future<void> Function(WidgetTester tester)? then,
   }) async {
     for (final scheme in const [Brightness.light, Brightness.dark]) {
       tester.view.physicalSize = size;
@@ -74,9 +76,19 @@ void main() {
       final colors = scheme == Brightness.dark
           ? CheckpostColors.dark
           : CheckpostColors.light;
+      // A fresh tree for each scheme. Pumped over the last one, the screen
+      // kept its state, so a sheet opened for the light shot was still open
+      // for the dark one and a filter turned on was turned off again.
+      await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(wrap(build(), colors, scheme));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
+      // What a person does before the screen worth looking at: opening a
+      // sheet, turning on a filter.
+      if (then != null) {
+        await then(tester);
+        await tester.pumpAndSettle();
+      }
 
       await expectLater(
         find.byType(MaterialApp),
@@ -173,6 +185,96 @@ void main() {
         listId: server.listId,
         realtimeFactory: noRealtime,
       ),
+    );
+  });
+
+  /// The cabin list, tagged the way somebody would tag it: a row with one
+  /// tag, a row with two, a row with none, and done rows that keep theirs.
+  LibraryController taggedCabin() {
+    final kitchen = server.addTag('Kitchen', color: 'clay')['id'] as String;
+    final outdoors = server.addTag('Outdoors', color: 'teal')['id'] as String;
+    final errands = server.addTag('Errands', color: 'ochre')['id'] as String;
+    server
+      ..addItem('Firewood', tagIds: [outdoors])
+      ..addItem(
+        'Coffee, and the good one',
+        note: 'The dark bag, not the tin',
+        tagIds: [kitchen],
+      )
+      ..addItem('Someone remember the cards')
+      ..addItem('Matches and the long lighter', tagIds: [kitchen, outdoors])
+      ..addItem('Book the ferry', checked: true, tagIds: [errands])
+      ..addItem('Cabin key from Marit', checked: true, tagIds: [errands]);
+    return libraryWith([
+      saved(id: server.listId, title: 'Cabin, Friday', done: 2, total: 6),
+    ]);
+  }
+
+  Widget cabinScreen(LibraryController library) => ListScreen(
+    library: library,
+    listId: server.listId,
+    realtimeFactory: noRealtime,
+  );
+
+  testWidgets('list, tagged', (tester) async {
+    final library = taggedCabin();
+    await library.load();
+    await shoot(tester, 'list-tagged', () => cabinScreen(library));
+  });
+
+  testWidgets('list, filtered by a tag', (tester) async {
+    final library = taggedCabin();
+    await library.load();
+    await shoot(
+      tester,
+      'list-filtered',
+      () => cabinScreen(library),
+      then: (tester) async {
+        await tester.tap(find.widgetWithText(TagToggle, 'Kitchen'));
+      },
+    );
+  });
+
+  testWidgets('list, grouped by tag', (tester) async {
+    final library = taggedCabin();
+    await library.load();
+    await shoot(
+      tester,
+      'list-by-tag',
+      () => cabinScreen(library),
+      then: (tester) async {
+        await tester.tap(find.text('By tag'));
+      },
+    );
+  });
+
+  testWidgets('item sheet, with tags', (tester) async {
+    final library = taggedCabin();
+    await library.load();
+    await shoot(
+      tester,
+      'item-sheet-tags',
+      () => cabinScreen(library),
+      then: (tester) async {
+        await tester.tap(find.text('Coffee, and the good one'));
+      },
+    );
+  });
+
+  testWidgets('tags sheet, one tag open', (tester) async {
+    final library = taggedCabin();
+    await library.load();
+    await shoot(
+      tester,
+      'tags-sheet',
+      () => cabinScreen(library),
+      then: (tester) async {
+        await tester.ensureVisible(find.text('Edit tags'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Edit tags'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('2 rows').first);
+      },
     );
   });
 

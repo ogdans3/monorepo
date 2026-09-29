@@ -167,20 +167,35 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-/// A section header for the done shelf.
-class ShelfHeader extends StatelessWidget {
-  const ShelfHeader({required this.label, this.trailing, super.key});
+/// The done shelf's heading, which is also the button that folds it.
+///
+/// Folding puts a long run of finished rows away without clearing them.
+/// Clear stays beside it, because putting them away and throwing them away
+/// are different acts. The chevron turns a quarter and the rows go at once:
+/// sliding a list's height shut is layout work that says nothing.
+class DoneShelfHeader extends StatelessWidget {
+  const DoneShelfHeader({
+    required this.count,
+    required this.folded,
+    required this.onFold,
+    this.trailing,
+    super.key,
+  });
 
-  final String label;
+  final int count;
+  final bool folded;
+  final VoidCallback onFold;
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final colors = CheckpostTheme.of(context);
+    final instant = MediaQuery.disableAnimationsOf(context);
+
     return Container(
       color: colors.surface,
       padding: const EdgeInsets.fromLTRB(
-        Space.gutter,
+        Space.gutter - Space.sm,
         Space.sm,
         Space.sm,
         Space.sm,
@@ -188,11 +203,45 @@ class ShelfHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(color: colors.inkMuted),
+            child: Semantics(
+              button: true,
+              expanded: !folded,
+              label: 'Done, $count',
+              excludeSemantics: true,
+              child: InkWell(
+                onTap: onFold,
+                borderRadius: Radii.smAll,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: Space.minTarget),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Space.sm),
+                    child: Row(
+                      children: [
+                        // Down while it is open, pointing along the heading
+                        // once it is folded.
+                        AnimatedRotation(
+                          turns: folded ? -0.25 : 0,
+                          duration: instant ? Duration.zero : Motion.fold,
+                          curve: Motion.curve,
+                          child: Icon(
+                            Icons.expand_more_rounded,
+                            size: 20,
+                            color: colors.inkMuted,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Done · $count',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(color: colors.inkMuted),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
           ?trailing,
