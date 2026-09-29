@@ -13,7 +13,7 @@
     disabled?: boolean;
     /** What a screen reader hears, when the name alone does not say it. */
     label?: string;
-    onclick: () => void;
+    onclick: (event: MouseEvent) => void;
   } = $props();
 </script>
 

@@ -720,8 +720,18 @@
 {/if}
 
 {#if confirmingClear}
+  {@const hidden = session.doneCount - session.visibleDone.length}
   <Sheet title="Clear {session.doneCount} done" onclose={() => (confirmingClear = false)}>
-    <p class="fine">They are removed for everyone on the list, straight away. There is no undo.</p>
+    <!-- Clear takes every done row, not only the ones a filter is showing, and
+         the heading it was pressed beside counted only those. Say so. -->
+    <p class="fine">
+      {#if hidden > 0}
+        They are removed for everyone on the list, straight away, including
+        {hidden === 1 ? 'one' : hidden} the tag filter is hiding. There is no undo.
+      {:else}
+        They are removed for everyone on the list, straight away. There is no undo.
+      {/if}
+    </p>
     <button
       type="button"
       class="wide"

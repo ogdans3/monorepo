@@ -602,8 +602,18 @@ test('a row takes a tag from its sheet, and the list filters by it', async ({ pa
   await tagRow(page, 'Milk', 'Dairy');
   await expect(row(page, 'Milk').locator('.chip')).toHaveText(['Dairy']);
 
-  await tagBar(page).getByRole('button', { name: 'Dairy', exact: true }).click();
+  const dairy = tagBar(page).getByRole('button', { name: 'Dairy', exact: true });
+  await dairy.click();
   await expect(row(page, 'Milk')).toBeVisible();
+  // Clear arrives in front of the chips and moves them along. The chip just
+  // tapped is brought back into view, so it can be tapped off again.
+  const width = page.viewportSize()!.width;
+  await expect
+    .poll(async () => {
+      const box = await dairy.boundingBox();
+      return box ? box.x >= 0 && box.x + box.width <= width + 0.5 : false;
+    })
+    .toBe(true);
   await expect(row(page, 'Bread')).toHaveCount(0);
   await expect(row(page, 'Leeks')).toHaveCount(0);
 
@@ -698,4 +708,21 @@ test('a read link sees the tags and can filter, and cannot change them', async (
   await tagBar(reader).getByRole('button', { name: 'Dairy', exact: true }).click();
   await expect(row(reader, 'Bread')).toHaveCount(0);
   await expect(row(reader, 'Milk')).toBeVisible();
+});
+
+test('clearing done rows under a filter says it takes the hidden ones too', async ({ page }) => {
+  await makeList(page);
+  for (const text of ['Kettle', 'Toast', 'Towel']) await addItem(page, text);
+  await tagRow(page, 'Kettle', 'Kitchen');
+  await tagRow(page, 'Toast', 'Kitchen');
+  await tick(page, 'Toast');
+  await tick(page, 'Towel');
+
+  await tagBar(page).getByRole('button', { name: 'Kitchen', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Done · 1' })).toBeVisible();
+  // Clear takes every done row, and the heading beside it counted one.
+  await page.locator('.shelf').getByRole('button', { name: 'Clear', exact: true }).click();
+  const sheet = page.locator('dialog');
+  await expect(sheet.locator('h2')).toHaveText('Clear 2 done');
+  await expect(sheet).toContainText('including one the tag filter is hiding');
 });

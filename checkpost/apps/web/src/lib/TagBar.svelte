@@ -22,6 +22,20 @@
     onsort: (byTag: boolean) => void;
     onedit: () => void;
   } = $props();
+
+  /**
+   * Turning the first filter on puts Clear in front of the chips, which pushed
+   * the chip just tapped off the right edge of a phone: the tap worked and the
+   * thing tapped disappeared. So the chip is brought back into view.
+   */
+  function pick(event: MouseEvent, tagId: string) {
+    const chip = event.currentTarget as HTMLElement;
+    onfilter(tagId);
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    requestAnimationFrame(() =>
+      chip.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: still ? 'auto' : 'smooth' }),
+    );
+  }
 </script>
 
 <!--
@@ -43,7 +57,7 @@
 
   <div class="tags" role="group" aria-label="Show rows tagged">
     {#each tags as tag (tag.id)}
-      <TagToggle {tag} on={filter.includes(tag.id)} onclick={() => onfilter(tag.id)} />
+      <TagToggle {tag} on={filter.includes(tag.id)} onclick={(event) => pick(event, tag.id)} />
     {/each}
   </div>
 
