@@ -5,6 +5,8 @@
   import ItemSheet from '$lib/ItemSheet.svelte';
   import ShareSheet from '$lib/ShareSheet.svelte';
   import Sheet from '$lib/Sheet.svelte';
+  import TagBar from '$lib/TagBar.svelte';
+  import TagsSheet from '$lib/TagsSheet.svelte';
   import { ListSession } from '$lib/list-session.svelte';
   import { library } from '$lib/library.svelte';
   import { trackKeyboard } from '$lib/keyboard';
@@ -33,6 +35,7 @@
   let titleDraft = $state('');
   let confirmingClear = $state(false);
   let confirmingDelete = $state(false);
+  let editingTags = $state(false);
   let copying = $state(false);
   let copyFailed = $state<string | null>(null);
 
@@ -159,8 +162,41 @@
   }
 
   let openList = $state<HTMLElement | null>(null);
-  /** One flag for the screen, so the done shelf reserves the same left column. */
-  const canReorder = $derived(session.canWrite && session.openItems.length > 1);
+  /**
+   * One flag for the screen, so the done shelf reserves the same left column.
+   *
+   * Grouped by tag there is nothing to drag: the groups are the order, and a
+   * row dropped between two others would land in your order, which this view
+   * is not showing. So no grips, and no reserved column to line up with.
+   */
+  const canReorder = $derived(
+    session.canWrite && !session.byTag && session.visibleOpen.length > 1,
+  );
+
+  /** What the composer promises while a filter is on, which is also what it does. */
+  const addLabel = $derived.by(() => {
+    if (!session.list) return 'Loading…';
+    const tags = session.filterTags;
+    if (tags.length === 0) return 'Add something';
+    if (tags.length === 1) return `Add to ${tags[0]!.name}`;
+    if (tags.length === 2) return `Add to ${tags[0]!.name} and ${tags[1]!.name}`;
+    return `Add with ${tags.length} tags`;
+  });
+
+  /** A filter that leaves nothing open says which, rather than showing a blank. */
+  const nothingLeft = $derived.by(() => {
+    const tags = session.filterTags;
+    if (tags.length === 1) return `Nothing left tagged ${tags[0]!.name}.`;
+    if (tags.length === 2) return `Nothing left tagged ${tags[0]!.name} or ${tags[1]!.name}.`;
+    return `Nothing left with those ${tags.length} tags.`;
+  });
+
+  /** The open item's tags as they are now, since a tag lands at a tap. */
+  const openTagIds = $derived(
+    openItem
+      ? (session.items.find((candidate) => candidate.id === openItem!.id)?.tagIds ?? openItem.tagIds)
+      : [],
+  );
   let dragId = $state<string | null>(null);
 
   /**
@@ -268,6 +304,7 @@
     renaming = false;
     confirmingClear = false;
     confirmingDelete = false;
+    editingTags = false;
     copying = false;
     copyFailed = null;
   });
@@ -378,6 +415,21 @@
       </button>
     </header>
 
+    {#if session.list && session.tags.length}
+      <div class="tagbar">
+        <TagBar
+          tags={session.sortedTags}
+          filter={session.filter}
+          byTag={session.byTag}
+          canWrite={session.canWrite}
+          onfilter={(tagId) => session.toggleFilter(tagId)}
+          onclear={() => session.clearFilter()}
+          onsort={(byTag) => session.setByTag(byTag)}
+          onedit={() => (editingTags = true)}
+        />
+      </div>
+    {/if}
+
     {#if session.status === 'offline'}
       <p class="banner">Offline. Your changes are saved here and will sync when you're back.</p>
     {/if}
@@ -402,33 +454,93 @@
           </p>
         </div>
       {:else}
-        <ul class="rows" bind:this={openList}>
-          {#each session.openItems as item (item.id)}
-            <ItemRow
-              {item}
-              washing={session.isWashing(item.id)}
-              readonly={!session.canWrite}
-              reorderable={canReorder}
-              reserveGrip={canReorder}
-              dragging={dragId === item.id}
-              onToggle={() => session.toggle(item)}
-              onOpen={() => (openItem = item)}
-              onGrab={(event) => grab(event, item)}
-            />
+        {#if session.byTag}
+          {#each session.groups as group (group.tag?.id ?? 'untagged')}
+            <section class="group" aria-label={group.tag ? group.tag.name : 'No tag'}>
+              <h2 class="group-head" data-tag-color={group.tag?.color}>
+                {#if group.tag}
+                  <span class="dot" aria-hidden="true"></span>
+                  <span class="group-name">{group.tag.name}</span>
+                {:else}
+                  <span class="group-name untagged">No tag</span>
+                {/if}
+                <span class="count" aria-label="{group.items.length} rows">{group.items.length}</span>
+              </h2>
+              <ul class="rows">
+                {#each group.items as item (item.id)}
+                  <ItemRow
+                    {item}
+                    tags={session.tagsOf(item)}
+                    washing={session.isWashing(item.id)}
+                    readonly={!session.canWrite}
+                    onToggle={() => session.toggle(item)}
+                    onOpen={() => (openItem = item)}
+                  />
+                {/each}
+              </ul>
+            </section>
           {/each}
-        </ul>
+        {:else}
+          <ul class="rows" bind:this={openList}>
+            {#each session.visibleOpen as item (item.id)}
+              <ItemRow
+                {item}
+                tags={session.tagsOf(item)}
+                washing={session.isWashing(item.id)}
+                readonly={!session.canWrite}
+                reorderable={canReorder}
+                reserveGrip={canReorder}
+                dragging={dragId === item.id}
+                onToggle={() => session.toggle(item)}
+                onOpen={() => (openItem = item)}
+                onGrab={(event) => grab(event, item)}
+              />
+            {/each}
+          </ul>
+        {/if}
 
-        {#if session.doneItems.length}
+        {#if session.filtering && !session.visibleOpen.length}
+          <div class="nothing-left" role="status">
+            <p>{nothingLeft}</p>
+            <button type="button" onclick={() => session.clearFilter()}>Show every row</button>
+          </div>
+        {/if}
+
+        {#if session.visibleDone.length}
           <div class="shelf">
-            <span>Done · {session.doneItems.length}</span>
+            <!--
+              The heading folds the shelf, so a long run of finished rows can be
+              put away without clearing them. Clear stays beside it: putting
+              them away and throwing them away are different acts.
+            -->
+            <button
+              type="button"
+              class="fold"
+              aria-expanded={!session.doneFolded}
+              aria-controls="done-rows"
+              onclick={() => session.setDoneFolded(!session.doneFolded)}
+            >
+              <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path
+                  d="M6 9l6 6 6-6"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span>Done · {session.visibleDone.length}</span>
+            </button>
             {#if session.canWrite}
               <button type="button" onclick={() => (confirmingClear = true)}>Clear</button>
             {/if}
           </div>
-          <ul class="rows">
-            {#each session.doneItems as item (item.id)}
+          <ul class="rows" id="done-rows" hidden={session.doneFolded}>
+            {#each session.visibleDone as item (item.id)}
               <ItemRow
                 {item}
+                tags={session.tagsOf(item)}
                 washing={session.isWashing(item.id)}
                 readonly={!session.canWrite}
                 reserveGrip={canReorder}
@@ -453,7 +565,7 @@
         disabled={!session.list}
         rows="1"
         maxlength={LIMITS.itemText}
-        placeholder={session.list ? 'Add something' : 'Loading…'}
+        placeholder={addLabel}
         enterkeyhint="done"
         aria-label="Add an item"
       ></textarea>
@@ -489,15 +601,37 @@
   {@const item = openItem}
   <ItemSheet
     {item}
+    tags={session.sortedTags}
+    tagIds={openTagIds}
     onclose={() => (openItem = null)}
     onsave={(patch) => session.edit(item, patch)}
     onremove={() => session.remove(item)}
-    onmove={session.canWrite && !item.checked ? (direction) => session.step(item, direction) : undefined}
-    canMoveUp={session.openItems.findIndex((candidate) => candidate.id === item.id) > 0}
+    onmove={session.canWrite && !item.checked && !session.byTag
+      ? (direction) => session.step(item, direction)
+      : undefined}
+    ontoggletag={(tagId) => session.toggleItemTag(item, tagId)}
+    onaddtag={(name) => session.tagRowByName(item, name)}
+    onedittags={() => {
+      openItem = null;
+      editingTags = true;
+    }}
+    canMoveUp={session.visibleOpen.findIndex((candidate) => candidate.id === item.id) > 0}
     canMoveDown={(() => {
-      const at = session.openItems.findIndex((candidate) => candidate.id === item.id);
-      return at >= 0 && at < session.openItems.length - 1;
+      const at = session.visibleOpen.findIndex((candidate) => candidate.id === item.id);
+      return at >= 0 && at < session.visibleOpen.length - 1;
     })()}
+  />
+{/if}
+
+{#if editingTags}
+  <TagsSheet
+    tags={session.sortedTags}
+    rowsWith={(tagId) => session.rowsWith(tagId)}
+    onrename={(tag, name) => session.renameTag(tag, name)}
+    onrecolor={(tag, color) => session.recolorTag(tag, color)}
+    ondelete={(tag) => session.deleteTag(tag)}
+    oncreate={(name) => session.createTag(name)}
+    onclose={() => (editingTags = false)}
   />
 {/if}
 
@@ -545,6 +679,15 @@
     <ul class="menu">
       {#if session.canWrite}
         <li><button type="button" onclick={startRename}>Rename list</button></li>
+        <li>
+          <button
+            type="button"
+            onclick={() => {
+              menu = false;
+              editingTags = true;
+            }}>Edit tags</button
+          >
+        </li>
         <li>
           <button
             type="button"
@@ -616,8 +759,34 @@
     position: fixed;
     inset: 0;
     display: grid;
-    grid-template-rows: auto auto 1fr auto;
+    /* Named rather than counted. The tag bar, the offline banner and the
+       composer each come and go, and rows placed by position would slide up
+       into whichever track was left: the list itself landing in an `auto` row
+       and the composer in the one that stretches. */
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas: 'header' 'tags' 'banner' 'main' 'composer';
     background: var(--bg);
+  }
+
+  header {
+    grid-area: header;
+  }
+
+  .tagbar {
+    grid-area: tags;
+    min-width: 0;
+  }
+
+  .banner {
+    grid-area: banner;
+  }
+
+  main {
+    grid-area: main;
+  }
+
+  .composer {
+    grid-area: composer;
   }
 
   /* Grid, not flex. A <button> refuses to shrink below its content inside a
@@ -717,15 +886,94 @@
     align-items: center;
     gap: 8px;
     margin-top: 20px;
-    padding: 8px 8px 8px 20px;
+    padding: 4px 8px 4px 8px;
     background: var(--surface);
     font-size: 0.85rem;
     font-weight: 500;
     color: var(--ink-muted);
   }
 
-  .shelf span {
+  .shelf .fold {
+    display: flex;
     flex: 1;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 12px 0 8px;
+    text-align: left;
+  }
+
+  .fold .chevron {
+    flex: none;
+    transition: transform 180ms var(--ease);
+  }
+
+  /* A quarter turn: down while it is open, pointing along the heading once it
+     is folded. */
+  .fold[aria-expanded='false'] .chevron {
+    transform: rotate(-90deg);
+  }
+
+  /* Grouped by tag. The heading is the tag as it appears everywhere else, the
+     dot and the name, at the size of a label rather than a title: a group is a
+     way of reading the list, not a section of a document. */
+  .group + .group {
+    margin-top: 4px;
+  }
+
+  .group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 20px 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .group:first-child .group-head {
+    padding-top: 14px;
+  }
+
+  .group-head .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--tag-dot);
+  }
+
+  .group-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .group-name.untagged {
+    color: var(--ink-muted);
+  }
+
+  .group-head .count {
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+
+  .nothing-left {
+    display: grid;
+    justify-items: start;
+    gap: 4px;
+    padding: 28px 20px 8px;
+    color: var(--ink-muted);
+  }
+
+  .nothing-left button {
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--primary);
+    cursor: pointer;
   }
 
   .shelf button {

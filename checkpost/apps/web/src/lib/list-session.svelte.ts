@@ -6,12 +6,24 @@ import type {
   List,
   ServerFrame,
   Snapshot,
+  Tag,
+  TagColor,
 } from '@checkpost/contract';
-import { allows } from '@checkpost/contract';
+import { LIMITS, allows, compareTags, nextTagColor, tagKey } from '@checkpost/contract';
 import { ApiError, OfflineError, api, clientId } from './api';
 import { Realtime } from './realtime';
+import { readViewPrefs, writeViewPrefs } from './view-prefs';
 
 export type Status = 'loading' | 'ready' | 'offline' | 'gone' | 'invalid' | 'copy';
+
+/** Open rows under one tag's heading, or under no tag at all. */
+export interface TagGroup {
+  tag: Tag | null;
+  items: Item[];
+}
+
+/** Trimmed and folded the way the API stores a name. */
+const cleanTagName = (name: string) => name.trim().replace(/\s+/g, ' ').slice(0, LIMITS.tagName);
 
 /** How long a ticked row holds its place before drifting to the done shelf. */
 const SETTLE_MS = 400;
@@ -48,6 +60,8 @@ const POLL_MS = 15_000;
 export class ListSession {
   list = $state<List | null>(null);
   items = $state<Item[]>([]);
+  /** The list's tags, in the order they were made. Show them as `sortedTags`. */
+  tags = $state<Tag[]>([]);
   status = $state<Status>('loading');
   goneReason = $state<'rotated' | 'deleted' | null>(null);
   presence = $state(1);
@@ -62,6 +76,23 @@ export class ListSession {
   settling = $state<string[]>([]);
   /** Ids somebody else changed recently, highlighted so the change is visible. */
   washing = $state<string[]>([]);
+
+  /**
+   * The tags the rows are filtered by, empty for every row. Several means rows
+   * with any of them. This tab's view of the list and nobody else's, and never
+   * written down: a filter left on and forgotten hides rows, which is the one
+   * thing a shared list must not do quietly.
+   */
+  filter = $state<string[]>([]);
+  /** Open rows under their tags' headings rather than in the list's own order. */
+  byTag = $state(false);
+  /** The done shelf folded down to its heading. */
+  doneFolded = $state(false);
+  /** The list the two view settings above were read for. */
+  #viewFor: string | null = null;
+
+  /** The one order tags are shown in: chips, filters, groups and the sheet. */
+  readonly sortedTags = $derived([...this.tags].sort(compareTags));
   /**
    * The order a drag has put the open items in, before the server has said
    * what their real positions are.
@@ -121,6 +152,76 @@ export class ListSession {
 
   get doneItems() {
     return this.items.filter((item) => this.#showAsDone(item));
+  }
+
+  get filtering() {
+    return this.filter.length > 0;
+  }
+
+  /** The filter's tags, in display order. */
+  get filterTags() {
+    return this.sortedTags.filter((tag) => this.filter.includes(tag.id));
+  }
+
+  /** The open rows the filter lets through, in the list's own order. */
+  get visibleOpen() {
+    return this.openItems.filter((item) => this.#passes(item));
+  }
+
+  /** The done rows the filter lets through. The shelf's count follows these. */
+  get visibleDone() {
+    return this.doneItems.filter((item) => this.#passes(item));
+  }
+
+  /**
+   * The open rows under one heading per tag, in tag order, for the By tag view.
+   *
+   * A row sits under the first of its tags rather than under each of them. Two
+   * copies of one row would be two boxes to tick for one thing, and ticking one
+   * would move the other. Rows with no tag come last, under no heading's tag.
+   * Within a group the list's own order holds.
+   */
+  get groups(): TagGroup[] {
+    const order = this.sortedTags;
+    const rank = new Map(order.map((tag, index) => [tag.id, index]));
+    const buckets = new Map<string | null, Item[]>();
+    for (const item of this.visibleOpen) {
+      let first: string | null = null;
+      let best = Infinity;
+      for (const id of item.tagIds) {
+        const at = rank.get(id);
+        if (at !== undefined && at < best) {
+          best = at;
+          first = id;
+        }
+      }
+      const bucket = buckets.get(first);
+      if (bucket) bucket.push(item);
+      else buckets.set(first, [item]);
+    }
+    const groups: TagGroup[] = order
+      .filter((tag) => buckets.has(tag.id))
+      .map((tag) => ({ tag, items: buckets.get(tag.id)! }));
+    const untagged = buckets.get(null);
+    if (untagged) groups.push({ tag: null, items: untagged });
+    return groups;
+  }
+
+  /** A row's tags in display order, leaving out any the list no longer has. */
+  tagsOf(item: Item): Tag[] {
+    if (item.tagIds.length === 0) return [];
+    const mine = new Set(item.tagIds);
+    return this.sortedTags.filter((tag) => mine.has(tag.id));
+  }
+
+  /** How many rows wear a tag, for the Tags sheet and its confirm. */
+  rowsWith(tagId: string) {
+    return this.items.filter((item) => item.tagIds.includes(tagId)).length;
+  }
+
+  #passes(item: Item) {
+    const filter = this.filter;
+    return filter.length === 0 || item.tagIds.some((id) => filter.includes(id));
   }
 
   get doneCount() {
@@ -338,6 +439,10 @@ export class ListSession {
     if (!trimmed || !this.list) return;
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    // Looking at the list through a tag filter, a new row takes the filter's
+    // tags. Otherwise it would vanish from the view the moment it landed, and
+    // look lost rather than added.
+    const tagIds = this.filterTags.map((tag) => tag.id).slice(0, LIMITS.tagsPerItem);
     const optimistic: Item = {
       id,
       listId: this.list.id,
@@ -349,14 +454,14 @@ export class ListSession {
       // above a '~', and the server's answer replaces this before it matters.
       // The client never sends a position, so this string never leaves the tab.
       position: `${this.items.at(-1)?.position ?? 'a0'}~`,
-      tagIds: [],
+      tagIds,
       createdAt: now,
       updatedAt: now,
     };
     this.items = [...this.items, optimistic];
 
     await this.#write(
-      () => api.createItem(this.#token, id, trimmed),
+      () => api.createItem(this.#token, id, trimmed, tagIds),
       (fresh) => this.#replace(fresh),
       () => this.#remove(id),
     );
@@ -376,12 +481,14 @@ export class ListSession {
    * with.
    */
   async move(item: Item, toIndex: number) {
-    const open = this.openItems;
-    const from = open.findIndex((candidate) => candidate.id === item.id);
-    const to = Math.max(0, Math.min(open.length - 1, toIndex));
+    // Indices are into what is on screen, which under a tag filter is not the
+    // whole list.
+    const shown = this.visibleOpen;
+    const from = shown.findIndex((candidate) => candidate.id === item.id);
+    const to = Math.max(0, Math.min(shown.length - 1, toIndex));
     if (from < 0 || from === to) return;
 
-    const reordered = [...open];
+    const reordered = [...shown];
     reordered.splice(to, 0, ...reordered.splice(from, 1));
 
     // The neighbours in the new arrangement, not the old one. Naming the item
@@ -390,7 +497,14 @@ export class ListSession {
     const after = reordered[to + 1];
     const patch = before ? { afterId: before.id } : { beforeId: after?.id ?? null };
 
-    this.#pendingOrder = reordered.map((candidate) => candidate.id);
+    // The whole open list as the server is about to have it: straight after the
+    // neighbour it was dropped below, or straight before the one it was dropped
+    // above, wherever the rows the filter is hiding happen to be. Without a
+    // filter this is exactly the arrangement on screen.
+    const order = this.openItems.map((candidate) => candidate.id).filter((id) => id !== item.id);
+    const at = before ? order.indexOf(before.id) + 1 : after ? order.indexOf(after.id) : 0;
+    order.splice(Math.max(0, at), 0, item.id);
+    this.#pendingOrder = order;
 
     await this.#write(
       () => api.updateItem(this.#token, item.id, patch),
@@ -409,7 +523,7 @@ export class ListSession {
 
   /** One place up or down, for the sheet's buttons and for a keyboard. */
   async step(item: Item, direction: -1 | 1) {
-    const at = this.openItems.findIndex((candidate) => candidate.id === item.id);
+    const at = this.visibleOpen.findIndex((candidate) => candidate.id === item.id);
     if (at < 0) return;
     await this.move(item, at + direction);
   }
@@ -461,6 +575,242 @@ export class ListSession {
       undefined,
       () => (this.items = previous),
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tags
+  // ---------------------------------------------------------------------------
+
+  /** Puts a tag on a row or takes it off, at a tap, like a tick. */
+  async toggleItemTag(item: Item, tagId: string) {
+    const row = this.items.find((candidate) => candidate.id === item.id);
+    if (!row) return;
+    const on = row.tagIds.includes(tagId);
+    if (!on && row.tagIds.length >= LIMITS.tagsPerItem) {
+      this.message = `A row holds ${LIMITS.tagsPerItem} tags.`;
+      return;
+    }
+    const next = on ? row.tagIds.filter((id) => id !== tagId) : [...row.tagIds, tagId];
+    await this.#sendItemTags({ ...row, tagIds: next }, row);
+  }
+
+  /**
+   * Puts a tag on a row by name: the one the list already has by that name, or
+   * a new one.
+   *
+   * A new tag shows on the row at once, but the row is only told about it once
+   * the server has said which id the tag goes by. Somebody else may have made
+   * the same name a moment earlier, in which case the answer is their tag, and
+   * a row sent with this tab's id would be sent with an id the list does not
+   * have, and quietly come back untagged.
+   */
+  async tagRowByName(item: Item, name: string) {
+    const clean = cleanTagName(name);
+    const row = this.items.find((candidate) => candidate.id === item.id);
+    if (!clean || !row) return;
+
+    const known = this.tags.find((tag) => tagKey(tag.name) === tagKey(clean));
+    if (known) {
+      if (!row.tagIds.includes(known.id)) await this.toggleItemTag(row, known.id);
+      return;
+    }
+    if (row.tagIds.length >= LIMITS.tagsPerItem) {
+      this.message = `A row holds ${LIMITS.tagsPerItem} tags.`;
+      return;
+    }
+
+    // `createTag` puts its optimistic tag in place before its first await, so
+    // it is already there to put on the row.
+    const made = this.createTag(clean);
+    const draft = this.tags.find((tag) => tagKey(tag.name) === tagKey(clean));
+    if (draft) this.#replace({ ...row, tagIds: [...row.tagIds, draft.id] });
+
+    const tag = await made;
+    const now = this.items.find((candidate) => candidate.id === item.id);
+    if (!now) return;
+    if (!tag) {
+      if (draft) this.#replace({ ...now, tagIds: now.tagIds.filter((id) => id !== draft.id) });
+      return;
+    }
+    // By now the row carries the server's id for the tag, whichever it was.
+    await this.#sendItemTags(now, { ...now, tagIds: now.tagIds.filter((id) => id !== tag.id) });
+  }
+
+  /**
+   * Makes a tag, or finds the one the list already has by that name. Resolves
+   * with the tag to use, under the id the server knows it by, or null when
+   * there is no tag to use.
+   */
+  async createTag(name: string, color?: TagColor): Promise<Tag | null> {
+    const clean = cleanTagName(name);
+    if (!clean || !this.list) return null;
+    const known = this.tags.find((tag) => tagKey(tag.name) === tagKey(clean));
+    if (known) return known;
+    if (this.tags.length >= LIMITS.tagsPerList) {
+      this.message = `This list holds ${LIMITS.tagsPerList} tags. Delete one in Edit tags to make room.`;
+      return null;
+    }
+
+    const now = new Date().toISOString();
+    const draft: Tag = {
+      id: crypto.randomUUID(),
+      listId: this.list.id,
+      name: clean,
+      // Worked out here and sent, so the chip has its colour before the server
+      // has answered and keeps it when it does.
+      color: color ?? nextTagColor(this.tags.map((tag) => tag.color)),
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.tags = [...this.tags, draft];
+
+    let settled: Tag | null = null;
+    let refused = false;
+    await this.#write(
+      () => api.createTag(this.#token, { id: draft.id, name: draft.name, color: draft.color }),
+      (fresh) => {
+        settled = fresh;
+        this.#settleTag(draft.id, fresh);
+      },
+      () => {
+        refused = true;
+        this.#dropTag(draft.id);
+      },
+    );
+    if (refused) return null;
+    // Offline keeps the draft, the same as every other edit made offline.
+    return settled ?? draft;
+  }
+
+  /** Renames a tag. False, having said why, when another tag has that name. */
+  async renameTag(tag: Tag, name: string): Promise<boolean> {
+    const clean = cleanTagName(name);
+    if (!clean || clean === tag.name) return true;
+    const clash = this.tags.find((other) => other.id !== tag.id && tagKey(other.name) === tagKey(clean));
+    if (clash) {
+      this.message = `There is already a tag called “${clash.name}”.`;
+      return false;
+    }
+    await this.#updateTag(tag, { name: clean });
+    return true;
+  }
+
+  async recolorTag(tag: Tag, color: TagColor) {
+    if (tag.color === color) return;
+    await this.#updateTag(tag, { color });
+  }
+
+  /** Deletes a tag for everyone, and takes it off every row that wore it. */
+  async deleteTag(tag: Tag) {
+    const wore = this.items.filter((item) => item.tagIds.includes(tag.id)).map((item) => item.id);
+    this.#dropTag(tag.id);
+    await this.#write(
+      () => api.deleteTag(this.#token, tag.id),
+      undefined,
+      () => {
+        // Put back exactly what went: the tag, and its id on the rows that are
+        // still here. Anything else that changed in the meantime stays changed.
+        this.#upsertTag(tag);
+        const back = new Set(wore);
+        this.items = this.items.map((item) =>
+          back.has(item.id) && !item.tagIds.includes(tag.id)
+            ? { ...item, tagIds: [...item.tagIds, tag.id] }
+            : item,
+        );
+      },
+    );
+  }
+
+  toggleFilter(tagId: string) {
+    this.filter = this.filter.includes(tagId)
+      ? this.filter.filter((id) => id !== tagId)
+      : [...this.filter, tagId];
+  }
+
+  clearFilter() {
+    this.filter = [];
+  }
+
+  setByTag(on: boolean) {
+    this.byTag = on;
+    this.#saveView();
+  }
+
+  setDoneFolded(on: boolean) {
+    this.doneFolded = on;
+    this.#saveView();
+  }
+
+  async #updateTag(tag: Tag, patch: { name?: string; color?: TagColor }) {
+    const before = this.tags.find((candidate) => candidate.id === tag.id) ?? tag;
+    this.#upsertTag({ ...before, ...patch });
+    await this.#write(
+      () => api.updateTag(this.#token, tag.id, patch),
+      (fresh) => this.#upsertTag(fresh),
+      () => this.#upsertTag(before),
+    );
+  }
+
+  async #sendItemTags(next: Item, before: Item) {
+    this.#replace(next);
+    await this.#write(
+      () => api.updateItem(this.#token, next.id, { tagIds: next.tagIds }),
+      (fresh) => this.#replace(fresh),
+      () => {
+        const row = this.items.find((candidate) => candidate.id === next.id);
+        if (row) this.#replace({ ...row, tagIds: before.tagIds });
+      },
+    );
+  }
+
+  /**
+   * The server's answer to a create. Usually the draft itself, confirmed. When
+   * the list already had the name under another id, the draft goes and the
+   * rows this tab tagged with it move to the tag that was there.
+   */
+  #settleTag(draftId: string, fresh: Tag) {
+    this.tags = [...this.tags.filter((tag) => tag.id !== draftId && tag.id !== fresh.id), fresh];
+    if (draftId === fresh.id) return;
+    const swap = (ids: string[]) => [...new Set(ids.map((id) => (id === draftId ? fresh.id : id)))];
+    this.items = this.items.map((item) =>
+      item.tagIds.includes(draftId) ? { ...item, tagIds: swap(item.tagIds) } : item,
+    );
+    if (this.filter.includes(draftId)) this.filter = swap(this.filter);
+  }
+
+  #upsertTag(tag: Tag) {
+    const index = this.tags.findIndex((candidate) => candidate.id === tag.id);
+    if (index === -1) {
+      this.tags = [...this.tags, tag];
+      return;
+    }
+    const next = [...this.tags];
+    next[index] = tag;
+    this.tags = next;
+  }
+
+  /** A tag gone, from the list, from every row, and from the filter. */
+  #dropTag(id: string) {
+    this.tags = this.tags.filter((tag) => tag.id !== id);
+    this.items = this.items.map((item) =>
+      item.tagIds.includes(id) ? { ...item, tagIds: item.tagIds.filter((tagId) => tagId !== id) } : item,
+    );
+    if (this.filter.includes(id)) this.filter = this.filter.filter((tagId) => tagId !== id);
+  }
+
+  /** Reads how this browser last looked at the list, once per list. */
+  #loadView(listId: string) {
+    if (this.#viewFor === listId) return;
+    this.#viewFor = listId;
+    if (this.#demo) return;
+    const prefs = readViewPrefs(listId);
+    this.byTag = prefs.byTag;
+    this.doneFolded = prefs.doneFolded;
+  }
+
+  #saveView() {
+    if (!this.list || this.#demo) return;
+    writeViewPrefs(this.list.id, { byTag: this.byTag, doneFolded: this.doneFolded });
   }
 
   links() {
@@ -552,7 +902,13 @@ export class ListSession {
   #apply(snapshot: Snapshot) {
     this.list = snapshot.list;
     this.items = this.#sorted(snapshot.items);
+    // `?? []` for the moment a deploy is rolling: an API from before tags
+    // answers without them, and a list with no tags is exactly what that is.
+    this.tags = snapshot.tags ?? [];
     this.access = snapshot.access;
+    const known = new Set(this.tags.map((tag) => tag.id));
+    if (this.filter.some((id) => !known.has(id))) this.filter = this.filter.filter((id) => known.has(id));
+    this.#loadView(snapshot.list.id);
   }
 
   /**
@@ -619,6 +975,19 @@ export class ListSession {
         const many = event.data.ids as string[] | undefined;
         if (one) this.#remove(one);
         for (const id of many ?? []) this.#remove(id);
+        break;
+      }
+      case 'tag.created':
+      case 'tag.updated': {
+        const tag = event.data.tag as Tag | undefined;
+        if (tag) this.#upsertTag(tag);
+        break;
+      }
+      case 'tag.deleted': {
+        // The server has taken it off every row already, and says so once
+        // rather than once per row. Taking it off ours locally is the same end.
+        const id = event.data.id as string | undefined;
+        if (id) this.#dropTag(id);
         break;
       }
       case 'list.deleted':

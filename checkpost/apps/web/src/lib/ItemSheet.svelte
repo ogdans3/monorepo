@@ -1,27 +1,64 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import type { Item } from '@checkpost/contract';
-  import { LIMITS } from '@checkpost/contract';
+  import type { Item, Tag } from '@checkpost/contract';
+  import { LIMITS, tagKey } from '@checkpost/contract';
   import Sheet from './Sheet.svelte';
+  import TagToggle from './TagToggle.svelte';
 
   let {
     item,
+    tags = [],
+    tagIds = [],
     onclose,
     onsave,
     onremove,
     onmove,
+    ontoggletag,
+    onaddtag,
+    onedittags,
     canMoveUp = false,
     canMoveDown = false,
   }: {
     item: Item;
+    /** Every tag on the list, in display order. */
+    tags?: Tag[];
+    /**
+     * The row's tags as they are now, not as they were when the sheet opened.
+     * Unlike the text fields, a tag lands at a tap, so what the chips show has
+     * to be the row's own state, including a change from somebody else.
+     */
+    tagIds?: string[];
     onclose: () => void;
     onsave: (patch: { text?: string; note?: string }) => void;
     onremove: () => void;
     /** Step the item one place. Absent on a checked item and on a read link. */
     onmove?: (direction: -1 | 1) => void;
+    ontoggletag: (tagId: string) => void;
+    onaddtag: (name: string) => void;
+    onedittags: () => void;
     canMoveUp?: boolean;
     canMoveDown?: boolean;
   } = $props();
+
+  let newTag = $state('');
+  const full = $derived(tags.length >= LIMITS.tagsPerList);
+  const atLimit = $derived(tagIds.length >= LIMITS.tagsPerItem);
+  /** The tag the list already has by the name being typed, if it has one. */
+  const known = $derived(
+    newTag.trim() ? (tags.find((tag) => tagKey(tag.name) === tagKey(newTag)) ?? null) : null,
+  );
+  const addable = $derived(
+    Boolean(newTag.trim()) && !atLimit && (known ? !tagIds.includes(known.id) : !full),
+  );
+
+  function addTag(event: Event) {
+    event.preventDefault();
+    if (!addable) return;
+    onaddtag(newTag);
+    // Straight back to an empty field, like the composer, so three tags are
+    // three names and three presses of enter.
+    newTag = '';
+  }
 
   // Deliberately the value as it was when the sheet opened. The sheet is
   // recreated on each open, and live-updating a field somebody is typing in
@@ -60,6 +97,43 @@
       placeholder="Anything worth remembering. Size, aisle, who is bringing it"
     ></textarea>
   </label>
+
+  <div class="tags" role="group" aria-labelledby="tags-label">
+    <span class="label" id="tags-label">Tags</span>
+    {#if tags.length}
+      <div class="chips">
+        {#each tags as tag (tag.id)}
+          {@const on = tagIds.includes(tag.id)}
+          <TagToggle {tag} {on} disabled={!on && atLimit} onclick={() => ontoggletag(tag.id)} />
+        {/each}
+      </div>
+    {:else}
+      <p class="hint">Tags group the list and filter it, for everyone on it.</p>
+    {/if}
+
+    <form class="add" onsubmit={addTag}>
+      <input
+        bind:value={newTag}
+        maxlength={LIMITS.tagName}
+        placeholder="Add a tag"
+        aria-label="Add a tag"
+        enterkeyhint="done"
+        autocomplete="off"
+        disabled={atLimit}
+      />
+      <button type="submit" disabled={!addable}>Add</button>
+    </form>
+    {#if atLimit}
+      <p class="hint">A row holds {LIMITS.tagsPerItem} tags.</p>
+    {:else if full && newTag.trim() && !known}
+      <p class="hint">
+        This list holds {LIMITS.tagsPerList} tags. Delete one in Edit tags to make room.
+      </p>
+    {/if}
+    {#if tags.length}
+      <button type="button" class="link" onclick={onedittags}>Edit tags</button>
+    {/if}
+  </div>
 
   <!--
     The same job as the drag handle, without the drag. The handle is a
@@ -200,5 +274,91 @@
     margin-bottom: 4px;
     color: var(--ink-muted);
     font-size: 0.95rem;
+  }
+
+  .tags {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .tags .label {
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .hint {
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+  }
+
+  .add {
+    display: flex;
+    gap: 8px;
+  }
+
+  .add input {
+    flex: 1;
+    min-width: 0;
+    /* 16px minimum, or iOS zooms the page the moment this takes focus. */
+    font: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 11px 14px;
+  }
+
+  .add input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+
+  .add input:disabled {
+    color: var(--ink-faint);
+  }
+
+  .add button {
+    flex: none;
+    min-height: 46px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--primary);
+    color: var(--on-primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* A full-strength shape at low contrast, as the composer's button does. */
+  .add button:disabled {
+    background: var(--surface);
+    color: var(--ink-faint);
+    cursor: default;
+  }
+
+  .link {
+    justify-self: start;
+    min-height: 40px;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 3px;
+    cursor: pointer;
   }
 </style>

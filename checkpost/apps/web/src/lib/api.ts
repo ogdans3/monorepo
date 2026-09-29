@@ -9,6 +9,8 @@ import type {
   NewLinkResponse,
   ShareLink,
   Snapshot,
+  Tag,
+  TagColor,
 } from '@checkpost/contract';
 
 /**
@@ -138,8 +140,11 @@ export const api = {
   rotateLink: (token: string) =>
     send<{ token: string; url: string }>('POST', '/list/rotate', { token }),
 
-  createItem: (token: string, id: string, text: string) =>
-    send<Item>('POST', '/list/items', { token, body: { id, text } }),
+  createItem: (token: string, id: string, text: string, tagIds: string[] = []) =>
+    send<Item>('POST', '/list/items', {
+      token,
+      body: { id, text, ...(tagIds.length ? { tagIds } : {}) },
+    }),
 
   updateItem: (
     token: string,
@@ -153,6 +158,8 @@ export const api = {
       checked?: boolean;
       afterId?: string | null;
       beforeId?: string | null;
+      /** The whole set the row carries afterwards. */
+      tagIds?: string[];
     },
   ) => send<Item>('PATCH', `/list/items/${itemId}`, { token, body: patch }),
 
@@ -161,6 +168,17 @@ export const api = {
 
   clearChecked: (token: string) =>
     send<{ removed: string[] }>('POST', '/list/items/clear-checked', { token }),
+
+  // Tags. The answer to a create can be a tag the list already had by that
+  // name, with its own id, and that id is the one to tag rows with.
+  createTag: (token: string, tag: { id: string; name: string; color: TagColor }) =>
+    send<Tag>('POST', '/list/tags', { token, body: tag }),
+
+  updateTag: (token: string, tagId: string, patch: { name?: string; color?: TagColor }) =>
+    send<Tag>('PATCH', `/list/tags/${tagId}`, { token, body: patch }),
+
+  deleteTag: (token: string, tagId: string) =>
+    send<void>('DELETE', `/list/tags/${tagId}`, { token }),
 
   // Links. Admin only, and never returning a token except the once.
   links: (token: string) => send<ShareLink[]>('GET', '/list/links', { token }),

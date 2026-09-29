@@ -47,8 +47,11 @@ nothing is going to be lost.
 ## Anti-references
 
 - **Todoist / TickTick / Any.do**. Feature-dense productivity systems with
-  priorities, labels, projects, karma scores. Checkpost is one list of one kind
-  of thing. Nothing nests.
+  priorities, projects, karma scores. Checkpost is one list of one kind of
+  thing. Nothing nests. Tags are the one borrowing, added on purpose in
+  September 2026: one flat set per list, shared by everyone on it, each a name
+  and a colour. They sort and filter the list you are looking at. They do not
+  rank, they do not nest, and a tag never grows into a project.
 - **Trello / Notion**. Boards, databases, workspaces. There is no hierarchy
   here beyond list → item.
 - **The blue-and-white productivity default.** The category reflex is a cool

@@ -566,3 +566,136 @@ test('the composer clears the keyboard and the rows reach the edge', async ({ pa
     (viewport?.height ?? 0) + 1,
   );
 });
+
+// ---------------------------------------------------------------------------
+// Tags
+// ---------------------------------------------------------------------------
+
+/** Puts a tag on a row through its sheet, the way a person does. */
+async function tagRow(page: Page, text: string, tag: string) {
+  await page.getByRole('button', { name: `Open ${text}` }).click();
+  const sheet = page.locator('dialog');
+  await sheet.getByLabel('Add a tag').fill(tag);
+  await sheet.getByLabel('Add a tag').press('Enter');
+  await expect(sheet.getByRole('button', { name: tag, exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await sheet.getByRole('button', { name: 'Close' }).click();
+  await expect(sheet).toHaveCount(0);
+}
+
+function row(page: Page, text: string) {
+  return page.locator('li.row').filter({ hasText: text });
+}
+
+function tagBar(page: Page) {
+  return page.getByRole('navigation', { name: 'Sort and filter by tag' });
+}
+
+test('a row takes a tag from its sheet, and the list filters by it', async ({ page }) => {
+  await makeList(page);
+  for (const text of ['Milk', 'Bread', 'Leeks']) await addItem(page, text);
+
+  // No tag bar until there is a tag: an untagged list looks as it always did.
+  await expect(tagBar(page)).toHaveCount(0);
+  await tagRow(page, 'Milk', 'Dairy');
+  await expect(row(page, 'Milk').locator('.chip')).toHaveText(['Dairy']);
+
+  await tagBar(page).getByRole('button', { name: 'Dairy', exact: true }).click();
+  await expect(row(page, 'Milk')).toBeVisible();
+  await expect(row(page, 'Bread')).toHaveCount(0);
+  await expect(row(page, 'Leeks')).toHaveCount(0);
+
+  // Added through the filter, a row comes with the filter's tag rather than
+  // vanishing as it lands.
+  await expect(page.getByLabel('Add an item')).toHaveAttribute('placeholder', 'Add to Dairy');
+  await addItem(page, 'Butter');
+  await expect(row(page, 'Butter').locator('.chip')).toHaveText(['Dairy']);
+
+  await tagBar(page).getByRole('button', { name: 'Clear the tag filter' }).click();
+  await expect(row(page, 'Bread')).toBeVisible();
+  await expect(row(page, 'Leeks')).toBeVisible();
+});
+
+test('grouped by tag, untagged rows come last and nothing can be dragged', async ({ page }) => {
+  await makeList(page);
+  for (const text of ['Leeks', 'Bread', 'Milk']) await addItem(page, text);
+  await tagRow(page, 'Leeks', 'Veg');
+  await tagRow(page, 'Milk', 'Dairy');
+
+  await tagBar(page).getByRole('button', { name: 'By tag' }).click();
+  await expect(page.locator('h2.group-head .group-name')).toHaveText(['Dairy', 'Veg', 'No tag']);
+  await expect(page.locator('button.grip')).toHaveCount(0);
+
+  // A view of this browser's, and it is remembered.
+  await page.reload();
+  await expect(page.locator('h2.group-head .group-name')).toHaveText(['Dairy', 'Veg', 'No tag']);
+  await tagBar(page).getByRole('button', { name: 'Your order' }).click();
+  await expect(page.locator('h2.group-head')).toHaveCount(0);
+  await expect(page.locator('button.grip')).toHaveCount(3);
+});
+
+test('the done shelf folds away, and stays folded', async ({ page }) => {
+  await makeList(page);
+  await addItem(page, 'Tent');
+  await addItem(page, 'Stove');
+  await tick(page, 'Tent');
+
+  const fold = page.getByRole('button', { name: 'Done · 1' });
+  await expect(fold).toHaveAttribute('aria-expanded', 'true');
+  await expect(row(page, 'Tent')).toBeVisible();
+
+  await fold.click();
+  await expect(fold).toHaveAttribute('aria-expanded', 'false');
+  await expect(row(page, 'Tent')).toBeHidden();
+  // Folded is not cleared: the heading still counts it, and Clear is still there.
+  await expect(page.getByRole('button', { name: 'Clear', exact: true })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Done · 1' })).toHaveAttribute('aria-expanded', 'false');
+  await page.getByRole('button', { name: 'Done · 1' }).click();
+  await expect(row(page, 'Tent')).toBeVisible();
+});
+
+test('renaming and deleting a tag reaches the other tab', async ({ page, context }) => {
+  const url = await makeList(page);
+  await addItem(page, 'Sheets');
+  await tagRow(page, 'Sheets', 'Bedroom');
+
+  const other = await context.newPage();
+  await other.goto(url);
+  await expect(row(other, 'Sheets').locator('.chip')).toHaveText(['Bedroom']);
+
+  await tagBar(page).getByRole('button', { name: 'Edit tags' }).click();
+  const sheet = page.locator('dialog');
+  await sheet.getByRole('button', { name: /^Bedroom/ }).click();
+  await sheet.getByLabel('Name').fill('Guest room');
+  await sheet.getByRole('button', { name: 'Save name' }).click();
+  await expect(row(other, 'Sheets').locator('.chip')).toHaveText(['Guest room']);
+
+  await sheet.getByRole('button', { name: 'Delete tag' }).click();
+  await expect(sheet.getByText('Takes Guest room off 1 row, for everyone. There is no undo.')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Delete the tag' }).click();
+  await expect(row(other, 'Sheets').locator('.chip')).toHaveCount(0);
+  // The last tag gone, the bar goes with it.
+  await expect(tagBar(other)).toHaveCount(0);
+});
+
+test('a read link sees the tags and can filter, and cannot change them', async ({ page, context }) => {
+  await makeList(page);
+  await addItem(page, 'Milk');
+  await addItem(page, 'Bread');
+  await tagRow(page, 'Milk', 'Dairy');
+  const readUrl = await mintLink(page, 'Look only');
+
+  const reader = await context.newPage();
+  await reader.goto(readUrl);
+  await expect(row(reader, 'Milk').locator('.chip')).toHaveText(['Dairy']);
+  await expect(tagBar(reader).getByRole('button', { name: 'Edit tags' })).toHaveCount(0);
+
+  // Filtering is looking, so a link that can only look can do it.
+  await tagBar(reader).getByRole('button', { name: 'Dairy', exact: true }).click();
+  await expect(row(reader, 'Bread')).toHaveCount(0);
+  await expect(row(reader, 'Milk')).toBeVisible();
+});

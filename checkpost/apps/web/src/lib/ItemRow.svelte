@@ -1,8 +1,10 @@
 <script lang="ts">
-  import type { Item } from '@checkpost/contract';
+  import type { Item, Tag } from '@checkpost/contract';
+  import TagChip from './TagChip.svelte';
 
   let {
     item,
+    tags = [],
     washing = false,
     readonly = false,
     reorderable = false,
@@ -13,6 +15,8 @@
     onGrab,
   }: {
     item: Item;
+    /** The row's tags, already in display order. */
+    tags?: Tag[];
     washing?: boolean;
     /** A read link. The row still shows everything, and nothing responds. */
     readonly?: boolean;
@@ -168,6 +172,12 @@
       <span class="text">
         <span class="t">{item.text}</span>
         {#if item.note.trim()}<span class="note">{item.note.trim()}</span>{/if}
+        {#if tags.length}
+          <span class="chips">
+            <span class="sr">Tagged</span>
+            {#each tags as tag (tag.id)}<TagChip {tag} quiet={item.checked} />{/each}
+          </span>
+        {/if}
       </span>
     </button>
 
@@ -232,7 +242,11 @@
   .sheet {
     position: relative;
     display: grid;
-    grid-template-columns: auto auto 1fr auto;
+    /* Four columns, and every child names its own. Placed by position, a row
+       with no grip (a read link, a list of one, the By tag view) slid each
+       child one column left, so the chevron landed in the stretching column
+       and sat wherever the text happened to end. */
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
     align-items: stretch;
     background: var(--bg);
     transform: translate3d(var(--offset, 0), 0, 0);
@@ -253,10 +267,12 @@
   }
 
   .grip-space {
+    grid-column: 1;
     width: 40px;
   }
 
   .grip {
+    grid-column: 1;
     display: grid;
     place-items: center;
     width: 40px;
@@ -281,6 +297,7 @@
   }
 
   .tick {
+    grid-column: 2;
     display: grid;
     place-items: center;
     /* 48px of hit target for the one thing that is hard to undo by accident
@@ -296,6 +313,7 @@
   }
 
   .body {
+    grid-column: 3;
     display: grid;
     align-items: center;
     min-height: 56px;
@@ -373,6 +391,7 @@
   /* Always drawn, never hover-revealed. This is a touch product, and it is the
      way to open an item without knowing about the swipe. */
   .edge {
+    grid-column: 4;
     display: grid;
     place-items: center;
     width: 48px;
@@ -401,5 +420,23 @@
     .t {
       transition: none;
     }
+  }
+
+  /* Under the words, never beside them: the text needs the width, and a row
+     that grows a line is better than an item name cut short by its own tags. */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 </style>

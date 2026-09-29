@@ -41,6 +41,33 @@
   --primary-quiet: oklch(0.955 0.03 2);
   --on-primary: oklch(1 0 0);
 
+  /* Tag tints, DESIGN.md "Tag tints". Quiet on purpose: one lightness for all
+     eight, kept clear of the rose, so a tagged list still has one accent. */
+  --tag-clay-tint: oklch(0.95 0.026 45);
+  --tag-clay-ink: oklch(0.43 0.085 45);
+  --tag-clay-dot: oklch(0.62 0.12 45);
+  --tag-ochre-tint: oklch(0.95 0.032 85);
+  --tag-ochre-ink: oklch(0.43 0.085 85);
+  --tag-ochre-dot: oklch(0.62 0.12 85);
+  --tag-olive-tint: oklch(0.95 0.032 120);
+  --tag-olive-ink: oklch(0.43 0.085 120);
+  --tag-olive-dot: oklch(0.62 0.12 120);
+  --tag-sage-tint: oklch(0.95 0.032 160);
+  --tag-sage-ink: oklch(0.43 0.085 160);
+  --tag-sage-dot: oklch(0.62 0.12 160);
+  --tag-teal-tint: oklch(0.95 0.032 200);
+  --tag-teal-ink: oklch(0.43 0.073 200);
+  --tag-teal-dot: oklch(0.62 0.105 200);
+  --tag-steel-tint: oklch(0.95 0.025 245);
+  --tag-steel-ink: oklch(0.43 0.085 245);
+  --tag-steel-dot: oklch(0.62 0.12 245);
+  --tag-iris-tint: oklch(0.95 0.024 285);
+  --tag-iris-ink: oklch(0.43 0.085 285);
+  --tag-iris-dot: oklch(0.62 0.12 285);
+  --tag-plum-tint: oklch(0.95 0.032 320);
+  --tag-plum-ink: oklch(0.43 0.085 320);
+  --tag-plum-dot: oklch(0.62 0.12 320);
+
   --font: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
@@ -71,7 +98,78 @@
     --primary-hover: oklch(0.755 0.155 2);
     --primary-quiet: oklch(0.285 0.055 2);
     --on-primary: oklch(0.168 0.006 350);
+
+    --tag-clay-tint: oklch(0.3 0.045 45);
+    --tag-clay-ink: oklch(0.87 0.065 45);
+    --tag-clay-dot: oklch(0.72 0.115 45);
+    --tag-ochre-tint: oklch(0.3 0.045 85);
+    --tag-ochre-ink: oklch(0.87 0.065 85);
+    --tag-ochre-dot: oklch(0.72 0.115 85);
+    --tag-olive-tint: oklch(0.3 0.045 120);
+    --tag-olive-ink: oklch(0.87 0.065 120);
+    --tag-olive-dot: oklch(0.72 0.115 120);
+    --tag-sage-tint: oklch(0.3 0.045 160);
+    --tag-sage-ink: oklch(0.87 0.065 160);
+    --tag-sage-dot: oklch(0.72 0.115 160);
+    --tag-teal-tint: oklch(0.3 0.045 200);
+    --tag-teal-ink: oklch(0.87 0.065 200);
+    --tag-teal-dot: oklch(0.72 0.115 200);
+    --tag-steel-tint: oklch(0.3 0.045 245);
+    --tag-steel-ink: oklch(0.87 0.065 245);
+    --tag-steel-dot: oklch(0.72 0.115 245);
+    --tag-iris-tint: oklch(0.3 0.045 285);
+    --tag-iris-ink: oklch(0.87 0.065 285);
+    --tag-iris-dot: oklch(0.72 0.115 285);
+    --tag-plum-tint: oklch(0.3 0.045 320);
+    --tag-plum-ink: oklch(0.87 0.065 320);
+    --tag-plum-dot: oklch(0.72 0.115 320);
   }
+}
+
+/*
+ * One tag colour at a time. Anything carrying `data-tag-color` gets the three
+ * roles as plain locals, so a chip, a dot or a swatch reads `--tag-tint`,
+ * `--tag-ink` and `--tag-dot` and never needs to know which of the eight it is.
+ */
+[data-tag-color='clay'] {
+  --tag-tint: var(--tag-clay-tint);
+  --tag-ink: var(--tag-clay-ink);
+  --tag-dot: var(--tag-clay-dot);
+}
+[data-tag-color='ochre'] {
+  --tag-tint: var(--tag-ochre-tint);
+  --tag-ink: var(--tag-ochre-ink);
+  --tag-dot: var(--tag-ochre-dot);
+}
+[data-tag-color='olive'] {
+  --tag-tint: var(--tag-olive-tint);
+  --tag-ink: var(--tag-olive-ink);
+  --tag-dot: var(--tag-olive-dot);
+}
+[data-tag-color='sage'] {
+  --tag-tint: var(--tag-sage-tint);
+  --tag-ink: var(--tag-sage-ink);
+  --tag-dot: var(--tag-sage-dot);
+}
+[data-tag-color='teal'] {
+  --tag-tint: var(--tag-teal-tint);
+  --tag-ink: var(--tag-teal-ink);
+  --tag-dot: var(--tag-teal-dot);
+}
+[data-tag-color='steel'] {
+  --tag-tint: var(--tag-steel-tint);
+  --tag-ink: var(--tag-steel-ink);
+  --tag-dot: var(--tag-steel-dot);
+}
+[data-tag-color='iris'] {
+  --tag-tint: var(--tag-iris-tint);
+  --tag-ink: var(--tag-iris-ink);
+  --tag-dot: var(--tag-iris-dot);
+}
+[data-tag-color='plum'] {
+  --tag-tint: var(--tag-plum-tint);
+  --tag-ink: var(--tag-plum-ink);
+  --tag-dot: var(--tag-plum-dot);
 }
 
 *,
