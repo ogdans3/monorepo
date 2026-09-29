@@ -1,24 +1,31 @@
-import { and, asc, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+import { and, asc, desc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm';
 import {
   LIMITS,
+  nextTagColor,
   shareUrl,
+  tagKey,
   type Access,
   type ChangeEvent,
   type CreateItemBody,
   type CreateListBody,
+  type CreateTagBody,
   type Item,
   type List,
   type ShareLink,
   type Snapshot,
+  type Tag,
+  type TagColor,
   type UpdateItemBody,
+  type UpdateTagBody,
 } from '@checkpost/contract';
 import type { Database } from '../db/index.js';
-import { items, listEvents, lists, shareLinks } from '../db/schema.js';
+import { items, listEvents, lists, shareLinks, tags } from '../db/schema.js';
 import { ApiError } from '../lib/errors.js';
 import { FIRST_KEY, keyBetween, keysBetween } from '../lib/fractional-index.js';
 import { generateShareToken, hashShareToken } from '../lib/tokens.js';
 import type { RealtimeHub, Subscriber } from '../realtime/hub.js';
-import { toChangeEvent, toItem, toList } from '../serialize.js';
+import { toChangeEvent, toItem, toList, toTag } from '../serialize.js';
 import type { ListCache, LinkOutcome } from './list-cache.js';
 
 /** Byte-wise ordering, so Postgres agrees with the clients' local sort. */
@@ -127,7 +134,7 @@ export class ListService {
     // Access is not part of the cached value: the rows are the same whoever
     // asks, and only the "what may you do with them" line differs.
     const cached = this.cache.snapshot(listId);
-    if (cached) return { list: cached.list, items: cached.items, access };
+    if (cached) return { list: cached.list, items: cached.items, tags: cached.tags, access };
 
     const [listRow] = await this.db.select().from(lists).where(eq(lists.id, listId)).limit(1);
     if (!listRow) throw ApiError.gone('This list has been deleted.');
@@ -136,8 +143,15 @@ export class ListService {
       .from(items)
       .where(eq(items.listId, listId))
       .orderBy(asc(POSITION_ORDER));
+    // In the order they were made. The clients sort for display with
+    // `compareTags`, so this only has to be stable, not meaningful.
+    const tagRows = await this.db
+      .select()
+      .from(tags)
+      .where(eq(tags.listId, listId))
+      .orderBy(asc(tags.createdAt), asc(tags.id));
 
-    const fresh = { list: toList(listRow), items: itemRows.map(toItem) };
+    const fresh = { list: toList(listRow), items: itemRows.map(toItem), tags: tagRows.map(toTag) };
     this.cache.rememberSnapshot(listId, fresh);
     // The client renders what it is allowed to do, so it is told.
     return { ...fresh, access };
@@ -242,6 +256,7 @@ export class ListService {
   async createList(body: CreateListBody, actor: string | null): Promise<{
     list: List;
     items: Item[];
+    tags: Tag[];
     token: string;
   }> {
     const token = generateShareToken();
@@ -297,9 +312,9 @@ export class ListService {
       linkId: created.linkId,
       access: 'admin',
     });
-    this.cache.rememberSnapshot(created.list.id, { list: created.list, items: created.items });
+    this.cache.rememberSnapshot(created.list.id, { list: created.list, items: created.items, tags: [] });
     this.cache.markTouched(created.list.id);
-    return { list: created.list, items: created.items, token };
+    return { list: created.list, items: created.items, tags: [], token };
   }
 
   async updateTitle(ctx: LinkContext, title: string, actor: string | null): Promise<List> {
@@ -346,6 +361,7 @@ export class ListService {
         text: body.text,
         note: body.note ?? '',
         position,
+        tagIds: await this.#knownTagIds(tx, ctx.listId, body.tagIds),
         ...(body.id ? { id: body.id } : {}),
       };
 
@@ -395,6 +411,9 @@ export class ListService {
       if (body.afterId !== undefined || body.beforeId !== undefined) {
         patch.position = await this.#positionFor(tx, ctx.listId, body, itemId);
       }
+      if (body.tagIds !== undefined) {
+        patch.tagIds = await this.#knownTagIds(tx, ctx.listId, body.tagIds);
+      }
 
       const [row] = await tx.update(items).set(patch).where(eq(items.id, itemId)).returning();
       if (!row) throw ApiError.notFound('That item is gone. Someone else removed it.');
@@ -436,6 +455,129 @@ export class ListService {
       return { result: ids, event: { type: 'item.deleted' as const, data: { ids } } };
     });
     return result;
+  }
+
+  // -------------------------------------------------------------------------
+  // Tags
+  // -------------------------------------------------------------------------
+
+  /**
+   * Makes a tag, or hands back the one that is already there.
+   *
+   * Two people typing the same new tag at once is the ordinary way this is
+   * called twice, and the answer both of them want is one tag. So a name the
+   * list already has (compared by `tagKey`, not by the database's `lower()`,
+   * which need not fold an Ø) returns that tag, and so does a retried request
+   * with an id that already exists. Neither is a change, so neither is an
+   * event. The caller learns which by the id it gets back, and must use that
+   * one: the row it tagged with its own id in the meantime would otherwise be
+   * tagged with nothing.
+   *
+   * The check is safe against a concurrent writer because `#mutate` has
+   * already taken the list's row lock by the time it runs.
+   */
+  async createTag(
+    ctx: LinkContext,
+    body: CreateTagBody,
+    actor: string | null,
+  ): Promise<{ tag: Tag; created: boolean }> {
+    const { result } = await this.#mutate(ctx.listId, actor, async (tx) => {
+      if (body.id) {
+        const [same] = await tx.select().from(tags).where(eq(tags.id, body.id)).limit(1);
+        if (same && same.listId === ctx.listId) {
+          return { result: { tag: toTag(same), created: false }, event: null };
+        }
+        if (same) throw ApiError.badRequest('That tag id is already in use elsewhere.');
+      }
+
+      const existing = await tx.select().from(tags).where(eq(tags.listId, ctx.listId));
+      const key = tagKey(body.name);
+      const named = existing.find((tag) => tagKey(tag.name) === key);
+      if (named) return { result: { tag: toTag(named), created: false }, event: null };
+
+      if (existing.length >= LIMITS.tagsPerList) {
+        throw ApiError.limitReached(
+          `A list holds ${LIMITS.tagsPerList} tags. Delete one you are not using to make room.`,
+        );
+      }
+
+      const color =
+        body.color ?? nextTagColor(existing.map((tag) => tag.color as TagColor));
+      const [row] = await tx
+        .insert(tags)
+        .values({
+          listId: ctx.listId,
+          name: body.name,
+          color,
+          ...(body.id ? { id: body.id } : {}),
+        })
+        .returning();
+      if (!row) throw ApiError.badRequest('Could not make the tag.');
+      const tag = toTag(row);
+      return { result: { tag, created: true }, event: { type: 'tag.created' as const, data: { tag } } };
+    });
+    return result;
+  }
+
+  /** Renames or recolours a tag. Every row wearing it changes with it. */
+  async updateTag(
+    ctx: LinkContext,
+    tagId: string,
+    body: UpdateTagBody,
+    actor: string | null,
+  ): Promise<Tag> {
+    const { result } = await this.#mutate(ctx.listId, actor, async (tx) => {
+      const existing = await tx.select().from(tags).where(eq(tags.listId, ctx.listId));
+      const current = existing.find((tag) => tag.id === tagId);
+      if (!current) throw ApiError.notFound('That tag is gone. Someone else deleted it.');
+
+      if (body.name !== undefined) {
+        const key = tagKey(body.name);
+        const clash = existing.find((tag) => tag.id !== tagId && tagKey(tag.name) === key);
+        // Refused rather than merged. Folding two tags into one is a bigger
+        // act than a rename, and nobody asked for it by typing a name.
+        if (clash) throw ApiError.badRequest(`There is already a tag called “${clash.name}”.`);
+      }
+
+      const [row] = await tx
+        .update(tags)
+        .set({
+          ...(body.name !== undefined ? { name: body.name } : {}),
+          ...(body.color !== undefined ? { color: body.color } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(tags.id, tagId))
+        .returning();
+      if (!row) throw ApiError.notFound('That tag is gone. Someone else deleted it.');
+      const tag = toTag(row);
+      return { result: tag, event: { type: 'tag.updated' as const, data: { tag } } };
+    });
+    return result;
+  }
+
+  /**
+   * Deletes a tag and takes it off every row, in one transaction and one
+   * event. The event says only which tag went: every client can take the id
+   * off its own rows, and a burst of one `item.updated` per row would strobe
+   * the screen to say the same thing.
+   */
+  async deleteTag(ctx: LinkContext, tagId: string, actor: string | null): Promise<void> {
+    await this.#mutate(ctx.listId, actor, async (tx) => {
+      const deleted = await tx
+        .delete(tags)
+        .where(and(eq(tags.id, tagId), eq(tags.listId, ctx.listId)))
+        .returning({ id: tags.id });
+      // Deleted already, by someone else a moment ago. The end state is right.
+      if (deleted.length === 0) return { result: undefined, event: null };
+      await tx
+        .update(items)
+        .set({ tagIds: sql`array_remove(${items.tagIds}, ${tagId}::uuid)` })
+        .where(and(eq(items.listId, ctx.listId), sql`${tagId}::uuid = any(${items.tagIds})`));
+      return {
+        result: undefined,
+        event: { type: 'tag.deleted' as const, data: { id: tagId } },
+      };
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -654,6 +796,21 @@ export class ListService {
         .where(eq(items.listId, ctx.listId))
         .orderBy(asc(POSITION_ORDER));
 
+      // The tags come too, as new tags on the copy. Ids are made here rather
+      // than by the database so the rows can be pointed at them in one insert.
+      const sourceTags = await tx.select().from(tags).where(eq(tags.listId, ctx.listId));
+      const renamed = new Map<string, string>(sourceTags.map((tag) => [tag.id, randomUUID()]));
+      if (sourceTags.length > 0) {
+        await tx.insert(tags).values(
+          sourceTags.map((tag) => ({
+            id: renamed.get(tag.id)!,
+            listId: copy.id,
+            name: tag.name,
+            color: tag.color,
+          })),
+        );
+      }
+
       if (sourceItems.length > 0) {
         await tx.insert(items).values(
           sourceItems.map((item) => ({
@@ -665,6 +822,9 @@ export class ListService {
             position: item.position,
             checked: false,
             checkedAt: null,
+            tagIds: item.tagIds
+              .map((id) => renamed.get(id))
+              .filter((id): id is string => Boolean(id)),
           })),
         );
       }
@@ -802,6 +962,26 @@ export class ListService {
 
     if (outcome.change) this.hub.broadcast(listId, outcome.change);
     return { result: outcome.result, event: outcome.change };
+  }
+
+  /**
+   * The ids a client asked a row to carry, cut down to the tags this list
+   * actually has, each once, in the order asked.
+   *
+   * Unknown ids are dropped rather than refused. The usual reason for one is a
+   * tag somebody deleted between this client drawing the chip and the request
+   * landing, and the rest of the edit is still worth keeping. It is also what
+   * stops an id from another list ever being written onto a row.
+   */
+  async #knownTagIds(tx: Tx, listId: string, wanted: string[] | undefined): Promise<string[]> {
+    if (!wanted || wanted.length === 0) return [];
+    const unique = [...new Set(wanted)];
+    const rows = await tx
+      .select({ id: tags.id })
+      .from(tags)
+      .where(and(eq(tags.listId, listId), inArray(tags.id, unique)));
+    const known = new Set(rows.map((row) => row.id));
+    return unique.filter((id) => known.has(id)).slice(0, LIMITS.tagsPerItem);
   }
 
   /**

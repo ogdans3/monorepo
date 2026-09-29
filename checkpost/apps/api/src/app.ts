@@ -15,6 +15,7 @@ import { itemRoutes } from './routes/items.js';
 import { listRoutes } from './routes/lists.js';
 import { metaRoutes } from './routes/meta.js';
 import { realtimeRoutes } from './routes/realtime.js';
+import { tagRoutes } from './routes/tags.js';
 import { DemoService } from './services/demo-service.js';
 import { ListCache } from './services/list-cache.js';
 import { ListService } from './services/list-service.js';
@@ -171,6 +172,7 @@ export async function buildApp(env: Env): Promise<BuiltApp> {
       await scope.register(metaRoutes);
       await scope.register(listRoutes);
       await scope.register(itemRoutes);
+      await scope.register(tagRoutes);
       await scope.register(realtimeRoutes);
       await scope.register(demoRoutes);
       await scope.register(adminRoutes);

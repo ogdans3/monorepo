@@ -91,6 +91,18 @@ export const items = pgTable(
      * Postgres, Dart and JavaScript.
      */
     position: text('position').notNull(),
+    /**
+     * The tags this row carries. An array on the row rather than a join table,
+     * because the row is the unit everything else moves in: `item.updated`
+     * carries the whole item, and a snapshot is one select. The service keeps
+     * it honest, since Postgres cannot put a foreign key on an array element:
+     * only ids of this list's tags are ever written, and deleting a tag takes
+     * its id off every row in the same transaction.
+     */
+    tagIds: uuid('tag_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(now),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().default(now),
   },
@@ -98,6 +110,33 @@ export const items = pgTable(
     index('items_list_position_idx').on(t.listId, sql`${t.position} COLLATE "C"`),
     // Ties are impossible in practice but must still sort deterministically.
     uniqueIndex('items_list_position_key').on(t.listId, t.position),
+  ],
+);
+
+/**
+ * A list's tags. They belong to the list, not to anyone on it, and a copy of
+ * the list gets copies of them.
+ */
+export const tags = pgTable(
+  'tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    listId: uuid('list_id')
+      .notNull()
+      .references(() => lists.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    /** One of `TAG_COLORS`. Text for the same reason `share_links.access` is. */
+    color: text('color').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(now),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().default(now),
+  },
+  (t) => [
+    /**
+     * A backstop, not the check. `lower()` follows the cluster's ctype, which
+     * need not fold non-ASCII letters, so the service compares `tagKey`s itself
+     * under the list's row lock. This only stops what that would miss.
+     */
+    uniqueIndex('tags_list_name_key').on(t.listId, sql`lower(${t.name})`),
   ],
 );
 
@@ -128,5 +167,6 @@ export const listEvents = pgTable(
 
 export type ListRow = typeof lists.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;
+export type TagRow = typeof tags.$inferSelect;
 export type ShareLinkRow = typeof shareLinks.$inferSelect;
 export type ListEventRow = typeof listEvents.$inferSelect;

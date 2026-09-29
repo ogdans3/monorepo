@@ -349,6 +349,7 @@ export class ListSession {
       // above a '~', and the server's answer replaces this before it matters.
       // The client never sends a position, so this string never leaves the tab.
       position: `${this.items.at(-1)?.position ?? 'a0'}~`,
+      tagIds: [],
       createdAt: now,
       updatedAt: now,
     };

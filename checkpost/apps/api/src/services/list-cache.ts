@@ -1,4 +1,4 @@
-import type { Access, Item, List } from '@checkpost/contract';
+import type { Access, Item, List, Tag } from '@checkpost/contract';
 import { TtlCache } from '../lib/ttl-cache.js';
 
 /**
@@ -21,6 +21,7 @@ export type LinkOutcome =
 export interface CachedSnapshot {
   list: List;
   items: Item[];
+  tags: Tag[];
 }
 
 export interface CachedPreview {
@@ -194,6 +195,7 @@ export class ListCache {
     // One array is handed to every caller, so freezing it turns a stray
     // in-place sort somewhere downstream into a throw instead of a mystery.
     Object.freeze(snapshot.items);
+    Object.freeze(snapshot.tags);
     this.#snapshots.set(listId, snapshot);
     this.#revisions.set(listId, snapshot.list.revision);
   }

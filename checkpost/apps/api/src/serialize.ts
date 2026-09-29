@@ -1,5 +1,5 @@
-import type { ChangeEvent, Item, List } from '@checkpost/contract';
-import type { ItemRow, ListEventRow, ListRow } from './db/schema.js';
+import type { ChangeEvent, Item, List, Tag, TagColor } from '@checkpost/contract';
+import type { ItemRow, ListEventRow, ListRow, TagRow } from './db/schema.js';
 
 /**
  * One place where database rows become wire objects. Timestamps are always ISO
@@ -26,6 +26,19 @@ export function toItem(row: ItemRow): Item {
     checked: row.checked,
     checkedAt: row.checkedAt ? row.checkedAt.toISOString() : null,
     position: row.position,
+    tagIds: row.tagIds,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function toTag(row: TagRow): Tag {
+  return {
+    id: row.id,
+    listId: row.listId,
+    name: row.name,
+    // Only ever written from `tagColorSchema`, so the cast states a fact.
+    color: row.color as TagColor,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

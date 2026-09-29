@@ -107,7 +107,94 @@ export const LIMITS = {
   changesPage: 500,
   /** Live links per list. Enough for any real sharing, bounded against abuse. */
   linksPerList: 20,
+  /** A tag is a word or two on a chip, not a sentence. */
+  tagName: 30,
+  /** Enough to cross-file a row, not so many that the chips outgrow it. */
+  tagsPerItem: 10,
+  tagsPerList: 50,
 } as const;
+
+// ---------------------------------------------------------------------------
+// Tags
+// ---------------------------------------------------------------------------
+
+/**
+ * The colours a tag can take, stored by name.
+ *
+ * Eight quiet tints of one lightness, spread round the wheel and kept clear of
+ * the rose accent, so a tagged list still has one accent on it. The values
+ * live in DESIGN.md, `apps/web/src/app.css` and `apps/app/lib/design/tokens.dart`,
+ * which is the palette rule: change them together. A tag always shows its
+ * name, so the colour helps you find it and never has to carry it.
+ *
+ * In wheel order, which is the order a picker shows them in.
+ */
+export const TAG_COLORS = ['clay', 'ochre', 'olive', 'sage', 'teal', 'steel', 'iris', 'plum'] as const;
+export const tagColorSchema = z.enum(TAG_COLORS);
+export type TagColor = z.infer<typeof tagColorSchema>;
+
+/**
+ * The order new tags are handed colours in. Alternating across the wheel, so
+ * the first few tags on a list never sit next to their own neighbour.
+ */
+export const TAG_COLOR_ORDER: readonly TagColor[] = [
+  'clay',
+  'teal',
+  'ochre',
+  'steel',
+  'olive',
+  'iris',
+  'sage',
+  'plum',
+];
+
+/**
+ * The colour a new tag gets when nobody picked one: the one used least on the
+ * list so far, and among equals the earliest in `TAG_COLOR_ORDER`. Eight tags
+ * get eight colours before any repeats.
+ *
+ * The Flutter client carries the same function in `models.dart`, because a
+ * tag made on a phone has to show its colour before the server has answered.
+ */
+export function nextTagColor(existing: readonly TagColor[]): TagColor {
+  const used = new Map<TagColor, number>();
+  for (const color of existing) used.set(color, (used.get(color) ?? 0) + 1);
+  let best = TAG_COLOR_ORDER[0]!;
+  for (const color of TAG_COLOR_ORDER) {
+    if ((used.get(color) ?? 0) < (used.get(best) ?? 0)) best = color;
+  }
+  return best;
+}
+
+/**
+ * A tag's name as the list compares it: two names that differ only in case or
+ * spacing are the same tag, so "Kitchen" and "kitchen " cannot both exist.
+ */
+export function tagKey(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/**
+ * The one order tags are shown in, everywhere: by name, ignoring case, and by
+ * id when two names compare equal. Code-unit order rather than a locale
+ * collator, because the Flutter client has no collator to agree with and the
+ * two clients must put the chips and the groups in the same place.
+ */
+export function compareTags(
+  a: { name: string; id: string },
+  b: { name: string; id: string },
+): number {
+  const ka = tagKey(a.name);
+  const kb = tagKey(b.name);
+  if (ka !== kb) return ka < kb ? -1 : 1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/** Trimmed, with inner runs of whitespace folded to one space. */
+export const tagNameSchema = z
+  .string()
+  .transform((name) => name.trim().replace(/\s+/g, ' '))
+  .pipe(z.string().min(1, 'A tag needs a name.').max(LIMITS.tagName));
 
 // ---------------------------------------------------------------------------
 // Entities
@@ -139,14 +226,35 @@ export const itemSchema = z.object({
    * the same spot never fight over integer positions.
    */
   position: z.string(),
+  /**
+   * The list's tags this item carries, by id. A set, so the order means
+   * nothing: clients show them in `compareTags` order. Only ever ids of tags on
+   * the same list, because the server drops any it does not recognise.
+   */
+  tagIds: z.array(z.string().uuid()),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 export type Item = z.infer<typeof itemSchema>;
 
+/**
+ * A tag belongs to one list and is shared by everyone on it, like the items.
+ * There are no personal tags because there are no persons.
+ */
+export const tagSchema = z.object({
+  id: z.string().uuid(),
+  listId: z.string().uuid(),
+  name: z.string(),
+  color: tagColorSchema,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type Tag = z.infer<typeof tagSchema>;
+
 export const snapshotSchema = z.object({
   list: listSchema,
   items: z.array(itemSchema),
+  tags: z.array(tagSchema),
   /** What the link this was fetched with is allowed to do. */
   access: accessSchema,
 });
@@ -201,6 +309,10 @@ export const eventTypeSchema = z.enum([
   'item.updated',
   'item.deleted',
   'link.rotated',
+  'tag.created',
+  'tag.updated',
+  /** Also takes the tag off every item, so clients drop its id locally. */
+  'tag.deleted',
 ]);
 export type EventType = z.infer<typeof eventTypeSchema>;
 
@@ -267,6 +379,8 @@ export type CreateListBody = z.infer<typeof createListBodySchema>;
 export const createListResponseSchema = z.object({
   list: listSchema,
   items: z.array(itemSchema),
+  /** Empty for a new list. A copy brings the tags of the list it came from. */
+  tags: z.array(tagSchema),
   token: shareTokenSchema,
   url: z.string().url(),
 });
@@ -285,6 +399,11 @@ export const createItemBodySchema = z
     /** Insert immediately after this item; omit to append. Mutually exclusive. */
     afterId: z.string().uuid().nullable().optional(),
     beforeId: z.string().uuid().nullable().optional(),
+    /**
+     * Tags to start with. A list being looked at through a tag filter adds its
+     * new rows with that filter's tags, or they would vanish as they landed.
+     */
+    tagIds: z.array(z.string().uuid()).max(LIMITS.tagsPerItem).optional(),
   })
   .strict()
   .refine((v) => !(v.afterId && v.beforeId), {
@@ -299,6 +418,8 @@ export const updateItemBodySchema = z
     checked: z.boolean().optional(),
     afterId: z.string().uuid().nullable().optional(),
     beforeId: z.string().uuid().nullable().optional(),
+    /** The whole set, not a change to it: what the row carries afterwards. */
+    tagIds: z.array(z.string().uuid()).max(LIMITS.tagsPerItem).optional(),
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: 'empty update' })
@@ -306,6 +427,26 @@ export const updateItemBodySchema = z
     message: 'afterId and beforeId are mutually exclusive',
   });
 export type UpdateItemBody = z.infer<typeof updateItemBodySchema>;
+
+export const createTagBodySchema = z
+  .object({
+    /** Client-generated, like an item's, so a retry finds the tag it made. */
+    id: z.string().uuid().optional(),
+    name: tagNameSchema,
+    /** Left out, the server picks `nextTagColor` for the list. */
+    color: tagColorSchema.optional(),
+  })
+  .strict();
+export type CreateTagBody = z.infer<typeof createTagBodySchema>;
+
+export const updateTagBodySchema = z
+  .object({
+    name: tagNameSchema.optional(),
+    color: tagColorSchema.optional(),
+  })
+  .strict()
+  .refine((v) => v.name !== undefined || v.color !== undefined, { message: 'empty update' });
+export type UpdateTagBody = z.infer<typeof updateTagBodySchema>;
 
 export const rotateResponseSchema = z.object({
   token: shareTokenSchema,

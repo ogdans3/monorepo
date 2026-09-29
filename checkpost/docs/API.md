@@ -27,7 +27,7 @@ read to the people who only need to look and keep admin for yourself.
 | `access` | Can |
 |---|---|
 | `read` | Fetch the snapshot, the change log and the socket. Nothing else. |
-| `write` | Everything `read` can, plus items and the list title. |
+| `write` | Everything `read` can, plus items, tags and the list title. |
 | `admin` | Everything, plus making and revoking links, rotating, and deleting the list. |
 | `copy` | Exactly one thing: mint a fresh list for whoever opens it. |
 
@@ -88,20 +88,26 @@ Rate limited to `RATE_LIMIT_CREATE_MAX` per IP per hour.
 // 201
 { "list": { "id": "…", "title": "Camping", "revision": 0, "createdAt": "…", "updatedAt": "…" },
   "items": [ /* Item */ ],
+  "tags": [],
   "token": "…43 chars…",
   "url": "https://checkpost.app/l/…" }
 ```
 
 ### `GET /v1/list`
 
-Full snapshot: the list, every item in display order, and what this link may
-do. Clients render according to `access` rather than guessing.
+Full snapshot: the list, every item in display order, the list's tags, and
+what this link may do. Clients render according to `access` rather than
+guessing.
 
 ```jsonc
 { "list": { … },
-  "items": [ { "id": "…", "text": "Tent", "checked": false, "position": "a1", … } ],
+  "items": [ { "id": "…", "text": "Tent", "checked": false, "position": "a1", "tagIds": ["…"], … } ],
+  "tags": [ { "id": "…", "listId": "…", "name": "Kitchen", "color": "clay", "createdAt": "…", "updatedAt": "…" } ],
   "access": "write" }
 ```
+
+`tags` come in the order they were made. Show them in `compareTags` order
+(see Tags below), which is what both clients do.
 
 ### `PATCH /v1/list`
 
@@ -136,14 +142,15 @@ Capped at `LIMITS.linksPerList` live links.
 | Method | Path | Returns |
 |---|---|---|
 | `GET` | `/v1/list/copy` | `200` `{ title, itemCount }` |
-| `POST` | `/v1/list/copy` | `201` `{ list, items, token, url }` |
+| `POST` | `/v1/list/copy` | `201` `{ list, items, tags, token, url }` |
 
 The preview is a name and a count, so a client can say what it is about to
 make. The items themselves are not in it.
 
 Taking the copy makes a new list with the same title and items, **all
 unchecked**, notes and order preserved, and hands the caller an `admin` link to
-it. The two lists are strangers afterwards: no shared rows, no shared links, no
+it. The tags come too, as new tags with new ids, and the copied rows wear the
+copies. The two lists are strangers afterwards: no shared rows, no shared links, no
 events crossing between them. Each person who opens the same copy link gets
 their own, and the template keeps working.
 
@@ -190,8 +197,8 @@ Capped at 500 events per call. Ask again with the highest revision you got.
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| `POST` | `/v1/list/items` | `{ id?, text, note?, afterId?, beforeId? }` | `201` `Item` |
-| `PATCH` | `/v1/list/items/:itemId` | `{ text?, note?, checked?, afterId?, beforeId? }` | `200` `Item` |
+| `POST` | `/v1/list/items` | `{ id?, text, note?, afterId?, beforeId?, tagIds? }` | `201` `Item` |
+| `PATCH` | `/v1/list/items/:itemId` | `{ text?, note?, checked?, afterId?, beforeId?, tagIds? }` | `200` `Item` |
 | `DELETE` | `/v1/list/items/:itemId` | none | `204` |
 | `POST` | `/v1/list/items/clear-checked` | none | `200` `{ removed: string[] }` |
 
@@ -207,6 +214,46 @@ what makes optimistic UI safe on a flaky connection.
 
 **Deleting twice is fine.** Two people tapping the same row both get `204`.
 The end state is what matters.
+
+**Tags on a row.** `tagIds` is the whole set the row carries afterwards, not a
+change to it, at most `tagsPerItem` of them. Ids that are not tags on this list
+are dropped rather than refused: the usual cause is a tag somebody deleted
+while the request was in flight, and the rest of the edit is still kept. A
+client showing a tag filter should create rows with the filter's tags, or they
+vanish from the view as they land.
+
+### Tags
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| `POST` | `/v1/list/tags` | `{ id?, name, color? }` | `201` `Tag`, or `200` with the tag the list already had |
+| `PATCH` | `/v1/list/tags/:tagId` | `{ name?, color? }` | `200` `Tag` |
+| `DELETE` | `/v1/list/tags/:tagId` | none | `204` |
+
+A tag belongs to the list and everyone on it sees the same ones. All three need
+`write`; every link that can read sees them in the snapshot.
+
+**Names.** Trimmed, inner whitespace folded to one space, 1 to `tagName`
+characters. Two names are the same tag when their `tagKey` matches: the name
+folded as above and lowercased, with non-ASCII letters folded too ("Ønsker" and
+"ønsker" are one tag). Creating a name the list already has answers `200` with
+the existing tag and changes nothing, and that is the id to tag rows with. The
+same goes for a retried create with an `id` that already exists. Renaming onto
+another tag's name is `400 bad_request`, not a merge.
+
+**Colours.** One of `clay`, `ochre`, `olive`, `sage`, `teal`, `steel`, `iris`,
+`plum`. Leave it out and the server picks `nextTagColor`: the colour used least
+on the list so far, ties broken by the order `clay, teal, ochre, steel, olive,
+iris, sage, plum`, so the first eight tags get eight colours. A client that
+shows a tag before the server answers computes the same thing and sends it.
+
+**Order.** `compareTags`: by `tagKey`, compared by code unit, then by `id`.
+Both clients use it for chips, filters, groups and the tag list.
+
+**Deleting** takes the tag off every row in the same transaction, and the one
+`tag.deleted` event is all anyone is sent: take the id off your rows locally.
+Deleting one twice is fine. At most `tagsPerList` tags per list; one more is
+`409 limit_reached`.
 
 ## The list on the landing page
 
@@ -280,6 +327,9 @@ API scale past one instance without a message bus.
 | `item.updated` | `{ item }` |
 | `item.deleted` | `{ id }` or `{ ids: [...] }` (from clear-checked) |
 | `link.rotated` | `{}` |
+| `tag.created` | `{ tag }` |
+| `tag.updated` | `{ tag }` |
+| `tag.deleted` | `{ id }`, and the tag is gone from every row's `tagIds` |
 
 ## Ordering
 
@@ -312,6 +362,9 @@ Messages are written for a person and are safe to show verbatim.
 | Item note | 4000 characters |
 | Items per list | 500 |
 | Live links per list | 20 |
+| Tag name | 30 characters |
+| Tags per item | 10 |
+| Tags per list | 50 |
 | Events per `/changes` call | 500 |
 | Global | `RATE_LIMIT_MAX` (default 300) requests per IP per minute |
 | Create list | `RATE_LIMIT_CREATE_MAX` (default 30) per IP per hour |

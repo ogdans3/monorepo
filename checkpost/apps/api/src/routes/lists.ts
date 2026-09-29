@@ -35,6 +35,7 @@ export async function listRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(201).send({
         list: created.list,
         items: created.items,
+        tags: created.tags,
         token: created.token,
         url: service.urlFor(created.token),
       });
@@ -136,6 +137,7 @@ export async function listRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(201).send({
         list: made.snapshot.list,
         items: made.snapshot.items,
+        tags: made.snapshot.tags,
         token: made.token,
         url: service.urlFor(made.token),
       });
