@@ -164,6 +164,44 @@ keys, and both test suites assert the same properties. Postgres sorts
 `position` with an explicit `COLLATE "C"` in every query and index. Keep it
 there.
 
+**A tag is looked up by name before it is made, and the answer's id is the
+one to use.** `POST /list/tags` answers `200` with the tag the list already has
+when the name matches by `tagKey`, and a retry with an id that exists gets the
+same. So both clients put a new tag on a row only once the create has answered,
+and with the id it answered with. A row sent with its own draft id comes back
+untagged, because the server drops tag ids it does not know, and drops them on
+purpose: a tag deleted while the request was in flight must not fail the rest of
+the edit.
+
+**Tag names fold the same way in three files.** `tagKey`, `compareTags` and
+`nextTagColor` live in `packages/contract` and are ported to
+`apps/app/lib/data/models.dart`, where `js_case.dart` does JavaScript's
+lowercasing and trim, because Dart's own disagree past Latin-1 and two clients
+folding a name their own way file it under two tags. Both suites hold them to
+the same vectors, produced by running the contract under Node: change one,
+regenerate them. The server compares `tagKey`s itself under the list's row
+lock. Postgres's `lower()` follows the cluster's ctype, so the unique index on
+it is a backstop and not the check.
+
+**Deleting a tag is one event.** `tag.deleted { id }`, with the id already
+taken off every row in the same transaction. Clients take it off their own rows.
+There is no item event per row, and there must not be one, or a delete strobes
+every screen on the list.
+
+**Two view settings live on the device, and the filter does not.** Grouping by
+tag and the folded done shelf are remembered per list (`view-prefs.ts`,
+`view_store.dart`), each under a key of its own and never in the list index.
+The tag filter lasts as long as the screen does, because a filter left on and
+forgotten hides rows, which a shared list must never do quietly. Do not
+"improve" it into a saved setting.
+
+**A row names its grid columns.** `ItemRow` has four (grip, box, text,
+chevron) and every child says which is its own. Placed by position, a row with
+no grip (a read link, a list of one, the By tag view) slid each child one column
+left and the chevron sat wherever the text ended. The list page's shell names
+its grid areas for the same reason: the tag bar, the banner and the composer all
+come and go.
+
 **Deploy through the dashboard, never by hand.** `docker compose up` recreates
 the front-door container and drops it off the `aicentral` network, which is
 what the proxy resolves. Only the dashboard's start path reattaches it, so a
@@ -265,11 +303,29 @@ pnpm dev && pnpm test:e2e  # the browser client, against the running stack
   ```bash
   POSTGRES_PORT=5436 POSTGRES_PASSWORD=localdev docker compose -p checkpost-e2e up -d db
   DATABASE_URL=postgres://checkpost:localdev@localhost:5436/checkpost \
-    API_PORT=4001 API_HOST=127.0.0.1 CORS_ORIGINS=http://localhost:5180 \
+    API_PORT=4011 API_HOST=127.0.0.1 CORS_ORIGINS=http://localhost:5180 \
     RUN_REAPER=0 RATE_LIMIT_CREATE_MAX=1000 pnpm --filter @checkpost/api dev
-  PUBLIC_API_ORIGIN=http://localhost:4001 pnpm --filter @checkpost/web build
-  WEB_ORIGIN=http://localhost:5180 API_ORIGIN=http://localhost:4001 pnpm test:e2e
+  PUBLIC_API_ORIGIN=http://localhost:4011 pnpm --filter @checkpost/web build
+  (cd apps/web && PORT=5180 ORIGIN=http://localhost:5180 node build/index.js)
+  WEB_ORIGIN=http://localhost:5180 API_ORIGIN=http://localhost:4011 pnpm test:e2e
   ```
+
+  4011 rather than 4001, because on the server 4001 is Swaply's API. And on
+  the server the last line cannot run as it stands: the host has none of
+  WebKit's system libraries and no sudo to add them, so the suite runs in
+  Playwright's own image, which has them, pointed at the same stack:
+
+  ```bash
+  docker run --rm --network host --ipc=host --user 1001:1001 -e HOME=/tmp \
+    -e WEB_ORIGIN=http://localhost:5180 -e API_ORIGIN=http://localhost:4011 \
+    -v "$PWD":"$PWD" -w "$PWD/apps/web" \
+    mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test
+  ```
+
+  The image tag has to match `@playwright/test` in `apps/web`. The API suite
+  can use the same throwaway Postgres, with `TEST_DATABASE_URL` and
+  `TEST_ADMIN_DATABASE_URL` pointed at port 5436, which keeps its truncates
+  off the cluster the real lists live in.
 
   `RATE_LIMIT_CREATE_MAX` is raised because the limit catches up with a local
   stack too, on the third run of the suite rather than the second pass against
