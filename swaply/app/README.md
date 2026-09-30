@@ -763,7 +763,7 @@ PKCS12 has one password for the store and the key, so both lines carry it.
 Then:
 
 ```sh
-flutter build appbundle
+tool/release.sh android
 # build/app/outputs/bundle/release/app-release.aab
 ```
 
@@ -775,9 +775,22 @@ the debug key, and after the upload is a long way to find that out. And
 INTERNET is asked for in the main manifest: Flutter's template grants it only
 to debug and profile, so the one build Play takes would have reached nothing.
 
-**Every upload needs a higher build number than the last:** the number after
-`+` in `version:` in `pubspec.yaml`, or `--build-number`. Play refuses a
-number it has seen before, even on a bundle that was never rolled out.
+**Every upload needs a higher build number than the last**, in Play and in
+TestFlight alike, and each refuses a number it has seen before, even on a build
+that was never rolled out. `tool/release.sh` sets it so nobody has to. The
+number is how many commits the repository has up to the one being built, so it
+goes up with every commit and is the same number for Android and iOS. It
+replaces the `+1` in `version:` in `pubspec.yaml`; the name in front, `1.0.0`,
+is still read from there. A plain `flutter build appbundle` still takes that
+`+1`, which Play has had. `tool/release.sh number` says what the next build will
+be called and builds nothing. Changes that are not committed go out under the
+number of the commit beneath them, and the script says so.
+
+**For TestFlight**, `tool/release.sh ios` makes the archive and the `.ipa` in
+one command, and opening `build/ios/archive/Runner.xcarchive` takes it to
+Xcode's Organizer, where Distribute App sends it. Archiving from Xcode's menu
+instead carries whatever build number the last `flutter` command wrote, and
+after a `flutter run` that is the `+1` again.
 
 **The first bundle goes up by hand**, in Play Console, because the Play API
 knows an app only once a build of it exists. That upload is also what ties
