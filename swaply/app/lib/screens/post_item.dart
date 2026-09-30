@@ -13,6 +13,7 @@ import '../state/draft_store.dart';
 import '../state/listing_draft.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
+import '../widgets/photo_viewer.dart';
 import '../widgets/shell.dart';
 import 'onboarding.dart';
 
@@ -1032,9 +1033,19 @@ class _PostItemScreenState extends State<PostItemScreen> {
                   padding: const EdgeInsets.only(left: Insets.sm),
                   child: Stack(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(Radii.card),
-                        child: _thumbnail(entry.value),
+                      // Tapped, the strip's pictures open big, from this one.
+                      // A convenience for eyes, and not a target to a screen
+                      // reader: the ✕ is the tile's one, and a picture seen
+                      // bigger says nothing more to somebody who hears it.
+                      GestureDetector(
+                        excludeFromSemantics: true,
+                        onTap: () => showPhotos(
+                            context, [for (final p in _photos) _picture(p)],
+                            initial: entry.key),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(Radii.card),
+                          child: _thumbnail(entry.value),
+                        ),
                       ),
                       if (identical(entry.value, _refused))
                         Positioned.fill(
@@ -1095,6 +1106,13 @@ class _PostItemScreenState extends State<PostItemScreen> {
           ],
         ),
       );
+
+  /// A picture in the strip, from memory while the bytes are on the phone and
+  /// from the server otherwise.
+  ImageProvider _picture(ListingPhoto photo) {
+    final bytes = photo.bytes;
+    return bytes != null ? MemoryImage(bytes) : NetworkImage(photo.stored!.url);
+  }
 
   /// From memory while the bytes are on the phone, from the server otherwise.
   Widget _thumbnail(ListingPhoto photo) {

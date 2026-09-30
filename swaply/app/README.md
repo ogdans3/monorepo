@@ -495,6 +495,19 @@ tile gets a coral edge, and its ✕ takes it out. Somebody with a profile has ea
 picture sent as it is picked, as before, and «Legg ut» waits while one is on
 its way.
 
+**Pictures open big.** A picture in the gallery on 04 opens all of the
+listing's, starting from that one. So does the round button at the gallery's
+foot, which is there because a picture does not say that it opens. On 10b, a
+picture in the strip opens the strip's, and its ✕ still only removes it. Big,
+they are swiped between, and pinched or double-tapped closer; while one is
+close a finger moves round it rather than on to the next. Pulled down, or «✕»,
+they go back, and 04's gallery is left on the one looked at last. A browser on
+a desk has the arrow keys and Escape, and a mouse drags where a finger swipes,
+since Flutter swipes with a finger only. For somebody who asked for less motion
+nothing slides or fades. The export draws no such screen, so it is the app's
+own: `widgets/photo_viewer.dart`, near-black, which is the ink of the palette.
+`test/photo_viewer_test.dart` holds it.
+
 ## A listing half written is kept on the phone
 
 Closing the app, or the phone killing it in the background, used to throw 10b

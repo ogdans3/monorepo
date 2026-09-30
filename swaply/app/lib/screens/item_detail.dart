@@ -8,6 +8,7 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../widgets/admin_chrome.dart';
 import '../widgets/common.dart';
+import '../widgets/photo_viewer.dart';
 import '../widgets/share_sheet.dart';
 import '../widgets/shell.dart';
 import '../state/session.dart';
@@ -74,8 +75,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   /// Whether [ItemDetailScreen.onSeen] has been told.
   bool _seen = false;
   int _photo = 0;
+
+  /// The gallery's pages, so it can be left on the picture last looked at big.
+  final _photos = PageController();
   final _message = TextEditingController();
   bool _sending = false;
+
   /// The conversation the box is: the one the page opened on, or the one the
   /// first message here made. Null until there is one.
   ItemConversation? _conversation;
@@ -89,6 +94,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   @override
   void dispose() {
     _message.dispose();
+    _photos.dispose();
     super.dispose();
   }
 
@@ -453,6 +459,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
   }
 
+  /// The listing's pictures, big, from the one at [at]; see [showPhotos]. The
+  /// gallery is then left on the one looked at last.
+  Future<void> _openPhotos(List<String> photos, int at) async {
+    final last = await showPhotos(context, [for (final p in photos) NetworkImage(p)], initial: at);
+    if (last != null && mounted && last != _photo && _photos.hasClients) {
+      _photos.jumpToPage(last);
+    }
+  }
+
   Widget _gallery(Item item) {
     final photos = item.media.isEmpty ? <String>[] : item.media;
 
@@ -471,13 +486,34 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     ),
                   )
                 : PageView.builder(
+                    controller: _photos,
                     onPageChanged: (i) => setState(() => _photo = i),
                     itemCount: photos.length,
-                    itemBuilder: (_, i) => Image.network(photos[i],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(color: SwaplyColors.greenSoft)),
+                    // A picture opens them all, big, at the one tapped. Not
+                    // to a screen reader, which has the button below, named:
+                    // a whole picture that answers a tap is a target lying
+                    // under the three round ones and the button.
+                    itemBuilder: (_, i) => GestureDetector(
+                      excludeFromSemantics: true,
+                      onTap: () => _openPhotos(photos, i),
+                      child: Image.network(photos[i],
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(color: SwaplyColors.greenSoft)),
+                    ),
                   ),
           ),
+          // And a button that says so, since a picture does not: the round
+          // one the header's are, at the foot on the right, clear of the dots.
+          if (photos.isNotEmpty)
+            Positioned(
+              right: 14 - _roundRoom,
+              bottom: 10 - _roundRoom,
+              child: _round(
+                Icons.open_in_full,
+                photos.length == 1 ? 'Vis bildet' : 'Vis alle bildene',
+                () => _openPhotos(photos, _photo),
+              ),
+            ),
           // Three 38 circles, 10 under the status bar and 14 in from the
           // sides, 8 between the two at the right. Each answers across 44:
           // three of those on every side, which is why the row sits three
