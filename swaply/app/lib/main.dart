@@ -19,9 +19,15 @@ import 'widgets/admin_chrome.dart';
 import 'widgets/desk.dart';
 import 'widgets/shell.dart';
 
-/// Points at the machine's own address in development so a phone on the same
-/// network can reach it. Override with `--dart-define=API_BASE=…`.
-const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://localhost:3001');
+/// Where the API is; `--dart-define=API_BASE=…` says otherwise. In development
+/// that is the machine's own address. A release build is for a phone, where
+/// localhost is the phone itself, so it talks to the live API. That is what
+/// Google Play and TestFlight need, and an archive made in Xcode carries only
+/// the defines the last `flutter` command happened to leave behind.
+const apiBase = String.fromEnvironment(
+  'API_BASE',
+  defaultValue: kReleaseMode ? 'https://swaply-api.freelunch.no' : 'http://localhost:3001',
+);
 
 void main() {
   final api = SwaplyApi(baseUrl: apiBase);

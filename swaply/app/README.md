@@ -9,7 +9,9 @@ flutter run --dart-define=API_BASE=http://localhost:3001
 flutter test && flutter analyze
 ```
 
-On an Android emulator the host machine is `10.0.2.2`, not `localhost`.
+On an Android emulator the host machine is `10.0.2.2`, not `localhost`. A
+release build talks to the live API instead; building one for Google Play is
+under [Google Play](#google-play) at the end.
 
 ## The export is the authority, and it is a drawing
 
@@ -697,3 +699,57 @@ link needs a registered domain and a bundle id, and there is neither; on the web
 build the token is read straight out of the address.
 
 Both are one screen away once the accounts exist. Neither pretends to work.
+
+## Google Play
+
+**What goes up is an app bundle signed with the upload key.** Google keeps the
+key that signs what reaches the phones (Play App Signing), so ours only shows
+that an upload came from us, and a lost one can be replaced by asking Play
+Console for an upload key reset. The keystore is never in the repository.
+`android/key.properties`, which git ignores, says where it is and what opens it:
+
+```properties
+storeFile=/absolute/path/to/swaply-upload.jks
+storePassword=…
+keyAlias=upload
+keyPassword=…
+```
+
+A relative `storeFile` is read from `android/app`. The key is made once:
+
+```sh
+keytool -genkeypair -keystore swaply-upload.jks -storetype PKCS12 \
+  -keyalg RSA -keysize 4096 -validity 10000 -alias upload
+```
+
+PKCS12 has one password for the store and the key, so both lines carry it.
+Then:
+
+```sh
+flutter build appbundle
+# build/app/outputs/bundle/release/app-release.aab
+```
+
+Three things are seen to without being asked. A release build talks to
+`https://swaply-api.freelunch.no` unless `--dart-define=API_BASE=…` says
+otherwise, because localhost on a phone is the phone. Without `key.properties`
+the bundle is refused before it is built, because Play refuses one signed with
+the debug key, and after the upload is a long way to find that out. And
+INTERNET is asked for in the main manifest: Flutter's template grants it only
+to debug and profile, so the one build Play takes would have reached nothing.
+
+**Every upload needs a higher build number than the last:** the number after
+`+` in `version:` in `pubspec.yaml`, or `--build-number`. Play refuses a
+number it has seen before, even on a bundle that was never rolled out.
+
+**The first bundle goes up by hand**, in Play Console, because the Play API
+knows an app only once a build of it exists. That upload is also what ties
+`no.teorimester.swaply` to the app for good.
+
+**Internal testing** takes up to a hundred testers named by e-mail, is not held
+for review, and has a new bundle on their phones within minutes. The store
+listing, content rating and data safety form can wait for a closed test; the
+advertising ID question under App content cannot, because Play will not roll
+out a release targeting Android 13 or later until it is answered (the app uses
+none). A tester opens the opt-in link signed in with the Google account the
+phone's Play Store uses.

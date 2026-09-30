@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The app is a window on the API and does nothing without it. Flutter's
+         template grants INTERNET only to the debug and profile builds, so
+         `flutter run` reaches the server and the release build, the only one
+         Google Play takes, reaches nothing. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <!-- No backup, and no copy onto another phone. Android backs an app up to
          the person's Google account unless it says otherwise, and restores it
          onto whichever phone they sign in on next. What this app keeps is
