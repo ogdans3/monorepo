@@ -532,6 +532,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 TapArea(
                   room: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
                   onTap: _sending ? null : _send,
+                  keepsKeyboard: true,
                   child: Text('Send',
                       style: TextStyle(
                           fontSize: 15,

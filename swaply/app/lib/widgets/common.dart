@@ -59,6 +59,15 @@ const kTapTarget = 44.0;
 /// The area is also the target's size to a screen reader, and everything
 /// under this is one node, named [label] if it is given. A label replaces
 /// what the drawing would say, so it is for a glyph or an icon.
+///
+/// [keepsKeyboard] is for a target that is part of the typing, «Send» beside
+/// a message, pressed between one message and the next. A tap on it is not a
+/// tap away from the field (`widgets/keyboard.dart` has that rule), so the
+/// keyboard stays up. That holds across the whole area, and also while the
+/// target cannot be pressed: a second tap on «Send» while the first message
+/// is still on its way does not take the keyboard down either. It lands on
+/// the target and does nothing, instead of passing through to whatever is
+/// under it.
 class TapArea extends StatefulWidget {
   const TapArea({
     super.key,
@@ -69,6 +78,7 @@ class TapArea extends StatefulWidget {
     this.room = EdgeInsets.zero,
     this.reach,
     this.above = false,
+    this.keepsKeyboard = false,
   });
 
   final Widget child;
@@ -77,6 +87,7 @@ class TapArea extends StatefulWidget {
   final EdgeInsets room;
   final EdgeInsets? reach;
   final bool above;
+  final bool keepsKeyboard;
 
   @override
   State<TapArea> createState() => _TapAreaState();
@@ -104,6 +115,19 @@ class _TapAreaState extends State<TapArea> {
     final drawn =
         own && widget.label != null ? ExcludeSemantics(child: widget.child) : widget.child;
     final laidOut = Padding(padding: widget.room, child: drawn);
+    Widget target = own || widget.keepsKeyboard
+        ? GestureDetector(
+            // Opaque, or the room would only answer where something is painted.
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            onLongPress: widget.onLongPress,
+            child: laidOut,
+          )
+        : laidOut;
+    // In the group every text field is in, and inside the area rather than
+    // round it: a room hands a touch in its share straight to the area, past
+    // anything wrapped round it.
+    if (widget.keepsKeyboard) target = TextFieldTapRegion(child: target);
     final area = _Area(
       link: _link,
       room: widget.room,
@@ -111,15 +135,7 @@ class _TapAreaState extends State<TapArea> {
       reach: widget.room == EdgeInsets.zero ? widget.reach : widget.reach ?? EdgeInsets.zero,
       label: widget.label,
       button: own,
-      child: own
-          ? GestureDetector(
-              // Opaque, or the room would only answer where something is painted.
-              behavior: HitTestBehavior.opaque,
-              onTap: widget.onTap,
-              onLongPress: widget.onLongPress,
-              child: laidOut,
-            )
-          : laidOut,
+      child: target,
     );
     if (!widget.above) return area;
     return OverlayPortal(

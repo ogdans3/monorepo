@@ -1226,6 +1226,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
               const SizedBox(width: 10),
               TapArea(
                 onTap: trade.threadId == null ? null : send,
+                keepsKeyboard: true,
                 child: const Text('Send',
                     style: TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),

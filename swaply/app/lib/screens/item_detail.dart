@@ -749,6 +749,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 // write, and a green slab beside it competes with the heart.
                 TapArea(
                   onTap: _sending ? null : _send,
+                  keepsKeyboard: true,
                   child: Text(
                     'Send',
                     style: Type.link.copyWith(

@@ -17,6 +17,7 @@ import 'state/session.dart';
 import 'util/reduced_motion.dart';
 import 'widgets/admin_chrome.dart';
 import 'widgets/desk.dart';
+import 'widgets/keyboard.dart';
 import 'widgets/shell.dart';
 
 /// Where the API is; `--dart-define=API_BASE=…` says otherwise. In development
@@ -124,13 +125,16 @@ class _SwaplyAppState extends State<SwaplyApp> with WidgetsBindingObserver {
         // here for the same reason from the other side: a screen pushed over
         // the tabs is not inside them, and still has to reach them. Less
         // motion outermost, so everything under it — the desk's own
-        // MediaQuery included — hears a browser that asked for it.
+        // MediaQuery included — hears a browser that asked for it. The
+        // keyboard's rule over all of it, since a field can be anywhere.
         builder: (context, child) => LessMotion(
           asked: _lessMotion,
-          child: Desk(
-            child: AdminFloor(
-              navigator: _navigator,
-              child: TabShellHost(child: child!),
+          child: KeyboardAway(
+            child: Desk(
+              child: AdminFloor(
+                navigator: _navigator,
+                child: TabShellHost(child: child!),
+              ),
             ),
           ),
         ),

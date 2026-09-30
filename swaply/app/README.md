@@ -429,6 +429,31 @@ no two claim the same point. A handful are drawn closer to a neighbour than a
 finger — «Glemt passord?» has 41 between the field and the button — and take
 all the room there is and no more; the test lists them with what they get.
 
+## A tap away puts the keyboard away
+
+Flutter does not do this by itself on a phone. It follows the platforms, and a
+text field on iOS or Android keeps the keyboard up when somebody taps somewhere
+else, unless the app lets go of it, which nearly every app does. Android has
+the back gesture too. An iPhone has nothing else, and where the return key
+makes a new line, in a description on 10b or a message, the only way out was
+to leave the screen. `KeyboardAway` in `widgets/keyboard.dart` sits in the
+`MaterialApp` builder, over every route, sheet and the admin floor. It lets go
+when a finger comes up away from the field no further from where it went down
+than a list lets it move before scrolling. That makes it a tap and not a
+scroll, and a list moved to see what is under the keyboard leaves the keyboard
+up.
+
+Away means anything that is not the field. The field's own selection handles
+and menu are not away, and neither is another field, which is handed the
+keyboard without it going down and up again in between. «Send» on 06g, 04 and
+06b is not away either. It is pressed between one message and the next, so it
+is a `TapArea` with `keepsKeyboard`, which counts across its whole area and
+while it is greyed out waiting for the server. Any other button is away just as
+the empty page is, so what it answers with, a chip's results for instance, is
+not under the keyboard. A mouse, and a finger in a browser, are left to
+Flutter, which lets go on the way down. `test/keyboard_test.dart` holds all of
+it, on an iPhone and on an Android phone.
+
 ## Photographs
 
 10b opens the system picker and shrinks the picture on the phone — 1600px,
