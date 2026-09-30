@@ -298,6 +298,18 @@ is newer than the collage the card came from, and a card's own heart that is
 answered after the page's heart was pressed — refused, say — leaves the card
 as the page left it.
 
+A heart is open until it is pressed and green all through once it is, on the
+card and on 04. It used to be a coral heart on the card, and on 04 a glyph that
+filled in on a button that was green either way, which changed too little to
+be seen. 04 also says how many have liked the thing, «3 har likt denne», and
+«Du og 3 andre …» once your own heart is pressed. The server's count is from
+when the page opened, so the page counts the others apart from your own like
+and follows the heart as the phone has it: the words turn with the tap and
+back again with a refusal. A heart pressed on pulses once (`HeartPop` in
+`widgets/common.dart`), only on the press and never for somebody who asked for
+less motion, the browser's setting included. `test/likes_shown_test.dart`
+holds all of it.
+
 Pulling Oppdag down asks again the same way, behind the grid, with only the
 pull's own spinner; a pull that gets no answer says so in a toast over the grid
 it kept. Only the newest asking is taken: a chip tapped while the grid was

@@ -885,13 +885,14 @@ class CircleAction extends StatelessWidget {
     this.iconSize = 26,
     this.color,
     this.borderColor,
+    this.borderWidth = 1,
     this.semanticLabel,
   });
 
   final IconData icon;
   final VoidCallback? onPressed;
   final bool filled, busy;
-  final double size, iconSize;
+  final double size, iconSize, borderWidth;
   final Color? color, borderColor;
   final String? semanticLabel;
 
@@ -906,7 +907,7 @@ class CircleAction extends StatelessWidget {
         shape: CircleBorder(
           side: filled
               ? BorderSide.none
-              : BorderSide(color: borderColor ?? SwaplyColors.cardLine),
+              : BorderSide(color: borderColor ?? SwaplyColors.cardLine, width: borderWidth),
         ),
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -928,6 +929,53 @@ class CircleAction extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A heart pressed on grows a little and settles, which is the heart saying
+/// it took. Each time [pops] goes up, and so only on the press: a heart that
+/// is already green when the page opens, or turns green because the server
+/// said so, holds still. Not at all for somebody who asked for less motion.
+class HeartPop extends StatefulWidget {
+  const HeartPop({super.key, required this.pops, required this.child});
+
+  final int pops;
+  final Widget child;
+
+  @override
+  State<HeartPop> createState() => _HeartPopState();
+}
+
+class _HeartPopState extends State<HeartPop> with SingleTickerProviderStateMixin {
+  late final _controller =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
+
+  // Out fast and back slower, with no overshoot on the way back: a pulse, not
+  // a bounce.
+  late final _scale = TweenSequence<double>([
+    TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.14).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 35),
+    TweenSequenceItem(
+        tween: Tween(begin: 1.14, end: 1.0).chain(CurveTween(curve: Curves.easeOutQuart)),
+        weight: 65),
+  ]).animate(_controller);
+
+  @override
+  void didUpdateWidget(HeartPop oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.pops > oldWidget.pops && !MediaQuery.disableAnimationsOf(context)) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ScaleTransition(scale: _scale, child: widget.child);
 }
 
 /// The badge on a listing that says what state it is in: «Tilgjengelig»,

@@ -600,6 +600,9 @@ class _ItemCardState extends State<ItemCard> {
   /// page was told when it opened may be from before it landed.
   int _inFlight = 0;
 
+  /// Presses here that turned the heart on, for [HeartPop].
+  int _pops = 0;
+
   @override
   void didUpdateWidget(ItemCard oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -626,6 +629,7 @@ class _ItemCardState extends State<ItemCard> {
     setState(() {
       _busy = true;
       _liked = want;
+      if (want) _pops++;
     });
     final heard = widget.onHeart;
     heard?.call(want, answered: false);
@@ -740,17 +744,25 @@ class _ItemCardState extends State<ItemCard> {
                     room: const EdgeInsets.all(5),
                     label: _liked ? 'Du vil ha denne' : 'Jeg vil ha',
                     onTap: _toggle,
-                    child: Container(
-                      height: 34,
-                      width: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _liked ? Icons.favorite : Icons.favorite_border,
-                        size: 18,
-                        color: _liked ? SwaplyColors.coral : SwaplyColors.ink,
+                    // Wished is green all through, as on the item page: open
+                    // is a question, and filled is yes. It was a coral heart,
+                    // and coral is the app's no.
+                    child: HeartPop(
+                      pops: _pops,
+                      child: Container(
+                        height: 34,
+                        width: 34,
+                        decoration: BoxDecoration(
+                          color: _liked
+                              ? SwaplyColors.greenPressed
+                              : Colors.white.withValues(alpha: 0.92),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _liked ? Icons.favorite : Icons.favorite_border,
+                          size: 18,
+                          color: _liked ? Colors.white : SwaplyColors.ink,
+                        ),
                       ),
                     ),
                   ),

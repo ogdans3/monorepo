@@ -68,6 +68,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   bool _liked = false;
   bool _liking = false;
 
+  /// Presses that turned the heart on, for [HeartPop].
+  int _pops = 0;
+
   /// Whether [ItemDetailScreen.onSeen] has been told.
   bool _seen = false;
   int _photo = 0;
@@ -137,6 +140,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     setState(() {
       _liking = true;
       _liked = wish;
+      if (wish) _pops++;
     });
     // Taken now: the answer can come after ‹, and the card still wants it.
     final heard = widget.onHeart;
@@ -271,6 +275,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           if (item.town != null) Text(item.town!, style: Type.secondary),
                         ],
                       ),
+                      if (item.likeCount != null) ...[
+                        const SizedBox(height: 10),
+                        _likedBy(item),
+                      ],
                       if (item.description != null && item.description!.isNotEmpty) ...[
                         const SizedBox(height: 11),
                         Text(item.description!, style: Type.body),
@@ -690,6 +698,41 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         ),
       );
 
+  /// How many people have liked this, in the words 12 and the profile use:
+  /// «3 har likt denne». Once the heart here is pressed it says «Du og 3
+  /// andre …», green like the heart, which is the state in words as well as
+  /// in colour. It follows the heart as the phone has it, so it turns with the
+  /// tap and turns back if the server says no. The server's count is from when
+  /// the page opened, with this account's own like in it or not, so the others
+  /// are counted apart from it.
+  Widget _likedBy(Item item) {
+    final others = item.likeCount! - (item.likedByMe ? 1 : 0);
+    final words = switch ((_liked, others)) {
+      (false, <= 0) => 'Ingen har likt denne ennå',
+      (false, _) => '$others har likt denne',
+      (true, <= 0) => 'Du har likt denne',
+      (true, 1) => 'Du og 1 annen har likt denne',
+      (true, _) => 'Du og $others andre har likt denne',
+    };
+    // The heart the buttons draw, not «♥»: a phone is free to draw that one
+    // as a red emoji, and the words are what a screen reader needs.
+    return Row(
+      children: [
+        Icon(Icons.favorite,
+            size: 14, color: _liked ? SwaplyColors.greenPressed : SwaplyColors.greyLight),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(words,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _liked ? SwaplyColors.greenText : SwaplyColors.inkBody,
+              )),
+        ),
+      ],
+    );
+  }
+
   /// The box that opens a negotiation. Writing here is what creates the trade,
   /// which is why the chips are trade actions and not emoji.
   ///
@@ -797,13 +840,26 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               const SizedBox(width: 26),
               // Never busy: the heart has already turned by the time the call
               // goes, so a spinner in it would only hide that it had.
-              CircleAction(
-                icon: _liked ? Icons.favorite : Icons.favorite_border,
-                size: 62,
-                iconSize: 26,
-                filled: true,
-                semanticLabel: _liked ? 'Du vil ha denne' : 'Jeg vil ha',
-                onPressed: _like,
+              //
+              // Open until it is pressed, and green all through once it is:
+              // more colour is on, as with any toggle, the card's heart says
+              // it the same way, and green is the app's yes beside the ✕'s red.
+              // The export draws only the one heart, filled, and never the
+              // state after it; the product owner chose this over a heart
+              // that turns coral, which is the app's no, on 30.09.2026.
+              HeartPop(
+                pops: _pops,
+                child: CircleAction(
+                  icon: _liked ? Icons.favorite : Icons.favorite_border,
+                  size: 62,
+                  iconSize: 26,
+                  filled: _liked,
+                  color: SwaplyColors.greenPressed,
+                  borderColor: SwaplyColors.greenPressed,
+                  borderWidth: 1.5,
+                  semanticLabel: _liked ? 'Du vil ha denne' : 'Jeg vil ha',
+                  onPressed: _like,
+                ),
               ),
             ],
           ),
