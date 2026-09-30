@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by tool/icon/make.py. -->
+<resources>
+    <!-- The icon's own green, behind the S in the adaptive icon. -->
+    <color name="ic_launcher_background">#04523E</color>
+    <!-- The app's deep green, which the launch screen hands over to 01 on. -->
+    <color name="splash_background">#064E3B</color>
+</resources>

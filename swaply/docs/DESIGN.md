@@ -285,6 +285,8 @@ The screen-by-screen specification lives in `round-5-brief.md`; the exports are 
 
 Round 5 came back with 45 screens and departs from the brief in two places worth knowing: the three-way flow kept its old numbering (07i–07l) rather than moving up to 07a–07c, and the counter-offer grew from a button into a nine-screen flow (09a–09i), which is the clearest confirmation that it is a state and not an action.
 
+**The app has an icon**, the product owner's, since 30.09.2026: a two-part «S», white over green, on deep green. The same S is the launch screen on every platform and stands in the middle of 01, with the wordmark moved under it. The export draws 01 as the wordmark alone, so on this point the app is ahead of the export on purpose. `app/README.md` has how it is made.
+
 ## Open questions
 
 1. **The point of no return.** Round 4 introduced a terminal state, «Ikke mulig, en ting er sendt»: past some moment you can no longer back out. Since we don't facilitate shipping, "sent" is self-reported, and nobody has defined who reports it, what it does to a three-way trade when one person has sent and another wants out, or what recourse the sender has. Left undecided on 06.09. One consequence to weigh with it, as built on 26.09: backing out through a withdrawal is refused once somebody else has marked their side sent (08c), but deleting the account is not — `DELETE /me` ends an accepted or paused trade like any other, with the close code `account_deleted` («Den andre parten slettet kontoen sin»; «En av de andre …» in a ring of three), and a trade that ends cancelled gets no snapshot of what was traded. What the sender keeps is the sealed record, three years from the deletion, and the chat.

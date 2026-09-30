@@ -76,9 +76,12 @@ class _MatchScreenState extends State<MatchScreen> {
       );
     }
     if (trade == null) {
-      return const Scaffold(
-        backgroundColor: SwaplyColors.greenDeep,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      return const AnnotatedRegion<SystemUiOverlayStyle>(
+        value: onDarkStatusBar,
+        child: Scaffold(
+          backgroundColor: SwaplyColors.greenDeep,
+          body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        ),
       );
     }
 
@@ -90,117 +93,121 @@ class _MatchScreenState extends State<MatchScreen> {
     // The one screen the export drenches: deep green, white type, the two
     // things tilted like photographs somebody put on a table. «The moment is
     // the product», and a moment does not look like the rest of the app.
-    return Scaffold(
-      backgroundColor: SwaplyColors.greenDeep,
-      body: Stack(
-        children: [
-          // Confetti, starting at the four spots the export puts it and
-          // drifting up from there.
-          const Positioned.fill(child: Confetti()),
-          SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 153),
-                        Text(
-                          chain ? 'Dere kan gjøre en treveis-swap!' : 'Dere kan swappe!',
-                          style: const TextStyle(
-                              fontSize: 36,
-                              height: 1.14,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.8,
-                              color: Colors.white),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          chain
-                              ? 'Vi fant et bytte med tre personer.'
-                              : '$other vil ha $youGive, du vil ha $theyGive.',
-                          style: const TextStyle(
-                              fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 51),
-                        if (chain) _chainList(trade) else _table(trade, other),
-                        if (chain) ...[
-                          const SizedBox(height: 24),
-                          Container(
-                            padding: const EdgeInsets.all(Insets.md),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(Radii.card),
-                            ),
-                            child: const Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.info_outline, size: 18, color: Colors.white70),
-                                SizedBox(width: Insets.sm),
-                                Expanded(
-                                  child: Text(
-                                    'Dette byttet kan ikke Swaply fasilitere, men vi kan '
-                                    'starte en chat så dere avtaler det selv.',
-                                    style: TextStyle(
-                                        fontSize: 13, height: 1.4, color: Colors.white70),
+    // Light over the green; see [onDarkStatusBar].
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: onDarkStatusBar,
+      child: Scaffold(
+        backgroundColor: SwaplyColors.greenDeep,
+        body: Stack(
+          children: [
+            // Confetti, starting at the four spots the export puts it and
+            // drifting up from there.
+            const Positioned.fill(child: Confetti()),
+            SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 153),
+                          Text(
+                            chain ? 'Dere kan gjøre en treveis-swap!' : 'Dere kan swappe!',
+                            style: const TextStyle(
+                                fontSize: 36,
+                                height: 1.14,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.8,
+                                color: Colors.white),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            chain
+                                ? 'Vi fant et bytte med tre personer.'
+                                : '$other vil ha $youGive, du vil ha $theyGive.',
+                            style: const TextStyle(
+                                fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 51),
+                          if (chain) _chainList(trade) else _table(trade, other),
+                          if (chain) ...[
+                            const SizedBox(height: 24),
+                            Container(
+                              padding: const EdgeInsets.all(Insets.md),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(Radii.card),
+                              ),
+                              child: const Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.info_outline, size: 18, color: Colors.white70),
+                                  SizedBox(width: Insets.sm),
+                                  Expanded(
+                                    child: Text(
+                                      'Dette byttet kan ikke Swaply fasilitere, men vi kan '
+                                      'starte en chat så dere avtaler det selv.',
+                                      style: TextStyle(
+                                          fontSize: 13, height: 1.4, color: Colors.white70),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  // The button and the words under it are both ways on, and a
+                  // toast goes up over the two of them.
+                  KeepClear(
+                    child: Padding(
+                      // 34 at the foot, 11 of it inside «Fortsett å sveipe».
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 34 - 11),
+                      child: Column(
+                        children: [
+                          PrimaryButton(
+                            chain ? 'Start chat' : 'Se byttet',
+                            // 07i offers a chat, and means it: the three of them
+                            // arrange this one themselves, so the button goes to
+                            // the conversation rather than to an overview of a
+                            // trade nobody is facilitating.
+                            // The chat covers the bar, as this does; the trade is
+                            // drawn with it, so it goes into the tab underneath.
+                            onPressed: () => chain && trade.threadId != null
+                                ? Navigator.of(context).pushReplacement(MaterialPageRoute(
+                                    builder: (_) => ThreadScreen(threadId: trade.threadId!)))
+                                : pushInTab<void>(context, TradeDetailScreen(tradeId: trade.id),
+                                    replace: true),
+                          ),
+                          // Words under the button, answering across the 12
+                          // over them and the top of the foot.
+                          TapArea(
+                            room: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+                            onTap: () => Navigator.of(context).maybePop(),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 2),
+                              child: Text('Fortsett å sveipe',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xA6FFFFFF))),
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                // The button and the words under it are both ways on, and a
-                // toast goes up over the two of them.
-                KeepClear(
-                  child: Padding(
-                    // 34 at the foot, 11 of it inside «Fortsett å sveipe».
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 34 - 11),
-                    child: Column(
-                      children: [
-                        PrimaryButton(
-                          chain ? 'Start chat' : 'Se byttet',
-                          // 07i offers a chat, and means it: the three of them
-                          // arrange this one themselves, so the button goes to
-                          // the conversation rather than to an overview of a
-                          // trade nobody is facilitating.
-                          // The chat covers the bar, as this does; the trade is
-                          // drawn with it, so it goes into the tab underneath.
-                          onPressed: () => chain && trade.threadId != null
-                              ? Navigator.of(context).pushReplacement(MaterialPageRoute(
-                                  builder: (_) => ThreadScreen(threadId: trade.threadId!)))
-                              : pushInTab<void>(context, TradeDetailScreen(tradeId: trade.id),
-                                  replace: true),
-                        ),
-                        // Words under the button, answering across the 12
-                        // over them and the top of the foot.
-                        TapArea(
-                          room: const EdgeInsets.fromLTRB(12, 12, 12, 11),
-                          onTap: () => Navigator.of(context).maybePop(),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 2),
-                            child: Text('Fortsett å sveipe',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xA6FFFFFF))),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

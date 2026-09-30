@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'api/client.dart';
@@ -16,6 +17,7 @@ import 'screens/tabs.dart';
 import 'state/session.dart';
 import 'util/reduced_motion.dart';
 import 'widgets/admin_chrome.dart';
+import 'widgets/common.dart' show onLightStatusBar;
 import 'widgets/desk.dart';
 import 'widgets/keyboard.dart';
 import 'widgets/shell.dart';
@@ -127,13 +129,21 @@ class _SwaplyAppState extends State<SwaplyApp> with WidgetsBindingObserver {
         // motion outermost, so everything under it — the desk's own
         // MediaQuery included — hears a browser that asked for it. The
         // keyboard's rule over all of it, since a field can be anywhere.
-        builder: (context, child) => LessMotion(
-          asked: _lessMotion,
-          child: KeyboardAway(
-            child: Desk(
-              child: AdminFloor(
-                navigator: _navigator,
-                child: TabShellHost(child: child!),
+        //
+        // And the status bar dark over all of it, for the light screens that
+        // nearly all of them are: iOS launches with it light, for the launch
+        // screen's green, and a style is kept until something sets another.
+        // The green screens set light for themselves.
+        builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: onLightStatusBar,
+          child: LessMotion(
+            asked: _lessMotion,
+            child: KeyboardAway(
+              child: Desk(
+                child: AdminFloor(
+                  navigator: _navigator,
+                  child: TabShellHost(child: child!),
+                ),
               ),
             ),
           ),

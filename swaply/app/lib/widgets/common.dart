@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 import '../api/client.dart' show ApiException;
 import '../api/models.dart';
@@ -19,6 +20,21 @@ export 'toast.dart';
 /// the area that answers, never the pixels: see [TapArea] and [TapRoom].
 /// `test/tap_targets_test.dart` holds every screen to it.
 const kTapTarget = 44.0;
+
+/// The status bar over a screen drawn dark: 01, the invitation and 06a on
+/// deep green, as the phone's launch screen has it, and the photographs.
+const onDarkStatusBar = SystemUiOverlayStyle(
+  statusBarIconBrightness: Brightness.light,
+  statusBarBrightness: Brightness.dark,
+);
+
+/// The status bar over everything else, which is light: set over the whole
+/// app in `main.dart`, because a style holds until something sets another, and
+/// after a green screen that would be white on white.
+const onLightStatusBar = SystemUiOverlayStyle(
+  statusBarIconBrightness: Brightness.dark,
+  statusBarBrightness: Brightness.light,
+);
 
 /// One target, answering a finger across more than its ink.
 ///

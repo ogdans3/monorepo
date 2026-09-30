@@ -14,14 +14,21 @@ import '../widgets/confetti.dart';
 import '../widgets/shell.dart';
 import 'tabs.dart';
 
-/// 01 Splash. Deep green, the wordmark, nothing else.
-/// 01. Deep green, two faint rings, the wordmark — and the same slow confetti
-/// as the match screen, because the two are the app's two moments.
+/// 01. Deep green, two faint rings, the S and the wordmark under it — and the
+/// same slow confetti as the match screen, because the two are the app's two
+/// moments.
+///
+/// The S is the app icon's, where the phone's own launch screen left it: in
+/// the middle of the screen, [markHeight] tall, on the same green. iOS,
+/// Android before 12 and Android 12's splash all draw it there
+/// (`tool/icon/make.py`), so when the app takes over nothing moves but the
+/// wordmark arriving under it. The export draws the wordmark alone in the
+/// middle; the product owner gave the app its icon on 30.09.2026.
 ///
 /// It is also what stays up while the app gets going — the saved token
 /// checked, or the device made a stranger — so it is where a failure to get
 /// going is said. [onRetry] is that state: one plain line and one button, at
-/// the foot where the thumb is, and the wordmark left alone.
+/// the foot where the thumb is, and the S and the wordmark left alone.
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key, this.onRetry, this.retrying = false});
 
@@ -29,46 +36,69 @@ class SplashScreen extends StatelessWidget {
   final VoidCallback? onRetry;
   final bool retrying;
 
+  /// How tall the S stands, in points, here and on every launch screen.
+  static const markHeight = 104.0;
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: SwaplyColors.greenDeep,
-        body: Stack(
-          children: [
-            // The rings, where the export draws them on a 390×844 frame.
-            Positioned(left: 24, top: 244, child: _ring(342, 0.07)),
-            Positioned(left: -46, top: 174, child: _ring(482, 0.05)),
-            const Positioned.fill(child: Confetti()),
-            const Center(
-              child: Text('swaply',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 42,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.2)),
-            ),
-            if (onRetry != null)
-              Positioned(
-                left: 28,
-                right: 28,
-                bottom: 0,
-                child: SafeArea(
-                  top: false,
-                  minimum: const EdgeInsets.only(bottom: 34),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        noContact,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xB8FFFFFF), fontSize: 15, height: 1.45),
-                      ),
-                      const SizedBox(height: Insets.md),
-                      PrimaryButton('Prøv igjen', busy: retrying, onPressed: onRetry),
-                    ],
+  Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: onDarkStatusBar,
+        child: Scaffold(
+          backgroundColor: SwaplyColors.greenDeep,
+          body: LayoutBuilder(
+            builder: (context, box) => Stack(
+              children: [
+                // The rings, where the export draws them on a 390×844 frame.
+                Positioned(left: 24, top: 244, child: _ring(342, 0.07)),
+                Positioned(left: -46, top: 174, child: _ring(482, 0.05)),
+                const Positioned.fill(child: Confetti()),
+                // The middle of the screen, as a launch screen has it: the
+                // whole of it, status bar and all.
+                const Center(
+                  child: Image(
+                    image: AssetImage('assets/brand/s.png'),
+                    height: markHeight,
+                    excludeFromSemantics: true,
                   ),
                 ),
-              ),
-          ],
+                // Under the S, growing down, so large text never reaches it.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: box.maxHeight / 2 + markHeight / 2 + 18,
+                  child: const Text('swaply',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1)),
+                ),
+                if (onRetry != null)
+                  Positioned(
+                    left: 28,
+                    right: 28,
+                    bottom: 0,
+                    child: SafeArea(
+                      top: false,
+                      minimum: const EdgeInsets.only(bottom: 34),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            noContact,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Color(0xB8FFFFFF), fontSize: 15, height: 1.45),
+                          ),
+                          const SizedBox(height: Insets.md),
+                          PrimaryButton('Prøv igjen', busy: retrying, onPressed: onRetry),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       );
 
@@ -159,103 +189,107 @@ class _InviteScreenState extends State<InviteScreen> {
     final invite = _invite;
     final inviter = invite?.inviterName;
 
-    return Scaffold(
-      backgroundColor: SwaplyColors.greenDeep,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-              Insets.screen, Insets.xl * 2, Insets.screen, Insets.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text('swaply',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.1)),
-              const SizedBox(height: Insets.xl * 1.5),
-              Text(
-                inviter == null
-                    ? 'Du er invitert til Swaply.'
-                    : '$inviter inviterer deg til Swaply.',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    height: 1.15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.8),
-              ),
-              const SizedBox(height: Insets.md),
-              const Text(
-                'Si hva du vil ha. Når ønskene lukker en sirkel, bytter dere.',
-                style: TextStyle(color: Color(0xB8FFFFFF), fontSize: 15, height: 1.45),
-              ),
-              if (invite?.itemTitle != null) ...[
-                const SizedBox(height: Insets.lg),
-                Container(
-                  padding: const EdgeInsets.all(Insets.md),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(Radii.card),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.favorite, color: SwaplyColors.green, size: 18),
-                      const SizedBox(width: Insets.sm),
-                      Expanded(
-                        child: Text('Delt med deg: ${invite!.itemTitle}',
-                            style: const TextStyle(color: Colors.white, fontSize: 14.5)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              if (invite?.used == true) ...[
-                const SizedBox(height: Insets.lg),
+    // Light over the green; see [onDarkStatusBar].
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: onDarkStatusBar,
+      child: Scaffold(
+        backgroundColor: SwaplyColors.greenDeep,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+                Insets.screen, Insets.xl * 2, Insets.screen, Insets.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('swaply',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1.1)),
+                const SizedBox(height: Insets.xl * 1.5),
                 Text(
                   inviter == null
-                      ? 'Invitasjonen er allerede brukt. Be om en ny lenke.'
-                      : 'Invitasjonen er allerede brukt. Be $inviter om en ny lenke.',
-                  style: const TextStyle(color: SwaplyColors.coral, fontSize: 14),
+                      ? 'Du er invitert til Swaply.'
+                      : '$inviter inviterer deg til Swaply.',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      height: 1.15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.8),
                 ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: Insets.lg),
-                Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 14)),
-              ],
-              const SizedBox(height: Insets.xl),
-              PrimaryButton('Se deg rundt', busy: _busy, onPressed: _lookAround),
-              const SizedBox(height: Insets.sm),
-              // The other two ways in are ways in as much as the button is,
-              // and a refusal of «Se deg rundt» goes up over all three.
-              KeepClear(
-                child: SizedBox(
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0x55FFFFFF)),
-                      shape:
-                          RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+                const SizedBox(height: Insets.md),
+                const Text(
+                  'Si hva du vil ha. Når ønskene lukker en sirkel, bytter dere.',
+                  style: TextStyle(color: Color(0xB8FFFFFF), fontSize: 15, height: 1.45),
+                ),
+                if (invite?.itemTitle != null) ...[
+                  const SizedBox(height: Insets.lg),
+                  Container(
+                    padding: const EdgeInsets.all(Insets.md),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(Radii.card),
                     ),
-                    child: const Text('Lag profil med en gang',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.favorite, color: SwaplyColors.green, size: 18),
+                        const SizedBox(width: Insets.sm),
+                        Expanded(
+                          child: Text('Delt med deg: ${invite!.itemTitle}',
+                              style: const TextStyle(color: Colors.white, fontSize: 14.5)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (invite?.used == true) ...[
+                  const SizedBox(height: Insets.lg),
+                  Text(
+                    inviter == null
+                        ? 'Invitasjonen er allerede brukt. Be om en ny lenke.'
+                        : 'Invitasjonen er allerede brukt. Be $inviter om en ny lenke.',
+                    style: const TextStyle(color: SwaplyColors.coral, fontSize: 14),
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: Insets.lg),
+                  Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 14)),
+                ],
+                const SizedBox(height: Insets.xl),
+                PrimaryButton('Se deg rundt', busy: _busy, onPressed: _lookAround),
+                const SizedBox(height: Insets.sm),
+                // The other two ways in are ways in as much as the button is,
+                // and a refusal of «Se deg rundt» goes up over all three.
+                KeepClear(
+                  child: SizedBox(
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const CreateProfileScreen())),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0x55FFFFFF)),
+                        shape:
+                            RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+                      ),
+                      child: const Text('Lag profil med en gang',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: Insets.sm),
-              KeepClear(
-                child: TextButton(
-                  onPressed: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => const LoginScreen())),
-                  child: const Text('Jeg har konto fra før',
-                      style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                const SizedBox(height: Insets.sm),
+                KeepClear(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context)
+                        .push(MaterialPageRoute(builder: (_) => const LoginScreen())),
+                    child: const Text('Jeg har konto fra før',
+                        style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

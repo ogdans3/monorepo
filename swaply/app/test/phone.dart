@@ -66,7 +66,9 @@ void holdPhone(WidgetTester tester) {
 
 /// The photographs: decoded for real, outside the test's fake clock, and left
 /// in the image cache for the screen to find. The hook is put back at once —
-/// the binding checks it is unset when the test body ends.
+/// the binding checks it is unset when the test body ends. The app's own S
+/// too, which 01 draws: an asset is decoded outside the clock as well, and a
+/// golden taken before it has been leaves a hole where it goes.
 Future<void> precachePhotos(WidgetTester tester) async {
   debugNetworkImageHttpClientProvider = PhotoClient.new;
   await tester.pumpWidget(const MaterialApp(home: SizedBox()));
@@ -75,6 +77,7 @@ Future<void> precachePhotos(WidgetTester tester) async {
     for (final file in fx.photoFiles) {
       await precacheImage(NetworkImage('${fx.photos}$file'), context);
     }
+    await precacheImage(const AssetImage('assets/brand/s.png'), context);
   });
   debugNetworkImageHttpClientProvider = null;
 }

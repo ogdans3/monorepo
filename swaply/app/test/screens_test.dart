@@ -82,9 +82,28 @@ void main() {
   });
 
   group('01 · 16c · 10c first run', () {
-    testWidgets('01 the splash is the wordmark on deep green', (tester) async {
+    testWidgets('01 the splash is the S and the wordmark on deep green', (tester) async {
       await mount(tester, const SplashScreen(), signedIn: false);
       expect(find.text('swaply'), findsOneWidget);
+
+      // Where the phone's launch screen left the S: in the middle of the
+      // screen, 104 tall, so it does not move when the app takes over. The
+      // wordmark is under it.
+      final screen = tester.getRect(find.byType(Scaffold));
+      final mark = tester.getRect(find.byType(Image));
+      expect(mark.center, screen.center);
+      expect(mark.height, SplashScreen.markHeight);
+      expect(tester.getRect(find.text('swaply')).top, greaterThan(mark.bottom));
+    });
+
+    testWidgets('01 the status bar is light over its green, and dark over the rest',
+        (tester) async {
+      await mount(tester, const SplashScreen(), signedIn: false);
+
+      final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+          find.byType(AnnotatedRegion<SystemUiOverlayStyle>).last);
+      expect(region.value.statusBarIconBrightness, Brightness.light);
+      expect(region.value.statusBarBrightness, Brightness.dark);
     });
 
     testWidgets('16c signing in takes an address and a password', (tester) async {

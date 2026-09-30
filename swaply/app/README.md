@@ -737,6 +737,34 @@ build the token is read straight out of the address.
 
 Both are one screen away once the accounts exist. Neither pretends to work.
 
+## The icon and the launch
+
+The icon is the product owner's, from 30.09.2026: a two-part «S», white over
+green, on deep green, in `tool/icon/swaply-icon.png`. Everything the platforms
+need is cut from that one picture by `tool/icon/make.py`. It needs Pillow
+(`python3 -m pip install pillow`), runs as `python3 tool/icon/make.py` from
+`app/`, and writes over what it made before and nothing else:
+
+- every size iOS's asset catalog lists, square and opaque, since the App Store
+  refuses an icon with transparency in it;
+- Android's adaptive icon from 8.0, which is the S alone over the icon's own
+  green and the S again as the monochrome layer Android 13 tints, and the plain
+  square for 7.x;
+- the web's favicon and manifest icons, and `tool/icon/play-store-512.png`, the
+  512 Play Console asks for on the store listing, which goes up by hand.
+
+The launch is the same S, 104 points tall in the middle of the screen, on the
+app's deep green: iOS's launch storyboard, Android's launch window before 12,
+and Android 12's own splash, which only `values-v31` can dress. Screen 01 draws
+the S in the same place, so when the app takes over nothing moves, and the
+wordmark arrives under it. The export draws the wordmark alone in the middle,
+so 01's golden differs from it on purpose. The web page is the same green until
+the app has drawn. The status bar is light over the green screens (01, the
+invitation, 06a) and dark over the rest. That is set over the whole app,
+because a style holds until something sets another, and after a green screen
+it would be white on white. `test/app_icon_test.dart` holds the platforms'
+files to all of it.
+
 ## Google Play
 
 **What goes up is an app bundle signed with the upload key.** Google keeps the
