@@ -97,9 +97,31 @@ describe('the whole journey over HTTP', () => {
     expect(nobody.body).toEqual(wrong.body)
   })
 
-  test('02 — interests are three to five', async () => {
-    expect((await call('PUT', '/me/interests', { token: ola, body: { interests: ['verktoy', 'gaming'] } })).status).toBe(400)
+  test('02 — any number of interests, none included, and each once', async () => {
+    // Round 5 said three to five. The product owner took the limit away on
+    // 30.09.2026: one is a choice, so are all twelve, and so is none.
+    const one = await call('PUT', '/me/interests', { token: ola, body: { interests: ['verktoy'] } })
+    expect(one.status).toBe(200)
+    expect(one.body!['interests']).toEqual(['verktoy'])
 
+    const twelve = ['sykling', 'gaming', 'verktoy', 'klaer', 'bat', 'friluft',
+                    'barn', 'hjem', 'sport', 'musikk', 'boker', 'diverse']
+    const all = await call('PUT', '/me/interests', { token: ola, body: { interests: twelve } })
+    expect(all.status).toBe(200)
+    expect(all.body!['interests']).toEqual(twelve)
+
+    const none = await call('PUT', '/me/interests', { token: ola, body: { interests: [] } })
+    expect(none.status).toBe(200)
+    expect(none.body!['interests']).toEqual([])
+
+    // Each once still, and twice is refused in words.
+    const twice = await call('PUT', '/me/interests', {
+      token: ola, body: { interests: ['verktoy', 'verktoy'] },
+    })
+    expect(twice.status).toBe(400)
+    expect(twice.body!['code']).toBe('duplicate_interests')
+
+    // The three the rest of the journey is walked with.
     const ok = await call('PUT', '/me/interests', {
       token: ola, body: { interests: ['verktoy', 'gaming', 'sykling'] },
     })

@@ -241,7 +241,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Text(
                   'Nullstill åpner dørene produktet bare lar deg gå gjennom én gang: '
-                  'interesser kan ikke tømmes, og BankID kan ikke settes tilbake.',
+                  'skjerm 02 vises én gang, og BankID kan ikke settes tilbake.',
                   style: TextStyle(fontSize: 12.5, height: 1.4, color: AdminColors.muted),
                 ),
               ),

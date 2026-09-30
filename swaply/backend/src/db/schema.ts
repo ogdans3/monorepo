@@ -116,6 +116,9 @@ export const users = pgTable(
     postalCode: text('postal_code'),
     // Argon2id. Round 5 signs in with email and a password, not a magic link.
     passwordHash: text('password_hash'),
+    // What 02 picked. Any number of the twelve, none included: round 5 held it
+    // to three to five, and the product owner took that away on 30.09.2026,
+    // along with the check that held the column to it (0012).
     interests: category('interests').array().notNull().default(sql`'{}'`),
     bankidSubject: text('bankid_subject').unique(),
     bankidVerifiedAt: timestamp('bankid_verified_at', { withTimezone: true }),
@@ -153,10 +156,6 @@ export const users = pgTable(
     anonymisedAt: timestamp('anonymised_at', { withTimezone: true }),
   },
   (t) => [
-    check(
-      'interests_bounds',
-      sql`cardinality(${t.interests}) = 0 or cardinality(${t.interests}) between 3 and 5`,
-    ),
     // An admin is never somebody's test account, so acting-as cannot chain and
     // the owned set stays a set.
     check('admin_is_not_a_test_account', sql`not (${t.isAdmin} and ${t.testAccountOf} is not null)`),

@@ -102,15 +102,19 @@ test('an item belongs to one trade at a time', async () => {
   expect(row!.active_trade_id).toBe(a!.id)
 })
 
-test('interests are three to five, or none', async () => {
-  await violates(
-    'interests_bounds',
-    db.execute(sql`insert into users (interests) values ('{verktoy,gaming}')`),
-  )
-
-  await expect(
-    db.execute(sql`insert into users (interests) values ('{verktoy,gaming,sykling}')`),
-  ).resolves.toBeTruthy()
+test('interests are any number of the twelve, none included', async () => {
+  // Round 5 held the column to none or three to five. The product owner took
+  // the limit away on 30.09.2026, and the check went with it (0012).
+  for (const picked of [
+    '{}',
+    '{verktoy}',
+    '{verktoy,gaming}',
+    '{sykling,gaming,verktoy,klaer,bat,friluft,barn,hjem,sport,musikk,boker,diverse}',
+  ]) {
+    await expect(
+      db.execute(sql`insert into users (interests) values (${picked}::category[])`),
+    ).resolves.toBeTruthy()
+  }
 })
 
 test('one thread per trade, and no more', async () => {

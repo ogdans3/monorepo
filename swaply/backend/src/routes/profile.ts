@@ -252,11 +252,12 @@ export default async function profileRoutes(app: FastifyInstance) {
     reply.code(204)
   })
 
-  // Screen 02. Three to five, and the database says so too.
+  // Screen 02. Any number of the twelve, none included, and each once. Round 5
+  // said three to five; the product owner took the limit away on 30.09.2026.
   app.put('/me/interests', async (request) => {
     const userId = app.requireUser(request)
     const { interests } = z
-      .object({ interests: z.array(z.enum(CATEGORIES)).min(3).max(5) })
+      .object({ interests: z.array(z.enum(CATEGORIES)) })
       .parse(request.body)
 
     if (new Set(interests).size !== interests.length) {

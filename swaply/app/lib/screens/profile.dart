@@ -283,7 +283,9 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                     runSpacing: 7,
                     children: [
                       ...me.interests.map((c) => Pill(categoryLabels[c] ?? c, small: true)),
-                      if (me.interests.length < 5)
+                      // While any of the twelve is left. Five was round 5's
+                      // ceiling, and there is none now.
+                      if (me.interests.length < categoryLabels.length)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(

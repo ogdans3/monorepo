@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -799,7 +800,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   }
 }
 
-/// 02 Interesser. Three to five, and the counter says which.
+/// 02 Interesser. As many as somebody likes, none included, and the counter
+/// says how many. Round 5 held it to three to five; the product owner took
+/// that away on 30.09.2026, so the export's «Velg 3 til 5 kategorier» and
+/// «3 av 5 valgt» are behind the app here on purpose.
 class InterestsScreen extends StatefulWidget {
   const InterestsScreen({super.key, this.asStep = false, this.atGate = false});
 
@@ -837,18 +841,19 @@ class _InterestsScreenState extends State<InterestsScreen> {
   }
 
   Future<void> _continue() async {
-    // Nothing chosen is «Hopp over» by another name, and it is allowed: the
-    // picker is advice. One or two is not, though — the column holds three to
-    // five or none at all — so the button waits rather than sending something
-    // the server has to refuse.
-    if (_chosen.isEmpty) {
-      context.read<Session>().dismissInterests();
+    final session = context.read<Session>();
+    // Nothing changed is «Hopp over» by another name: nothing chosen, nearly
+    // always, by an account that had nothing. It goes on without asking the
+    // server. Anything else is written down, and none is a choice like any
+    // other: one that had interests and takes them all away has chosen none.
+    if (setEquals(_chosen, {...?session.me?.interests})) {
+      session.dismissInterests();
       _leave();
       return;
     }
     setState(() => _busy = true);
     try {
-      await context.read<Session>().setInterests(_chosen.toList());
+      await session.setInterests(_chosen.toList());
       if (mounted) _leave();
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
@@ -859,10 +864,6 @@ class _InterestsScreenState extends State<InterestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final full = _chosen.length >= 5;
-    // Below three, «Fortsett» has nothing to send: the users table holds three
-    // to five interests or none, so one or two came back as a bare 400.
-    final short = _chosen.isNotEmpty && _chosen.length < 3;
     // Read out here: inside the SafeArea the status bar is taken off.
     final safe = MediaQuery.paddingOf(context);
 
@@ -909,7 +910,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
                             color: SwaplyColors.greenDeep)),
                     const SizedBox(height: Insets.sm),
                     const Text(
-                      'Velg 3 til 5 kategorier, så viser vi deg de riktige tingene først.',
+                      'Velg så mange du vil, så viser vi deg de riktige tingene først.',
                       style: TextStyle(fontSize: 14, height: 1.5, color: SwaplyColors.inkMuted),
                     ),
                     const SizedBox(height: Insets.lg),
@@ -927,15 +928,9 @@ class _InterestsScreenState extends State<InterestsScreen> {
                       childAspectRatio: 166 / 66,
                       children: categoryLabels.entries.map((entry) {
                         final selected = _chosen.contains(entry.key);
-                        // At five the rest go quiet rather than shouting an
-                        // error when they are tapped.
-                        final locked = full && !selected;
                         return GestureDetector(
-                          onTap: locked
-                              ? null
-                              : () => setState(() => selected
-                                  ? _chosen.remove(entry.key)
-                                  : _chosen.add(entry.key)),
+                          onTap: () => setState(() =>
+                              selected ? _chosen.remove(entry.key) : _chosen.add(entry.key)),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 160),
                             curve: Curves.easeOut,
@@ -957,9 +952,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
                                       fontWeight: FontWeight.w700,
                                       color: selected
                                           ? SwaplyColors.greenDeep
-                                          : locked
-                                              ? SwaplyColors.greyLight
-                                              : SwaplyColors.inkBody,
+                                          : SwaplyColors.inkBody,
                                     )),
                                 if (selected) ...[
                                   const SizedBox(width: 6),
@@ -984,21 +977,16 @@ class _InterestsScreenState extends State<InterestsScreen> {
               child: Column(
                 children: [
                   Text(
-                    full
-                        ? 'Fem er nok. Du kan endre dette senere.'
-                        : short
-                            ? 'Velg ${3 - _chosen.length} til, eller ingen for å hoppe over.'
-                            : _chosen.isEmpty
-                                ? 'Anbefalt, ikke påkrevd. Du kan endre dette senere.'
-                                : '${_chosen.length} av 5 valgt',
-                    style: TextStyle(
+                    _chosen.isEmpty
+                        ? 'Anbefalt, ikke påkrevd. Du kan endre dette senere.'
+                        : '${_chosen.length} valgt',
+                    style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: short ? SwaplyColors.grey : SwaplyColors.greenText),
+                        color: SwaplyColors.greenText),
                   ),
                   const SizedBox(height: 12),
-                  PrimaryButton('Fortsett',
-                      busy: _busy, enabled: !short, onPressed: _continue),
+                  PrimaryButton('Fortsett', busy: _busy, onPressed: _continue),
                 ],
               ),
             ),

@@ -114,7 +114,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         withItems: z.number().int().min(0).max(5).nullish(),
         bankid: z.boolean().nullish(),
         claimed: z.boolean().nullish(),
-        interests: z.array(z.enum(CATEGORIES)).min(3).max(5).nullish(),
+        interests: z.array(z.enum(CATEGORIES)).nullish(),
       })
       .parse(request.body ?? {})
 

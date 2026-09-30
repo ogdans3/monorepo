@@ -105,7 +105,7 @@ export async function createTestAccount(
   const tag = randomBytes(4).toString('hex')
   const email = claimed ? `testkonto-${tag}@swaply.test` : null
   const deviceId = claimed ? null : `testdevice-${randomBytes(12).toString('hex')}`
-  const interests = (opts.interests ?? [...INTERESTS]).slice(0, 5)
+  const interests = opts.interests ?? [...INTERESTS]
 
   const user = await one(
     db,
@@ -168,11 +168,11 @@ export type ResetPart = 'likes' | 'items' | 'trades' | 'interests' | 'bankid' | 
  * Empty part of an account, so the screen in front of it can be seen again.
  *
  * Three of these are one-way doors in the product and that is the point of the
- * lever: `PUT /me/interests` takes three to five and the check constraint
- * allows none or three to five, so screen 02 is once per account; `POST
- * /me/bankid` sets a subject and nothing unsets it, so the prompt at the first
- * accept is once per account; and a listing, once it exists, cannot be unmade
- * back into an empty profile.
+ * lever: screen 02 is shown to an account with no interests, and the phone
+ * remembers once it has been through it, so emptying them and switching into
+ * the account is the way to see it again; `POST /me/bankid` sets a subject and
+ * nothing unsets it, so the prompt at the first accept is once per account;
+ * and a listing, once it exists, cannot be unmade back into an empty profile.
  */
 export async function resetAccount(
   db: Database,

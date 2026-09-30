@@ -185,7 +185,7 @@ void main() {
       }
     });
 
-    testWidgets('choosing is advised, but one or two is not a choice', (tester) async {
+    testWidgets('choosing is advised, and one is a choice', (tester) async {
       final fresh = {...FakeServer.me, 'interests': const []};
       server.overrides['POST /auth/login'] = {'token': 'tok', 'user': fresh};
       server.overrides['GET /me'] = fresh;
@@ -196,20 +196,22 @@ void main() {
       final button = find.widgetWithText(FilledButton, 'Fortsett');
       expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
       expect(find.text('Anbefalt, ikke påkrevd. Du kan endre dette senere.'), findsOneWidget);
+      expect(find.text('Velg så mange du vil, så viser vi deg de riktige tingene først.'),
+          findsOneWidget);
 
-      // Three to five or none is the shape of the column, so below three the
-      // button waits and says what it is waiting for. It used to stay lit and
-      // hand the server something it could only refuse.
+      // Any number is a choice. Round 5 said three to five, and one left the
+      // button waiting for two more; the product owner took the limit away on
+      // 30.09.2026, ahead of the export.
       await tester.tap(find.text('Sykling'));
-      await tester.tap(find.text('Gaming'));
       await tester.pump();
-      expect(find.text('Velg 1 til, eller ingen for å hoppe over.'), findsOneWidget);
-      expect(tester.widget<FilledButton>(button).onPressed, isNull);
-
-      await tester.tap(find.text('Verktøy'));
-      await tester.pump();
-      expect(find.text('3 av 5 valgt'), findsOneWidget);
+      expect(find.text('1 valgt'), findsOneWidget);
       expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(server.bodies['PUT /me/interests'], {
+        'interests': ['sykling'],
+      });
     });
 
     testWidgets('«Fortsett» with nothing chosen writes nothing and moves on', (tester) async {
@@ -225,21 +227,43 @@ void main() {
       expect(find.byType(DiscoverScreen), findsOneWidget);
     });
 
-    testWidgets('at five the rest go quiet rather than shouting', (tester) async {
+    testWidgets('five is no ceiling: all twelve can be chosen, and are written down',
+        (tester) async {
       final fresh = {...FakeServer.me, 'interests': const []};
       server.overrides['POST /auth/login'] = {'token': 'tok', 'user': fresh};
       server.overrides['GET /me'] = fresh;
       await mount(tester, const InterestsScreen());
 
-      for (final c in ['Sykling', 'Gaming', 'Verktøy', 'Klær', 'Båt']) {
+      for (final c in ['Sykling', 'Gaming', 'Verktøy', 'Klær', 'Båt', 'Friluft',
+        'Barn', 'Hjem', 'Sport', 'Musikk', 'Bøker', 'Diverse']) {
         await tester.tap(find.text(c));
         await tester.pump();
       }
-      expect(find.text('Fem er nok. Du kan endre dette senere.'), findsOneWidget);
+      // Every one of them ticked. At five the rest used to go quiet.
+      expect(find.text('✓'), findsNWidgets(12));
+      expect(find.text('12 valgt'), findsOneWidget);
 
-      await tester.tap(find.text('Sport'));
-      await tester.pump();
-      expect(find.text('Fem er nok. Du kan endre dette senere.'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Fortsett'));
+      await tester.pumpAndSettle();
+      expect((server.bodies['PUT /me/interests']!['interests'] as List).toSet(), {
+        'sykling', 'gaming', 'verktoy', 'klaer', 'bat', 'friluft',
+        'barn', 'hjem', 'sport', 'musikk', 'boker', 'diverse',
+      });
+    });
+
+    testWidgets('none is a choice as well: taking them all away writes none down',
+        (tester) async {
+      // Signed in with three, which the picker starts from.
+      await mount(tester, const InterestsScreen());
+      for (final c in ['Verktøy', 'Gaming', 'Sykling']) {
+        await tester.tap(find.text(c));
+        await tester.pump();
+      }
+      expect(find.text('Anbefalt, ikke påkrevd. Du kan endre dette senere.'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Fortsett'));
+      await tester.pumpAndSettle();
+      expect(server.bodies['PUT /me/interests'], {'interests': <String>[]});
     });
   });
 

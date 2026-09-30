@@ -251,9 +251,9 @@ describe('the test tooling', () => {
   })
 
   test('13. resetting an account opens the doors the product closes once', async () => {
-    // Interests are three to five or none and `PUT /me/interests` takes three
-    // at minimum, so screen 02 is otherwise once per account; BankID is set
-    // once and nothing unsets it.
+    // Screen 02 is shown to an account with no interests, and a phone that has
+    // been through it does not show it again, so emptying them is the way back
+    // to it; BankID is set once and nothing unsets it.
     await call('POST', '/me/bankid', { token: kariToken, body: { subject: 'test-kari' } })
     expect((await call('GET', '/me', { token: kariToken })).body!['bankidVerified']).toBe(true)
 

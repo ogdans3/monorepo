@@ -85,6 +85,13 @@
       "when": 1790494482578,
       "tag": "0011_test_account_owner_restrict",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790793865413,
+      "tag": "0012_interests_unbounded",
+      "breakpoints": true
     }
   ]
 }

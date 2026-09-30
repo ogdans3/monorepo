@@ -56,7 +56,7 @@ Before the user has searched, the page shows **rows by interest** — the catego
 
 ## Interests
 
-New first-run screen: pick **3–5 categories** from a fixed list (Verktøy, Gaming, Sykkel, Klær, Sport, Båt og fritid, Møbler, Elektronikk, Barn, Hage, Musikk, Bil og MC). Below 3 the continue button is disabled; at 5 the selection locks with a calm message rather than an error.
+New first-run screen: pick **any number of categories, none included**, each once, from the fixed twelve (Sykling, Gaming, Verktøy, Klær, Båt, Friluft, Barn, Hjem, Sport, Musikk, Bøker, Diverse). Round 5 held it to three to five, with the button disabled below three and the rest locked at five; the product owner took the limit away on 30.09.2026, so one is a choice and so are all twelve. The export's 02 still says «Velg 3 til 5 kategorier» and «3 av 5 valgt», so on this point the file is ahead of the export on purpose, and so is 02's golden. Nothing chosen is the same door as «Hopp over».
 
 Stored on `users`. It replaces the "how it works" onboarding slides, which were cut in round 4.
 
@@ -189,7 +189,7 @@ The schema is code now: `backend/src/db/schema.ts`, with the migration in
 `backend/drizzle/`. That file is the authority; this is the shape of it.
 
 - `users` — anonymous (device-scoped) until claimed, then display name, email
-  *or* phone, coarse location, 3–5 interests, and a **pseudonymous BankID
+  *or* phone, coarse location, the interests picked on 02, and a **pseudonymous BankID
   subject**. Never a fødselsnummer.
 - `items` — a listing, item or service, with an optional photo set and an
   `active_trade_id` that is the reservation.
