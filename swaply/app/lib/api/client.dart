@@ -437,10 +437,10 @@ class SwaplyApi {
 
   Future<Trade> trade(String id) async => Trade.fromJson(await _get('/trades/$id'));
 
-  Future<({String tradeId, String threadId})> messageAboutItem(String itemId, String body) async {
-    final json = await _post('/items/$itemId/message', {'body': body});
-    return (tradeId: json['tradeId'] as String, threadId: json['threadId'] as String);
-  }
+  /// The conversation the message went into, with it as the last thing said.
+  /// An API from before `lastMessage` was in the answer leaves it null.
+  Future<ItemConversation> messageAboutItem(String itemId, String body) async =>
+      ItemConversation.fromJson(await _post('/items/$itemId/message', {'body': body}));
 
   Future<Trade> accept(String tradeId, {String termsVersion = '2026-09-06'}) async {
     final json = await _post('/trades/$tradeId/accept', {'termsVersion': termsVersion});

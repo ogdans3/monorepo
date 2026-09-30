@@ -1006,6 +1006,44 @@ class StatePill extends StatelessWidget {
       );
 }
 
+/// What was said last in a conversation, as the card on 06b draws it and the
+/// box on 04 does too: a face and a soft bubble, two lines at most. It is a
+/// glimpse of the thread and not the thread, which «Åpne ›» beside it opens.
+class LastMessage extends StatelessWidget {
+  const LastMessage(this.message, {super.key});
+
+  final MessagePreview message;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Your own face deep green, as [Avatar] has it everywhere else: after
+          // a message from 04 the last thing said is nearly always yours.
+          Avatar(message.senderName ?? '?', size: 26, mine: message.mine),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3F6F2),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(14),
+                  topRight: Radius.circular(14),
+                  bottomRight: Radius.circular(14),
+                  bottomLeft: Radius.circular(5),
+                ),
+              ),
+              child: Text(message.body,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13.5, height: 1.4, color: SwaplyColors.ink)),
+            ),
+          ),
+        ],
+      );
+}
+
 class SectionCard extends StatelessWidget {
   const SectionCard({super.key, required this.child, this.padding, this.radius = 18, this.edge});
 

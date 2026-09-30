@@ -89,6 +89,26 @@ describe('a conversation and the trade it belongs to', () => {
 
     const trade = await call('GET', `/trades/${tradeId}`, { token: kari })
     expect(trade.body!['state']).toBe('talking')
+
+    // What was said comes back with it: the box on 04 draws it at once, in
+    // the server's words.
+    expect(res.body!['lastMessage']).toMatchObject({
+      body: 'Hei! Er drillen fortsatt ledig?', senderName: 'Kari N.', mine: true,
+    })
+  })
+
+  test('2b. 04 opens on the conversation about the listing, for the one in it', async () => {
+    const kariSees = await call('GET', `/items/${drill}`, { token: kari })
+    expect(kariSees.body!['conversation']).toMatchObject({
+      tradeId, threadId,
+      lastMessage: { body: 'Hei! Er drillen fortsatt ledig?', senderName: 'Kari N.', mine: true },
+    })
+
+    // The owner has one conversation per person who wrote, in Chats, and
+    // somebody who never wrote has none.
+    expect((await call('GET', `/items/${drill}`, { token: ola })).body!['conversation']).toBeNull()
+    expect((await call('GET', `/items/${drill}`, { token: per })).body!['conversation']).toBeNull()
+    expect((await call('GET', `/items/${drill}`)).body!['conversation']).toBeNull()
   })
 
   test('3. a second message goes to the same place, not into a second trade', async () => {
@@ -98,6 +118,9 @@ describe('a conversation and the trade it belongs to', () => {
 
     expect(res.body!['tradeId']).toBe(tradeId)
     expect((await call('GET', '/threads', { token: kari })).body!['threads']).toHaveLength(1)
+    // …and the box on 04 shows it as what was last said there.
+    expect((await call('GET', `/items/${drill}`, { token: kari })).body!['conversation'])
+      .toMatchObject({ tradeId, lastMessage: { body: 'Jeg kan bytte mot et telt.', mine: true } })
   })
 
   test('4. writing to yourself is not a conversation', async () => {
@@ -179,6 +202,10 @@ describe('a conversation and the trade it belongs to', () => {
         token: kari, body: { body: 'Beklager, fant noe annet.' },
       })
       expect(posted.status).toBe(201)
+
+      // The box on 04 is for the conversation still going, and the next
+      // message from there opens a new one, so it starts empty again.
+      expect((await call('GET', `/items/${drill}`, { token: kari })).body!['conversation']).toBeNull()
     })
 
   test('9. and writing about the listing again opens a new trade, not the dead one',
@@ -190,6 +217,9 @@ describe('a conversation and the trade it belongs to', () => {
       expect(res.status).toBe(201)
       expect(res.body!['tradeId']).not.toBe(tradeId)
       expect((await call('GET', '/threads', { token: kari })).body!['threads']).toHaveLength(2)
+      // …and that is the one the box on 04 shows now.
+      expect((await call('GET', `/items/${drill}`, { token: kari })).body!['conversation'])
+        .toMatchObject({ tradeId: res.body!['tradeId'], threadId: res.body!['threadId'] })
     })
 
   test('10. a chain puts all three in one thread, with the banner that cannot be closed',

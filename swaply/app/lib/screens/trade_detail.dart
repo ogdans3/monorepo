@@ -1169,32 +1169,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
           ),
           const SizedBox(height: 8),
           if (trade.lastMessage != null) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Avatar(trade.lastMessage!.senderName ?? '?', size: 26),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF3F6F2),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(14),
-                        topRight: Radius.circular(14),
-                        bottomRight: Radius.circular(14),
-                        bottomLeft: Radius.circular(5),
-                      ),
-                    ),
-                    child: Text(trade.lastMessage!.body,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 13.5, height: 1.4, color: SwaplyColors.ink)),
-                  ),
-                ),
-              ],
-            ),
+            LastMessage(trade.lastMessage!),
             const SizedBox(height: 8),
           ],
           Row(

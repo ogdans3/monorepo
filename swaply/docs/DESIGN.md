@@ -129,7 +129,7 @@ Which means writing the first message about an item *is* opening a negotiation, 
 
 The four cases then follow from the model rather than needing rules of their own. No trade between you: an empty box that will create one. One trade: that thread. Several: a list of the trades with their items, opened from there. And on an item there is only ever your own conversation about it, so only the first two can happen.
 
-A chain trade's thread holds all participants together — it only works if everyone syncs. The same conversation component appears in the item detail, in the trade detail, and while waiting for the others to accept.
+A chain trade's thread holds all participants together — it only works if everyone syncs. The same conversation component appears in the item detail, in the trade detail, and while waiting for the others to accept. On the item page it is your conversation about that listing, the one a message from there goes into, opened on what was said last with «Åpne ›» to the rest; it starts empty only until there is one, and again once that trade has ended, because the next message opens a new one. The server decides which conversation that is in one place, so the box and «Send» cannot disagree. Built 30.09.2026, when the box still said «Meldingen er sendt» and showed nothing of what was sent.
 
 **Read state is per participant**, which is what the unread badge on the Chats tab counts.
 

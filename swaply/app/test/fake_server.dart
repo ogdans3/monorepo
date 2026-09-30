@@ -227,8 +227,17 @@ class FakeServer {
         'GET /items/item-console' => {...console, 'owner': kari},
         'POST /items/item-console/like' =>
           {'liked': true, 'tradeId': trade['id'], 'promptToList': false, 'likedCount': 3},
-        'POST /items/item-console/message' =>
-          {'tradeId': trade['id'], 'threadId': 'thread-1'},
+        // What was said comes back with it, trimmed as the real one keeps it.
+        'POST /items/item-console/message' => {
+            'tradeId': trade['id'],
+            'threadId': 'thread-1',
+            'lastMessage': {
+              'body': ((jsonDecode(request.body) as Map)['body'] as String).trim(),
+              'senderName': 'Ola N.',
+              'mine': true,
+              'createdAt': '2026-09-09T09:00:00Z',
+            },
+          },
         'GET /me/likes' => {'items': [console]},
         'GET /me/liked-by' => {
             'items': [

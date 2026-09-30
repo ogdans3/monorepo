@@ -9,6 +9,7 @@ import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
 import { storedExists, toStoredPath } from '../lib/media.js'
 import { townFor, townOf } from '../lib/postcodes.js'
 import { coverSql, many, one, type Row } from '../lib/rows.js'
+import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
 import { publicItem, publicUser } from './serialize.js'
 
 const itemBody = z.object({
@@ -223,9 +224,21 @@ export default async function itemRoutes(app: FastifyInstance) {
           from users u where u.id = ${item['owner_id']}`,
     )
 
+    // The box on 04 is the conversation about this listing, so it opens on
+    // what was last said there, and on «Åpne ›» to the rest. Somebody else's
+    // listing only: the owner has one conversation per person who wrote, and
+    // they live in Chats.
+    const talk =
+      viewer && viewer !== item['owner_id']
+        ? await conversationAbout(app.db, viewer, item['owner_id'], id)
+        : null
+
     return {
       ...publicItem({ ...item, media: media.map((m) => m['url']) }),
       owner: publicUser(owner!),
+      conversation: talk
+        ? { ...talk, lastMessage: await lastMessageIn(app.db, talk.threadId, viewer!) }
+        : null,
     }
   })
 

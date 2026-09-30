@@ -16,6 +16,7 @@ import {
   withdrawEarly,
 } from '../trades/actions.js'
 import { acceptTrade } from '../trades/accept.js'
+import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
 import { validateOffer } from '../trades/offer.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import {
@@ -58,25 +59,17 @@ export default async function tradeRoutes(app: FastifyInstance) {
 
     // One conversation per pair per listing: a second message goes to the same
     // place rather than opening a second trade.
-    const existing = await one(
-      app.db,
-      sql`select t.id from trades t
-          join trade_participants me on me.trade_id = t.id and me.user_id = ${userId}
-          join trade_participants them on them.trade_id = t.id and them.user_id = ${item['owner_id']}
-          join trade_offers o on o.trade_id = t.id
-          join trade_offer_items oi on oi.offer_id = o.id and oi.item_id = ${id}
-          where t.state not in ('completed', 'cancelled')
-          order by t.created_at desc limit 1`,
-    )
+    const existing = await conversationAbout(app.db, userId, item['owner_id'], id)
 
     if (existing) {
-      const thread = await one(app.db, sql`select id from threads where trade_id = ${existing['id']}`)
       await app.db.execute(
         sql`insert into messages (thread_id, sender_id, body)
-            values (${thread!['id']}, ${userId}, ${body.body})`,
+            values (${existing.threadId}, ${userId}, ${body.body})`,
       )
       reply.code(201)
-      return { tradeId: existing['id'], threadId: thread!['id'] }
+      // What was said, as the box on 04 draws it. 04 shows it straight away,
+      // and it is the server's words, trimmed as it kept them.
+      return { ...existing, lastMessage: await lastMessageIn(app.db, existing.threadId, userId) }
     }
 
     const opened = await startTalking(app.db, userId, id, body.body)
@@ -85,7 +78,7 @@ export default async function tradeRoutes(app: FastifyInstance) {
       values (${item['owner_id']}, 'message', jsonb_build_object('tradeId', ${opened.tradeId}::text))
     `)
     reply.code(201)
-    return opened
+    return { ...opened, lastMessage: await lastMessageIn(app.db, opened.threadId, userId) }
   })
 
   // Screen 06c: the swipe at the bottom of the agreement. Everything above it is

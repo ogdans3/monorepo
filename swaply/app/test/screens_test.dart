@@ -357,8 +357,10 @@ void main() {
       expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
-    testWidgets('writing the first message opens the conversation', (tester) async {
+    testWidgets('writing the first message opens the conversation, and the box shows it',
+        (tester) async {
       await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
+      expect(find.text('Åpne ›'), findsNothing);
 
       await tester.enterText(
           find.widgetWithText(TextField, 'Skriv en melding til Kari…'), 'Er den ledig?');
@@ -366,7 +368,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.requests, contains('POST /items/item-console/message'));
-      expect(find.text('Meldingen er sendt. Samtalen ligger under Chats.'), findsOneWidget);
+      // What was sent, drawn as 06b draws the last thing said, with the way to
+      // the rest of it. It used to say «Meldingen er sendt» and show nothing.
+      expect(find.descendant(of: find.byType(LastMessage), matching: find.text('Er den ledig?')),
+          findsOneWidget);
+      expect(find.text('Åpne ›'), findsOneWidget);
+      expect(find.text('Meldingen er sendt. Samtalen ligger under Chats.'), findsNothing);
     });
 
     testWidgets('04 the fifth wish says what to do next, here as on the collage',

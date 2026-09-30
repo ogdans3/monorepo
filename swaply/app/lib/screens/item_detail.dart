@@ -76,7 +76,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   int _photo = 0;
   final _message = TextEditingController();
   bool _sending = false;
-  String? _openedThreadId;
+  /// The conversation the box is: the one the page opened on, or the one the
+  /// first message here made. Null until there is one.
+  ItemConversation? _conversation;
 
   @override
   void initState() {
@@ -107,6 +109,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         setState(() {
           _item = item;
           _error = null;
+          _conversation = item.conversation;
           if (!_liking) _liked = item.likedByMe;
         });
         if (!_seen && !_liking) widget.onSeen?.call(item.likedByMe);
@@ -196,9 +199,20 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
     setState(() => _sending = true);
     try {
-      final result = await context.read<SwaplyApi>().messageAboutItem(widget.itemId, text);
+      final said = await context.read<SwaplyApi>().messageAboutItem(widget.itemId, text);
       _message.clear();
-      if (mounted) setState(() => _openedThreadId = result.threadId);
+      if (mounted) {
+        // An API from before the answer carried the message still says where
+        // it went, and the words are the ones just typed.
+        final me = context.read<Session>().me;
+        setState(() => _conversation = said.lastMessage != null
+            ? said
+            : ItemConversation(
+                tradeId: said.tradeId,
+                threadId: said.threadId,
+                lastMessage: MessagePreview(body: text, senderName: me?.displayName, mine: true),
+              ));
+      }
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -736,10 +750,18 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   /// The box that opens a negotiation. Writing here is what creates the trade,
   /// which is why the chips are trade actions and not emoji.
   ///
+  /// Once there is a conversation it is that conversation, drawn as 06b's card
+  /// draws one: what was said last, and «Åpne ›» to the rest of it. The page
+  /// opens on it, so a message sent here is still there when the listing is
+  /// opened again, and one sent now is there as soon as the server has it. It
+  /// used to say «Meldingen er sendt» and show nothing of what was sent, and
+  /// on the next visit not even that.
+  ///
   /// «Åpne ›», the field and «Send» share the box and the 11 over it: «Åpne ›»
   /// the top, the field and «Send» the foot.
   Widget _conversationBox(UserRef? owner) {
     final name = owner?.displayName.split(' ').first ?? 'eieren';
+    final talk = _conversation;
 
     return TapRoom(
       room: const EdgeInsets.only(top: 11),
@@ -751,15 +773,18 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Kicker('Samtale med $name'),
-                if (_openedThreadId != null)
+                if (talk != null)
                   TapArea(
-                    onTap: () =>
-                        pushOverBar<void>(context, ThreadScreen(threadId: _openedThreadId!)),
+                    onTap: () => pushOverBar<void>(context, ThreadScreen(threadId: talk.threadId)),
                     child: const Text('Åpne ›', style: Type.link),
                   ),
               ],
             ),
             const SizedBox(height: 8),
+            if (talk?.lastMessage != null) ...[
+              LastMessage(talk!.lastMessage!),
+              const SizedBox(height: 8),
+            ],
             Row(
               children: [
                 Expanded(
@@ -803,10 +828,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
               ],
             ),
-            if (_openedThreadId != null) ...[
-              const SizedBox(height: Insets.sm),
-              const Text('Meldingen er sendt. Samtalen ligger under Chats.', style: Type.small),
-            ],
           ],
         ),
       ),

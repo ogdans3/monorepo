@@ -256,7 +256,9 @@ class Item {
         likeCount = _int(j['likeCount']),
         inOffer = j['inOffer'] as bool? ?? false,
         lockedByOtherTrade = j['lockedByOtherTrade'] as bool? ?? false,
-        owner = j['owner'] == null ? null : UserRef.fromJson(j['owner']);
+        owner = j['owner'] == null ? null : UserRef.fromJson(j['owner']),
+        conversation =
+            j['conversation'] == null ? null : ItemConversation.fromJson(j['conversation']);
 
   final String id, kind, title, category, status;
   final String? ownerId, description, subcategory, condition, town, cover;
@@ -264,6 +266,26 @@ class Item {
   final List<String> media;
   final bool likedByMe, reserved, inOffer, lockedByOtherTrade;
   final UserRef? owner;
+
+  /// Yours about somebody else's listing, still going; only on 04's answer.
+  final ItemConversation? conversation;
+}
+
+/// The conversation about a listing that the box on 04 is: the trade it
+/// belongs to, its thread, and what was said there last. What 04 is sent when
+/// it opens, and what «Send» there answers with.
+class ItemConversation {
+  ItemConversation.fromJson(Map<String, dynamic> j)
+      : tradeId = j['tradeId'] as String,
+        threadId = j['threadId'] as String,
+        lastMessage =
+            j['lastMessage'] == null ? null : MessagePreview.fromJson(j['lastMessage']);
+
+  const ItemConversation(
+      {required this.tradeId, required this.threadId, required this.lastMessage});
+
+  final String tradeId, threadId;
+  final MessagePreview? lastMessage;
 }
 
 /// «Ikke vis meg slike» as the server wrote it down: a kind — the category
@@ -350,6 +372,9 @@ class MessagePreview {
         senderName = j['senderName'] as String?,
         mine = j['mine'] as bool? ?? false,
         createdAt = _date(j['createdAt']);
+
+  const MessagePreview(
+      {required this.body, required this.senderName, required this.mine, this.createdAt});
 
   final String body;
   final String? senderName;

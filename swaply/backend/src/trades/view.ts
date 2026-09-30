@@ -5,6 +5,7 @@ import { mediaUrl } from '../lib/media.js'
 import { coverSql, iso, many, num, one } from '../lib/rows.js'
 import { publicItem, publicUser } from '../routes/serialize.js'
 import type { CloseCode } from './close.js'
+import { lastMessageIn } from './conversation.js'
 
 /**
  * Everything the trade screens render, from one viewer's point of view.
@@ -69,14 +70,7 @@ export async function tradeView(db: Database, tradeId: string, viewerId: string)
   )
 
   const thread = await one(db, sql`select id from threads where trade_id = ${tradeId}`)
-  const lastMessage = thread
-    ? await one(
-        db,
-        sql`select m.*, u.display_name as sender_name from messages m
-            join users u on u.id = m.sender_id
-            where m.thread_id = ${thread['id']} order by m.created_at desc limit 1`,
-      )
-    : null
+  const lastMessage = thread ? await lastMessageIn(db, thread['id'] as string, viewerId) : null
 
   const withdrawal = await one(
     db,
@@ -168,14 +162,7 @@ export async function tradeView(db: Database, tradeId: string, viewerId: string)
     })),
 
     threadId: thread?.['id'] ?? null,
-    lastMessage: lastMessage
-      ? {
-          body: lastMessage['body'],
-          senderName: lastMessage['sender_name'],
-          mine: lastMessage['sender_id'] === viewerId,
-          createdAt: iso(lastMessage['created_at']),
-        }
-      : null,
+    lastMessage,
 
     withdrawal: withdrawal
       ? {
