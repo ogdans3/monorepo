@@ -347,8 +347,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   /// scrolled, and as it is laid out — a first page that does not fill the
   /// screen, or a grid that lost cards to «Ikke vis meg slike», has no scroll
   /// to wait for. A new drag is a new try after a page that did not come.
-  /// Asked for after the frame, since a notification can come from inside
-  /// one, and never stops the notification on its way up.
+  /// Asked for once the notification is through, since one can come from
+  /// inside a frame, where nothing may be set; and the notification goes on
+  /// up, to the pull and anything else listening.
   bool _scrolled(Notification notification) {
     final (metrics, depth) = switch (notification) {
       ScrollNotification n => (n.metrics, n.depth),

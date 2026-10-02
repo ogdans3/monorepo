@@ -126,6 +126,10 @@ with nothing to tap.
   the token goes rather than made by the gate afterwards: on the web every tab
   becomes a stranger at that moment, and each used to find no id and make its
   own — two device accounts, one of them nobody's. See «Another tab» below.
+  The server is asked to end the session first, which on a bad line takes up
+  to the api's patience, so the row says «Logger ut …» with a spinner meanwhile
+  and takes no second press; and the session signs out once however often it
+  is asked, where each press used to keep another new device id.
 - **Closing the app on 02**, or reloading the page, comes back to 02. Whose 02
   is still owed is kept next to the token, by account id, because nothing the
   server says can tell a skipped 02 from one never seen: «Hopp over» leaves the
@@ -329,7 +333,8 @@ Oppdag comes thirty at a time. It used to make one asking and draw what came
 of it, which is the server's first page: «84 treff» over thirty cards, and the
 rest never shown however far anybody scrolled. The next page is asked for as
 the foot of the grid comes near, and as the grid is laid out, so a page that
-does not fill the screen asks too. It is asked with the search the grid on
+does not fill the screen asks too. While it comes, a small spinner stands under
+the last cards: the export draws no end to the grid, so this is the app's. It is asked with the search the grid on
 screen was asked with, not words typed since and not searched for. «N treff» is
 the server's count, not the cards'. A grid asked for again behind itself is
 asked for as far down as it has been read, in pieces of a hundred, the most the
