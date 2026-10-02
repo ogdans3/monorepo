@@ -260,12 +260,13 @@ export default async function adminRoutes(app: FastifyInstance) {
           amountNok: 200,
         }
         // Validated inside, under the trade's lock, as the product's own is.
-        await proposeCounterOffer(app.db, id, body.as, composition, cash)
+        const { freed } = await proposeCounterOffer(app.db, id, body.as, composition, cash)
         await app.db.execute(sql`
           insert into notifications (user_id, type, payload)
           select p.user_id, 'counter_offer', jsonb_build_object('tradeId', ${id}::text)
           from trade_participants p where p.trade_id = ${id} and p.user_id <> ${body.as}
         `)
+        await sweepForCycles(app.db, freed)
         break
       }
       case 'decline': {
@@ -299,7 +300,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         // anyone having to press a separate button» — and the route that says
         // so is the one this has to behave like.
         const marked = await markHandover(app.db, id, body.as, 'received')
-        if (marked.complete) await completeTrade(app.db, id)
+        if (marked.complete) await sweepForCycles(app.db, await completeTrade(app.db, id))
         break
       }
       case 'request-withdrawal':

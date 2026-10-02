@@ -9,6 +9,7 @@
 //
 // `locks.ts` is the two halves (`lockTrades`, `lockItems`), and every caller
 // goes through it: `acceptOffer`, `revokeAcceptance`, `completeTrade`,
+// `proposeCounterOffer`, which lets go of what the version before held,
 // `endTrade` — and so `cancelTrade`, «Avslå», «Trekk deg», a yes to a
 // withdrawal, the tool's «Nullstill → bytter» and a trade pushed out by
 // somebody else's yes — every answer to a withdrawal question
@@ -37,10 +38,9 @@
 // Every lock is `for no key update`, the lock an UPDATE takes on its own. It
 // queues writers and nothing else: the key-share lock a new offer, message,
 // like or reservation takes on the row it points at does not wait for it, so
-// the inserts that open trades and put things on the table (`startTalking`,
-// `openTradeFromCycle`, `proposeCounterOffer`) stand outside the order
-// without breaking it — the only row lock any of them takes is its own
-// trade's.
+// the inserts that open trades (`startTalking`, `openTradeFromCycle`) stand
+// outside the order without breaking it — the only row lock either takes is
+// its own trade's.
 //
 // Inside one transaction a lock already held costs nothing, so a helper may
 // lock what its caller has locked (`endTrade` under an acceptance or an

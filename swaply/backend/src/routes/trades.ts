@@ -149,13 +149,17 @@ export default async function tradeRoutes(app: FastifyInstance) {
     // would silently undo everybody's acceptance, and on a closed one it would
     // reopen something that is over — so the state, and the offer, are judged
     // in `proposeCounterOffer`, under the trade's lock.
-    await proposeCounterOffer(app.db, id, userId, body.items, body.cash ?? undefined)
+    const { freed } = await proposeCounterOffer(
+      app.db, id, userId, body.items, body.cash ?? undefined,
+    )
 
     await app.db.execute(sql`
       insert into notifications (user_id, type, payload)
       select p.user_id, 'counter_offer', jsonb_build_object('tradeId', ${id}::text)
       from trade_participants p where p.trade_id = ${id} and p.user_id <> ${userId}
     `)
+    // What the trade held for the version before is back on the market.
+    await sweepForCycles(app.db, freed)
     return tradeView(app.db, id, userId)
   })
 
@@ -211,7 +215,8 @@ export default async function tradeRoutes(app: FastifyInstance) {
 
     const result = await markHandover(app.db, id, userId, body.marker, body.value)
     // Everyone has sent and received: it is over, and the snapshot is taken.
-    if (result.complete) await completeTrade(app.db, id)
+    // Whatever it held that the final version does not give goes back.
+    if (result.complete) await sweepForCycles(app.db, await completeTrade(app.db, id))
     return { ...result, trade: await tradeView(app.db, id, userId) }
   })
 
@@ -229,7 +234,7 @@ export default async function tradeRoutes(app: FastifyInstance) {
       sql`select count(*) as n from trade_participants
           where trade_id = ${id} and (sent_at is null or received_at is null)`,
     )
-    if (Number(outstanding!['n']) === 0) await completeTrade(app.db, id)
+    if (Number(outstanding!['n']) === 0) await sweepForCycles(app.db, await completeTrade(app.db, id))
     return tradeView(app.db, id, userId)
   })
 

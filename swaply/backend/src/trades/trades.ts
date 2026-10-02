@@ -113,11 +113,24 @@ export async function startTalking(
   })
 }
 
+/** A counter-offer on the table, and what the trade let go of to put it there. */
+export type CounterResult = {
+  offerId: string
+  /**
+   * Listings the trade held for an earlier version, back on the market. Their
+   * wishes were dead while it held them, so the caller runs the search again.
+   */
+  freed: string[]
+}
+
 /**
  * Put a new version of the deal on the table.
  *
  * Never an edit. Earlier acceptances stay attached to the version they were
  * given for, which is the only way to avoid having accepted something else.
+ * And since a reservation *is* an owner's acceptance, the reservations go:
+ * a yes to the old version is not a yes to this one, and a listing held for
+ * an offer nobody can accept any more is frozen by a promise about nothing.
  *
  * Judged under the trade's lock, like every other move: the state, and the
  * offer itself (`validateOffer`). Read beforehand, a counter-offer landing in
@@ -130,7 +143,7 @@ export async function proposeCounterOffer(
   proposedBy: string,
   items: OfferItem[],
   cash?: OfferCash,
-): Promise<string> {
+): Promise<CounterResult> {
   return db.transaction(async (tx) => {
     const state = (await lockTrades(tx, [tradeId])).get(tradeId)
     // A counter-offer is a move inside a negotiation. Each refusal says what
@@ -176,9 +189,19 @@ export async function proposeCounterOffer(
       )
     }
 
+    // Everything the trade holds was held for a version that is no longer the
+    // one on the table. In the one order (`index.ts`): the trade is held
+    // above, and these are what it holds.
+    await lockItems(tx, sql`i.active_trade_id = ${tradeId}`)
+    const released = await tx.execute<Row>(
+      sql`update items set active_trade_id = null, status = 'available'
+          where active_trade_id = ${tradeId}
+          returning id`,
+    )
+
     // Negotiable, as judged under the lock above.
     await tx.execute(sql`update trades set state = 'countered' where id = ${tradeId}`)
-    return offerId
+    return { offerId, freed: released.map((row) => row['id']!) }
   })
 }
 
@@ -382,12 +405,17 @@ export async function revokeAcceptance(
  * completing it after that would mark as traded what the deletion had just
  * put back on the market; and a marker set again on a finished trade must not
  * move the day it finished, which is where the retention clock starts.
+ *
+ * Returns the listings it let go of rather than marking traded: anything it
+ * held that the final version does not give. A counter-offer lets go of what
+ * the trade held for the version before, but one made before it did left them
+ * held, and completing marked them traded — things the deal had dropped.
  */
-export async function completeTrade(db: Database, tradeId: string) {
-  await db.transaction(async (tx) => {
+export async function completeTrade(db: Database, tradeId: string): Promise<string[]> {
+  return db.transaction(async (tx) => {
     // The one order (`index.ts`): the trade, then what it holds.
     const state = (await lockTrades(tx, [tradeId])).get(tradeId)
-    if (state !== 'accepted' && state !== 'paused') return
+    if (state !== 'accepted' && state !== 'paused') return []
     await lockItems(tx, sql`i.active_trade_id = ${tradeId}`)
 
     await tx.execute(sql`
@@ -405,7 +433,16 @@ export async function completeTrade(db: Database, tradeId: string) {
 
     await tx.execute(
       sql`update items set status = 'traded', active_trade_id = null
-          where active_trade_id = ${tradeId}`,
+          where active_trade_id = ${tradeId}
+            and id in (select oi.item_id from trade_offers o
+                       join trade_offer_items oi on oi.offer_id = o.id
+                       where o.trade_id = ${tradeId}
+                         and o.seq = (select max(seq) from trade_offers where trade_id = ${tradeId}))`,
+    )
+    const released = await tx.execute<Row>(
+      sql`update items set active_trade_id = null, status = 'available'
+          where active_trade_id = ${tradeId}
+          returning id`,
     )
     await tx.execute(
       sql`update trades set state = 'completed', closed_at = now() where id = ${tradeId}`,
@@ -418,6 +455,7 @@ export async function completeTrade(db: Database, tradeId: string) {
       sql`update trade_withdrawals set state = 'expired', resolved_at = now()
           where trade_id = ${tradeId} and state = 'waiting'`,
     )
+    return released.map((row) => row['id']!)
   })
 }
 

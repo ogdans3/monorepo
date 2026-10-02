@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
-import { many } from '../lib/rows.js'
+import { many, uuidArray } from '../lib/rows.js'
 import { findCyclesThrough } from './cycles.js'
 import { openTradeFromCycle } from './trades.js'
 
@@ -39,15 +39,18 @@ export async function sweepForCycles(db: Database, itemIds?: string[]): Promise<
     if (!cycle) continue
 
     // One trade per listing per sweep: a second would open on things the first
-    // has already put on the table.
+    // has already put on the table. The table is the newest version: a thing a
+    // counter-offer dropped is back on the market (`proposeCounterOffer`), and
+    // an older version naming it is history, not a claim on it.
     const ids = cycle.map((hop) => hop.givesItemId)
     const alreadyOpen = await many(
       db,
       sql`select 1 from trades t
           join trade_offers o on o.trade_id = t.id
+           and o.seq = (select max(seq) from trade_offers where trade_id = t.id)
           join trade_offer_items oi on oi.offer_id = o.id
           where t.state in ('pending', 'countered')
-            and oi.item_id = any(${sql.raw(`array['${ids.join("','")}']::uuid[]`)})`,
+            and oi.item_id = any(${uuidArray(ids)})`,
     )
     if (alreadyOpen.length > 0) continue
 
