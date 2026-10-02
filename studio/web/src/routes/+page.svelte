@@ -1,0 +1,1721 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import {
+    ArrowUp,
+    ArrowUpRight,
+    ArrowLeft,
+    ArrowRight,
+    Plus,
+    Search,
+    X,
+    House,
+    Library,
+    CalendarDays,
+    Columns3,
+    MessageSquare,
+    Settings,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    FileText,
+    Film,
+    Image,
+    Mic,
+    Link,
+    Check,
+    Copy,
+    Download,
+    Upload,
+    Circle,
+    Clock3,
+    Square,
+    LogOut,
+    Menu,
+    SlidersHorizontal,
+    MoreHorizontal,
+  } from '@lucide/svelte';
+  import { api, kinds, states, formatDate, localInput, osloISO, type Row } from '$lib/api';
+  import '$lib/style.css';
+
+  let loading = true,
+    setup = false,
+    user: Row | null = null,
+    authMode = 'login',
+    authError = '';
+  let email = '',
+    password = '',
+    name = '',
+    authToken = '';
+  let view = 'home',
+    products: Row[] = [],
+    product = '',
+    items: Row[] = [],
+    tasks: Row[] = [],
+    publications: Row[] = [],
+    conversations: Row[] = [];
+  let settings: Row = { models: [] },
+    invites: Row[] = [],
+    agentKeys: Row[] = [];
+  let busy = false,
+    notice = '',
+    error = '',
+    query = '',
+    results: Row[] = [],
+    searching = false,
+    searchTimer: ReturnType<typeof setTimeout>,
+    searchGeneration = 0;
+  let filter = '',
+    statusFilter = '',
+    boardState = 'ready',
+    calendarOffset = 0,
+    calendarMode = 'week',
+    selectedDay = '';
+  let dialog: HTMLDialogElement,
+    modal = '',
+    draft: Row = {},
+    detail: Row | null = null,
+    note = '',
+    versionBody = '',
+    versionTitle = '',
+    editVersion = false;
+  let file: File | null = null,
+    uploadProgress = false,
+    freshSecret = '',
+    inviteLink = '';
+  let conversationID = '',
+    messages: Row[] = [],
+    latestRun: Row | null = null,
+    composer = '',
+    modelOverride = '',
+    runEvents: Row[] = [];
+  let clipboardTimer: ReturnType<typeof setTimeout>;
+  const nav = [
+    { id: 'home', label: 'Oversikt', icon: House },
+    { id: 'library', label: 'Bibliotek', icon: Library },
+    { id: 'calendar', label: 'Kalender', icon: CalendarDays },
+    { id: 'tasks', label: 'Oppgaver', icon: Columns3 },
+    { id: 'chat', label: 'Chat', icon: MessageSquare },
+  ];
+  const columns = ['idea', 'ready', 'running', 'review', 'done'];
+  const roleNames: Record<string, string> = {
+    chat: 'Chat og planlegging',
+    script: 'Manus og tekst',
+    analysis: 'Videoanalyse',
+    ranking: 'Vurdering · Jev',
+    video: 'Videoproduksjon',
+    design: 'Visuelle maler',
+  };
+  $: currentProduct = products.find((p) => p.id === product);
+  $: visibleItems = items.filter(
+    (i) => (!filter || i.kind === filter) && (!statusFilter || i.status === statusFilter),
+  );
+  $: upcoming = publications.filter((p) => p.status !== 'published').slice(0, 4);
+  $: reviewTasks = tasks.filter((t) => t.status === 'review');
+  $: activeRun = latestRun && ['queued', 'running'].includes(latestRun.status);
+  $: canEdit = user && user.role !== 'reader';
+  $: calendarDays = weekDays(calendarOffset);
+  $: weekPublications = publications.filter((p) =>
+    calendarDays.includes(localInput(new Date(p.scheduled_at)).slice(0, 10)),
+  );
+  $: listedPublications =
+    calendarMode === 'list'
+      ? publications
+      : weekPublications.filter(
+          (p) => !selectedDay || localInput(new Date(p.scheduled_at)).startsWith(selectedDay),
+        );
+
+  function iconFor(kind: string) {
+    return kind === 'video'
+      ? Film
+      : kind === 'image' || kind === 'carousel'
+        ? Image
+        : kind === 'audio'
+          ? Mic
+          : kind === 'reference'
+            ? Link
+            : FileText;
+  }
+  function weekDays(offset: number) {
+    const now = new Date();
+    const oslo = localInput(now).slice(0, 10);
+    const d = new Date(oslo + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + offset * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(d);
+      day.setUTCDate(d.getUTCDate() + i);
+      return day.toISOString().slice(0, 10);
+    });
+  }
+  function toast(text: string) {
+    notice = text;
+    clearTimeout(clipboardTimer);
+    clipboardTimer = setTimeout(() => (notice = ''), 3500);
+  }
+  async function safely(fn: () => Promise<void>) {
+    error = '';
+    busy = true;
+    try {
+      await fn();
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      busy = false;
+    }
+  }
+  async function refresh() {
+    const suffix = '?product=' + encodeURIComponent(product);
+    [items, tasks, publications, conversations] = await Promise.all([
+      api('/items' + suffix),
+      api('/tasks' + suffix),
+      api('/publications' + suffix),
+      api('/conversations' + suffix),
+    ]);
+  }
+  async function load() {
+    const status = await api('/auth/status');
+    setup = status.setup;
+    user = status.user;
+    if (user) {
+      products = await api('/products');
+      product = product || products[0]?.id || '';
+      settings = await api('/settings');
+      await refresh();
+    } else if (setup) {
+      authMode = 'setup';
+    }
+  }
+  onMount(() => {
+    const hash = new URLSearchParams(location.hash.slice(1));
+    if (hash.has('invite')) {
+      authMode = 'invite';
+      authToken = hash.get('invite') || '';
+      history.replaceState(null, '', location.pathname);
+    }
+    if (hash.has('setup')) {
+      authToken = hash.get('setup') || '';
+      history.replaceState(null, '', location.pathname);
+    }
+    load()
+      .catch((e) => (authError = e.message))
+      .finally(() => (loading = false));
+    const poll = setInterval(() => {
+      if (conversationID && activeRun)
+        loadConversation(conversationID).catch((e) => (error = e.message));
+    }, 1500);
+    return () => {
+      clearInterval(poll);
+      clearTimeout(searchTimer);
+      clearTimeout(clipboardTimer);
+    };
+  });
+  async function authenticate(e: SubmitEvent) {
+    e.preventDefault();
+    authError = '';
+    busy = true;
+    try {
+      await api(
+        '/auth/' +
+          (authMode === 'setup' ? 'bootstrap' : authMode === 'invite' ? 'accept' : 'login'),
+        'POST',
+        { email, password, name, token: authToken },
+      );
+      password = '';
+      authToken = '';
+      await load();
+    } catch (e) {
+      authError = (e as Error).message;
+    } finally {
+      busy = false;
+    }
+  }
+  async function navigate(next: string) {
+    view = next;
+    error = '';
+    if (next === 'settings')
+      await safely(async () => {
+        settings = await api('/settings');
+        if (user?.role === 'admin')
+          [invites, agentKeys] = await Promise.all([api('/invites'), api('/agent-tokens')]);
+      });
+  }
+  function openModal(type: string, data: Row = {}) {
+    modal = type;
+    error = '';
+    freshSecret = '';
+    inviteLink = '';
+    file = null;
+    editVersion = false;
+    draft = {
+      title: '',
+      kind: 'hook',
+      body: '',
+      source_url: '',
+      rights: 'unknown',
+      status: 'idea',
+      executor: 'external',
+      assignee: '',
+      channel: 'Instagram',
+      scheduled_at: localInput(),
+      caption: '',
+      item_id: '',
+      task_id: '',
+      email: '',
+      role: 'editor',
+      ...data,
+    };
+    dialog.showModal();
+  }
+  function closeModal() {
+    dialog.close();
+    modal = '';
+    detail = null;
+    error = '';
+    freshSecret = '';
+    inviteLink = '';
+  }
+  async function openItem(id: string) {
+    await safely(async () => {
+      detail = await api('/items/' + id);
+      note = '';
+      versionTitle = detail!.item.title;
+      versionBody = detail!.item.body;
+      openModal('detail');
+    });
+  }
+  async function save(e: SubmitEvent) {
+    e.preventDefault();
+    await safely(async () => {
+      if (modal === 'item') {
+        if (file) {
+          uploadProgress = true;
+          try {
+            const form = new FormData();
+            form.set('file', file);
+            form.set('product_id', product);
+            form.set('title', draft.title || file.name);
+            form.set('body', draft.body);
+            form.set('rights', draft.rights);
+            await api('/uploads', 'POST', form);
+          } finally {
+            uploadProgress = false;
+          }
+        } else
+          await api('/items', 'POST', {
+            product_id: product,
+            title: draft.title,
+            kind: draft.kind,
+            body: draft.body,
+            source_url: draft.source_url,
+            rights: draft.rights,
+            tags: [],
+          });
+      } else if (modal === 'task') {
+        await api('/tasks', 'POST', {
+          product_id: product,
+          title: draft.title,
+          brief: draft.body,
+          status: draft.status,
+          executor: draft.executor,
+          assignee: draft.assignee,
+        });
+        boardState = draft.status;
+      } else if (modal === 'publication')
+        await api('/publications', 'POST', {
+          product_id: product,
+          title: draft.title,
+          channel: draft.channel,
+          scheduled_at: osloISO(draft.scheduled_at),
+          caption: draft.caption,
+          item_id: draft.item_id || null,
+          task_id: draft.task_id || null,
+          assignee: draft.assignee,
+        });
+      else if (modal === 'invite') {
+        const result = await api('/invites', 'POST', { email: draft.email, role: draft.role });
+        inviteLink = result.url;
+        invites = await api('/invites');
+        return;
+      } else if (modal === 'agent') {
+        const result = await api('/agent-tokens', 'POST', {
+          name: draft.title,
+          product_id: product,
+        });
+        freshSecret = result.token;
+        agentKeys = await api('/agent-tokens');
+        return;
+      }
+      closeModal();
+      await refresh();
+      toast('Lagret');
+    });
+  }
+  async function saveVersion() {
+    if (!detail) return;
+    await safely(async () => {
+      await api('/items/' + detail!.item.id + '/versions', 'POST', {
+        title: versionTitle,
+        body: versionBody,
+        expected_version_id: detail!.item.current_version_id,
+      });
+      detail = await api('/items/' + detail!.item.id);
+      editVersion = false;
+      await refresh();
+      toast('Ny versjon lagret');
+    });
+  }
+  async function approve() {
+    if (!detail) return;
+    await safely(async () => {
+      await api('/items/' + detail!.item.id + '/approve', 'POST', {
+        version_id: detail!.item.current_version_id,
+      });
+      detail = await api('/items/' + detail!.item.id);
+      await refresh();
+      toast('Versjonen er godkjent');
+    });
+  }
+  async function postNote(e: SubmitEvent) {
+    e.preventDefault();
+    if (!detail) return;
+    await safely(async () => {
+      await api('/items/' + detail!.item.id + '/notes', 'POST', { body: note });
+      note = '';
+      detail = await api('/items/' + detail!.item.id);
+    });
+  }
+  async function changeTask(t: Row, status: string) {
+    await safely(async () => {
+      await api('/tasks/' + t.id, 'PATCH', { status });
+      await refresh();
+    });
+  }
+  async function savePublication() {
+    await safely(async () => {
+      await api('/publications/' + draft.id, 'PATCH', {
+        item_id: draft.item_id || undefined,
+        scheduled_at: osloISO(draft.scheduled_at),
+      });
+      await refresh();
+      closeModal();
+      toast('Publiseringspakken er oppdatert');
+    });
+  }
+  async function markPublished() {
+    await safely(async () => {
+      await api('/publications/' + draft.id, 'PATCH', { status: 'published', url: draft.url });
+      await refresh();
+      closeModal();
+      toast('Publisering registrert');
+    });
+  }
+  async function copy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Kopiert');
+    } catch {
+      error = 'Kunne ikke kopiere. Marker teksten og kopier manuelt.';
+    }
+  }
+  function searchInput() {
+    clearTimeout(searchTimer);
+    const generation = ++searchGeneration;
+    if (!query.trim()) {
+      results = [];
+      searching = false;
+      return;
+    }
+    searching = true;
+    searchTimer = setTimeout(async () => {
+      try {
+        const found = await api('/search?q=' + encodeURIComponent(query) + '&product=' + product);
+        if (generation === searchGeneration) results = found;
+      } catch (e) {
+        if (generation === searchGeneration) error = (e as Error).message;
+      } finally {
+        if (generation === searchGeneration) searching = false;
+      }
+    }, 250);
+  }
+  async function followResult(result: Row) {
+    closeModal();
+    if (result.entity === 'item' || result.entity === 'note') await openItem(result.target_id);
+    else if (result.entity === 'message') {
+      await navigate('chat');
+      await loadConversation(result.target_id);
+    } else if (result.entity === 'task') {
+      await navigate('tasks');
+    } else if (result.entity === 'publication') {
+      await navigate('calendar');
+    } else await navigate('settings');
+  }
+  async function loadConversation(id: string) {
+    const data = await api('/conversations/' + id);
+    if (conversationID && conversationID !== id) return;
+    conversationID = id;
+    messages = data.messages || [];
+    latestRun = data.runs?.[0] || null;
+    if (latestRun) {
+      const data = await api('/runs/' + latestRun.id);
+      runEvents = data.events || [];
+    }
+  }
+  async function selectConversation(id: string) {
+    conversationID = id;
+    await safely(() => loadConversation(id));
+  }
+  async function send(e: SubmitEvent) {
+    e.preventDefault();
+    if (!composer.trim() || activeRun) return;
+    await safely(async () => {
+      if (!conversationID) {
+        const result = await api('/conversations', 'POST', {
+          product_id: product,
+          title: composer.slice(0, 80),
+        });
+        conversationID = result.id;
+      }
+      await api('/conversations/' + conversationID + '/messages', 'POST', {
+        body: composer,
+        model: modelOverride,
+      });
+      composer = '';
+      await loadConversation(conversationID);
+      await refresh();
+    });
+  }
+  async function stopRun() {
+    if (latestRun)
+      await safely(async () => {
+        await api('/runs/' + latestRun!.id + '/cancel', 'POST', {});
+        await loadConversation(conversationID);
+      });
+  }
+  async function saveModel(model: Row) {
+    await safely(async () => {
+      await api('/settings/' + model.role, 'PUT', model);
+      toast('Modellvalg lagret');
+    });
+  }
+</script>
+
+<svelte:head
+  ><title>Studio · {currentProduct?.name || 'Ditt innhold, samlet'}</title><meta
+    name="description"
+    content="Bibliotek, produksjon og publisering samlet i et rolig arbeidsrom."
+  /></svelte:head
+>
+
+{#if loading}
+  <div class="boot">
+    <span class="wordmark">studio<span>.</span></span>
+    <p>Åpner arbeidsrommet …</p>
+  </div>
+{:else if !user}
+  <main class="auth-page">
+    <a class="wordmark" href="/">studio<span>.</span></a>
+    <div class="auth-layout">
+      <section class="auth-intro">
+        <p class="eyebrow">FRA FØRSTE IDÉ TIL SISTE FINPUSS</p>
+        <h1>Et sted for alt<br />dere lager.</h1>
+        <p>Samle materialet. Finn retningen.<br />Få det ut i verden.</p>
+        <div class="auth-process">
+          <span>Idé</span><ArrowRight size={16} /><span>Innhold</span><ArrowRight size={16} /><span
+            >Publisert</span
+          >
+        </div>
+      </section>
+      <section class="auth-form">
+        <span class="section-number">01 / VELKOMMEN</span>
+        <h2>
+          {authMode === 'setup'
+            ? 'Opprett arbeidsrommet'
+            : authMode === 'invite'
+              ? 'Bli med i Studio'
+              : 'Godt å se deg igjen'}
+        </h2>
+        <p class="muted">
+          {authMode === 'setup'
+            ? 'Den første brukeren blir administrator.'
+            : authMode === 'invite'
+              ? 'Bruk e-postadressen invitasjonen ble sendt til.'
+              : 'Logg inn for å fortsette der dere slapp.'}
+        </p>
+        <form onsubmit={authenticate}>
+          {#if authMode !== 'login'}<label
+              >Navnet ditt<input
+                bind:value={name}
+                autocomplete="name"
+                required
+                placeholder="Fornavn Etternavn"
+              /></label
+            >{/if}
+          <label
+            >E-post<input
+              type="email"
+              bind:value={email}
+              autocomplete="email"
+              required
+              placeholder="deg@firma.no"
+            /></label
+          >
+          <label
+            >Passord<input
+              type="password"
+              bind:value={password}
+              autocomplete={authMode === 'login' ? 'current-password' : 'new-password'}
+              minlength={authMode === 'login' ? 1 : 12}
+              maxlength="72"
+              required
+              placeholder={authMode === 'login' ? 'Ditt passord' : 'Minst 12 tegn'}
+            /></label
+          >
+          {#if authMode === 'setup'}<label
+              >Oppsettkode<input
+                type="password"
+                bind:value={authToken}
+                required
+                autocomplete="off"
+              /><small>Finn BOOTSTRAP_TOKEN i den lokale .env-filen.</small></label
+            >{/if}
+          {#if authError}<p class="error" role="alert">{authError}</p>{/if}
+          <button class="primary wide" disabled={busy}
+            >{busy
+              ? 'Et øyeblikk …'
+              : authMode === 'setup'
+                ? 'Opprett Studio'
+                : authMode === 'invite'
+                  ? 'Godta invitasjon'
+                  : 'Logg inn'}<ArrowRight size={16} /></button
+          >
+        </form>
+        <p class="small muted">
+          {authMode === 'login'
+            ? 'Tilgang gis gjennom en invitasjon fra administrator.'
+            : 'Studio er privat. Du bestemmer hvem som får tilgang.'}
+        </p>
+      </section>
+    </div>
+    <footer>Et roligere sted å få ting gjort.</footer>
+  </main>
+{:else}
+  <div class="app-shell">
+    <aside class="sidebar">
+      <button class="wordmark" onclick={() => navigate('home')}>studio<span>.</span></button><span
+        class="workspace-label">ARBEIDSROM</span
+      ><label class="product-picker"
+        ><span class="product-dot">T</span><select
+          aria-label="Velg produkt"
+          bind:value={product}
+          onchange={() =>
+            safely(async () => {
+              conversationID = '';
+              messages = [];
+              latestRun = null;
+              await refresh();
+            })}
+          >{#each products as p}<option value={p.id}>{p.name}</option>{/each}</select
+        ><ChevronDown size={14} /></label
+      >
+      <nav aria-label="Hovedmeny">
+        {#each nav as n}<button class:active={view === n.id} onclick={() => navigate(n.id)}
+            ><n.icon size={19} strokeWidth={1.7} /><span>{n.label}</span
+            >{#if n.id === 'tasks' && reviewTasks.length}<span class="nav-count"
+                >{reviewTasks.length}</span
+              >{/if}</button
+          >{/each}
+      </nav>
+      <div class="sidebar-bottom">
+        <button class:active={view === 'settings'} onclick={() => navigate('settings')}
+          ><Settings size={18} />Innstillinger</button
+        >
+        <div class="user-row">
+          <span class="avatar">{user.name.slice(0, 1)}</span>
+          <div>
+            <strong>{user.name}</strong><small
+              >{user.role === 'admin'
+                ? 'Administrator'
+                : user.role === 'reader'
+                  ? 'Lesetilgang'
+                  : 'Redaktør'}</small
+            >
+          </div>
+          <button
+            aria-label="Logg ut"
+            onclick={() =>
+              safely(async () => {
+                await api('/auth/logout', 'POST', {});
+                user = null;
+              })}><LogOut size={16} /></button
+          >
+        </div>
+      </div>
+    </aside>
+    <div class="main-column">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span class="mobile-wordmark" onclick={() => navigate('home')} role="presentation"
+            >studio.</span
+          ><span>{currentProduct?.name}</span><span class="slash">/</span><strong
+            >{nav.find((n) => n.id === view)?.label || 'Innstillinger'}</strong
+          >
+        </div>
+        <div class="topbar-actions">
+          <button
+            class="search-trigger"
+            onclick={() => {
+              openModal('search');
+              query = '';
+              results = [];
+            }}
+            aria-label="Søk i Studio"><Search size={17} /><span>Søk i alt</span><kbd>⌕</kbd></button
+          ><button
+            class="mobile-settings icon-button"
+            aria-label="Innstillinger"
+            onclick={() => navigate('settings')}><Settings size={19} /></button
+          >
+        </div>
+      </header>
+      {#if error && !modal}<div class="page-error error" role="alert">
+          {error}<button
+            class="icon-button"
+            aria-label="Lukk feilmelding"
+            onclick={() => (error = '')}><X size={16} /></button
+          >
+        </div>{/if}
+      <main class:chat-main={view === 'chat'}>
+        {#if view === 'home'}
+          <section class="page-heading">
+            <div>
+              <p class="eyebrow">
+                {formatDate(new Date().toISOString(), {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}
+              </p>
+              <h1>Plass til neste idé.</h1>
+              <p class="muted">Her er det som skjer i {currentProduct?.name}.</p>
+            </div>
+            {#if canEdit}<button class="primary" onclick={() => openModal('item')}
+                ><Plus size={17} />Legg til innhold</button
+              >{/if}
+          </section>
+          <section class="summary-strip" aria-label="Arbeidsrommet i tall">
+            <button onclick={() => navigate('library')}
+              ><span>Biblioteket</span><strong>{items.length.toString().padStart(2, '0')}</strong
+              ><small>elementer samlet <ArrowUpRight size={15} /></small></button
+            ><button onclick={() => navigate('tasks')}
+              ><span>Under arbeid</span><strong
+                >{tasks
+                  .filter((t) => t.status === 'running')
+                  .length.toString()
+                  .padStart(2, '0')}</strong
+              ><small>oppgaver pågår <ArrowUpRight size={15} /></small></button
+            ><button onclick={() => navigate('calendar')}
+              ><span>På planen</span><strong
+                >{publications
+                  .filter((p) => p.status !== 'published')
+                  .length.toString()
+                  .padStart(2, '0')}</strong
+              ><small>kommende publiseringer <ArrowUpRight size={15} /></small></button
+            >
+          </section>
+          <div class="home-columns">
+            <section>
+              <div class="section-heading">
+                <h2>Neste ut</h2>
+                <button class="text-button" onclick={() => navigate('calendar')}
+                  >Se kalender<ArrowRight size={15} /></button
+                >
+              </div>
+              {#if upcoming.length}<div class="list-panel">
+                  {#each upcoming as p}<button
+                      class="publication-row"
+                      onclick={() =>
+                        openModal('publish-detail', {
+                          ...p,
+                          scheduled_at: localInput(new Date(p.scheduled_at)),
+                        })}
+                      ><span class="date-block"
+                        ><strong>{formatDate(p.scheduled_at, { day: 'numeric' })}</strong><small
+                          >{formatDate(p.scheduled_at, { month: 'short' })}</small
+                        ></span
+                      ><span class="row-main"
+                        ><strong>{p.title}</strong><small
+                          >{p.channel} · {formatDate(p.scheduled_at, {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}</small
+                        ></span
+                      ><span class="dot" class:ready={p.content_ready}></span></button
+                    >{/each}
+                </div>{:else}<div class="empty-card">
+                  <CalendarDays size={28} strokeWidth={1.3} />
+                  <h3>Gi ideene en dato.</h3>
+                  <p>Legg inn neste publisering.<br />Innholdet kan bli klart underveis.</p>
+                  {#if canEdit}<button class="secondary" onclick={() => openModal('publication')}
+                      >Planlegg en post<Plus size={15} /></button
+                    >{/if}
+                </div>{/if}
+            </section>
+            <section>
+              <div class="section-heading">
+                <h2>Trenger et blikk</h2>
+                <span class="small muted">{reviewTasks.length} til gjennomgang</span>
+              </div>
+              {#if reviewTasks.length}<div class="list-panel">
+                  {#each reviewTasks as t}<button
+                      class="review-row"
+                      onclick={() => {
+                        if (t.item_id) openItem(t.item_id);
+                        else navigate('tasks');
+                      }}
+                      ><span class="mini-icon"><FileText size={18} /></span><span class="row-main"
+                        ><strong>{t.title}</strong><small>{t.assignee || 'Ingen ansvarlig'}</small
+                        ></span
+                      ><ArrowUpRight size={17} /></button
+                    >{/each}
+                </div>{:else}<div class="empty-card quiet">
+                  <Check size={28} strokeWidth={1.3} />
+                  <h3>Alt er sett over.</h3>
+                  <p>Nye leveranser fra teamet og<br />agentene dukker opp her.</p>
+                </div>{/if}
+            </section>
+          </div>
+          <section class="start-note">
+            <span class="note-index">ET GODT STED Å BEGYNNE</span>
+            <h2>En tanke er nok.</h2>
+            <p>Samle en referanse, skriv ned en hook eller gi en agent et konkret oppdrag.</p>
+            <div>
+              <button
+                class="text-button"
+                onclick={() => {
+                  navigate('chat');
+                  composer = 'Hjelp meg å lage en brief for neste Teorimester-video.';
+                }}>Åpne chatten<ArrowRight size={16} /></button
+              ><button class="text-button" onclick={() => openModal('task')}
+                >Lag en oppgave<Plus size={16} /></button
+              >
+            </div>
+          </section>
+        {:else if view === 'library'}
+          <section class="page-heading">
+            <div>
+              <p class="eyebrow">DERE HAR LAGET. DERE VIL LAGE.</p>
+              <h1>Biblioteket</h1>
+              <p class="muted">Ideer, referanser og ferdig innhold. Samlet.</p>
+            </div>
+            {#if canEdit}<button class="primary" onclick={() => openModal('item')}
+                ><Plus size={17} />Legg til</button
+              >{/if}
+          </section>
+          <div class="filterbar">
+            <div class="chips">
+              <button class:selected={!filter} onclick={() => (filter = '')}
+                >Alt <span>{items.length}</span></button
+              >{#each ['video', 'image', 'hook', 'script', 'reference', 'template'] as kind}<button
+                  class:selected={filter === kind}
+                  onclick={() => (filter = kind)}>{kinds[kind]}</button
+                >{/each}
+            </div>
+            <select aria-label="Filtrer status" bind:value={statusFilter}
+              ><option value="">Alle statuser</option><option value="draft">Utkast</option><option
+                value="approved">Godkjent</option
+              ></select
+            >
+          </div>
+          {#if visibleItems.length}<div class="asset-grid">
+              {#each visibleItems as item}{@const Icon = iconFor(item.kind)}<button
+                  class="asset-card"
+                  onclick={() => openItem(item.id)}
+                  ><div
+                    class="asset-preview"
+                    class:text-preview={!['video', 'image', 'audio'].includes(item.kind)}
+                  >
+                    {#if item.mime?.startsWith('image/')}<img
+                        src={'/api/files/' + item.current_version_id}
+                        alt={item.title}
+                        loading="lazy"
+                      />{:else if item.mime?.startsWith('video/')}<video
+                        src={'/api/files/' + item.current_version_id + '#t=0.1'}
+                        preload="metadata"
+                        muted
+                        playsinline><track kind="captions" /></video
+                      ><Film size={22} />{:else}<Icon
+                        size={25}
+                        strokeWidth={1.4}
+                      />{#if item.body}<p>{item.body.slice(0, 140)}</p>{/if}{/if}<span
+                      class="type-label">{kinds[item.kind]}</span
+                    >
+                  </div>
+                  <div class="asset-info">
+                    <h3>{item.title}</h3>
+                    <div>
+                      <span>{formatDate(item.created_at)}</span><span
+                        class="status"
+                        class:approved={item.status === 'approved'}>{states[item.status]}</span
+                      >
+                    </div>
+                  </div></button
+                >{/each}
+            </div>{:else}<div class="empty-large">
+              <Library size={36} strokeWidth={1.2} />
+              <h2>{filter ? 'Ingen treff ennå.' : 'Alt begynner med det første.'}</h2>
+              <p>
+                {filter
+                  ? 'Velg en annen type, eller legg til nytt innhold.'
+                  : 'Last opp en fil, ta vare på en referanse eller skriv ned en idé.'}
+              </p>
+              {#if canEdit}<button class="primary" onclick={() => openModal('item')}
+                  ><Plus size={16} />Legg til innhold</button
+                >{/if}
+            </div>{/if}
+        {:else if view === 'calendar'}
+          <section class="page-heading">
+            <div>
+              <p class="eyebrow">EN TING OM GANGEN</p>
+              <h1>Publiseringsplan</h1>
+              <p class="muted">Hva som skal ut. Og alt du trenger for å poste.</p>
+            </div>
+            {#if canEdit}<button class="primary" onclick={() => openModal('publication')}
+                ><Plus size={17} />Planlegg</button
+              >{/if}
+          </section>
+          <div class="calendar-toolbar">
+            <div class="week-switch">
+              <button
+                class="icon-button"
+                aria-label="Forrige uke"
+                onclick={() => {
+                  calendarOffset--;
+                  selectedDay = '';
+                }}><ChevronLeft size={19} /></button
+              ><strong
+                >{formatDate(calendarDays[0] + 'T12:00:00Z')} – {formatDate(
+                  calendarDays[6] + 'T12:00:00Z',
+                )}</strong
+              ><button
+                class="icon-button"
+                aria-label="Neste uke"
+                onclick={() => {
+                  calendarOffset++;
+                  selectedDay = '';
+                }}><ChevronRight size={19} /></button
+              ><button
+                class="text-button"
+                onclick={() => {
+                  calendarOffset = 0;
+                  selectedDay = '';
+                }}>I dag</button
+              >
+            </div>
+            <div class="segmented">
+              <button
+                class:selected={calendarMode === 'week'}
+                onclick={() => (calendarMode = 'week')}>Uke</button
+              ><button
+                class:selected={calendarMode === 'list'}
+                onclick={() => (calendarMode = 'list')}>Liste</button
+              >
+            </div>
+          </div>
+          {#if calendarMode === 'week'}<div class="week-grid">
+              {#each calendarDays as day}{@const dayPosts = publications.filter((p) =>
+                  localInput(new Date(p.scheduled_at)).startsWith(day),
+                )}<button
+                  class:today={day === localInput().slice(0, 10)}
+                  class:chosen={day === selectedDay}
+                  onclick={() => (selectedDay = selectedDay === day ? '' : day)}
+                  ><span>{formatDate(day + 'T12:00:00Z', { weekday: 'short' })}</span><strong
+                    >{day.slice(-2)}</strong
+                  >
+                  <div class="day-dots">
+                    {#each dayPosts.slice(0, 4) as p}<i
+                        class:ready={p.content_ready || p.status === 'published'}
+                      ></i>{/each}
+                  </div></button
+                >{/each}
+            </div>{/if}
+          <div class="section-heading">
+            <h2>
+              {selectedDay
+                ? formatDate(selectedDay + 'T12:00:00Z', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                  })
+                : calendarMode === 'list'
+                  ? 'Alle publiseringer'
+                  : 'Denne uken'}
+            </h2>
+            <span class="small muted">Europe/Oslo</span>
+          </div>
+          {#if listedPublications.length}<div class="schedule-list">
+              {#each listedPublications as p}<button
+                  class="schedule-card"
+                  onclick={() =>
+                    openModal('publish-detail', {
+                      ...p,
+                      scheduled_at: localInput(new Date(p.scheduled_at)),
+                    })}
+                  ><div class="schedule-time">
+                    <strong
+                      >{formatDate(p.scheduled_at, { hour: '2-digit', minute: '2-digit' })}</strong
+                    ><span
+                      >{formatDate(p.scheduled_at, {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                      })}</span
+                    >
+                  </div>
+                  <div class="row-main">
+                    <span class="eyebrow">{p.channel}</span>
+                    <h3>{p.title}</h3>
+                    <small>{p.assignee || 'Ingen ansvarlig'}</small>
+                  </div>
+                  <span class="status" class:approved={p.status === 'published' || p.content_ready}
+                    >{p.status === 'published'
+                      ? 'Publisert'
+                      : p.content_ready
+                        ? 'Klar til å postes'
+                        : 'Mangler godkjent innhold'}</span
+                  ><ArrowUpRight size={18} /></button
+                >{/each}
+            </div>{:else}<div class="empty-large">
+              <CalendarDays size={34} strokeWidth={1.2} />
+              <h2>Her er det plass.</h2>
+              <p>Planlegg en publisering, selv om innholdet ikke er ferdig.</p>
+              {#if canEdit}<button
+                  class="secondary"
+                  onclick={() =>
+                    openModal('publication', {
+                      scheduled_at: (selectedDay || calendarDays[0]) + 'T10:00',
+                    })}><Plus size={16} />Legg noe på planen</button
+                >{/if}
+            </div>{/if}
+        {:else if view === 'tasks'}
+          <section class="page-heading">
+            <div>
+              <p class="eyebrow">FRA IDÉ TIL LEVERANSE</p>
+              <h1>Arbeidet underveis</h1>
+              <p class="muted">Oppgaver for dere og agentene deres.</p>
+            </div>
+            {#if canEdit}<button class="primary" onclick={() => openModal('task')}
+                ><Plus size={17} />Ny oppgave</button
+              >{/if}
+          </section>
+          <div class="board-tabs" aria-label="Oppgavestatus">
+            {#each columns as col}
+              <button
+                class:active={boardState === col}
+                aria-pressed={boardState === col}
+                onclick={() => (boardState = col)}
+                >{states[col]} <span>{tasks.filter((t) => t.status === col).length}</span></button
+              >
+            {/each}
+          </div>
+          <div class="kanban">
+            {#each columns as col}<section
+                class="kanban-column"
+                class:mobile-hidden={col !== boardState}
+              >
+                <div class="column-heading">
+                  <span class={'column-dot ' + col}></span>
+                  <h2>{col === 'ready' ? 'Klar til arbeid' : states[col]}</h2>
+                  <span>{tasks.filter((t) => t.status === col).length}</span>
+                </div>
+                {#each tasks.filter((t) => t.status === col) as t}<article class="task-card">
+                    <span class="eyebrow"
+                      >{t.executor === 'external' ? 'EKSTERN AGENT' : 'TEAM'}</span
+                    >
+                    <h3>{t.title}</h3>
+                    {#if t.brief}<p>{t.brief.slice(0, 160)}</p>{/if}
+                    <div class="task-meta">
+                      <span>{t.assignee || 'Ikke tildelt'}</span>{#if t.lease_until}<Clock3
+                          size={14}
+                        />{/if}
+                    </div>
+                    {#if t.item_id}<button class="text-button" onclick={() => openItem(t.item_id)}
+                        >Se leveransen<ArrowUpRight size={15} /></button
+                      >{/if}{#if canEdit}<select
+                        aria-label={'Status for ' + t.title}
+                        value={t.status}
+                        onchange={(e) => changeTask(t, e.currentTarget.value)}
+                        >{#each columns as state}<option value={state}>{states[state]}</option
+                          >{/each}</select
+                      >{/if}
+                  </article>{/each}{#if canEdit}<button
+                    class="add-task"
+                    onclick={() => openModal('task', { status: col })}
+                    ><Plus size={15} />Legg til oppgave</button
+                  >{/if}
+              </section>{/each}
+          </div>
+          <p class="small muted board-note">
+            Agenter kan hente oppgaver i «Klar til arbeid». Leveranser kommer tilbake til
+            gjennomgang.
+          </p>
+        {:else if view === 'chat'}
+          <div class="chat-top">
+            <div>
+              <h1>La oss få det gjort.</h1>
+              <span class="small muted">{currentProduct?.name} · produktkontekst og bibliotek</span>
+            </div>
+            <button
+              class="secondary"
+              onclick={() => {
+                conversationID = '';
+                messages = [];
+                latestRun = null;
+                runEvents = [];
+              }}><Plus size={16} /><span>Ny samtale</span></button
+            >
+          </div>
+          {#if conversations.length}<select
+              class="conversation-picker"
+              aria-label="Velg samtale"
+              value={conversationID}
+              onchange={(e) => selectConversation(e.currentTarget.value)}
+              ><option value="">Ny samtale</option>{#each conversations as c}<option value={c.id}
+                  >{c.title}</option
+                >{/each}</select
+            >{/if}
+          <div class="chat-scroll" aria-live="polite">
+            {#if !messages.length}<div class="chat-welcome">
+                <span class="chat-mark">s.</span>
+                <h2>Hva har du på hjertet?</h2>
+                <p>En løs idé, en konkret brief eller noe<br />du vil finne i biblioteket.</p>
+                <div class="suggestions">
+                  <button
+                    onclick={() =>
+                      (composer = 'Hjelp meg å skrive tre hooks for en video om teoriprøven.')}
+                    >Skriv tre nye hooks<ArrowUpRight size={15} /></button
+                  ><button
+                    onclick={() =>
+                      (composer =
+                        'Finn referanser og manus som allerede finnes i biblioteket vårt.')}
+                    >Finn materiale i biblioteket<ArrowUpRight size={15} /></button
+                  ><button
+                    onclick={() =>
+                      (composer = 'Lag en brief for en 15 sekunders video for foreldre.')}
+                    >Lag en produksjonsbrief<ArrowUpRight size={15} /></button
+                  >
+                </div>
+              </div>{/if}{#each messages as m}<article
+                class="chat-message"
+                class:mine={m.role === 'user'}
+              >
+                <span class="message-author">{m.role === 'user' ? user.name : 'Studio'}</span>
+                <p>{m.body}</p>
+              </article>{/each}
+            {#if latestRun}<div class="run-status">
+                <span class:working={activeRun} class="dot"></span><span
+                  >{states[latestRun.status]} · {latestRun.steps} steg · ${Number(
+                    latestRun.cost_usd,
+                  ).toFixed(4)}</span
+                >{#if activeRun}<button class="text-button" onclick={stopRun}
+                    ><Square size={12} />Stopp</button
+                  >{/if}
+              </div>
+              {#if latestRun.stop_reason}<p class="run-reason">
+                  {latestRun.stop_reason}
+                </p>{/if}{#if runEvents.length}<details class="run-log">
+                  <summary>Se jobblogg</summary>{#each runEvents as event}<div>
+                      <span>{event.kind}</span><code>{JSON.stringify(event.detail)}</code>
+                    </div>{/each}
+                </details>{/if}{/if}
+          </div>
+          <form class="composer" onsubmit={send}>
+            <textarea
+              aria-label="Melding til Studio"
+              bind:value={composer}
+              placeholder="Hva vil du lage eller finne?"
+              rows="2"
+              disabled={!canEdit}></textarea>
+            <div class="composer-bottom">
+              <select aria-label="Modell for denne samtalen" bind:value={modelOverride}
+                ><option value=""
+                  >{settings.models.find((m: Row) => m.role === 'chat')?.model ||
+                    'Velg modell i innstillinger'}</option
+                >{#each settings.models.filter((m: Row) => m.provider === 'openrouter' && m.model) as m}<option
+                    value={m.model}>{m.model}</option
+                  >{/each}</select
+              ><button
+                class="send-button"
+                aria-label="Send melding"
+                disabled={busy || activeRun || !composer.trim() || !canEdit}
+                ><ArrowUp size={20} /></button
+              >
+            </div>
+          </form>
+          <p class="composer-hint">
+            {settings.ai_enabled && settings.openrouter_connected
+              ? 'Studio kan søke og lagre utkast. Produksjonsagenter kobles til via MCP.'
+              : 'Legg inn OpenRouter-nøkkel og aktiver AI i .env for å bruke chatten.'}
+          </p>
+        {:else if view === 'settings'}
+          <section class="page-heading">
+            <div>
+              <p class="eyebrow">ET ARBEIDSROM SOM PASSER DERE</p>
+              <h1>Innstillinger</h1>
+              <p class="muted">Produkt, modeller og menneskene som er med.</p>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h2>Produktgrunnlaget</h2>
+            <p class="muted">Dette følger med når Studio jobber for {currentProduct?.name}.</p>
+            {#if currentProduct}<form
+                onsubmit={(e) => {
+                  e.preventDefault();
+                  safely(async () => {
+                    await api('/products/' + product, 'PATCH', {
+                      description: currentProduct.description,
+                      brand: currentProduct.brand,
+                      audience: currentProduct.audience,
+                    });
+                    toast('Produktgrunnlaget er lagret');
+                  });
+                }}
+              >
+                <label
+                  >Om produktet<textarea
+                    bind:value={currentProduct.description}
+                    rows="3"
+                    disabled={!canEdit}></textarea></label
+                ><label
+                  >Målgruppe<textarea
+                    bind:value={currentProduct.audience}
+                    rows="2"
+                    disabled={!canEdit}></textarea></label
+                ><label
+                  >Merkevare og godkjente påstander<textarea
+                    bind:value={currentProduct.brand}
+                    rows="4"
+                    placeholder="Tone, farger, formuleringer og fakta agentene skal bruke …"
+                    disabled={!canEdit}></textarea></label
+                >{#if canEdit}<button class="secondary" disabled={busy}
+                    >Lagre produktgrunnlag</button
+                  >{/if}
+              </form>{/if}
+          </section>
+          <section class="settings-section">
+            <div class="section-heading">
+              <h2>Modeller og grenser</h2>
+              <span class="status" class:approved={settings.ai_enabled}
+                >{settings.ai_enabled ? 'AI aktivert' : 'AI avslått'}</span
+              >
+            </div>
+            <p class="muted">
+              Velg en modell per rolle. Chat kjører i Studio. Produksjonsoppgaver utføres foreløpig
+              av eksterne MCP-agenter.
+            </p>
+            <p class="small muted">
+              OpenRouter: {settings.openrouter_connected ? 'nøkkel konfigurert' : 'nøkkel mangler'} ·
+              TypeSafe: {settings.typesafe_connected ? 'nøkkel konfigurert' : 'nøkkel mangler'}
+            </p>
+            <div class="model-list">
+              {#each settings.models as model}<form
+                  class="model-row"
+                  onsubmit={(e) => {
+                    e.preventDefault();
+                    saveModel(model);
+                  }}
+                >
+                  <div>
+                    <strong>{roleNames[model.role]}</strong><small
+                      >{model.provider === 'external'
+                        ? 'Ekstern agent via MCP'
+                        : model.role === 'chat'
+                          ? 'Aktiv chatmotor'
+                          : 'Modellvalg lagres · kjøring kommer senere'}</small
+                    >
+                  </div>
+                  <label
+                    >Modell-ID<input
+                      bind:value={model.model}
+                      placeholder={model.provider === 'typesafe'
+                        ? 'jev-1.13.0'
+                        : 'leverandør/modell'}
+                      disabled={user.role !== 'admin'}
+                    /></label
+                  >{#if model.role === 'chat'}<div class="limits-grid">
+                      <label
+                        >Maks steg<input
+                          type="number"
+                          min="1"
+                          max="12"
+                          bind:value={model.max_steps}
+                          disabled={user.role !== 'admin'}
+                        /></label
+                      ><label
+                        >Maks sekunder<input
+                          type="number"
+                          min="10"
+                          max="300"
+                          bind:value={model.timeout_seconds}
+                          disabled={user.role !== 'admin'}
+                        /></label
+                      ><label
+                        >USD per jobb<input
+                          type="number"
+                          min="0.001"
+                          max="5"
+                          step="0.001"
+                          bind:value={model.max_cost_usd}
+                          disabled={user.role !== 'admin'}
+                        /></label
+                      >
+                    </div>{/if}{#if user.role === 'admin'}<button class="secondary" disabled={busy}
+                      >Lagre</button
+                    >{/if}
+                </form>{/each}
+            </div>
+            <p class="small muted">
+              Studio krever også en bruksgrense på OpenRouter-nøkkelen. Jobber starter aldri nye
+              agentjobber automatisk.
+            </p>
+          </section>
+          {#if user.role === 'admin'}<section class="settings-section">
+              <div class="section-heading">
+                <h2>Invitasjoner</h2>
+                <button class="secondary" onclick={() => openModal('invite')}
+                  ><Plus size={16} />Inviter</button
+                >
+              </div>
+              <p class="muted">Kopier en invitasjonslenke og del den selv. Gyldig i syv dager.</p>
+              {#each invites as invite}<div class="settings-list-row">
+                  <span>{invite.email}<small>{invite.role}</small></span><span class="status"
+                    >{invite.used_at
+                      ? 'Brukt'
+                      : new Date(invite.expires_at) < new Date()
+                        ? 'Utløpt'
+                        : 'Venter'}</span
+                  >
+                </div>{/each}
+            </section>
+            <section class="settings-section">
+              <div class="section-heading">
+                <h2>Eksterne agenter</h2>
+                <button class="secondary" onclick={() => openModal('agent')}
+                  ><Plus size={16} />Ny agentnøkkel</button
+                >
+              </div>
+              <p class="muted">
+                Hver nøkkel gir tilgang til ett produkt. Agenten kan hente oppgaver og levere
+                innhold til gjennomgang.
+              </p>
+              <code class="endpoint">http://localhost:8088/mcp</code>{#each agentKeys as key}<div
+                  class="settings-list-row"
+                >
+                  <span>{key.name}<small>{key.product_name}</small></span>{#if key.revoked_at}<span
+                      class="status">Tilbakekalt</span
+                    >{:else}<button
+                      class="text-button"
+                      onclick={() =>
+                        safely(async () => {
+                          await api('/agent-tokens/' + key.id, 'DELETE');
+                          agentKeys = await api('/agent-tokens');
+                        })}>Tilbakekall</button
+                    >{/if}
+                </div>{/each}
+            </section>{/if}
+          <button
+            class="secondary"
+            onclick={() =>
+              safely(async () => {
+                await api('/auth/logout', 'POST', {});
+                user = null;
+                authMode = 'login';
+              })}><LogOut size={16} />Logg ut</button
+          >
+        {/if}
+      </main>
+    </div>
+    <nav class="mobile-nav" aria-label="Mobilmeny">
+      {#each nav as n}<button class:active={view === n.id} onclick={() => navigate(n.id)}
+          ><n.icon size={21} strokeWidth={1.7} /><span>{n.label}</span></button
+        >{/each}
+    </nav>
+  </div>
+{/if}
+
+{#if notice}<div class="toast" role="status"><Check size={16} />{notice}</div>{/if}
+<dialog
+  bind:this={dialog}
+  onclose={() => {
+    modal = '';
+    detail = null;
+  }}
+  class:search-dialog={modal === 'search'}
+  class:detail-dialog={modal === 'detail'}
+>
+  <div class="dialog-header">
+    <span class="eyebrow"
+      >{modal === 'search'
+        ? 'FINN DET DU TRENGER'
+        : modal === 'detail'
+          ? kinds[detail?.item.kind] || 'INNHOLD'
+          : currentProduct?.name || 'STUDIO'}</span
+    ><button class="icon-button" aria-label="Lukk" onclick={closeModal}><X size={21} /></button>
+  </div>
+  {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {#if modal === 'search'}
+    <div class="global-search">
+      <Search size={23} /><input
+        aria-label="Søk"
+        bind:value={query}
+        oninput={searchInput}
+        placeholder="Hva leter du etter?"
+      />
+    </div>
+    <p class="small muted">Søk i innhold, notater, samtaler, oppgaver og publiseringsplaner.</p>
+    <div class="search-results">
+      {#if searching}<p class="muted">Leter …</p>{:else if query && !results.length}<div
+          class="empty-card"
+        >
+          <h3>Ingen treff.</h3>
+          <p>Prøv et annet ord eller en kortere formulering.</p>
+        </div>{:else if !query}<p class="search-help">
+          Et ord fra et manus. En idé dere diskuterte.<br />Navnet på en publisering.
+        </p>{:else}{#each results as result}<button onclick={() => followResult(result)}
+            ><span class="eyebrow"
+              >{kinds[result.kind] ||
+                (
+                  {
+                    task: 'Oppgave',
+                    message: 'Samtale',
+                    publication: 'Publisering',
+                    note: 'Notat',
+                  } as Record<string, string>
+                )[result.entity] ||
+                result.entity}</span
+            >
+            <h3>{result.title}</h3>
+            <p>{result.excerpt}</p></button
+          >{/each}{/if}
+    </div>
+  {:else if modal === 'detail' && detail}
+    <h2>{detail.item.title}</h2>
+    <div class="detail-meta">
+      <span class="status" class:approved={detail.item.status === 'approved'}
+        >{states[detail.item.status]}</span
+      ><span>{detail.item.created_by}</span><span>{detail.versions?.length} versjoner</span>
+    </div>
+    {#if detail.item.mime?.startsWith('video/')}<video
+        class="detail-media"
+        src={'/api/files/' + detail.item.current_version_id}
+        controls
+        playsinline><track kind="captions" /></video
+      >{:else if detail.item.mime?.startsWith('image/')}<img
+        class="detail-media"
+        src={'/api/files/' + detail.item.current_version_id}
+        alt={detail.item.title}
+      />{:else if detail.item.mime?.startsWith('audio/')}<audio
+        class="detail-media"
+        src={'/api/files/' + detail.item.current_version_id}
+        controls
+      ></audio>{/if}
+    {#if editVersion}<label>Tittel<input bind:value={versionTitle} /></label><label
+        >Innhold<textarea rows="8" bind:value={versionBody}></textarea></label
+      >
+      <div class="button-row">
+        <button class="primary" onclick={saveVersion} disabled={busy}>Lagre ny versjon</button
+        ><button class="secondary" onclick={() => (editVersion = false)}>Avbryt</button>
+      </div>{:else}<p class="body-text">{detail.item.body || 'Ingen beskrivelse ennå.'}</p>{/if}
+    <p class="small muted">
+      Rettigheter: {(
+        {
+          unknown: 'Ikke avklart',
+          owned: 'Eget materiale',
+          licensed: 'Lisensiert',
+          reference_only: 'Kun referanse',
+        } as Record<string, string>
+      )[detail.item.rights]}
+    </p>
+    {#if detail.item.source_url}<a
+        class="text-button"
+        href={detail.item.source_url}
+        target="_blank"
+        rel="noreferrer">Åpne kilde<ArrowUpRight size={15} /></a
+      >{/if}
+    <div class="button-row">
+      {#if canEdit && !editVersion}<button class="secondary" onclick={() => (editVersion = true)}
+          >Ny versjon</button
+        >{#if detail.item.status !== 'approved'}<button
+            class="primary"
+            onclick={approve}
+            disabled={busy}><Check size={16} />Godkjenn</button
+          >{/if}{/if}{#if detail.item.file_name}<a
+          class="secondary"
+          href={'/api/files/' + detail.item.current_version_id + '?download=1'}
+          download><Download size={16} />Last ned</a
+        >{/if}
+    </div>
+    <details class="version-list">
+      <summary>Versjonshistorikk</summary>{#each detail.versions || [] as version}<div>
+          <strong>v{version.number} · {version.title}</strong><small
+            >{version.created_by} · {formatDate(version.created_at)}</small
+          >
+          <p>{version.body}</p>
+          {#if version.file_name}<a href={'/api/files/' + version.id + '?download=1'}
+              >Last ned denne versjonen</a
+            >{/if}
+        </div>{/each}
+    </details>
+    <section class="notes">
+      <h3>Notater</h3>
+      {#each detail.notes || [] as n}<article>
+          <strong>{n.author}</strong>
+          <p>{n.body}</p>
+          <small>{formatDate(n.created_at)}</small>
+        </article>{/each}{#if canEdit}<form onsubmit={postNote}>
+          <label class="sr-only" for="note">Nytt notat</label><textarea
+            id="note"
+            bind:value={note}
+            rows="2"
+            placeholder="En tanke eller tilbakemelding …"
+            required></textarea><button class="secondary" disabled={busy || !note.trim()}
+            >Legg til notat</button
+          >
+        </form>{/if}
+    </section>
+  {:else if modal === 'publish-detail'}
+    <h2>{draft.title}</h2>
+    <p class="muted">
+      {draft.channel} · {formatDate(osloISO(draft.scheduled_at), {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}
+    </p>
+    <span class="status" class:approved={draft.content_ready}
+      >{draft.content_ready ? 'Godkjent innhold er klart' : 'Mangler godkjent innhold'}</span
+    >
+    <label
+      >Publiseringstid · Europe/Oslo<input
+        type="datetime-local"
+        bind:value={draft.scheduled_at}
+        disabled={!canEdit}
+      /></label
+    ><label
+      >Innhold<select bind:value={draft.item_id} disabled={!canEdit}
+        ><option value="">Velg innhold</option>{#each items as i}<option value={i.id}
+            >{i.title} · {states[i.status]}</option
+          >{/each}</select
+      ></label
+    >{#if canEdit}<button class="secondary" onclick={savePublication} disabled={busy}
+        >Oppdater pakken</button
+      >{/if}
+    <div class="publish-copy">
+      <div class="section-heading">
+        <h3>Posttekst</h3>
+        <button class="text-button" onclick={() => copy(draft.caption || '')}
+          ><Copy size={15} />Kopier</button
+        >
+      </div>
+      <p class="body-text">{draft.caption || 'Ingen posttekst er lagt inn.'}</p>
+    </div>
+    {#if draft.version_id && draft.file_name}<a
+        class="primary wide"
+        href={'/api/files/' + draft.version_id + '?download=1'}
+        download><Download size={17} />Last ned publiseringsfil</a
+      >{/if}
+    <a
+      class="secondary wide"
+      href={draft.channel === 'TikTok'
+        ? 'https://www.tiktok.com/'
+        : draft.channel === 'YouTube'
+          ? 'https://studio.youtube.com/'
+          : draft.channel === 'Facebook'
+            ? 'https://www.facebook.com/'
+            : draft.channel === 'Snapchat'
+              ? 'https://www.snapchat.com/'
+              : 'https://www.instagram.com/'}
+      target="_blank"
+      rel="noreferrer">Åpne {draft.channel}<ArrowUpRight size={16} /></a
+    >
+    {#if draft.status !== 'published' && canEdit}<form
+        class="publish-confirm"
+        onsubmit={(e) => {
+          e.preventDefault();
+          markPublished();
+        }}
+      >
+        <label
+          >Lenke til publisert post<input
+            type="url"
+            bind:value={draft.url}
+            placeholder="https://…"
+            required
+          /></label
+        ><button class="primary" disabled={busy || !draft.content_ready}
+          ><Check size={16} />Marker som publisert</button
+        >
+      </form>{:else if draft.url}<a href={draft.url} target="_blank" rel="noreferrer"
+        >Se publisert post</a
+      >{/if}
+  {:else if modal}
+    <h2>
+      {modal === 'item'
+        ? 'Legg til i biblioteket'
+        : modal === 'task'
+          ? 'Et nytt oppdrag'
+          : modal === 'publication'
+            ? 'Sett en dato'
+            : modal === 'invite'
+              ? 'Inviter en kollega'
+              : 'Koble til en agent'}
+    </h2>
+    {#if freshSecret}<p>Kopier nøkkelen nå. Den vises bare én gang.</p>
+      <code class="secret">{freshSecret}</code><button
+        class="primary"
+        onclick={() => copy(freshSecret)}><Copy size={16} />Kopier nøkkel</button
+      >
+      <p class="small muted">MCP: http://localhost:8088/mcp · Authorization: Bearer nøkkel</p>
+    {:else if inviteLink}<p>Del denne lenken med {draft.email}.</p>
+      <code class="secret">{inviteLink}</code><button
+        class="primary"
+        onclick={() => copy(inviteLink)}><Copy size={16} />Kopier invitasjon</button
+      >
+    {:else}<form onsubmit={save}>
+        {#if modal === 'invite'}<label
+            >E-post<input
+              type="email"
+              bind:value={draft.email}
+              required
+              placeholder="kollega@firma.no"
+            /></label
+          ><label
+            >Tilgang<select bind:value={draft.role}
+              ><option value="editor">Redaktør</option><option value="reader">Lesetilgang</option
+              ><option value="admin">Administrator</option></select
+            ></label
+          >
+        {:else}<label
+            >{modal === 'agent' ? 'Agentens navn' : 'Tittel'}<input
+              bind:value={draft.title}
+              required
+              placeholder={modal === 'task'
+                ? 'Lag tre hook-varianter til neste video'
+                : 'Gi det et godt navn'}
+              maxlength="300"
+            /></label
+          >{/if}
+        {#if modal === 'item'}<div class="upload-zone">
+            <Upload size={23} strokeWidth={1.4} /><strong
+              >{file ? file.name : 'Legg ved en fil'}</strong
+            ><span>Bilder, video og lyd · inntil 250 MB</span><input
+              type="file"
+              aria-label="Last opp fil"
+              onchange={(e) => {
+                file = e.currentTarget.files?.[0] || null;
+                if (file && !draft.title) draft.title = file.name;
+              }}
+            />
+          </div>
+          {#if !file}<label
+              >Type<select bind:value={draft.kind}
+                >{#each Object.entries(kinds) as [id, label]}<option value={id}>{label}</option
+                  >{/each}</select
+              ></label
+            >{/if}<label
+            >Innhold eller beskrivelse<textarea
+              bind:value={draft.body}
+              rows="5"
+              placeholder="Skriv, lim inn eller ta vare på en tanke …"></textarea></label
+          >{#if draft.kind === 'reference'}<label
+              >Kildelenke<input
+                type="url"
+                bind:value={draft.source_url}
+                placeholder="https://…"
+              /></label
+            >{/if}<label
+            >Bruksrettigheter<select bind:value={draft.rights}
+              ><option value="unknown">Ikke avklart</option><option value="owned"
+                >Eget materiale</option
+              ><option value="licensed">Lisensiert</option><option value="reference_only"
+                >Kun referanse</option
+              ></select
+            ></label
+          >{/if}
+        {#if modal === 'task'}<label
+            >Brief<textarea
+              bind:value={draft.body}
+              rows="5"
+              placeholder="Hva skal lages, til hvem og i hvilket format?"></textarea></label
+          >
+          <div class="form-grid">
+            <label
+              >Utføres av<select bind:value={draft.executor}
+                ><option value="external">Ekstern agent via MCP</option><option value="human"
+                  >Et menneske</option
+                ></select
+              ></label
+            ><label
+              >Status<select bind:value={draft.status}
+                >{#each columns as col}<option value={col}>{states[col]}</option>{/each}</select
+              ></label
+            >
+          </div>
+          <label
+            >Ansvarlig<input bind:value={draft.assignee} placeholder="Navn eller agent" /></label
+          >{/if}
+        {#if modal === 'publication'}<div class="form-grid">
+            <label
+              >Kanal<select bind:value={draft.channel}
+                >{#each ['Instagram', 'TikTok', 'Facebook', 'YouTube', 'Snapchat'] as ch}<option
+                    >{ch}</option
+                  >{/each}</select
+              ></label
+            ><label
+              >Tid · Europe/Oslo<input
+                type="datetime-local"
+                bind:value={draft.scheduled_at}
+                required
+              /></label
+            >
+          </div>
+          <label
+            >Posttekst<textarea
+              bind:value={draft.caption}
+              rows="4"
+              placeholder="Teksten som følger posten …"></textarea></label
+          ><label
+            >Koble til innhold<select bind:value={draft.item_id}
+              ><option value="">Kommer senere</option>{#each items as i}<option value={i.id}
+                  >{i.title}</option
+                >{/each}</select
+            ></label
+          ><label
+            >Produksjonsoppgave<select bind:value={draft.task_id}
+              ><option value="">Ingen oppgave</option>{#each tasks as t}<option value={t.id}
+                  >{t.title}</option
+                >{/each}</select
+            ></label
+          ><label>Hvem skal poste?<input bind:value={draft.assignee} placeholder="Navn" /></label
+          >{/if}
+        {#if modal === 'agent'}<p class="muted">
+            Nøkkelen får tilgang til {currentProduct?.name}. Den kan hente og levere oppgaver, men
+            ikke godkjenne eller publisere.
+          </p>{/if}
+        <div class="dialog-footer">
+          <button type="button" class="secondary" onclick={closeModal}>Avbryt</button><button
+            class="primary"
+            disabled={busy}
+            >{uploadProgress
+              ? 'Laster opp …'
+              : busy
+                ? 'Lagrer …'
+                : modal === 'invite'
+                  ? 'Lag invitasjonslenke'
+                  : modal === 'agent'
+                    ? 'Opprett nøkkel'
+                    : 'Lagre'}<ArrowRight size={16} /></button
+          >
+        </div>
+      </form>{/if}
+  {/if}
+</dialog>

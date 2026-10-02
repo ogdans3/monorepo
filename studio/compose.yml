@@ -1,0 +1,49 @@
+name: studio
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: studio
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studio-local-only}
+    ports:
+      - '127.0.0.1:5448:5432'
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U studio -d studio']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+  api:
+    build: ./api
+    environment:
+      DATABASE_URL: postgres://studio:${POSTGRES_PASSWORD:-studio-local-only}@db:5432/studio?sslmode=disable
+      LISTEN_ADDR: ':8088'
+      STORAGE_PATH: /data/files
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:5178}
+      BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN:?Run scripts/setup.sh first}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      AI_ENABLED: ${AI_ENABLED:-false}
+    ports:
+      - '127.0.0.1:8088:8088'
+    volumes:
+      - files:/data/files
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    build: ./web
+    environment:
+      API_URL: http://api:8088
+      ORIGIN: ${APP_ORIGIN:-http://localhost:5178}
+      PORT: '5178'
+      BODY_SIZE_LIMIT: '270M'
+    ports:
+      - '127.0.0.1:5178:5178'
+    depends_on:
+      - api
+volumes:
+  database:
+  files:

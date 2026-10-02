@@ -1,0 +1,10 @@
+.env
+.data/
+.logs/
+api/studio
+web/node_modules/
+web/.svelte-kit/
+web/build/
+test-results/
+playwright-report/
+*.log
