@@ -84,12 +84,19 @@ export default async function tradeRoutes(app: FastifyInstance) {
   app.post('/trades/:id/accept', async (request) => {
     const userId = app.requireClaimedUser(request)
     const { id } = idParam.parse(request.params)
-    const body = z.object({ termsVersion: z.string().default('2026-09-06') }).parse(request.body ?? {})
+    const body = z
+      .object({
+        termsVersion: z.string().default('2026-09-06'),
+        // The version 06c showed. Absent, the yes is for the newest, which is
+        // what an app from before this sends.
+        offerId: z.string().uuid().nullish(),
+      })
+      .parse(request.body ?? {})
 
     // The guards, the acceptance and everything that follows it are in
     // `trades/accept.ts`, because the test tooling says yes on somebody else's
     // behalf and a second copy of them is a second copy that drifts.
-    const result = await acceptTrade(app.db, id, userId, body.termsVersion)
+    const result = await acceptTrade(app.db, id, userId, body.termsVersion, body.offerId)
     return { ...result, trade: await tradeView(app.db, id, userId) }
   })
 
@@ -141,6 +148,9 @@ export default async function tradeRoutes(app: FastifyInstance) {
             amountNok: z.number().int().positive(),
           })
           .nullish(),
+        // The version the proposal answers. Absent, it answers whatever is on
+        // the table, which is what an app from before this sends.
+        baseOfferId: z.string().uuid().nullish(),
       })
       .parse(request.body)
 
@@ -150,7 +160,7 @@ export default async function tradeRoutes(app: FastifyInstance) {
     // reopen something that is over — so the state, and the offer, are judged
     // in `proposeCounterOffer`, under the trade's lock.
     const { freed } = await proposeCounterOffer(
-      app.db, id, userId, body.items, body.cash ?? undefined,
+      app.db, id, userId, body.items, body.cash ?? undefined, { baseOfferId: body.baseOfferId },
     )
 
     await app.db.execute(sql`

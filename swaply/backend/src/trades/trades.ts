@@ -113,6 +113,18 @@ export async function startTalking(
   })
 }
 
+/** 409 for a yes to a version that is no longer the one on the table. */
+export const offerChanged = () =>
+  conflict('offer_changed', 'Forslaget er endret. Se over det nye før du godtar.')
+
+/** The version on the table: the highest `seq`. Read under the trade's lock. */
+async function newestOffer(tx: Tx, tradeId: string): Promise<string | null> {
+  const [row] = await tx.execute<Row>(
+    sql`select id from trade_offers where trade_id = ${tradeId} order by seq desc limit 1`,
+  )
+  return row?.['id'] ?? null
+}
+
 /** A counter-offer on the table, and what the trade let go of to put it there. */
 export type CounterResult = {
   offerId: string
@@ -143,6 +155,14 @@ export async function proposeCounterOffer(
   proposedBy: string,
   items: OfferItem[],
   cash?: OfferCash,
+  opts: {
+    /**
+     * The version the proposal was made from, when the client says. A newer
+     * one on the table means the person answered a deal that has already
+     * been answered, and their proposal would quietly replace it.
+     */
+    baseOfferId?: string | null
+  } = {},
 ): Promise<CounterResult> {
   return db.transaction(async (tx) => {
     const state = (await lockTrades(tx, [tradeId])).get(tradeId)
@@ -157,6 +177,12 @@ export async function proposeCounterOffer(
     }
     if (!state || !NEGOTIABLE.includes(state)) {
       throw conflict('not_negotiable', 'Byttet er avsluttet.')
+    }
+    if (opts.baseOfferId && (await newestOffer(tx, tradeId)) !== opts.baseOfferId) {
+      throw conflict(
+        'offer_changed',
+        'Forslaget er endret. Se over det nye før du foreslår noe annet.',
+      )
     }
     await validateOffer(tx, tradeId, items, cash)
 
@@ -277,6 +303,12 @@ export async function acceptOffer(
     if (state === 'paused') {
       throw conflict('trade_paused', 'Byttet er pauset mens noen svarer på en forespørsel.')
     }
+    // A yes is for the version on the table, and that is the newest one. A
+    // counter-offer that landed since this one was read — while the person
+    // was looking at it, or between the read and this lock — means the thing
+    // they said yes to is no longer what is proposed; and enough yeses to an
+    // old version agreed a trade on a deal nobody had on the table.
+    if ((await newestOffer(tx, tradeId)) !== offerId) throw offerChanged()
     // Only a negotiation loses its things to another trade's yes, judged as
     // it stands now that it is held. An agreed trade holding one of them is
     // refused below, as `item_reserved`.

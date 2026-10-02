@@ -4,7 +4,7 @@ import type { Database } from '../db/index.js'
 import { conflict, notFound } from '../lib/errors.js'
 import { one } from '../lib/rows.js'
 import { sweepForCycles } from './sweep.js'
-import { acceptOffer, type AcceptResult } from './trades.js'
+import { acceptOffer, offerChanged, type AcceptResult } from './trades.js'
 import { tradeView } from './view.js'
 
 /**
@@ -22,6 +22,12 @@ export async function acceptTrade(
   tradeId: string,
   userId: string,
   termsVersion: string,
+  /**
+   * The version the person was shown, when the client says which. Without
+   * it — the app as released on 30.09 sends none — the yes is for the newest.
+   * Either way `acceptOffer` checks under the lock that it still is.
+   */
+  offerId?: string | null,
 ): Promise<AcceptResult> {
   const view = await tradeView(db, tradeId, userId)
   if (!view) throw notFound('Fant ikke byttet.')
@@ -34,6 +40,10 @@ export async function acceptTrade(
     // Accepting again here would quietly overwrite that question.
     throw conflict('trade_paused', 'Byttet er pauset mens noen svarer på en forespørsel.')
   }
+  // The version on the screen has to be the one on the table, or the yes is
+  // for something the person has not seen. An id from another trade is never
+  // this one's newest, so it can only ever be refused here.
+  if (offerId && offerId !== view.offerId) throw offerChanged()
 
   // «Each side of a hop is a list of 1–3 items.» The opening offer behind
   // «Jeg vil ha» names their listing and nothing back, and accepting that is
@@ -53,6 +63,7 @@ export async function acceptTrade(
     )
   }
 
+  // Asked again under the lock: a counter-offer may land after the read above.
   const result = await acceptOffer(db, view.offerId, userId, termsVersion)
 
   await db.execute(sql`
