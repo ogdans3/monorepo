@@ -481,11 +481,19 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   List<Widget> _sections(Trade trade) {
     final chain = trade.isChain;
 
+    final withdrawal = trade.withdrawal;
     return [
-      // 08b: the trade is paused while the other side answers.
-      if (trade.state == 'paused' && trade.withdrawal != null) _withdrawalBanner(trade),
-      // 08c: asked too late, because something had already been sent.
-      if (trade.withdrawal?.state == 'rejected' && trade.withdrawal!.blockedBySent)
+      // 08b: the trade is paused while the question is answered.
+      if (trade.state == 'paused' && withdrawal?.state == 'waiting') _withdrawalBanner(trade),
+      // 08c: asked too late, because something had already been sent. Only
+      // to the one who asked, and only while the trade carries on: it was
+      // drawn for everybody in it — telling the one who had answered that
+      // they could not withdraw — and stayed after the trade had ended.
+      if (withdrawal != null &&
+          withdrawal.byYou &&
+          trade.state == 'accepted' &&
+          withdrawal.state == 'rejected' &&
+          withdrawal.blockedBySent)
         _blockedBanner(trade),
       // 09e: a new proposal is on the table.
       if (trade.state == 'countered' && trade.counterOfferBy != trade.participants
@@ -695,9 +703,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ),
       );
 
+  /// Everybody in the trade but you.
+  List<UserRef> _others(Trade trade) =>
+      trade.participants.where((p) => p.position != trade.youPosition).toList();
+
   Widget _withdrawalBanner(Trade trade) {
     final w = trade.withdrawal!;
-    final other = trade.receivingFrom.displayName.split(' ').first;
+    final others = _others(trade);
+    // Who asked, which in a ring is not always the one you receive from.
+    final asker = others.where((p) => p.id == w.requestedBy).firstOrNull ?? trade.receivingFrom;
     final left = w.respondsBy?.difference(now());
 
     return Padding(
@@ -706,13 +720,22 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(w.byYou ? 'Vi hører med $other' : '$other vil trekke seg', style: Type.heading),
+            Text(
+                w.byYou
+                    ? 'Vi hører med ${_firstNames(others)}'
+                    : '${_firstName(asker)} vil trekke seg',
+                style: Type.heading),
             const SizedBox(height: 6),
             Text(
               w.byYou
-                  ? 'Byttet er pauset mens $other svarer på om det er greit at du trekker deg.'
-                  : '$other har bedt om å trekke seg. Svarer du ja og ingenting er sendt, '
-                      'avbrytes byttet.',
+                  // In a ring two are asked, and the first answer decides.
+                  ? others.length > 1
+                      ? 'Byttet er pauset til en av dem svarer på om det er greit at du '
+                          'trekker deg.'
+                      : 'Byttet er pauset mens ${_firstName(asker)} svarer på om det er greit '
+                          'at du trekker deg.'
+                  : '${_firstName(asker)} har bedt om å trekke seg. Svarer du ja og ingenting '
+                      'er sendt, avbrytes byttet.',
               style: Type.secondary,
             ),
             if (left != null && !left.isNegative) ...[
@@ -754,6 +777,20 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     );
   }
 
+  /// «Kari har allerede sendt sin ting.», naming whoever has marked theirs
+  /// sent: in a ring that is one of two, and not always the one you receive
+  /// from.
+  String _alreadySent(Trade trade) {
+    final others = _others(trade);
+    final sent = others.where((p) => p.sentAt != null).toList();
+    if (sent.length > 1) return '${_firstNames(sent)} har allerede sendt tingene sine.';
+    if (sent.length == 1) return '${_firstName(sent.single)} har allerede sendt sin ting.';
+    // Nobody marked as sent on this phone's copy of the trade.
+    return others.length > 1
+        ? 'En av de andre har allerede sendt sin ting.'
+        : '${_firstName(trade.receivingFrom)} har allerede sendt sin ting.';
+  }
+
   Widget _blockedBanner(Trade trade) => Padding(
         padding: const EdgeInsets.only(top: Insets.sm),
         child: SectionCard(
@@ -763,8 +800,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
               const Text('Du kan ikke trekke deg', style: Type.heading),
               const SizedBox(height: 6),
               Text(
-                '${trade.receivingFrom.displayName.split(' ').first} har allerede sendt sin ting. '
-                'Byttet fortsetter som normalt.',
+                '${_alreadySent(trade)} Byttet fortsetter som normalt.',
                 style: Type.secondary,
               ),
               const SizedBox(height: Insets.sm),
@@ -1474,7 +1510,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       if (result.blocked) {
         await _confirm(
           title: 'Du kan ikke trekke deg',
-          body: '$other har allerede sendt sin ting. Byttet fortsetter som normalt.',
+          body: '${_alreadySent(result.trade)} Byttet fortsetter som normalt.',
           confirm: 'Tilbake til byttet',
           cancel: null,
         );
@@ -1542,5 +1578,15 @@ const _months = [
   'januar', 'februar', 'mars', 'april', 'mai', 'juni',
   'juli', 'august', 'september', 'oktober', 'november', 'desember',
 ];
+
+/// «Kari», as every line on the trade screen names somebody.
+String _firstName(UserRef person) => person.displayName.split(' ').first;
+
+/// «Kari», or «Kari og Per»: the two others in a ring.
+String _firstNames(List<UserRef> people) {
+  final names = people.map(_firstName).toList();
+  if (names.length < 2) return names.firstOrNull ?? '';
+  return '${names.sublist(0, names.length - 1).join(', ')} og ${names.last}';
+}
 
 String _longDate(DateTime date) => '${date.day}. ${_months[date.month - 1]} ${date.year}';

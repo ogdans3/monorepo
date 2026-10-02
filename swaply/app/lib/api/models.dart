@@ -344,11 +344,16 @@ class TradeLeg {
 class Withdrawal {
   Withdrawal.fromJson(Map<String, dynamic> j)
       : byYou = j['byYou'] as bool? ?? false,
+        requestedBy = j['requestedBy'] as String?,
         state = j['state'] as String? ?? 'waiting',
         respondsBy = _date(j['respondsBy']),
         blockedBySent = j['blockedBySent'] as bool? ?? false;
 
   final bool byYou, blockedBySent;
+
+  /// Who asked to be let out: in a ring of three not always the one you
+  /// receive from, which is who the banner used to name.
+  final String? requestedBy;
   final String state;
   final DateTime? respondsBy;
 }
