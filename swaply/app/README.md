@@ -809,6 +809,19 @@ behind that session, not the account's — and the tool retires it, as
 `../docs/ADMIN.md` has it; the phone goes back to the admin after.
 `test/account_test.dart` holds both, and the «Vis alt» row.
 
+## Flutter's own words are Norwegian too
+
+The app's words were always Norwegian; the ones Flutter brings were not. «Copy»
+and «Paste» over a field, «Dismiss» for the dimming behind a sheet, «Back»,
+«Close» and «Alert» for a screen reader — English whatever the phone was set
+to, because the app never said which language it speaks. `main.dart` says
+Bokmål (`nb_NO`) now, with `flutter_localizations`' delegates, and only Bokmål,
+since every word of the app's own is. On iOS `Info.plist` lists `nb` in
+`CFBundleLocalizations`, so the system's own sheets (the photo picker, sharing)
+can follow, and the web build's page is `lang="nb"`. `intl` came in with it and
+is no longer listed on its own: nothing in the app used it.
+`test/norwegian_test.dart` holds it.
+
 ## What the app says in passing
 
 `widgets/toast.dart` is the only way the app says something without taking over

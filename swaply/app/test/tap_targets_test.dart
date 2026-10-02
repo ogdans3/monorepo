@@ -239,8 +239,9 @@ List<_Target> _targets(WidgetTester tester) {
   return found;
 }
 
-/// What the dimming behind a sheet or a dialog calls itself.
-const _dimming = {'Scrim', 'Dismiss'};
+/// What the dimming behind a sheet or a dialog calls itself: in English, as a
+/// screen mounted on its own speaks, and in Norwegian, as the app does.
+const _dimming = {'Scrim', 'Dismiss', 'Vev', 'Avvis'};
 
 /// The target a real touch at [position] reaches: the deepest listener the hit
 /// test finds, and the node it answers as — or null, when that node answers

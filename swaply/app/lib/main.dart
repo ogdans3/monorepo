@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'api/client.dart';
@@ -120,6 +121,14 @@ class _SwaplyAppState extends State<SwaplyApp> with WidgetsBindingObserver {
         title: 'Swaply',
         debugShowCheckedModeBanner: false,
         theme: swaplyTheme(),
+        // The app speaks Norwegian, and so does Flutter in it: «Kopier» and
+        // «Lim inn» over a field, «Lukk» on a sheet a screen reader can
+        // dismiss, «Tilbake» for a back button. Without this they were in
+        // English, whatever the phone was set to. Bokmål whatever the phone
+        // is set to, too: every word of the app's own is.
+        locale: const Locale('nb', 'NO'),
+        supportedLocales: const [Locale('nb', 'NO')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         navigatorKey: _navigator,
         // Phone-sized on a desk; see Desk. The admin floor is wired here and
         // not inside a screen, so that «you are Kari right now» is drawn on
