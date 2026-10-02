@@ -81,6 +81,10 @@ export default async function discoveryRoutes(app: FastifyInstance) {
 
     // «Nærmest» needs the viewer's town, so it is written out below with the
     // rest of the query rather than as a fragment with a placeholder in it.
+    // Where a thing is, is the listing's own town — the postcode typed on 10b
+    // — and only without one its owner's: a drill kept at the cabin is at
+    // the cabin. Same town first, and the rest newest first, as it always
+    // was; for somebody who has not said where they are, that is all of it.
     //
     // Every order ends on the id. A page is an offset into the order, and
     // listings that tie on everything before it — one value, one town, one
@@ -101,7 +105,9 @@ export default async function discoveryRoutes(app: FastifyInstance) {
                      exists (select 1 from likes l where l.target_item = i.id
                              and l.from_user = ${viewer ?? null}) as liked_by_me
               ${base}
-              order by (u.town is distinct from (select town from users where id = ${viewer ?? null})) asc,
+              order by (lower(coalesce(nullif(i.town, ''), nullif(u.town, ''))) =
+                        (select lower(nullif(v.town, '')) from users v
+                         where v.id = ${viewer ?? null})) is true desc,
                        i.created_at desc, i.id
               limit ${args.limit} offset ${args.offset}`
         : sql`select i.*, ${coverSql('i')} as cover,

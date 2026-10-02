@@ -12,6 +12,9 @@
 // and with neither there is no town rather than an invented one. A postcode
 // that belongs to no town is refused in words, since passing over it is the
 // same silence as before and a typo is the likeliest reason for one.
+//
+// «Nærmest» on Oppdag reads the same town: where the listing is, and its
+// owner's town only when it has none of its own.
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
@@ -171,5 +174,39 @@ describe('where a listing is', () => {
     const page = await call('GET', `/items/${drill}`, { token: kari })
     expect(page.body!['town']).toBe('Bergen')
     expect(page.body!['title']).toBe('Bosch drill 18V med koffert')
+  })
+
+  test('12. «Nærmest» goes by where the listing is, not by where its owner lives', async () => {
+    // Siri is in Trondheim. Kari lives in Bergen, and her cabin drill is in
+    // Trondheim; her screwdriver is at home.
+    const siri = await call('POST', '/auth/register', {
+      body: { displayName: 'Siri', email: 'siri@epost.no', password: 'sykkelsete2', postalCode: '7030' },
+    })
+    const near = await call('GET', '/discover?sort=nearest', { token: siri.body!['token'] })
+    expect(near.body!['items'][0]['title']).toBe('Hyttedrill')
+
+    // Nils is in Bergen: Kari's screwdriver, and Ola's drill since it moved
+    // there in step 10 — Ola himself has said nowhere.
+    const nils = await call('POST', '/auth/register', {
+      body: { displayName: 'Nils', email: 'nils@epost.no', password: 'sykkelsete3', postalCode: '5003' },
+    })
+    const bergen = await call('GET', '/discover?sort=nearest', { token: nils.body!['token'] })
+    const first = (bergen.body!['items'] as Json[]).slice(0, 2).map((i) => i['title']).sort()
+    expect(first).toEqual(['Bosch drill 18V med koffert', 'Skrutrekker'])
+  })
+
+  test('13. and somebody who has said nowhere is shown the newest first', async () => {
+    // Not the listings that say nowhere either, which is what comparing two
+    // unknowns used to put first.
+    const phone = await call('POST', '/auth/anonymous', {
+      body: { deviceId: 'device-nearest-0123456789abcdef' },
+    })
+    const token = phone.body!['token']
+    const ids = async (sort: string) =>
+      ((await call('GET', `/discover?sort=${sort}`, { token })).body!['items'] as Json[]).map(
+        (i) => i['id'],
+      )
+
+    expect(await ids('nearest')).toEqual(await ids('newest'))
   })
 })
