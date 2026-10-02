@@ -421,4 +421,27 @@ describe('the test tooling', () => {
       await refusal(db.execute(sql`update users set test_account_of = ${gabrielId} where id = ${id}`)),
     ).toMatch(/never adopted/)
   })
+
+  test('19. accounts made without a name answer to first names nobody else in the ring has', async () => {
+    // The screens call people by their first name — «Som motparten» draws
+    // «Kari godtar» — and every account used to be «Testbruker …», so a
+    // three-way trade read «Testbruker godtar» twice.
+    for (let i = 0; i < 3; i++) {
+      const made = await call('POST', '/admin/accounts', { token: gabriel, body: { withItems: 0 } })
+      expect(made.status).toBe(201)
+    }
+
+    const overview = await call('GET', '/admin/overview', { token: gabriel })
+    const firsts = [
+      'Gabriel',
+      ...(overview.body!['accounts'] as Json[]).map((a) => a['displayName'] as string | null),
+    ]
+      .filter((name): name is string => Boolean(name))
+      .map((name) => name.split(' ')[0])
+    expect(new Set(firsts).size).toBe(firsts.length)
+    expect(firsts).not.toContain('Testbruker')
+    // «Kari Testbruker» from step 5 already answers to Kari, so the first
+    // account made without a name is not another one.
+    expect(firsts.filter((name) => name === 'Kari')).toHaveLength(1)
+  })
 })

@@ -32,14 +32,40 @@ export const CATALOGUE: Fixture[] = [
   { title: 'Snømåking en vinter', category: 'hjem', kind: 'service', valueNok: 1500, description: 'Jeg måker innkjørselen din hele vinteren.' },
 ]
 
-/** Names and towns for accounts nobody should mistake for a person. */
+/**
+ * Names and towns for test accounts: a first name and the initial T., for
+ * test. The first name is what the screens call somebody — «Som motparten»
+ * draws «Kari godtar» — so each is a different one. They used to be
+ * «Testbruker Én», «Testbruker To», …, which every screen shortened to
+ * «Testbruker», and a three-way trade read «Testbruker godtar» twice.
+ *
+ * More of them than the twenty accounts a ring may hold, so a new account
+ * can always be given a first name nobody in the ring has (`createTestAccount`).
+ * The badge, not the name, is what says it is a test account.
+ */
 export const PEOPLE = [
-  { name: 'Testbruker Én', town: 'Trondheim' },
-  { name: 'Testbruker To', town: 'Bergen' },
-  { name: 'Testbruker Tre', town: 'Stavanger' },
-  { name: 'Testbruker Fire', town: 'Tromsø' },
-  { name: 'Testbruker Fem', town: 'Kristiansand' },
-  { name: 'Testbruker Seks', town: 'Ålesund' },
+  { name: 'Kari T.', town: 'Trondheim' },
+  { name: 'Ola T.', town: 'Bergen' },
+  { name: 'Ingrid T.', town: 'Stavanger' },
+  { name: 'Lars T.', town: 'Tromsø' },
+  { name: 'Sigrid T.', town: 'Kristiansand' },
+  { name: 'Henrik T.', town: 'Ålesund' },
+  { name: 'Astrid T.', town: 'Bodø' },
+  { name: 'Magnus T.', town: 'Drammen' },
+  { name: 'Solveig T.', town: 'Fredrikstad' },
+  { name: 'Jonas T.', town: 'Lillehammer' },
+  { name: 'Marit T.', town: 'Molde' },
+  { name: 'Eirik T.', town: 'Hamar' },
+  { name: 'Tuva T.', town: 'Trondheim' },
+  { name: 'Sindre T.', town: 'Bergen' },
+  { name: 'Hedda T.', town: 'Stavanger' },
+  { name: 'Aksel T.', town: 'Tromsø' },
+  { name: 'Nora T.', town: 'Kristiansand' },
+  { name: 'Vegard T.', town: 'Ålesund' },
+  { name: 'Synnøve T.', town: 'Bodø' },
+  { name: 'Håkon T.', town: 'Drammen' },
+  { name: 'Live T.', town: 'Fredrikstad' },
+  { name: 'Even T.', town: 'Lillehammer' },
 ]
 
 export const INTERESTS = ['verktoy', 'gaming', 'sykling'] as const

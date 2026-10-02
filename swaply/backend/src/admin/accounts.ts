@@ -96,7 +96,17 @@ export async function createTestAccount(
     throw conflict('too_many_test_accounts', 'Du har 20 testkontoer. Slett noen først.')
   }
 
-  const person = PEOPLE[n % PEOPLE.length]!
+  // A first name nobody in the ring answers to yet, the admin included: the
+  // screens call people by it, and two of one name in a trade is a trade
+  // nobody can follow. The list is longer than the cap, so one is free.
+  const first = (name: unknown) => String(name ?? '').trim().split(' ')[0]!.toLowerCase()
+  const named = await many(
+    db,
+    sql`select display_name from users
+        where (test_account_of = ${adminId} or id = ${adminId}) and anonymised_at is null`,
+  )
+  const taken = new Set(named.map((row) => first(row['display_name'])))
+  const person = PEOPLE.find((p) => !taken.has(first(p.name))) ?? PEOPLE[n % PEOPLE.length]!
   const displayName = (opts.displayName ?? '').trim() || `${person.name}`
   const town = (opts.town ?? '').trim() || person.town
   const claimed = opts.claimed ?? true
