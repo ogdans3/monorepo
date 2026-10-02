@@ -6,7 +6,7 @@ import { createInvite, findInvite, inviteUrl } from '../lib/invites.js'
 import { notFound } from '../lib/errors.js'
 import { many, one } from '../lib/rows.js'
 import { inviteText, shareText } from '../lib/text.js'
-import { sharedItem } from './serialize.js'
+import { knownTown, sharedItem } from './serialize.js'
 
 // base64url, sixteen bytes. Checked here so a typo comes back as a 400 with a
 // sentence in it rather than a 404 that looks like the invitation is gone.
@@ -111,7 +111,7 @@ export default async function inviteRoutes(app: FastifyInstance) {
       // is what gets you the page.
       itemId: request.userId && item ? item['id'] : null,
       inviter: inviter?.['display_name']
-        ? { displayName: inviter['display_name'], town: inviter['town'] }
+        ? { displayName: inviter['display_name'], town: knownTown(inviter['town']) }
         : null,
       // A listing can be retired after the link went out. The page still works;
       // it just has nothing to show, which is the truth and not an error.

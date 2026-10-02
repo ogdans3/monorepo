@@ -150,7 +150,15 @@ export default async function profileRoutes(app: FastifyInstance) {
         displayName: z.string().trim().min(1).max(60).optional(),
         email: emailAddress.optional(),
         phone: z.string().min(6).max(20).nullish(),
-        town: z.string().max(60).optional(),
+        // Null and '' empty it: «Rediger profil» sends the box as typed, and
+        // an emptied box was kept as '' — a town of nothing, which 13 drew
+        // as « · medlem siden …».
+        town: z
+          .string()
+          .trim()
+          .max(60)
+          .nullish()
+          .transform((v) => (v === '' ? null : v)),
         postalCode: z.string().regex(/^\d{4}$/, 'Et postnummer har fire sifre.').optional(),
       })
       .parse(request.body)
@@ -174,7 +182,12 @@ export default async function profileRoutes(app: FastifyInstance) {
     // Only the town a postcode belongs to is shown to anybody, so a postcode
     // decides it, over a town sent alongside; one that belongs to no town is
     // refused in words rather than kept as a place nobody can find.
-    const town = townOf(body.postalCode) ?? body.town ?? null
+    const typed = townOf(body.postalCode)
+    // Without one, a town sent is the town, and an emptied one takes the
+    // postcode with it: the two are a pair, and a postcode left behind would
+    // put the next listing in the very town that was just taken away.
+    const town = typed ?? (body.town === undefined ? sql`town` : body.town)
+    const postalCode = body.postalCode ?? (body.town === null ? null : sql`postal_code`)
 
     const user = await one(
       app.db,
@@ -182,8 +195,8 @@ export default async function profileRoutes(app: FastifyInstance) {
             display_name = coalesce(${body.displayName ?? null}, display_name),
             email = coalesce(${body.email ?? null}, email),
             phone = ${body.phone === undefined ? sql`phone` : (body.phone ?? null)},
-            town = coalesce(${town}, town),
-            postal_code = coalesce(${body.postalCode ?? null}, postal_code)
+            town = ${town},
+            postal_code = ${postalCode}
           where id = ${userId} returning *, ${hiddenCountColumn}`,
     )
     return publicMe(user!)

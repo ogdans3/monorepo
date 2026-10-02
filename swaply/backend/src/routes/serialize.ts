@@ -1,13 +1,22 @@
 import { mediaUrl } from '../lib/media.js'
 import { iso, num, type Row } from '../lib/rows.js'
 
+/**
+ * A town, or null where there is none. An emptied box was once stored as
+ * `''` — on a profile by «Rediger profil», on a listing made from such a
+ * profile — and real accounts still hold it, so it is read as none wherever
+ * a town is read: 13 drew « · medlem siden …» around the empty string.
+ */
+export const knownTown = (value: unknown): string | null =>
+  typeof value === 'string' && value.trim() !== '' ? value : null
+
 /** Your own profile: everything, including what only you may see. */
 export const publicMe = (u: Row) => ({
   id: u['id'],
   displayName: u['display_name'],
   email: u['email'],
   phone: u['phone'],
-  town: u['town'],
+  town: knownTown(u['town']),
   postalCode: u['postal_code'],
   interests: u['interests'] ?? [],
   bankidVerified: Boolean(u['bankid_verified_at']),
@@ -33,7 +42,7 @@ export const publicMe = (u: Row) => ({
 export const publicUser = (u: Row) => ({
   id: u['id'],
   displayName: u['display_name'] ?? 'Slettet bruker',
-  town: u['town'],
+  town: knownTown(u['town']),
   bankidVerified: Boolean(u['bankid_verified_at']),
   ratingAvg: num(u['rating_avg']),
   ratingCount: num(u['rating_count']) ?? 0,
@@ -52,7 +61,7 @@ export const publicItem = (i: Row) => ({
   subcategory: i['subcategory'],
   condition: i['condition'],
   estimatedValueNok: num(i['estimated_value_nok']),
-  town: i['town'],
+  town: knownTown(i['town']),
   status: i['status'],
   reserved: Boolean(i['active_trade_id']),
   cover: mediaUrl(i['cover']),
@@ -85,7 +94,7 @@ export const sharedItem = (i: Row) => ({
   subcategory: i['subcategory'],
   condition: i['condition'],
   estimatedValueNok: num(i['estimated_value_nok']),
-  town: i['town'],
+  town: knownTown(i['town']),
   media: ((i['media'] ?? []) as string[]).map(mediaUrl),
   ownerName: i['owner_name'] ?? null,
 })

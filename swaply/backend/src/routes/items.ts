@@ -10,7 +10,7 @@ import { storedExists, toStoredPath } from '../lib/media.js'
 import { townFor, townOf } from '../lib/postcodes.js'
 import { coverSql, many, one, type Executor, type Row } from '../lib/rows.js'
 import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
-import { publicItem, publicUser } from './serialize.js'
+import { knownTown, publicItem, publicUser } from './serialize.js'
 
 /**
  * Words a person may leave out. A box they emptied is the same as one they
@@ -166,10 +166,13 @@ export default async function itemRoutes(app: FastifyInstance) {
     // the owner is (a town sent as words wins over both, and no screen sends
     // one). A profile made on 10c has no town, and 10c is where most listings
     // come from, so without the postcode a listing usually had none; and a
-    // thing kept at the cabin is at the cabin, whatever the profile says.
+    // thing kept at the cabin is at the cabin, whatever the profile says. A
+    // profile town emptied to '' is none: `??` took it as one, and the
+    // listing went out with an empty town and never reached the postcode.
     const typed = townOf(body.postalCode)
     const owner = await one(app.db, sql`select town, postal_code from users where id = ${userId}`)
-    const town = body.town ?? typed ?? owner?.['town'] ?? townFor(owner?.['postal_code'])
+    const town =
+      body.town ?? typed ?? knownTown(owner?.['town']) ?? townFor(owner?.['postal_code'])
 
     // One transaction, so a listing is never seen without its photos — and so
     // a second press arriving while the first is still being written waits on

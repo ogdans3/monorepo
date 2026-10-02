@@ -22,7 +22,13 @@ const registerBody = z.object({
   phone: z.string().min(6).max(20).nullish(),
   password: z.string().min(8, 'Passordet må ha minst 8 tegn.'),
   postalCode: z.string().regex(/^\d{4}$/, 'Et postnummer har fire sifre.').nullish(),
-  town: z.string().nullish(),
+  // An empty box is no town, rather than a town called ''.
+  town: z
+    .string()
+    .trim()
+    .max(60)
+    .nullish()
+    .transform((v) => (v === '' ? null : v)),
   // The link that let you in. Spent here unless it was already spent when this
   // device started looking around.
   invite: z.string().min(16).max(64).nullish(),

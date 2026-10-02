@@ -7,10 +7,14 @@
 // town to whatever the client sent, which was usually nothing.
 //
 // A postcode that belongs to no town is refused in words and changes nothing,
-// the way 10b refuses one. And the lookup itself is open to anybody, without a
-// session: it is reference data from a register carried in the build, it says
-// nothing about anybody, and it lets a form show «Trondheim» under «7030»
-// while the person is still typing.
+// the way 10b refuses one. An emptied town is no town: it takes the postcode
+// with it, and a town kept as '' before that was true is read as none.
+//
+// And the lookup itself is open to anybody, without a session: it is
+// reference data from a register carried in the build, it says nothing about
+// anybody, and it lets a form show «Trondheim» under «7030» while the person
+// is still typing.
+import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
@@ -153,5 +157,62 @@ describe('a postcode says a town', () => {
     expect(res.body!['town']).toBe('Kristiansand S')
     expect(res.body).not.toHaveProperty('postalCode')
     expect(JSON.stringify(res.body)).not.toContain('"4610"')
+  })
+
+  test('11. emptying the town on «Rediger profil» takes it away, and the postcode with it', async () => {
+    // What the app sends: every box as it stands, the town box emptied.
+    const res = await call('PATCH', '/me', {
+      token: ola,
+      body: { displayName: 'Ola N.', email: 'ola@epost.no', phone: null, town: '' },
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body!['town']).toBeNull()
+    expect(res.body!['postalCode']).toBeNull()
+
+    // So the next listing is nowhere, rather than back in Kristiansand by
+    // way of a postcode left behind.
+    const listed = await call('POST', '/items', {
+      token: ola,
+      body: { title: 'Snøfreser', category: 'hjem', condition: 'good' },
+    })
+    expect(listed.body!['town']).toBeNull()
+  })
+
+  test('12. a town sent alone moves the profile, and null empties it the way \'\' does', async () => {
+    const moved = await call('PATCH', '/me', { token: ola, body: { town: 'Bodø' } })
+    expect(moved.body!['town']).toBe('Bodø')
+
+    const emptied = await call('PATCH', '/me', { token: ola, body: { town: null } })
+    expect(emptied.status).toBe(200)
+    expect(emptied.body!['town']).toBeNull()
+  })
+
+  test('13. a town kept as \'\' before this is said as none, and a listing looks past it', async () => {
+    // Real accounts still hold the empty string an emptied box was kept as,
+    // and so do listings made from them.
+    const kari = (await call('POST', '/auth/login', {
+      body: { email: 'kari@epost.no', password: 'fiskestang1' },
+    })).body!['token']
+    const kariId = (await call('GET', '/me', { token: kari })).body!['id']
+    const old = (await call('POST', '/items', {
+      token: kari,
+      body: { title: 'Gammel stol', category: 'hjem', condition: 'worn', postalCode: '7030' },
+    })).body!['id']
+    await db.execute(sql`update users set town = '' where id = ${kariId}`)
+    await db.execute(sql`update items set town = '' where id = ${old}`)
+
+    expect((await call('GET', '/me', { token: kari })).body!['town']).toBeNull()
+    expect((await call('GET', `/users/${kariId}`, { token: ola })).body!['town']).toBeNull()
+    expect((await call('GET', `/items/${old}`, { token: ola })).body!['town']).toBeNull()
+    const invite = (await call('POST', '/invites', { token: kari })).body!['token']
+    expect((await call('GET', `/invites/${invite}`)).body!['inviter']['town']).toBeNull()
+
+    // A new listing takes no town from '' — it goes on to the postcode.
+    const listed = await call('POST', '/items', {
+      token: kari,
+      body: { title: 'Ny stol', category: 'hjem', condition: 'good' },
+    })
+    expect(listed.body!['town']).toBe('Trondheim')
   })
 })
