@@ -6,7 +6,6 @@ import { blocked, blockedBetween } from '../lib/blocks.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import {
-  NEGOTIABLE,
   cancelWithdrawalRequest,
   declineTrade,
   markHandover,
@@ -17,7 +16,6 @@ import {
 } from '../trades/actions.js'
 import { acceptTrade } from '../trades/accept.js'
 import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
-import { validateOffer } from '../trades/offer.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import {
   completeTrade,
@@ -147,20 +145,10 @@ export default async function tradeRoutes(app: FastifyInstance) {
       .parse(request.body)
 
     await participantOf(app.db, id, userId)
-    const trade = await one(app.db, sql`select state from trades where id = ${id}`)
-    if (!trade) throw notFound('Fant ikke byttet.')
     // A counter-offer is a move inside a negotiation. On an accepted trade it
     // would silently undo everybody's acceptance, and on a closed one it would
-    // reopen something that is over.
-    if (!NEGOTIABLE.includes(trade['state'])) {
-      throw conflict(
-        'not_negotiable',
-        trade['state'] === 'accepted'
-          ? 'Byttet er allerede godtatt. Angre godkjenningen først.'
-          : 'Byttet er avsluttet.',
-      )
-    }
-    await validateOffer(app.db, id, body.items, body.cash ?? undefined)
+    // reopen something that is over — so the state, and the offer, are judged
+    // in `proposeCounterOffer`, under the trade's lock.
     await proposeCounterOffer(app.db, id, userId, body.items, body.cash ?? undefined)
 
     await app.db.execute(sql`

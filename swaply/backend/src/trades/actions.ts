@@ -5,7 +5,9 @@ import { WITHDRAWAL_RESPONSE_HOURS } from '../lib/constants.js'
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
 import { many, one, type Row } from '../lib/rows.js'
 import { lockTrades } from './locks.js'
-import { cancelTrade, endTrade, type Tx } from './trades.js'
+import { NEGOTIABLE, cancelTrade, endTrade, type Tx } from './trades.js'
+
+export { NEGOTIABLE }
 
 export async function participantOf(db: Database, tradeId: string, userId: string) {
   const row = await one(
@@ -16,48 +18,31 @@ export async function participantOf(db: Database, tradeId: string, userId: strin
   return row
 }
 
-/** The states in which a trade is still being negotiated rather than carried out. */
-export const NEGOTIABLE = ['talking', 'pending', 'countered']
-
 /**
  * «Avslå» — screen 09f. Ends it for everyone and frees what was held.
  *
  * Only while it is still a negotiation. Once everybody has accepted, backing
  * out is the withdrawal flow on 08a–08c and needs the other side's yes; a
  * decline here would be a way around the one screen that exists to stop it.
+ * Judged under the trade's lock (`endTrade`), so a yes landing in the same
+ * moment cannot slip between the check and the ending.
  */
 export async function declineTrade(db: Database, tradeId: string, userId: string) {
   await participantOf(db, tradeId, userId)
-  const trade = await one(db, sql`select state from trades where id = ${tradeId}`)
-  if (!trade) throw notFound('Fant ikke byttet.')
-  if (['completed', 'cancelled'].includes(trade['state'])) {
-    throw conflict('trade_closed', 'Byttet er allerede avsluttet.')
-  }
-  if (!NEGOTIABLE.includes(trade['state'])) {
-    throw conflict('needs_permission', 'Alle har godtatt. Du må spørre de andre først.')
-  }
-  return cancelTrade(db, tradeId, 'declined')
+  return cancelTrade(db, tradeId, 'declined', { onlyWhileNegotiating: true })
 }
 
 /**
  * «Trekk deg» before everyone has accepted — screen 09g.
  *
  * Nobody has committed anything yet, so it just ends. The conversation is kept,
- * because the screen promises that in writing.
+ * because the screen promises that in writing. A closed trade is refused
+ * rather than cancelled a second time, which would overwrite the reason the
+ * first ending is showing on 09f.
  */
 export async function withdrawEarly(db: Database, tradeId: string, userId: string) {
   await participantOf(db, tradeId, userId)
-  const trade = await one(db, sql`select state from trades where id = ${tradeId}`)
-  if (!trade) throw notFound('Fant ikke byttet.')
-  if (['completed', 'cancelled'].includes(trade['state'])) {
-    // Cancelling a closed trade a second time would overwrite the reason the
-    // first one is showing on 09f.
-    throw conflict('trade_closed', 'Byttet er allerede avsluttet.')
-  }
-  if (!NEGOTIABLE.includes(trade['state'])) {
-    throw conflict('needs_permission', 'Alle har godtatt. Du må spørre de andre først.')
-  }
-  return cancelTrade(db, tradeId, 'withdrawn_early')
+  return cancelTrade(db, tradeId, 'withdrawn_early', { onlyWhileNegotiating: true })
 }
 
 /**

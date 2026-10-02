@@ -8,7 +8,6 @@ import {
   markHandover,
   requestWithdrawal,
 } from '../trades/actions.js'
-import { validateOffer } from '../trades/offer.js'
 import { acceptOffer, completeTrade, proposeCounterOffer, startTalking } from '../trades/trades.js'
 import { expressWish } from '../trades/wish.js'
 import { CATALOGUE } from './fixtures.js'
@@ -194,7 +193,6 @@ export async function buildScenario(
       payeePosition: Number(other['position']),
       amountNok: 200,
     }
-    await validateOffer(db, tradeId, composition, cash)
     await proposeCounterOffer(db, tradeId, other['id'], composition, cash)
     steps.push(`${firstName(other)} foreslo 200 kr i mellomlegg`)
     return { tradeId, steps, participants: ring.map((p) => p['id']) }

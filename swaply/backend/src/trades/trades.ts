@@ -6,11 +6,15 @@ import { uuidArray } from '../lib/rows.js'
 import { closeReasonSql, type CloseCode } from './close.js'
 import type { Cycle } from './cycles.js'
 import { lockItems, lockTrades } from './locks.js'
+import { validateOffer, type OfferCash, type OfferItem } from './offer.js'
 
 type Row = Record<string, string | null>
 
 /** A transaction's handle, for the steps that have to share one with their caller. */
 export type Tx = Parameters<Parameters<Database['transaction']>[0]>[0]
+
+/** The states in which a trade is still being negotiated rather than carried out. */
+export const NEGOTIABLE = ['talking', 'pending', 'countered']
 
 /**
  * Turn a found cycle into a trade with its first offer on the table.
@@ -114,15 +118,35 @@ export async function startTalking(
  *
  * Never an edit. Earlier acceptances stay attached to the version they were
  * given for, which is the only way to avoid having accepted something else.
+ *
+ * Judged under the trade's lock, like every other move: the state, and the
+ * offer itself (`validateOffer`). Read beforehand, a counter-offer landing in
+ * the moment the last yes agreed the trade put an agreed trade back to
+ * `countered`, undoing everybody's acceptance without anybody seeing it.
  */
 export async function proposeCounterOffer(
   db: Database,
   tradeId: string,
   proposedBy: string,
-  items: { itemId: string; giverPosition: number }[],
-  cash?: { payerPosition: number; payeePosition: number; amountNok: number },
+  items: OfferItem[],
+  cash?: OfferCash,
 ): Promise<string> {
   return db.transaction(async (tx) => {
+    const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+    // A counter-offer is a move inside a negotiation. Each refusal says what
+    // is true and what the screen offers: an agreed trade is left through the
+    // withdrawal question on 08a, and a paused one is waiting for an answer.
+    if (state === 'accepted') {
+      throw conflict('not_negotiable', 'Alle har godtatt byttet, så det kan ikke endres lenger.')
+    }
+    if (state === 'paused') {
+      throw conflict('not_negotiable', 'Byttet er pauset mens noen svarer på en forespørsel.')
+    }
+    if (!state || !NEGOTIABLE.includes(state)) {
+      throw conflict('not_negotiable', 'Byttet er avsluttet.')
+    }
+    await validateOffer(tx, tradeId, items, cash)
+
     const [offer] = await tx.execute<Row>(
       sql`insert into trade_offers (trade_id, seq, proposed_by)
           select ${tradeId}, coalesce(max(seq), 0) + 1, ${proposedBy}
@@ -152,6 +176,7 @@ export async function proposeCounterOffer(
       )
     }
 
+    // Negotiable, as judged under the lock above.
     await tx.execute(sql`update trades set state = 'countered' where id = ${tradeId}`)
     return offerId
   })
@@ -396,6 +421,18 @@ export async function completeTrade(db: Database, tradeId: string) {
   })
 }
 
+/** How a trade is ended, beyond the code that says why. */
+export type Ending = {
+  /**
+   * Only while it is still a negotiation, judged under the lock — the rule for
+   * a person's own «Avslå» and «Trekk deg». Read before the lock, a decline
+   * landing in the moment the last yes agreed the trade ended an agreed trade,
+   * which is the withdrawal question on 08a and needs the others' yes. A trade
+   * that has ended under it is refused in words rather than passed over.
+   */
+  onlyWhileNegotiating?: boolean
+}
+
 /**
  * Release everything a trade was holding, and say why it ended.
  *
@@ -406,8 +443,9 @@ export async function cancelTrade(
   db: Database,
   tradeId: string,
   code: CloseCode,
+  ending: Ending = {},
 ): Promise<string[]> {
-  return db.transaction((tx) => endTrade(tx, tradeId, code))
+  return db.transaction((tx) => endTrade(tx, tradeId, code, ending))
 }
 
 /**
@@ -420,11 +458,24 @@ export async function cancelTrade(
  * writes nothing — a decline landing just after a deletion must not tell the
  * others the trade was declined.
  */
-export async function endTrade(tx: Tx, tradeId: string, code: CloseCode): Promise<string[]> {
+export async function endTrade(
+  tx: Tx,
+  tradeId: string,
+  code: CloseCode,
+  ending: Ending = {},
+): Promise<string[]> {
   // The one order (`index.ts`): the trade, then what it holds. A caller that
   // holds them already — an answer to a withdrawal, an acceptance pushing
   // this trade out — takes nothing new here.
   const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+  if (ending.onlyWhileNegotiating) {
+    if (state === 'completed' || state === 'cancelled') {
+      throw conflict('trade_closed', 'Byttet er allerede avsluttet.')
+    }
+    if (state && !NEGOTIABLE.includes(state)) {
+      throw conflict('needs_permission', 'Alle har godtatt. Du må spørre de andre først.')
+    }
+  }
   if (!state || state === 'completed' || state === 'cancelled') return []
   await lockItems(tx, sql`i.active_trade_id = ${tradeId}`)
 

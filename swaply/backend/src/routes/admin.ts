@@ -23,7 +23,6 @@ import {
   requestWithdrawal,
 } from '../trades/actions.js'
 import { expireWithdrawals } from '../trades/actions.js'
-import { validateOffer } from '../trades/offer.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import { acceptTrade } from '../trades/accept.js'
 import { completeTrade, proposeCounterOffer } from '../trades/trades.js'
@@ -260,7 +259,7 @@ export default async function adminRoutes(app: FastifyInstance) {
           payeePosition: Number(seat['position']),
           amountNok: 200,
         }
-        await validateOffer(app.db, id, composition, cash)
+        // Validated inside, under the trade's lock, as the product's own is.
         await proposeCounterOffer(app.db, id, body.as, composition, cash)
         await app.db.execute(sql`
           insert into notifications (user_id, type, payload)

@@ -3,7 +3,8 @@ import { sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { MAX_ITEMS_PER_SIDE } from '../lib/constants.js'
 import { badRequest } from '../lib/errors.js'
-import { many } from '../lib/rows.js'
+import type { Row } from '../lib/rows.js'
+import type { Tx } from './trades.js'
 
 export type OfferItem = { itemId: string; giverPosition: number }
 export type OfferCash = { payerPosition: number; payeePosition: number; amountNok: number }
@@ -19,15 +20,17 @@ export type OfferCash = { payerPosition: number; payeePosition: number; amountNo
  * None of this is reachable from the app's own screens, which only ever offer
  * what `/trades/:id/candidates` handed them. It is the difference between a
  * client that behaves and a rule.
+ *
+ * `proposeCounterOffer` runs it under the trade's lock, inside the
+ * transaction that writes the offer, which is why it takes either handle.
  */
 export async function validateOffer(
-  db: Database,
+  db: Database | Tx,
   tradeId: string,
   items: OfferItem[],
   cash?: OfferCash,
 ) {
-  const seats = await many(
-    db,
+  const seats = await db.execute<Row>(
     sql`select position, user_id from trade_participants where trade_id = ${tradeId}`,
   )
   const owner = new Map(seats.map((s) => [Number(s['position']), s['user_id'] as string]))
@@ -59,8 +62,7 @@ export async function validateOffer(
   const ids = [...new Set(items.map((i) => i.itemId))]
   if (ids.length === 0) return
 
-  const rows = await many(
-    db,
+  const rows = await db.execute<Row>(
     sql`select id, owner_id, status, deleted_at, active_trade_id
         from items where id in ${ids}`,
   )
