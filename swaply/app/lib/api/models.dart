@@ -438,6 +438,19 @@ class Trade {
   /// in ended with it.
   static const closedByErasure = 'account_deleted';
 
+  /// One of the people in it blocked another.
+  static const closedByBlock = 'blocked';
+
+  /// An owner took down a listing that was on the table.
+  static const closedByListingRemoved = 'listing_removed';
+
+  /// Ended in a way that leaves nobody to write to: somebody in it deleted
+  /// their account, or blocked another. A trade that ended any other way
+  /// keeps its conversation, since how long an ordinary conversation lives
+  /// is an open question.
+  bool get conversationClosed =>
+      state == 'cancelled' && (closeCode == closedByErasure || closeCode == closedByBlock);
+
   final int? offerSeq, yourReviewScore;
   final int youPosition, youGiveValue, youGetValue, difference;
   final bool youAccepted;

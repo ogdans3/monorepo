@@ -864,16 +864,21 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ),
       );
 
-  /// Ended: why, and what there is to do about it.
+  /// Ended, and why.
   ///
-  /// Ended because somebody in it deleted their account, it says that, in the
-  /// app's words — the server's sentence was «Den andre parten», which is
-  /// wrong in a ring of three, and the card went on to offer a new proposal
-  /// from the conversation, to somebody who is no longer anywhere. Nothing
-  /// about things coming free either: most trades a deletion ends were still
-  /// a conversation or an offer, with nothing held.
+  /// Where the trade's `closeCode` has words of the app's own, they are
+  /// said, true for whoever reads them; otherwise the server's sentence.
+  /// Ended because somebody in it deleted their account, it says that — the
+  /// server's sentence was «Den andre parten», which is wrong in a ring of
+  /// three — and nothing about things coming free: most trades a deletion
+  /// ends were still a conversation or an offer, with nothing held.
+  ///
+  /// The line under it, «Angret du? Du kan sende et nytt forslag fra
+  /// samtalen.», is gone. 09f draws it, and it promised what this build does
+  /// not do: the chips are not drawn on an ended trade, and the server
+  /// refuses a counter-offer on one.
   Widget _cancelledCard(Trade trade) {
-    final erased = trade.closeCode == Trade.closedByErasure;
+    final ring = trade.isChain || trade.participants.length > 2;
     return Padding(
       padding: const EdgeInsets.only(top: Insets.sm),
       child: SectionCard(
@@ -883,23 +888,22 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             const Text('Byttet er avsluttet', style: Type.heading),
             const SizedBox(height: 6),
             Text(
-              erased
-                  // Under «Byttet er avsluttet», the reason it did. A pair
-                  // has one other person in it and a ring two, and the one
-                  // reading is never the one who left.
-                  ? trade.isChain || trade.participants.length > 2
-                      ? 'En av de andre i byttet slettet kontoen sin.'
-                      : 'Den andre i byttet slettet kontoen sin.'
-                  : trade.closeReason ?? 'Tingene dine er tilgjengelige for andre igjen.',
+              switch (trade.closeCode) {
+                // A pair has one other person in it and a ring two, and the
+                // one reading is never the one who left.
+                Trade.closedByErasure => ring
+                    ? 'En av de andre i byttet slettet kontoen sin.'
+                    : 'Den andre i byttet slettet kontoen sin.',
+                // Read by the one who blocked and the one blocked alike,
+                // and by the third in a ring: it says what ended it and
+                // not who.
+                Trade.closedByBlock => 'Byttet ble avsluttet etter en blokkering.',
+                // True for the owner too.
+                Trade.closedByListingRemoved => 'En av tingene i byttet ble tatt ned av eieren.',
+                _ => trade.closeReason ?? 'Tingene dine er tilgjengelige for andre igjen.',
+              },
               style: Type.secondary,
             ),
-            if (!erased) ...[
-              const SizedBox(height: Insets.sm),
-              const Text(
-                'Angret du? Du kan sende et nytt forslag fra samtalen.',
-                style: Type.small,
-              ),
-            ],
           ],
         ),
       ),
@@ -1351,44 +1355,48 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             LastMessage(trade.lastMessage!),
             const SizedBox(height: 8),
           ],
-          Row(
-            children: [
-              Expanded(
-                child: TapArea(
-                  child: TextField(
-                    controller: _message,
-                    style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
-                    onSubmitted: (_) => send(),
-                    decoration: InputDecoration(
-                      hintText: trade.isChain ? 'Skriv til begge…' : 'Skriv en melding…',
-                      hintStyle: const TextStyle(fontSize: 13, color: SwaplyColors.greyLight),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(Radii.pill),
-                          borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
-                      enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(Radii.pill),
-                          borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(Radii.pill),
-                          borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+          // Nobody left to write to; the card above says why.
+          if (trade.conversationClosed)
+            const Text('Samtalen er stengt.', style: Type.small)
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: TapArea(
+                    child: TextField(
+                      controller: _message,
+                      style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
+                      onSubmitted: (_) => send(),
+                      decoration: InputDecoration(
+                        hintText: trade.isChain ? 'Skriv til begge…' : 'Skriv en melding…',
+                        hintStyle: const TextStyle(fontSize: 13, color: SwaplyColors.greyLight),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.fieldLine)),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Radii.pill),
+                            borderSide: const BorderSide(color: SwaplyColors.greenPressed)),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              TapArea(
-                onTap: trade.threadId == null || _sending ? null : send,
-                keepsKeyboard: true,
-                child: Text('Send',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText)),
-              ),
-            ],
-          ),
+                const SizedBox(width: 10),
+                TapArea(
+                  onTap: trade.threadId == null || _sending ? null : send,
+                  keepsKeyboard: true,
+                  child: Text('Send',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText)),
+                ),
+              ],
+            ),
         ],
       ),
     );

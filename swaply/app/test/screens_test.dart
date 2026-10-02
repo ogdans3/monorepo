@@ -904,7 +904,11 @@ void main() {
         await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
         expect(find.text('Byttet ble avslått'), findsOneWidget);
-        expect(find.text('Angret du? Du kan sende et nytt forslag fra samtalen.'), findsOneWidget);
+        expect(find.text('Åpne ›'), findsOneWidget);
+        // Not «Angret du? Du kan sende et nytt forslag fra samtalen.»: the
+        // chips are not drawn on an ended trade, and the server refuses a
+        // counter-offer on one.
+        expect(find.textContaining('Angret du?'), findsNothing);
       });
     });
 

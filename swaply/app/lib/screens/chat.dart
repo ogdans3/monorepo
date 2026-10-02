@@ -444,7 +444,7 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
                     const Icon(Icons.info_outline, size: 18, color: SwaplyColors.amber),
                     const SizedBox(width: Insets.sm),
                     Expanded(
-                      child: Text(thread.banner!,
+                      child: Text(_banner(thread),
                           style: const TextStyle(
                               fontSize: 12.5, height: 1.4, color: SwaplyColors.amber)),
                     ),
@@ -473,12 +473,47 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
             ),
             // What a refusal of «Send» is about, so its toast goes up over
             // the composer rather than on it.
-            KeepClear(child: _composer()),
+            if (_trade?.conversationClosed ?? false)
+              _closed(_trade!)
+            else
+              KeepClear(child: _composer()),
           ],
         ),
       ),
     );
   }
+
+  /// The banner over a ring's conversation, which the server words for a
+  /// ring being arranged — «Dere avtaler overlevering … selv i denne
+  /// chatten» — and which stayed so after the ring had ended. Once it has,
+  /// it says that, and still that Swaply was not part of it.
+  String _banner(Thread thread) => switch (thread.state) {
+        'cancelled' => 'Byttet er avsluttet. Swaply var ikke part i det.',
+        'completed' => 'Byttet er gjennomført. Swaply var ikke part i det.',
+        _ => thread.banner!,
+      };
+
+  /// In the composer's place on a trade that ended with nobody left to
+  /// write to: somebody in it deleted their account, or blocked another.
+  /// The field stayed, and what was written there went to nobody.
+  Widget _closed(Trade trade) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: const BoxDecoration(
+          color: SwaplyColors.surface,
+          border: Border(top: BorderSide(color: SwaplyColors.barLine)),
+        ),
+        child: Text(
+          trade.closeCode == Trade.closedByBlock
+              // Not who blocked whom: the one blocked reads it too.
+              ? 'Samtalen er stengt etter en blokkering.'
+              : trade.isChain
+                  ? 'Samtalen er stengt fordi en av de andre i byttet slettet kontoen sin.'
+                  : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.',
+          style: Type.secondary,
+          textAlign: TextAlign.center,
+        ),
+      );
 
   String _tradeLine(Trade trade) {
     final give = trade.youGive.map((i) => i.title).join(' + ');
