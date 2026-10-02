@@ -29,7 +29,7 @@ export async function participantOf(db: Database, tradeId: string, userId: strin
  */
 export async function declineTrade(db: Database, tradeId: string, userId: string) {
   await participantOf(db, tradeId, userId)
-  return cancelTrade(db, tradeId, 'declined', { onlyWhileNegotiating: true })
+  return cancelTrade(db, tradeId, 'declined', { actor: userId, onlyWhileNegotiating: true })
 }
 
 /**
@@ -42,7 +42,7 @@ export async function declineTrade(db: Database, tradeId: string, userId: string
  */
 export async function withdrawEarly(db: Database, tradeId: string, userId: string) {
   await participantOf(db, tradeId, userId)
-  return cancelTrade(db, tradeId, 'withdrawn_early', { onlyWhileNegotiating: true })
+  return cancelTrade(db, tradeId, 'withdrawn_early', { actor: userId, onlyWhileNegotiating: true })
 }
 
 /**
@@ -169,6 +169,7 @@ export async function respondToWithdrawal(
                    blocked_by_sent = true where id = ${req['id']}`,
       )
       await resume(tx, tradeId)
+      await toldNo(tx, tradeId, req['requested_by']!)
       return { state: 'rejected', blockedBySent: true, freed: [] as string[] }
     }
 
@@ -179,8 +180,9 @@ export async function respondToWithdrawal(
       )
       // Inside the lock: the trade was open when this was decided, and it
       // ends with the reason this answer gives rather than one written over
-      // somebody else's.
-      const freed = await endTrade(tx, tradeId, 'withdrawal_approved')
+      // somebody else's. The one who asked is told it ended, as everybody
+      // but the one answering is.
+      const freed = await endTrade(tx, tradeId, 'withdrawal_approved', { actor: userId })
       return { state: 'approved', blockedBySent: false, freed }
     }
 
@@ -189,8 +191,20 @@ export async function respondToWithdrawal(
           where id = ${req['id']}`,
     )
     await resume(tx, tradeId)
+    await toldNo(tx, tradeId, req['requested_by']!)
     return { state: 'rejected', blockedBySent: false, freed: [] as string[] }
   })
+}
+
+/**
+ * The one who asked to get out, told that the answer is no and the trade goes
+ * on. They are waiting on 08b for exactly this, and the others answered it.
+ */
+async function toldNo(tx: Tx, tradeId: string, askedBy: string) {
+  await tx.execute(sql`
+    insert into notifications (user_id, type, payload)
+    values (${askedBy}, 'withdrawal_rejected', jsonb_build_object('tradeId', ${tradeId}::text))
+  `)
 }
 
 /** «Angre forespørselen» on screen 08b. */
@@ -214,20 +228,46 @@ export async function cancelWithdrawalRequest(db: Database, tradeId: string, use
   })
 }
 
-/** The deadline decides it if nobody answers: the trade simply carries on. */
+/**
+ * The deadline decides it if nobody answers: the trade simply carries on.
+ *
+ * One trade at a time, under its lock, the way every answer to the question
+ * is given — so a no that arrives in the last second and the clock cannot
+ * both decide it. And everybody in the trade is told it goes on: the one who
+ * asked is waiting on 08b for an answer, and the others had one to give.
+ */
 export async function expireWithdrawals(db: Database) {
-  const rows = await many(
+  const due = await many(
     db,
-    sql`update trade_withdrawals set state = 'expired', resolved_at = now()
-        where state = 'waiting' and responds_by < now()
-        returning trade_id`,
+    sql`select distinct trade_id from trade_withdrawals
+        where state = 'waiting' and responds_by < now()`,
   )
-  for (const row of rows) {
-    await db.execute(
-      sql`update trades set state = 'accepted' where id = ${row['trade_id']} and state = 'paused'`,
-    )
+  let expired = 0
+  for (const { trade_id: tradeId } of due) {
+    expired += await db.transaction(async (tx) => {
+      await lockTrades(tx, [tradeId])
+      const lapsed = await tx.execute<Row>(
+        sql`update trade_withdrawals set state = 'expired', resolved_at = now()
+            where trade_id = ${tradeId} and state = 'waiting' and responds_by < now()
+            returning id`,
+      )
+      if (lapsed.length === 0) return 0
+      const resumed = await tx.execute<Row>(
+        sql`update trades set state = 'accepted' where id = ${tradeId} and state = 'paused'
+            returning id`,
+      )
+      if (resumed.length > 0) {
+        await tx.execute(sql`
+          insert into notifications (user_id, type, payload)
+          select p.user_id, 'withdrawal_lapsed', jsonb_build_object('tradeId', ${tradeId}::text)
+          from trade_participants p join users u on u.id = p.user_id
+          where p.trade_id = ${tradeId} and u.anonymised_at is null
+        `)
+      }
+      return lapsed.length
+    })
   }
-  return rows.length
+  return expired
 }
 
 export type Marker = 'sent' | 'received' | 'paid'

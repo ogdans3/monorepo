@@ -41,6 +41,27 @@ const REASONS: Record<CloseCode, string | { pair: string; ring: string }> = {
 }
 
 /**
+ * Whether `endTrade` tells the others in the trade, with a `trade_cancelled`
+ * notification carrying the trade and the code — never the words, which are
+ * the app's to write and must not travel through Google or Apple in a push.
+ *
+ * Every ending a person decides is told to everybody else in it, which is
+ * what the sheets behind «Avslå» and «Trekk deg» promise («… får beskjed»).
+ * Two are not told here: erasure tells the others itself, in the same
+ * transaction, and the test tooling's «Nullstill» only ends trades inside its
+ * own ring. A record rather than a list, so a new code cannot arrive without
+ * somebody deciding this for it.
+ */
+export const TOLD: Record<CloseCode, boolean> = {
+  displaced: true,
+  declined: true,
+  withdrawn_early: true,
+  withdrawal_approved: true,
+  account_deleted: false,
+  ended_by_admin: false,
+}
+
+/**
  * The `close_reason` for a code, as an expression over the `trades` row being
  * updated, so a sentence that depends on the size of the trade is chosen by
  * the statement that writes it.

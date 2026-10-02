@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { conflict } from '../lib/errors.js'
 import { uuidArray } from '../lib/rows.js'
-import { closeReasonSql, type CloseCode } from './close.js'
+import { TOLD, closeReasonSql, type CloseCode } from './close.js'
 import type { Cycle } from './cycles.js'
 import { lockItems, lockTrades } from './locks.js'
 import { validateOffer, type OfferCash, type OfferItem } from './offer.js'
@@ -350,7 +350,9 @@ export async function acceptOffer(
     // accepted in one of them locked their things, and a listing reserved by
     // a trade that no longer exists is one nothing would ever free.
     const freed: string[] = []
-    for (const loser of displaced) freed.push(...(await endTrade(tx, loser, 'displaced')))
+    for (const loser of displaced) {
+      freed.push(...(await endTrade(tx, loser, 'displaced', { actor: userId })))
+    }
 
     await tx.execute(
       sql`insert into trade_acceptances (offer_id, user_id, terms_version)
@@ -494,6 +496,12 @@ export async function completeTrade(db: Database, tradeId: string): Promise<stri
 /** How a trade is ended, beyond the code that says why. */
 export type Ending = {
   /**
+   * Whoever ended it — the one who declined, withdrew, answered yes, or whose
+   * yes in another trade pushed this one out. Everybody else in the trade is
+   * told (`TOLD` in `close.ts`); they are not told about their own move.
+   */
+  actor?: string | null
+  /**
    * Only while it is still a negotiation, judged under the lock — the rule for
    * a person's own «Avslå» and «Trekk deg». Read before the lock, a decline
    * landing in the moment the last yes agreed the trade ended an agreed trade,
@@ -567,5 +575,18 @@ export async function endTrade(
     sql`update trade_withdrawals set state = 'expired', resolved_at = now()
         where trade_id = ${tradeId} and state = 'waiting'`,
   )
+  // Told here, where the ending is decided and only when it is: a trade that
+  // had already ended returned above, so nobody hears of one ending twice.
+  // Nobody already erased either — a tombstone has no list to read it in.
+  if (TOLD[code]) {
+    await tx.execute(sql`
+      insert into notifications (user_id, type, payload)
+      select p.user_id, 'trade_cancelled',
+             jsonb_build_object('tradeId', ${tradeId}::text, 'reason', ${code}::text)
+      from trade_participants p join users u on u.id = p.user_id
+      where p.trade_id = ${tradeId} and u.anonymised_at is null
+        and p.user_id is distinct from ${ending.actor ?? null}::uuid
+    `)
+  }
   return freed.map((row) => row['id']!)
 }
