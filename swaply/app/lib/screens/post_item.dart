@@ -524,22 +524,33 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   /// The form, as a correction to a listing that already stands: «Rediger
   /// annonsen», and a «Legg ut» the server answered with the listing an
-  /// earlier press made. A field emptied is sent empty, so it is emptied
-  /// there too.
+  /// earlier press made.
+  ///
+  /// A field emptied is sent as null, which a PATCH takes as «clear it». It
+  /// used to send an emptied description or subcategory as '' and leave an
+  /// emptied value out, and the server kept all three. A server from before
+  /// it cleared on null keeps them still, which is no worse. A service has no
+  /// condition, so a thing made a service has its own cleared.
   Map<String, dynamic> _correction() => {
         'kind': _kind,
         'title': _title.text.trim(),
-        'description': _description.text.trim(),
+        'description': _orNull(_description.text),
         'category': _category,
-        'subcategory': _subcategory.text.trim(),
-        if (_kind == 'item') 'condition': _condition,
-        if (_value.text.trim().isNotEmpty) 'estimatedValueNok': int.tryParse(_value.text.trim()),
+        'subcategory': _orNull(_subcategory.text),
+        'condition': _kind == 'item' ? _condition : null,
+        'estimatedValueNok': _valueTyped,
         // Only when one is typed. The server keeps the town a postcode
         // belongs to and not the postcode, so the field opens empty, and
         // empty leaves the listing where it is.
         if (_postal.text.trim().isNotEmpty) 'postalCode': _postal.text.trim(),
         'media': [for (final photo in _photos) photo.stored!.path],
       };
+
+  /// What was typed, or null for nothing but spaces.
+  static String? _orNull(String typed) => typed.trim().isEmpty ? null : typed.trim();
+
+  /// The value as typed, in whole kroner, or null for none.
+  int? get _valueTyped => int.tryParse(_value.text.trim());
 
   /// The same fields, sent as a correction. A listing a trade is holding is
   /// refused by the server, and that message is the one worth showing.
