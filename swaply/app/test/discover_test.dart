@@ -1,0 +1,307 @@
+// 05 Oppdag, the grid and the search behind it.
+//
+// The grid comes a page at a time. It used to make one asking and draw what
+// came of it, which is the server's first thirty: «84 treff» over thirty
+// cards, and the rest never shown however far anybody scrolled. Now the next
+// page is asked for as the foot of the grid comes near, with the search the
+// grid on screen was asked with, and «N treff» stays the server's count.
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/screens/discover.dart';
+import 'package:swaply_app/state/session.dart';
+
+import 'fake_server.dart';
+
+late FakeServer server;
+late SwaplyApi api;
+late Session session;
+
+/// What each asking for the grid was sent with, in order.
+late List<Map<String, String>> asked;
+
+Future<void> mount(WidgetTester tester, Widget screen) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await session.login('ola@epost.no', 'passord');
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        Provider<SwaplyApi>.value(value: api),
+        ChangeNotifierProvider<Session>.value(value: session),
+      ],
+      child: MaterialApp(
+        home: screen,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// [count] listings, each its own.
+List<Map<String, Object?>> listings(int count, {int from = 0}) => [
+      for (var i = from; i < from + count; i++)
+        {...FakeServer.console, 'id': 'item-$i', 'title': 'Ting $i'},
+    ];
+
+/// The server's grid, handed out a page at a time as the real one does it:
+/// `limit` from `offset`, thirty from nought when neither is said. [instead]
+/// answers in its place for an asking it has something to say about.
+void serve(List<Map<String, Object?>> all,
+    {Object? Function(Map<String, String> query)? instead}) {
+  server.overrides['GET /discover'] = (http.Request request) {
+    final query = request.url.queryParameters;
+    asked.add(query);
+    final odd = instead?.call(query);
+    if (odd != null) return odd;
+    final from = int.tryParse(query['offset'] ?? '') ?? 0;
+    final take = int.tryParse(query['limit'] ?? '') ?? 30;
+    return {'total': all.length, 'items': all.skip(from).take(take).toList()};
+  };
+}
+
+Finder card(int i) => find.byKey(ValueKey('item-$i'));
+
+Finder get grid =>
+    find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down);
+
+/// Pulls the grid down, the way a thumb does. Not waited for: the pull ends
+/// when the frames that draw it have been pumped.
+void pull(WidgetTester tester) =>
+    unawaited(tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show());
+
+/// The grid scrolled to its foot, and what that asks for answered.
+Future<void> toTheFoot(WidgetTester tester) async {
+  final position = tester.state<ScrollableState>(grid.first).position;
+  position.jumpTo(position.maxScrollExtent);
+  await tester.pumpAndSettle();
+}
+
+/// Back at the top, where «N treff» is: a list builds only what is near the
+/// screen.
+Future<void> toTheTop(WidgetTester tester) async {
+  tester.state<ScrollableState>(grid.first).position.jumpTo(0);
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    server = FakeServer();
+    api = SwaplyApi(baseUrl: 'http://test', client: server.client);
+    session = Session(api)..loading = false;
+    asked = [];
+  });
+
+  group('the grid comes a page at a time', () {
+    testWidgets('1. thirty first, the next thirty as the foot comes near, and the count is the '
+        'server\'s all along', (tester) async {
+      serve(listings(70));
+      await mount(tester, const DiscoverScreen());
+
+      expect(asked.single, containsPair('limit', '30'));
+      expect(asked.single, containsPair('offset', '0'));
+      expect(find.text('70 treff'), findsOneWidget);
+      expect(card(29), findsOneWidget);
+      expect(card(30), findsNothing);
+
+      await toTheFoot(tester);
+      expect(asked.last, containsPair('offset', '30'));
+      expect(asked.last, containsPair('limit', '30'));
+      expect(card(59), findsOneWidget);
+      await toTheTop(tester);
+      expect(find.text('70 treff'), findsOneWidget);
+
+      await toTheFoot(tester);
+      expect(asked.last, containsPair('offset', '60'));
+      expect(card(69), findsOneWidget);
+
+      // The last page came back short: there is no more to ask for.
+      final before = asked.length;
+      await toTheFoot(tester);
+      await tester.drag(grid.first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(asked.length, before);
+      // And no spinner is left under it.
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('2. asked again behind the grid, it is asked as far down as it was read',
+        (tester) async {
+      // A pull, the tab coming back, a card's page closed: the first page alone
+      // took the second away from under the thumb that had scrolled to it.
+      serve(listings(70));
+      await mount(tester, const DiscoverScreen());
+      await toTheFoot(tester);
+      expect(card(59), findsOneWidget);
+
+      pull(tester);
+      await tester.pumpAndSettle();
+
+      expect(asked.last, containsPair('offset', '0'));
+      expect(asked.last, containsPair('limit', '60'));
+      expect(card(59), findsOneWidget);
+    });
+
+    testWidgets('3. …in pieces of a hundred, the most the server hands over at once',
+        (tester) async {
+      serve(listings(250));
+      await mount(tester, const DiscoverScreen());
+      for (var i = 0; i < 4; i++) {
+        await toTheFoot(tester);
+      }
+      expect(card(149), findsOneWidget);
+      asked.clear();
+
+      pull(tester);
+      await tester.pumpAndSettle();
+
+      expect([for (final q in asked) (q['offset'], q['limit'])], [('0', '100'), ('100', '50')]);
+      expect(card(149), findsOneWidget);
+    });
+
+    testWidgets('4. a page that does not come keeps the grid, says so, and the next scroll asks '
+        'again', (tester) async {
+      var fail = true;
+      serve(listings(70), instead: (query) => query['offset'] == '30' && fail ? unreachable : null);
+      await mount(tester, const DiscoverScreen());
+
+      await toTheFoot(tester);
+      expect(find.text(noContact), findsOneWidget);
+      expect(card(29), findsOneWidget);
+      expect(card(30), findsNothing);
+
+      // Not again by itself, at every frame the thumb rests there.
+      final tries = asked.length;
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(asked.length, tries);
+
+      fail = false;
+      await tester.drag(grid.first, const Offset(0, -200));
+      await tester.pumpAndSettle();
+      expect(asked[tries], containsPair('offset', '30'));
+      expect(card(59), findsOneWidget);
+    });
+
+    testWidgets('5. the next page is the grid\'s: words typed and not searched for stay out of it',
+        (tester) async {
+      serve(listings(70));
+      await mount(tester, const DiscoverScreen());
+
+      await tester.enterText(find.byType(TextField), 'kajakk');
+      await tester.pump();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await toTheFoot(tester);
+
+      expect(asked.last, containsPair('offset', '30'));
+      expect(asked.last.containsKey('q'), isFalse);
+      expect(card(59), findsOneWidget);
+    });
+
+    testWidgets('6. a listing that moved a place between two pages is drawn once', (tester) async {
+      // Somebody put a thing out while this was being read: every listing
+      // moved down a place, and the last of the first page came again first
+      // in the second.
+      final all = listings(70);
+      serve(all, instead: (query) {
+        if (query['offset'] != '30') return null;
+        return {
+          'total': 71,
+          'items': [all[29], ...all.skip(30).take(29)],
+        };
+      });
+      await mount(tester, const DiscoverScreen());
+      await toTheFoot(tester);
+
+      expect(card(29), findsOneWidget);
+      expect(card(58), findsOneWidget);
+      // And the next page starts after what the server handed over, not
+      // after what was drawn.
+      await toTheFoot(tester);
+      expect(asked.last, containsPair('offset', '60'));
+    });
+
+    testWidgets('7. a new search starts from the first page, and a page for the old one is dropped',
+        (tester) async {
+      final all = listings(70);
+      var slow = false;
+      serve(all, instead: (query) {
+        if (!slow || query['offset'] != '30') return null;
+        return Future.delayed(const Duration(seconds: 2),
+            () => {'total': 70, 'items': all.skip(30).take(30).toList()});
+      });
+      await mount(tester, const DiscoverScreen());
+
+      slow = true;
+      final position = tester.state<ScrollableState>(grid.first).position;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pump();
+      await tester.pump();
+      expect(asked.last, containsPair('offset', '30'));
+
+      serve([...listings(3, from: 100)]);
+      await tester.enterText(find.byType(TextField), 'kajakk');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      // The old grid's page lands after the new search has.
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      expect(asked.last, containsPair('offset', '0'));
+      expect(asked.last, containsPair('q', 'kajakk'));
+      expect(find.text('3 treff'), findsOneWidget);
+      expect(card(100), findsOneWidget);
+      expect(card(30), findsNothing);
+      expect(card(0), findsNothing);
+    });
+
+    testWidgets('8. a grid «Ikke vis meg slike» has emptied is asked for again, when there is more',
+        (tester) async {
+      // The whole first page of one kind, and the second of another.
+      final ps5 = [
+        for (final item in listings(30)) {...item, 'subcategory': 'PS5'},
+      ];
+      final rest = listings(10, from: 30);
+      var hidden = false;
+      server.overrides['POST /me/hidden'] = (http.Request request) {
+        hidden = true;
+        return {
+          'hidden': {'category': 'gaming', 'subcategory': 'PS5', 'itemId': null},
+          'hiddenCount': 1,
+        };
+      };
+      server.overrides['GET /discover'] = (http.Request request) {
+        final query = request.url.queryParameters;
+        asked.add(query);
+        final all = hidden ? rest : [...ps5, ...rest];
+        final from = int.parse(query['offset']!);
+        final take = int.parse(query['limit']!);
+        return {'total': all.length, 'items': all.skip(from).take(take).toList()};
+      };
+      await mount(tester, const DiscoverScreen());
+
+      await tester.longPress(find.text('Ting 0'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ikke vis meg slike'));
+      await tester.pumpAndSettle();
+
+      expect(jsonEncode(asked.last), contains('"offset":"0"'));
+      expect(card(30), findsOneWidget);
+      expect(card(0), findsNothing);
+      expect(find.text('Ingen treff'), findsNothing);
+    });
+  });
+}

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -88,6 +89,44 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   int _total = 0;
   List<Item> _results = const [];
 
+  /// How many listings a page is — the server's own page — and the most the
+  /// server hands over in one answer.
+  static const _page = 30, _mostAtOnce = 100;
+
+  /// How close to the foot of the grid the next page is asked for: a couple
+  /// of rows of cards, so a thumb scrolling at reading pace does not meet the
+  /// end before the page has come.
+  static const _moreWithin = 600.0;
+
+  /// The asking the grid on screen is the answer to, as it was sent. The next
+  /// page is asked for with it: the field may hold words typed since and not
+  /// searched for, and a page of those under a grid of these is two searches
+  /// in one grid.
+  _Ask? _grid;
+
+  /// Where the next page starts: how many listings the server has handed
+  /// over for the grid, counting one it handed over twice. Not how many are
+  /// drawn — a listing put out while somebody scrolls moves every one after
+  /// it down a place, so the last of one page comes again first in the next,
+  /// and it is drawn once.
+  int _next = 0;
+
+  /// A page came back short, which is the server saying that was all.
+  bool _end = false;
+
+  /// The next page is on its way.
+  bool _loadingMore = false;
+
+  /// The last page asked for got no answer. Not asked for again until the
+  /// grid is scrolled again: a thumb resting at the foot of it would have
+  /// asked at every frame of a drag, and said so in a toast each time.
+  bool _moreFailed = false;
+
+  /// The newest asking whose answer has landed, or failed to come. An asking
+  /// for the grid on its way means the next page waits for it: its answer is
+  /// the grid the page would go under.
+  int _settled = 0;
+
   /// «Alt» is null. The chip row is a filter on one grid, which is what the
   /// export draws: one home tab, not a shelf per interest.
   String? _chip;
@@ -169,6 +208,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   /// and then failed left that grid standing under the new chip, with its
   /// count and no word of what had happened. Under «Fikk ikke kontakt» there
   /// is no grid to keep.
+  ///
+  /// The grid comes a page at a time; see [_loadMore]. Asked for again behind
+  /// it, it is asked for as far down as it has been read, or the pages under
+  /// the thumb that scrolled to them would go with the first one.
   Future<void> _load({bool quiet = false, bool say = false}) async {
     if (!mounted) return;
     final behind = quiet && !_loading && _error == null && _results.isNotEmpty;
@@ -180,8 +223,37 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
     }
     final api = context.read<SwaplyApi>();
     final asked = ++_asked;
+    final ask = _asking();
     try {
-      final res = await api.discover(
+      final res = await _fetch(api, ask, from: 0, count: behind ? math.max(_page, _next) : _page);
+      if (!mounted || asked != _asked) return;
+      setState(() {
+        _grid = ask;
+        _total = res.total;
+        _results = _distinct(res.items);
+        _next = res.items.length;
+        _end = res.end;
+        _moreFailed = false;
+        _shown = _settled = asked;
+        _loading = false;
+        _error = null;
+        // Asked for after the server had them: the answer is its word again.
+        _hidden.removeWhere((h) => h.until != null && h.until! < asked);
+      });
+    } on ApiException catch (e) {
+      // A newer asking is on its way, and it is the one that says.
+      if (!mounted || asked != _asked) return;
+      setState(() {
+        _settled = asked;
+        _loading = false;
+        if (!behind) _error = e.message;
+      });
+      if (behind && say) showError(context, e);
+    }
+  }
+
+  /// The search and the filters as they stand, to ask with.
+  _Ask _asking() => (
         q: _search.text.trim(),
         // The chip wins over the filter sheet's category: it is the one the
         // person can see.
@@ -192,25 +264,95 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
         condition: _filters.condition,
         sort: _filters.sort,
       );
+
+  /// [count] listings from [from] on, asked for as [ask], in as many answers
+  /// as the server's most at once makes it. `end` is a page that came back
+  /// short: the server has no more.
+  static Future<({int total, List<Item> items, bool end})> _fetch(SwaplyApi api, _Ask ask,
+      {required int from, required int count}) async {
+    final items = <Item>[];
+    var total = 0;
+    while (items.length < count) {
+      final limit = math.min(_mostAtOnce, count - items.length);
+      final res = await api.discover(
+        q: ask.q,
+        category: ask.category,
+        subcategory: ask.subcategory,
+        minValue: ask.minValue,
+        maxValue: ask.maxValue,
+        condition: ask.condition,
+        sort: ask.sort,
+        limit: limit,
+        offset: from + items.length,
+      );
+      total = res.total;
+      items.addAll(res.items);
+      if (res.items.length < limit) return (total: total, items: items, end: true);
+    }
+    return (total: total, items: items, end: false);
+  }
+
+  /// Each listing once, where it came first.
+  static List<Item> _distinct(Iterable<Item> items) {
+    final seen = <String>{};
+    return [
+      for (final item in items)
+        if (seen.add(item.id)) item,
+    ];
+  }
+
+  /// The next page, under the grid. Oppdag used to make one asking and show
+  /// what came of it, which is the server's first thirty: «84 treff» over
+  /// thirty cards, and the rest never shown however far anybody scrolled.
+  ///
+  /// Only for the grid on screen, asked for as it was ([_grid]), and not while
+  /// it is being asked for again: that answer is the grid this page would go
+  /// under. A page that lands after the grid has been asked for again, or for
+  /// something else, is dropped. One that gets no answer leaves the grid as it
+  /// is and says so; the next scroll asks again.
+  Future<void> _loadMore() async {
+    final grid = _grid;
+    if (!mounted || grid == null || _loadingMore || _moreFailed || _loading) return;
+    if (_error != null || _end || _next >= _total || _asked != _settled) return;
+    final api = context.read<SwaplyApi>();
+    final asked = _asked;
+    setState(() => _loadingMore = true);
+    try {
+      final res = await _fetch(api, grid, from: _next, count: _page);
       if (!mounted || asked != _asked) return;
       setState(() {
         _total = res.total;
-        _results = res.items;
-        _shown = asked;
-        _loading = false;
-        _error = null;
-        // Asked for after the server had them: the answer is its word again.
-        _hidden.removeWhere((h) => h.until != null && h.until! < asked);
+        _results = _distinct([..._results, ...res.items]);
+        _next += res.items.length;
+        _end = res.end;
       });
     } on ApiException catch (e) {
-      // A newer asking is on its way, and it is the one that says.
       if (!mounted || asked != _asked) return;
-      setState(() {
-        _loading = false;
-        if (!behind) _error = e.message;
-      });
-      if (behind && say) showError(context, e);
+      _moreFailed = true;
+      showError(context, e);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
+  }
+
+  /// Near the foot of the grid, the next page is asked for: as it is
+  /// scrolled, and as it is laid out — a first page that does not fill the
+  /// screen, or a grid that lost cards to «Ikke vis meg slike», has no scroll
+  /// to wait for. A new drag is a new try after a page that did not come.
+  /// Asked for after the frame, since a notification can come from inside
+  /// one, and never stops the notification on its way up.
+  bool _scrolled(Notification notification) {
+    final (metrics, depth) = switch (notification) {
+      ScrollNotification n => (n.metrics, n.depth),
+      ScrollMetricsNotification n => (n.metrics, n.depth),
+      _ => (null, 0),
+    };
+    if (metrics == null || depth != 0 || metrics.axis != Axis.vertical) return false;
+    if (notification is ScrollStartNotification && notification.dragDetails != null) {
+      _moreFailed = false;
+    }
+    if (metrics.extentAfter < _moreWithin) scheduleMicrotask(() => unawaited(_loadMore()));
+    return false;
   }
 
   /// Pulled down: asked again behind the grid, which stays where it was with
@@ -237,6 +379,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
             ..remove(guess)
             ..add((kind: hid.kind, until: _asked));
         });
+        // Every card on screen was of the kind, and the server has more:
+        // those, rather than «Ingen treff» over listings not shown yet. The
+        // server has the kind now and leaves it out of the answer. Under the
+        // spinner, since there is no grid left to ask behind.
+        if (_visible.isEmpty && !_end && _next < _total) unawaited(_load());
       }
       // The count 16b shows.
       unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
@@ -492,30 +639,56 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
         );
 
     // Less what is hidden here and still in the answer, so the count is of
-    // the grid under it.
+    // the grid under it. The server's count, not the cards': the grid comes a
+    // page at a time.
     final total = _total - (_results.length - results.length);
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, Insets.xl),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text('$total treff', style: const TextStyle(fontSize: 12.5, color: SwaplyColors.grey)),
-          ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              column(left, 0),
-              const SizedBox(width: 14),
-              column(right, 1),
-            ],
-          ),
-        ],
+    return NotificationListener<Notification>(
+      onNotification: _scrolled,
+      child: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, Insets.xl),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text('$total treff',
+                  style: const TextStyle(fontSize: 12.5, color: SwaplyColors.grey)),
+            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                column(left, 0),
+                const SizedBox(width: 14),
+                column(right, 1),
+              ],
+            ),
+            // The next page on its way, small, under the last cards.
+            if (_loadingMore)
+              const Center(
+                child: SizedBox(
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.2),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
+
+/// What the grid is asked for with: the search and the filters as they were
+/// sent. See `_DiscoverScreenState._grid`.
+typedef _Ask = ({
+  String q,
+  String? category,
+  String? subcategory,
+  int? minValue,
+  int? maxValue,
+  String? condition,
+  String sort,
+});
 
 class _SquareIconButton extends StatelessWidget {
   const _SquareIconButton({required this.icon, required this.onTap, this.active = false});

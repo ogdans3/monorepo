@@ -337,6 +337,10 @@ class SwaplyApi {
 
   // --- discovery ------------------------------------------------------------
 
+  /// 05's grid, [limit] listings from [offset] on, in an order the server
+  /// keeps the same from one page to the next. Left out, they are the
+  /// server's own first page. `total` is every listing the search finds, not
+  /// how many came.
   Future<({int total, List<Item> items})> discover({
     String? q,
     String? category,
@@ -345,6 +349,8 @@ class SwaplyApi {
     int? maxValue,
     String? condition,
     String sort = 'newest',
+    int? limit,
+    int? offset,
   }) async {
     final query = <String, String>{
       if (q != null && q.isNotEmpty) 'q': q,
@@ -354,6 +360,8 @@ class SwaplyApi {
       if (maxValue != null) 'maxValue': '$maxValue',
       'condition': ?condition,
       'sort': sort,
+      if (limit != null) 'limit': '$limit',
+      if (offset != null) 'offset': '$offset',
     };
     final json = await _get('/discover?${Uri(queryParameters: query).query}');
     return (

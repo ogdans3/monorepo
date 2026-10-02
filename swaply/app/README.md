@@ -319,6 +319,21 @@ what is asked is kept, though: under a chip's spinner the grid in memory is the
 one from before the chip, and a quiet asking that overtakes the spinner and
 fails ends in «Fikk ikke kontakt», not in the old grid under the new chip.
 
+Oppdag comes thirty at a time. It used to make one asking and draw what came
+of it, which is the server's first page: «84 treff» over thirty cards, and the
+rest never shown however far anybody scrolled. The next page is asked for as
+the foot of the grid comes near, and as the grid is laid out, so a page that
+does not fill the screen asks too. It is asked with the search the grid on
+screen was asked with, not words typed since and not searched for. «N treff» is
+the server's count, not the cards'. A grid asked for again behind itself is
+asked for as far down as it has been read, in pieces of a hundred, the most the
+server hands over at once: the first page alone took the rest away from under
+the thumb that had scrolled to it. A listing that moved a place between two
+pages is drawn once, and the next page starts after what the server handed
+over. A page that gets no answer leaves the grid as it is and says so in a
+toast, and the next drag asks again; one that lands after a new search is
+dropped. `test/discover_test.dart` holds it.
+
 The long press holds «Ikke vis meg slike», «Se profil» and «Rapporter».
 Hiding takes the kind — the category and the subcategory, or the listing alone
 when it has none — out of the grid on the tap and tells the server
