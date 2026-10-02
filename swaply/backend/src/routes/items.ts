@@ -12,19 +12,32 @@ import { coverSql, many, one, type Executor, type Row } from '../lib/rows.js'
 import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
 import { publicItem, publicUser } from './serialize.js'
 
+/**
+ * Words a person may leave out. A box they emptied is the same as one they
+ * never filled: the app sends `''` for it, and kept as `''` it was a
+ * description of nothing, which every reader had to know to hide.
+ */
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullish()
+    .transform((v) => (v === '' ? null : v))
+
 const itemBody = z.object({
   kind: z.enum(['item', 'service']).default('item'),
   // Trimmed first, everywhere a person types: `min(1)` accepts a space, and
   // the collage would draw a card with nothing written on it.
   title: z.string().trim().min(1).max(80),
-  description: z.string().trim().max(2000).nullish(),
+  description: optionalText(2000),
   category: z.enum(CATEGORIES),
-  subcategory: z.string().trim().max(60).nullish(),
+  subcategory: optionalText(60),
   condition: z.enum(CONDITIONS).nullish(),
   estimatedValueNok: z.number().int().min(0).max(10_000_000).nullish(),
   // Looked up, never stored: see `townOf` in lib/postcodes.ts.
   postalCode: z.string().regex(/^\d{4}$/, 'Et postnummer har fire sifre.').nullish(),
-  town: z.string().trim().max(60).nullish(),
+  town: optionalText(60),
   // Up to ten, first is the cover. A listing with none is allowed: services
   // usually have none, and discovery draws a generated card instead.
   //
@@ -262,61 +275,111 @@ export default async function itemRoutes(app: FastifyInstance) {
     }
   })
 
+  // «Rediger annonsen». A field in the body is a change and a field left out
+  // is left alone; `null` empties what may be empty, and so does `''`, which
+  // is what the app sends for a box somebody cleared. Every field used to be
+  // `coalesce(new, old)`, so nothing could ever be emptied and `kind` was not
+  // written at all.
   app.patch('/items/:id', async (request) => {
     const userId = app.requireUser(request)
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
     const body = itemBody.partial().parse(request.body)
+    // Before anything is held: a postcode that is no postcode changes nothing.
+    const typed = townOf(body.postalCode)
+    const media = body.media?.map(toStoredPath)
 
-    const existing = await one(app.db, sql`select owner_id, active_trade_id from items where id = ${id}`)
-    if (!existing) throw notFound('Fant ikke gjenstanden.')
-    if (existing['owner_id'] !== userId) throw forbidden('Dette er ikke din gjenstand.')
-    if (existing['active_trade_id']) {
-      throw badRequest('item_reserved', 'Gjenstanden er reservert i et bytte og kan ikke endres.')
-    }
-    if (body.media) {
-      const kept = await many(app.db, sql`select url from item_media where item_id = ${id}`)
-      await assertMedia(
-        app.db,
-        userId,
-        body.media.map(toStoredPath),
-        kept.map((row) => row['url']),
+    // One transaction, so the listing is never seen with its new words and
+    // its old photos, or half of either — and with its row held to the end,
+    // so an acceptance reserving it in the same moment either lands first and
+    // is answered below, or waits for this and reserves what it says.
+    const { item, photos } = await app.db.transaction(async (tx) => {
+      const [existing] = await tx.execute<Row>(
+        sql`select * from items where id = ${id} for no key update`,
       )
-    }
-
-    const item = await one(
-      app.db,
-      sql`update items set
-            title = coalesce(${body.title ?? null}, title),
-            description = coalesce(${body.description ?? null}, description),
-            category = coalesce(${body.category ?? null}::category, category),
-            subcategory = coalesce(${body.subcategory ?? null}, subcategory),
-            condition = coalesce(${body.condition ?? null}::condition, condition),
-            estimated_value_nok = coalesce(${body.estimatedValueNok ?? null}, estimated_value_nok),
-            town = coalesce(${body.town ?? townOf(body.postalCode)}, town)
-          where id = ${id} returning *`,
-    )
-
-    if (body.media) {
-      await app.db.execute(sql`delete from item_media where item_id = ${id}`)
-      for (const [position, url] of body.media.entries()) {
-        await app.db.execute(
-          sql`insert into item_media (item_id, url, position)
-              values (${id}, ${toStoredPath(url)}, ${position})`,
-        )
+      // Taken down is gone, for an edit as for everything else that reads it.
+      if (!existing || existing['deleted_at']) throw notFound('Fant ikke gjenstanden.')
+      if (existing['owner_id'] !== userId) throw forbidden('Dette er ikke din gjenstand.')
+      if (existing['active_trade_id']) {
+        throw badRequest('item_reserved', 'Gjenstanden er reservert i et bytte og kan ikke endres.')
       }
-    }
 
-    // Read the photos back rather than echoing the row: the row does not carry
-    // them, and a client that has just added one should not be told there is
-    // none.
-    const media = await many(
-      app.db,
-      sql`select url from item_media where item_id = ${id} order by position`,
-    )
+      // The rule 10b has: a service has no condition, and an item needs one.
+      const kind = body.kind ?? (existing['kind'] as string)
+      const condition =
+        kind === 'service'
+          ? null
+          : body.condition !== undefined
+            ? body.condition
+            : (existing['condition'] as string | null)
+      if (kind === 'item' && !condition) {
+        throw badRequest('condition_required', 'Velg tilstand for gjenstanden.')
+      }
+      // A service is never reserved, so one in a trade everybody has agreed
+      // to holds nothing. Made an item there, it would be one that the trade
+      // gives away and that another trade could reserve as well.
+      if (kind !== existing['kind']) {
+        const [agreed] = await tx.execute<Row>(
+          sql`select 1 from trade_offer_items oi
+              join trade_offers o on o.id = oi.offer_id
+              join trades t on t.id = o.trade_id
+              where oi.item_id = ${id} and t.state in ('accepted', 'paused')
+                and o.seq = (select max(seq) from trade_offers where trade_id = t.id)
+              limit 1`,
+        )
+        if (agreed) {
+          throw conflict(
+            'agreed_trade',
+            'Tjenesten er med i et avtalt bytte og kan ikke gjøres om til en gjenstand.',
+          )
+        }
+      }
+
+      if (media) {
+        const kept = await many(tx, sql`select url from item_media where item_id = ${id}`)
+        await assertMedia(tx, userId, media, kept.map((row) => row['url']))
+      }
+
+      const set = [sql`kind = ${kind}`, sql`condition = ${condition}`]
+      if (body.title !== undefined) set.push(sql`title = ${body.title}`)
+      if (body.description !== undefined) set.push(sql`description = ${body.description}`)
+      if (body.category !== undefined) set.push(sql`category = ${body.category}`)
+      if (body.subcategory !== undefined) set.push(sql`subcategory = ${body.subcategory}`)
+      if (body.estimatedValueNok !== undefined) {
+        set.push(sql`estimated_value_nok = ${body.estimatedValueNok}`)
+      }
+      // Words win, then a postcode, as on 10b. An empty postcode box is not
+      // sent and leaves the listing where it is; emptied words with no
+      // postcode beside them take the town away.
+      const town = body.town ?? typed
+      if (town !== null || body.town === null) set.push(sql`town = ${town}`)
+
+      const [updated] = await tx.execute<Row>(
+        sql`update items set ${sql.join(set, sql`, `)} where id = ${id} returning *`,
+      )
+
+      if (media) {
+        await tx.execute(sql`delete from item_media where item_id = ${id}`)
+        for (const [position, url] of media.entries()) {
+          await tx.execute(
+            sql`insert into item_media (item_id, url, position)
+                values (${id}, ${url}, ${position})`,
+          )
+        }
+      }
+
+      // Read the photos back rather than echoing the body: a client that has
+      // just added one should be told what is stored, which is a path.
+      const photos = await many(
+        tx,
+        sql`select url from item_media where item_id = ${id} order by position`,
+      )
+      return { item: updated!, photos }
+    })
+
     return publicItem({
-      ...item!,
-      cover: media[0]?.['url'] ?? null,
-      media: media.map((m) => m['url']),
+      ...item,
+      cover: photos[0]?.['url'] ?? null,
+      media: photos.map((m) => m['url']),
     })
   })
 
