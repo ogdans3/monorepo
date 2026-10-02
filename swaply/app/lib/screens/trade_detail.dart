@@ -1490,9 +1490,28 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // exists — the lifecycle reverses — but this screen is not where the
       // export offers it.
       if (trade.isChain) {
-        children.add(PrimaryButton('Marker byttet som gjennomført',
-            busy: _busy,
-            onPressed: () => _run((api) => api.completeChainTrade(trade.id))));
+        // Pressed, it marks your side sent and received, and the trade is
+        // done once all three have pressed it. It used to look the same
+        // after the press as before, and never said who was left.
+        if (trade.youSentAt != null && trade.youReceivedAt != null) {
+          final missing = _others(trade)
+              .where((p) => p.sentAt == null || p.receivedAt == null)
+              .toList();
+          children.add(Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(
+              missing.isEmpty
+                  ? 'Du har markert byttet som gjennomført.'
+                  : 'Du har markert byttet som gjennomført. Venter på ${_firstNames(missing)}.',
+              style: Type.secondary,
+              textAlign: TextAlign.center,
+            ),
+          ));
+        } else {
+          children.add(PrimaryButton('Marker byttet som gjennomført',
+              busy: _busy,
+              onPressed: () => _run((api) => api.completeChainTrade(trade.id))));
+        }
         children.add(const SizedBox(height: Insets.sm));
       }
       children.add(SecondaryButton('Trekk deg fra byttet',

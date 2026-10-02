@@ -6,6 +6,8 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
+import 'chat.dart';
+import 'profile.dart';
 
 /// 09h Fullført. The moment the trade lands, before anything is asked of you.
 class TradeCompletedScreen extends StatelessWidget {
@@ -131,6 +133,24 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  /// «Byttet ble ikke noe av» on 07l. The export has it free the things
+  /// again, asked a week into the chat; here 07l comes once all three have
+  /// marked the ring done, and a completed trade has nothing left to free.
+  /// What is still true to do is to tell us, about whichever of the two it
+  /// concerns. It used to close the screen and say nothing to anybody.
+  Future<void> _didNotHappen() async {
+    final person = await choosePerson(
+      context,
+      title: 'Hvem gjelder det?',
+      people: _others,
+      describe: (p) => p.gives.isEmpty
+          ? 'byttet med deg'
+          : 'ga ${p.gives.map((i) => i.title).join(' og ')}',
+    );
+    if (person == null || !mounted) return;
+    await showReportSheet(context, userId: person.id, personName: person.displayName);
+  }
+
   @override
   Widget build(BuildContext context) {
     final chain = widget.trade.isChain;
@@ -142,6 +162,29 @@ class _ReviewScreenState extends State<ReviewScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // 07l's way out without an answer, at the top as the export
+            // draws it: «Byttet ble ikke noe av» no longer leaves.
+            if (chain)
+              Align(
+                alignment: Alignment.centerRight,
+                // 6 under the status bar and 24 in from the edge, as drawn;
+                // the row is a finger tall, and the 24 answers too.
+                child: TapArea(
+                  room: const EdgeInsets.fromLTRB(16, 0, 24, 0),
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: const SizedBox(
+                    height: kTapTarget,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: Text('Senere',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: SwaplyColors.grey)),
+                    ),
+                  ),
+                ),
+              ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
@@ -167,7 +210,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                             room: const EdgeInsets.symmetric(horizontal: 16, vertical: 12))),
                     const SizedBox(height: 28 - 12),
                   ] else ...[
-                    const SizedBox(height: 60),
+                    // 60 under the status bar, as before «Senere»'s row
+                    // took the top of it.
+                    const SizedBox(height: 60 - kTapTarget),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 15),
                       child: Text('Ble byttet gjennomført?',
@@ -250,7 +295,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 34 - 11),
               child: Column(
                 children: [
-                  PrimaryButton('Send vurdering',
+                  // 07l asks whether it happened, so its two answers are
+                  // «Ja, send vurdering» and «Byttet ble ikke noe av».
+                  PrimaryButton(chain ? 'Ja, send vurdering' : 'Send vurdering',
                       busy: _busy,
                       enabled: _others.every((p) => _scores.containsKey(p.id)),
                       onPressed: _submit),
@@ -258,7 +305,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   // them and the top of the foot.
                   TapArea(
                     room: const EdgeInsets.fromLTRB(12, 12, 12, 11),
-                    onTap: () => Navigator.of(context).maybePop(),
+                    onTap: chain ? _didNotHappen : () => Navigator.of(context).maybePop(),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       // A chain we were not part of may simply not have happened.

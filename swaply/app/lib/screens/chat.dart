@@ -460,10 +460,16 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
   /// The three chips over the field. They are trade actions, not decoration:
   /// this is where a conversation turns into a proposal.
+  ///
+  /// Not in a ring. 07k draws them, but each sheet behind them proposes to
+  /// the one person you receive from, which a ring of three has no offer
+  /// for: every tap ended in a toast saying so. A ring is agreed in words,
+  /// which is what the banner over it says.
   Widget _composer() {
     final trade = _trade;
-    final negotiable =
-        trade != null && ['talking', 'pending', 'countered'].contains(trade.state);
+    final negotiable = trade != null &&
+        !trade.isChain &&
+        ['talking', 'pending', 'countered'].contains(trade.state);
 
     // 10 over the chips and 8 under them, and 8 under the field: the chips
     // share theirs, and the field and «Send» share the rest.
@@ -562,17 +568,66 @@ class _ThreadScreenState extends State<ThreadScreen> {
       );
 
   Future<void> _propose(Trade trade, ProposalKind kind) async {
-    if (trade.isChain) {
-      // A chain has no offer to counter: it is agreed here, which is what the
-      // banner above the thread says.
-      showError(context, 'Treveis-bytter avtales her i chatten.');
-      return;
-    }
     final sent = await showProposalSheet(context, trade: trade, kind: kind);
     if (sent) await _load();
   }
 
 }
+
+/// A small sheet with the people in a ring, for something that is about one
+/// of them. Null when it is closed without a choice.
+Future<UserRef?> choosePerson(
+  BuildContext context, {
+  required String title,
+  required List<UserRef> people,
+  String Function(UserRef person)? describe,
+}) =>
+    showModalBottomSheet<UserRef>(
+      context: context,
+      // Over the bar, not inside the tab under it; see `pushOverBar`.
+      useRootNavigator: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(Insets.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(title, style: Type.title),
+              const SizedBox(height: Insets.sm),
+              for (final person in people)
+                InkWell(
+                  borderRadius: BorderRadius.circular(Radii.card),
+                  onTap: () => Navigator.of(sheet).pop(person),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Avatar(person.displayName, size: 40),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(person.displayName, style: Type.heading),
+                              if (describe != null) Text(describe(person), style: Type.small),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: Insets.md),
+              SecondaryButton('Avbryt', onPressed: () => Navigator.of(sheet).pop()),
+            ],
+          ),
+        ),
+      ),
+    );
 
 String _relative(DateTime? when) {
   if (when == null) return '';
