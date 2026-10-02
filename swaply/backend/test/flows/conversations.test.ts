@@ -266,6 +266,62 @@ describe('a conversation and the trade it belongs to', () => {
     expect(res.status).toBe(400)
   })
 
+  test('11c. a thing traded away, or taken down, is not something to open a conversation about', async () => {
+    // Siri's screwdriver goes to Tor, and the trade is done.
+    const siri = (await register('Siri N.', 'siri@epost.no')).token
+    const tor = (await register('Tor N.', 'tor@epost.no')).token
+    const screwdriver = await list(siri, 'Skrutrekker')
+    const helmet = await list(tor, 'Sykkelhjelm')
+    await call('POST', `/items/${screwdriver}/like`, { token: tor })
+    const swap = (await call('POST', `/items/${helmet}/like`, { token: siri })).body!['tradeId']
+    for (const token of [siri, tor]) {
+      expect((await call('POST', `/trades/${swap}/accept`, { token })).status).toBe(200)
+    }
+    for (const token of [siri, tor]) {
+      for (const marker of ['sent', 'received']) {
+        await call('POST', `/trades/${swap}/mark`, { token, body: { marker } })
+      }
+    }
+    expect((await call('GET', `/trades/${swap}`, { token: siri })).body!['state']).toBe('completed')
+    const before = (await call('GET', '/threads', { token: per })).body!['threads'].length
+
+    // Writing about it used to open a negotiation about a thing already given away.
+    const traded = await call('POST', `/items/${screwdriver}/message`, {
+      token: per, body: { body: 'Er skrutrekkeren ledig?' },
+    })
+    expect(traded.status).toBe(409)
+    expect(traded.body).toEqual({ code: 'item_unavailable', message: 'Denne er allerede byttet bort.' })
+
+    // A listing taken down was already refused, as not found.
+    const lamp = await list(siri, 'Byggelampe')
+    expect((await call('DELETE', `/items/${lamp}`, { token: siri })).status).toBe(204)
+    const removed = await call('POST', `/items/${lamp}/message`, {
+      token: per, body: { body: 'Er lampen ledig?' },
+    })
+    expect(removed.status).toBe(404)
+
+    expect((await call('GET', '/threads', { token: per })).body!['threads']).toHaveLength(before)
+  })
+
+  test('11d. but a thing held by somebody’s yes still is: several trades may want one drill', async () => {
+    const siri = (await call('POST', '/auth/login', {
+      body: { email: 'siri@epost.no', password: 'byttehandel1' },
+    })).body!['token']
+    const tor = (await call('POST', '/auth/login', {
+      body: { email: 'tor@epost.no', password: 'byttehandel1' },
+    })).body!['token']
+    const kayak = await list(siri, 'Kajakk')
+    const skis = await list(tor, 'Ski')
+    await call('POST', `/items/${kayak}/like`, { token: tor })
+    const swap = (await call('POST', `/items/${skis}/like`, { token: siri })).body!['tradeId']
+    expect((await call('POST', `/trades/${swap}/accept`, { token: siri })).status).toBe(200)
+
+    const res = await call('POST', `/items/${kayak}/message`, {
+      token: per, body: { body: 'Hvis byttet ryker, vil jeg gjerne ha kajakken.' },
+    })
+    expect(res.status).toBe(201)
+  })
+
   test('12. signing out takes the session with it', async () => {
     const extra = await call('POST', '/auth/login', {
       body: { email: 'ola@epost.no', password: 'byttehandel1' },

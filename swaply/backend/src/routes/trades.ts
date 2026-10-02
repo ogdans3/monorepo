@@ -48,7 +48,10 @@ export default async function tradeRoutes(app: FastifyInstance) {
     const { id } = idParam.parse(request.params)
     const body = z.object({ body: z.string().trim().min(1).max(2000) }).parse(request.body)
 
-    const item = await one(app.db, sql`select owner_id from items where id = ${id} and deleted_at is null`)
+    const item = await one(
+      app.db,
+      sql`select owner_id, status from items where id = ${id} and deleted_at is null`,
+    )
     if (!item) throw notFound('Fant ikke gjenstanden.')
     if (item['owner_id'] === userId) throw badRequest('own_item', 'Dette er din egen gjenstand.')
     // Writing the first message opens a negotiation, which is the one thing a
@@ -70,6 +73,16 @@ export default async function tradeRoutes(app: FastifyInstance) {
       return { ...existing, lastMessage: await lastMessageIn(app.db, existing.threadId, userId) }
     }
 
+    // A new conversation is a new negotiation, and only a thing still on the
+    // market is something to negotiate about. A traded one used to open a
+    // trade about a thing already given away. Reserved is still on the
+    // market: several trades may want one drill, and its owner decides.
+    if (item['status'] === 'traded') {
+      throw conflict('item_unavailable', 'Denne er allerede byttet bort.')
+    }
+    if (item['status'] === 'withdrawn') {
+      throw conflict('item_unavailable', 'Denne er ikke lagt ut lenger.')
+    }
     const opened = await startTalking(app.db, userId, id, body.body)
     await app.db.execute(sql`
       insert into notifications (user_id, type, payload)
