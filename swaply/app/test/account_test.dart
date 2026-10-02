@@ -150,8 +150,8 @@ void main() {
       // The postcode register's credit is for a device too: 10b looks up its
       // towns for anybody.
       expect(find.textContaining('tilgjengeliggjort av Posten Bring AS.'), findsOneWidget);
-      // No profile to delete, so no way to.
-      expect(find.text('Slett kontoen'), findsNothing);
+      // And a device may delete its account as anybody may: see 8.
+      expect(find.text('Slett kontoen'), findsOneWidget);
       expect(find.byType(SwaplyNavBar).hitTestable(), findsNothing);
     });
 
@@ -318,6 +318,55 @@ void main() {
       expect(toast.bottom, lessThanOrEqualTo(fortsett.top - 14));
       // And the button answers all the way across while it is up.
       expect(find.widgetWithText(PrimaryButton, 'Fortsett').hitTestable(), findsOneWidget);
+    });
+  });
+
+  group('«Slett kontoen» for a device looking around', () {
+    // ARCHITECTURE and DESIGN promise `DELETE /me` to a device, with its
+    // token alone, and the server asks it for nothing more. The row was drawn
+    // only for an account with a profile, so a stranger had no way to it.
+    testWidgets('8. it is asked once, with no password, and the phone is a new stranger after',
+        (tester) async {
+      server.overrides['GET /me'] =
+          (http.Request r) => r.headers['authorization'] == 'Bearer ${FakeServer.deviceToken}'
+              ? FakeServer.lookingAround
+              : FakeServer.me;
+      await boot(tester, saved: const {'token': FakeServer.deviceToken});
+      await tester.tap(
+          find.descendant(of: find.byType(SwaplyNavBar), matching: find.text('Profil')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Juridisk og personvern'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Slett kontoen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Slette kontoen?'), findsOneWidget);
+      expect(find.textContaining('Du har ikke laget en profil, så vi beholder ingenting.'),
+          findsOneWidget);
+      // Nothing about a sealed record, which a device does not leave.
+      expect(find.descendant(of: sheet, matching: find.textContaining('identitetspost')),
+          findsNothing);
+      expect(passwordField, findsNothing);
+
+      // Pulled down, it was not sent.
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Avbryt'));
+      await tester.pumpAndSettle();
+      expect(asked('DELETE /me'), 0);
+
+      await tester.tap(find.text('Slett kontoen'));
+      await tester.pumpAndSettle();
+      await tester.tap(deleteButton);
+      await tester.pumpAndSettle();
+
+      expect(asked('DELETE /me'), 1);
+      expect(server.bodies['DELETE /me'], isNull);
+      expect(server.bearers['DELETE /me'], 'Bearer ${FakeServer.deviceToken}');
+      // A new stranger, with a new id: the old one went with the account.
+      final sent = server.bodies['POST /auth/anonymous']!['deviceId'] as String;
+      expect(sent, isNot(oldDevice));
+      expect(session.anonymous, isTrue);
+      expect(find.byType(LegalScreen), findsNothing);
+      expect(find.text('Kontoen er slettet.'), findsOneWidget);
     });
   });
 

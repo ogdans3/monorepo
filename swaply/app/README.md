@@ -696,13 +696,19 @@ person can read them. A device looking around has no 16b, so its 13 — an
 invitation to make a profile — carries the way here itself, a quiet line under
 «Har du konto? Logg inn», and says the twelve-month rule in its own words:
 the likes are kept on an account for the device, and go with it. «Slett
-kontoen» is not drawn for a device; there is no profile to delete.
+kontoen» is there for a device too. It used to be left out, since there is no
+profile to delete, but ARCHITECTURE and DESIGN promise `DELETE /me` to a
+device, and the server takes its token alone: what it liked is personal data
+as much as a profile is.
 
 The row opens a sheet with one sentence of what happens — the profile emptied
 and the things taken down at once, trades under way ended, a minimal record
 kept apart for three years after the last completed trade, or after the
 deletion for somebody who never completed one — and the password,
-because a phone left unlocked on a table is not the person. The button is the
+because a phone left unlocked on a table is not the person. A device's sheet
+says that the account and its likes go at once and nothing is kept, since a
+device leaves no sealed record, and asks for no password, having none. It is
+still asked, since a tap is easily made. The button is the
 app's destructive one («Avslå», «Trekk deg»), never the green way on and never
 report-and-block red. `DELETE /me` then ends every session; the phone signs out
 as «Logg ut» does, device id and all, and the gate makes whoever holds it next

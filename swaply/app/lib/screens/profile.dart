@@ -1020,9 +1020,10 @@ class LegalScreen extends StatelessWidget {
             Text(paragraph, style: Type.body),
             const SizedBox(height: 12),
           ],
-          // A device looking around reaches this from its 13, and has no
-          // profile to delete: its way on is to make one.
-          if (session.signedIn && !session.anonymous) ...[
+          // A device looking around reaches this from its 13 and may delete
+          // its account too: what it liked is personal data, and the server
+          // takes its token alone for it. It was offered only to a profile.
+          if (session.signedIn) ...[
             const SizedBox(height: 8),
             _group([
               // A row in a card, the way «Logg ut» is on 16b and in its
@@ -1080,6 +1081,7 @@ class LegalScreen extends StatelessWidget {
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
       builder: (_) => _DeleteAccountSheet(
         acting: acting,
+        device: session.anonymous && !acting,
         onDeleted: () async {
           if (acting) {
             final gone = session.me?.id;
@@ -1149,12 +1151,22 @@ Future<void> _gateDecided(Session session) async {
 /// «Slett kontoen», asked for once more with the password. The sheet owns its
 /// controller; see [_ReportSheet].
 class _DeleteAccountSheet extends StatefulWidget {
-  const _DeleteAccountSheet({required this.acting, required this.onDeleted});
+  const _DeleteAccountSheet(
+      {required this.acting, required this.device, required this.onDeleted});
 
   /// A session the account switcher minted. The server takes the admin's key
   /// behind it instead of the test account's password, which the admin does
   /// not know.
   final bool acting;
+
+  /// A device looking around, with no profile and so no password: its token
+  /// is all it ever had, and all the server asks. Asked once all the same,
+  /// since a tap is easily made.
+  final bool device;
+
+  /// Whether a password is asked for: an account with a profile, on its own
+  /// session.
+  bool get asksPassword => !acting && !device;
 
   final Future<void> Function() onDeleted;
 
@@ -1176,7 +1188,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
   Future<void> _delete() async {
     if (_busy) return;
     final password = _password.text;
-    if (!widget.acting && password.isEmpty) {
+    if (widget.asksPassword && password.isEmpty) {
       setState(() => _error = 'Skriv inn passordet ditt.');
       return;
     }
@@ -1185,7 +1197,9 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
       _error = null;
     });
     try {
-      await context.read<SwaplyApi>().deleteAccount(password: widget.acting ? null : password);
+      await context
+          .read<SwaplyApi>()
+          .deleteAccount(password: widget.asksPassword ? password : null);
     } on ApiException catch (e) {
       // «Feil passord.», the key to the test tooling still on the account, a
       // real person in the test account's trade, or no contact: the server's
@@ -1217,18 +1231,22 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                 Text(widget.acting ? 'Slette testkontoen?' : 'Slette kontoen?', style: Type.title),
                 const SizedBox(height: Insets.sm),
                 // One sentence, and what is true: `anonymiseUser` and
-                // docs/DESIGN.md, «Erasure and retention».
+                // docs/DESIGN.md, «Erasure and retention». A device leaves no
+                // sealed record: it had nothing to seal.
                 Text(
                   widget.acting
                       ? 'Testverktøyet sletter den som en ekte konto, og du er deg selv igjen '
                           'etterpå.'
-                      : 'Profilen din tømmes og tingene dine tas ned med en gang, bytter du er '
-                          'midt i avsluttes, og en minimal identitetspost holdes adskilt i tre '
-                          'år etter siste gjennomførte bytte, eller etter slettingen om du '
-                          'aldri har byttet.',
+                      : widget.device
+                          ? 'Kontoen og det du har likt slettes med en gang. Du har ikke laget '
+                              'en profil, så vi beholder ingenting.'
+                          : 'Profilen din tømmes og tingene dine tas ned med en gang, bytter du '
+                              'er midt i avsluttes, og en minimal identitetspost holdes adskilt '
+                              'i tre år etter siste gjennomførte bytte, eller etter slettingen '
+                              'om du aldri har byttet.',
                   style: Type.secondary,
                 ),
-                if (!widget.acting) ...[
+                if (widget.asksPassword) ...[
                   const SizedBox(height: Insets.lg),
                   const Text('Passord', style: Type.section),
                   const SizedBox(height: 6),
