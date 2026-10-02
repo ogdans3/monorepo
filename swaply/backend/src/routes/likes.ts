@@ -50,9 +50,14 @@ export default async function likeRoutes(app: FastifyInstance) {
 
     // Who is shown liking your things, and so counted beside them: a test
     // account is not shown to anybody outside its ring, nor anybody outside
-    // to it (`trades/ring.ts`). A like across the ring is one the heart
-    // refuses now, but likes from before that are still in the table.
-    const shown = sql`${sameRing(sql`${userId}::uuid`, sql`l.from_user`)}`
+    // to it (`trades/ring.ts`), and nobody is shown across a block, either
+    // way. The heart refuses both now, but likes made before a block — or
+    // before the ring rule — are still in the table, and a block hides both
+    // ways on every surface (`lib/blocks.ts`).
+    const shown = sql`${sameRing(sql`${userId}::uuid`, sql`l.from_user`)}
+      and not exists (select 1 from blocks b
+                      where (b.blocker = ${userId} and b.blocked = l.from_user)
+                         or (b.blocker = l.from_user and b.blocked = ${userId}))`
 
     const items = await many(
       app.db,
@@ -73,7 +78,16 @@ export default async function likeRoutes(app: FastifyInstance) {
             where l.target_item = ${item['id']} and ${shown}
             order by l.created_at desc`,
       )
-      out.push({ item: publicItem(item), likers: likers.map(publicUser) })
+      out.push({
+        item: publicItem(item),
+        likers: likers.map((u) => ({
+          ...publicUser(u),
+          // A device looking around, with no profile yet: there is nobody to
+          // write to and nothing of theirs to want back, so 12 cannot offer
+          // to close the loop from this side.
+          anonymous: u['email'] === null,
+        })),
+      })
     }
     return { items: out }
   })
