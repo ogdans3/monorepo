@@ -442,5 +442,76 @@ void main() {
       expect(find.byType(ItemThumb), findsNWidgets(3));
     });
   });
+
+  group('05b\'s value fields take a number, and a filter refused keeps the grid', () {
+    Finder valueField(int i) => find.descendant(
+        of: find.byType(AdvancedSearchScreen), matching: find.byType(TextField).at(i + 1));
+
+    testWidgets('1. only digits go in, and «1 000» is a thousand', (tester) async {
+      // «-500» was sent and refused; «1 000» read as nothing and filtered
+      // nothing.
+      serve(listings(3));
+      await mount(tester, const AdvancedSearchScreen(initial: SearchFilters(), query: ''));
+
+      await tester.enterText(valueField(0), '-500');
+      await tester.pump();
+      expect(tester.widget<TextField>(valueField(0)).controller!.text, '500');
+      expect(asked.last, containsPair('minValue', '500'));
+
+      await tester.enterText(valueField(1), '1 000');
+      await tester.pump();
+      expect(asked.last, containsPair('maxValue', '1000'));
+
+      // Past what any listing can be worth, a bound is that much, and a
+      // number the server could not hold is never sent.
+      await tester.enterText(valueField(1), '9' * 25);
+      await tester.pump();
+      expect(asked.last, containsPair('maxValue', '10000000'));
+    });
+
+    testWidgets('2. a filter the server refuses leaves the grid, and says why', (tester) async {
+      serve(listings(3),
+          instead: (query) => query.containsKey('minValue')
+              ? const Refusal(400, 'invalid_request', 'Tallet kan være høyst 100.')
+              : null);
+      await mount(tester, const DiscoverScreen());
+      expect(card(2), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Avansert søk'));
+      await tester.pumpAndSettle();
+      await tester.enterText(valueField(0), '500');
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('treff').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fikk ikke kontakt'), findsNothing);
+      expect(find.text('Tallet kan være høyst 100.'), findsOneWidget);
+      expect(card(2), findsOneWidget);
+      expect(find.text('3 treff'), findsOneWidget);
+
+      // The filter that was refused is not the grid's: the next asking is
+      // without it.
+      await tester.tap(find.text('Gaming'));
+      await tester.pumpAndSettle();
+      expect(asked.last.containsKey('minValue'), isFalse);
+      expect(asked.last, containsPair('category', 'gaming'));
+    });
+
+    testWidgets('3. no answer is still «Fikk ikke kontakt», with «Prøv igjen»', (tester) async {
+      var reach = true;
+      serve(listings(3), instead: (query) => reach ? null : unreachable);
+      await mount(tester, const DiscoverScreen());
+
+      reach = false;
+      await tester.tap(find.text('Gaming'));
+      await tester.pumpAndSettle();
+      expect(find.text('Fikk ikke kontakt'), findsOneWidget);
+
+      reach = true;
+      await tester.tap(find.text('Prøv igjen'));
+      await tester.pumpAndSettle();
+      expect(card(2), findsOneWidget);
+    });
+  });
 }
 

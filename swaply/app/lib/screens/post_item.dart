@@ -28,6 +28,10 @@ const _imageGone = 'Et av bildene er ikke lagret lenger. Legg det til på nytt.'
 const _heldByTrade =
     'Den var allerede lagt ut, og er reservert i et bytte nå. Den kan ikke endres før byttet er over.';
 
+/// The most a listing may be said to be worth, in kroner: the server's bound
+/// (`itemBody` in `backend/src/routes/items.ts`; the two change together).
+const mostValueNok = 10000000;
+
 /// What a picker gives back: the bytes and a name to send them under. Named so
 /// the screen does not have to know whether they came from a camera roll, a
 /// file input in a browser, or a test.
@@ -356,7 +360,6 @@ class _PostItemScreenState extends State<PostItemScreen> {
   /// The server's limits on a listing (`itemBody` in
   /// `backend/src/routes/items.ts`; the two change together).
   static const _mostTitle = 80, _mostDescription = 2000, _mostSubcategory = 60;
-  static const _mostValue = 10000000;
 
   /// What the server would refuse in the form as it stands, in words that
   /// name the field, or null. Only the postcode used to be asked about before
@@ -374,8 +377,8 @@ class _PostItemScreenState extends State<PostItemScreen> {
       return 'Underkategorien kan ha høyst $_mostSubcategory tegn.';
     }
     final value = _valueTyped;
-    if (_value.text.trim().isNotEmpty && (value == null || value > _mostValue)) {
-      return 'Anslått verdi kan være høyst ${kr(_mostValue)}.';
+    if (_value.text.trim().isNotEmpty && (value == null || value > mostValueNok)) {
+      return 'Anslått verdi kan være høyst ${kr(mostValueNok)}.';
     }
     // The server's own words for it, which name the field.
     if (_kind == 'item' && _condition == null) return 'Velg tilstand for gjenstanden.';

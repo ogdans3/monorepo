@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../api/client.dart';
@@ -245,6 +246,21 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
     } on ApiException catch (e) {
       // A newer asking is on its way, and it is the one that says.
       if (!mounted || asked != _asked) return;
+      // A refusal is the server saying no to what was asked — a filter it
+      // will not take — and not the connection: the grid it was asked over
+      // stays, under the filters it was asked with, and the toast says what
+      // was wrong. «Fikk ikke kontakt» over it was untrue, and its «Prøv
+      // igjen» asked the same thing again.
+      final kept = _grid;
+      if (!behind && !e.isNoContact && kept != null) {
+        setState(() {
+          _settled = asked;
+          _loading = false;
+          _filters = kept.filters;
+        });
+        showError(context, e);
+        return;
+      }
       setState(() {
         _settled = asked;
         _loading = false;
@@ -255,15 +271,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   }
 
   /// The search and the filters as they stand, to ask with.
-  _Ask _asking() => (
-        q: _search.text.trim(),
-        category: _filters.category,
-        subcategory: _filters.subcategory,
-        minValue: _filters.minValue,
-        maxValue: _filters.maxValue,
-        condition: _filters.condition,
-        sort: _filters.sort,
-      );
+  _Ask _asking() => (q: _search.text.trim(), filters: _filters);
 
   /// [count] listings from [from] on, asked for as [ask], in as many answers
   /// as the server's most at once makes it. `end` is a page that came back
@@ -276,12 +284,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
       final limit = math.min(_mostAtOnce, count - items.length);
       final res = await api.discover(
         q: ask.q,
-        category: ask.category,
-        subcategory: ask.subcategory,
-        minValue: ask.minValue,
-        maxValue: ask.maxValue,
-        condition: ask.condition,
-        sort: ask.sort,
+        category: ask.filters.category,
+        subcategory: ask.filters.subcategory,
+        minValue: ask.filters.minValue,
+        maxValue: ask.filters.maxValue,
+        condition: ask.filters.condition,
+        sort: ask.filters.sort,
         limit: limit,
         offset: from + items.length,
       );
@@ -682,15 +690,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
 
 /// What the grid is asked for with: the search and the filters as they were
 /// sent. See `_DiscoverScreenState._grid`.
-typedef _Ask = ({
-  String q,
-  String? category,
-  String? subcategory,
-  int? minValue,
-  int? maxValue,
-  String? condition,
-  String sort,
-});
+typedef _Ask = ({String q, SearchFilters filters});
 
 class _SquareIconButton extends StatelessWidget {
   const _SquareIconButton({required this.icon, required this.onTap, this.active = false});
@@ -1322,6 +1322,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                         child: TextField(
                           controller: _minText,
                           keyboardType: TextInputType.number,
+                          inputFormatters: _kronerOnly,
                           decoration: const InputDecoration(
                               hintText: '0',
                               // suffixText hides until focus; «kr» is always there.
@@ -1331,7 +1332,7 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                                       style: TextStyle(fontSize: 15, color: SwaplyColors.grey))),
                               suffixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0)),
                           onChanged: (v) {
-                            _min = int.tryParse(v);
+                            _min = _kroner(v);
                             _countPreview();
                           },
                         ),
@@ -1344,9 +1345,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                         child: TextField(
                           controller: _maxText,
                           keyboardType: TextInputType.number,
+                          inputFormatters: _kronerOnly,
                           decoration: const InputDecoration(hintText: 'Ingen grense'),
                           onChanged: (v) {
-                            _max = int.tryParse(v);
+                            _max = _kroner(v);
                             _countPreview();
                           },
                         ),
@@ -1430,6 +1432,22 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
         ),
       ),
     );
+  }
+
+  /// What the value fields take: digits, and the spaces a number is written
+  /// with — «1 000». They took anything, so «-500» went to the server, came
+  /// back refused, and «1 000» read as no number at all and filtered nothing.
+  static final _kronerOnly = [FilteringTextInputFormatter.allow(RegExp('[0-9 ]'))];
+
+  /// A value field's kroner, past the spaces in it, or null for none. No
+  /// listing is worth more than [mostValueNok], so a bound past it finds what
+  /// the bound itself would, and a number too long to be one is that bound
+  /// rather than a number the server cannot hold.
+  static int? _kroner(String typed) {
+    final digits = typed.replaceAll(' ', '');
+    if (digits.isEmpty) return null;
+    final value = int.tryParse(digits);
+    return value == null ? mostValueNok : math.min(value, mostValueNok);
   }
 
   /// The chips on 05: filled green when chosen, the chip grey otherwise. Each
