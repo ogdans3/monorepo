@@ -82,11 +82,11 @@ export async function sweepForCycles(db: Database, itemIds?: string[]): Promise<
     itemIds
       ? sql`select l.from_user, l.target_item from likes l
             join items i on i.id = l.target_item
-            where i.status = 'available' and i.active_trade_id is null
+            where i.status = 'available' and i.active_trade_id is null and i.deleted_at is null
               and l.target_item = any(${uuidArray(itemIds)})`
       : sql`select l.from_user, l.target_item from likes l
             join items i on i.id = l.target_item
-            where i.status = 'available' and i.active_trade_id is null`,
+            where i.status = 'available' and i.active_trade_id is null and i.deleted_at is null`,
   )
 
   const opened: string[] = []

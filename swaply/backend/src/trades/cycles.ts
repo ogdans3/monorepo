@@ -40,7 +40,7 @@ export async function findCyclesThrough(
 
   const [wanted] = await db.execute<Row>(
     sql`select owner_id from items
-        where id = ${wantedItem} and status = 'available' and active_trade_id is null`,
+        where id = ${wantedItem} and ${available('items')}`,
   )
   if (!wanted) return []
 
@@ -95,9 +95,14 @@ export async function findCyclesThrough(
 }
 
 // Reserved is `active_trade_id`, not status: nothing is held until an owner
-// accepts, so status alone would let a traded item back into the graph.
+// accepts, so status alone would let a traded item back into the graph. And
+// removed is `deleted_at`: a listing removed while a trade held it came back
+// `available` when the trade let go of it, before releases learnt otherwise,
+// and the search found rings through a thing that was no longer there.
 function available(alias: string) {
-  return sql.raw(`${alias}.status = 'available' and ${alias}.active_trade_id is null`)
+  return sql.raw(
+    `${alias}.status = 'available' and ${alias}.active_trade_id is null and ${alias}.deleted_at is null`,
+  )
 }
 
 // A block hides both ways. Someone you blocked cannot reach you through a chain

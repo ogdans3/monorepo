@@ -19,6 +19,22 @@ export type Tx = Parameters<Parameters<Database['transaction']>[0]>[0]
 export const NEGOTIABLE = ['talking', 'pending', 'countered']
 
 /**
+ * What a listing goes back to when a trade lets go of it: the market — or,
+ * for one its owner removed while a trade held it, withdrawn, as removing it
+ * said. Removal refuses a held listing now (`removeListings`), but before it
+ * did, the check and the write were two statements and a yes could land
+ * between them; such a listing came back `available` and deleted at once, and
+ * went into the cycle search like any other.
+ */
+const RELEASED = sql.raw(
+  `(case when deleted_at is null then 'available' else 'withdrawn' end)::item_status`,
+)
+
+/** The listings a release put back on the market, for the search to look at. */
+const backOnTheMarket = (rows: Row[]) =>
+  rows.filter((row) => row['status'] === 'available').map((row) => row['id']!)
+
+/**
  * Turn a found cycle into a trade with its first offer on the table.
  *
  * Nothing is reserved here. A cycle is a suggestion until the owners say yes,
@@ -224,14 +240,14 @@ export async function proposeCounterOffer(
     // above, and these are what it holds.
     await lockItems(tx, sql`i.active_trade_id = ${tradeId}`)
     const released = await tx.execute<Row>(
-      sql`update items set active_trade_id = null, status = 'available'
+      sql`update items set active_trade_id = null, status = ${RELEASED}
           where active_trade_id = ${tradeId}
-          returning id`,
+          returning id, status`,
     )
 
     // Negotiable, as judged under the lock above.
     await tx.execute(sql`update trades set state = 'countered' where id = ${tradeId}`)
-    return { offerId, freed: released.map((row) => row['id']!) }
+    return { offerId, freed: backOnTheMarket(released) }
   })
 }
 
@@ -316,6 +332,20 @@ export async function acceptOffer(
     // And no yes across a block: a trade the block did not end — agreed, and
     // then taken back — or a block from before blocks ended anything.
     if (await blockedInTrade(tx, tradeId, userId)) throw blocked()
+    // Nor to a deal with something in it that is gone: removed by its owner,
+    // or traded away. Removal ends the negotiations it was on the table in
+    // (`removeListings`), but a trade from before that did, or a version put
+    // on the table in the same moment, still names it — and a yes to it
+    // agrees to receive a thing nobody can give.
+    const [gone] = await tx.execute<Row>(
+      sql`select 1 from trade_offer_items oi join items i on i.id = oi.item_id
+          where oi.offer_id = ${offerId}
+            and (i.deleted_at is not null or i.status in ('withdrawn', 'traded'))
+          limit 1`,
+    )
+    if (gone) {
+      throw conflict('item_unavailable', 'En av tingene i forslaget er ikke tilgjengelig lenger.')
+    }
     // Only a negotiation loses its things to another trade's yes, judged as
     // it stands now that it is held. An agreed trade holding one of them is
     // refused below, as `item_reserved`.
@@ -419,9 +449,9 @@ export async function revokeAcceptance(
     )
 
     const released = await tx.execute<Row>(
-      sql`update items set active_trade_id = null, status = 'available'
+      sql`update items set active_trade_id = null, status = ${RELEASED}
           where active_trade_id = ${tradeId} and owner_id = ${userId}
-          returning id`,
+          returning id, status`,
     )
 
     // Only out of `accepted`. `countered` says a newer offer is on the table,
@@ -430,7 +460,7 @@ export async function revokeAcceptance(
       update trades set state = 'pending' where id = ${tradeId} and state = 'accepted'
     `)
 
-    return { freed: released.map((row) => row['id']!) }
+    return { freed: backOnTheMarket(released) }
   })
 }
 
@@ -481,9 +511,9 @@ export async function completeTrade(db: Database, tradeId: string): Promise<stri
                          and o.seq = (select max(seq) from trade_offers where trade_id = ${tradeId}))`,
     )
     const released = await tx.execute<Row>(
-      sql`update items set active_trade_id = null, status = 'available'
+      sql`update items set active_trade_id = null, status = ${RELEASED}
           where active_trade_id = ${tradeId}
-          returning id`,
+          returning id, status`,
     )
     await tx.execute(
       sql`update trades set state = 'completed', closed_at = now() where id = ${tradeId}`,
@@ -496,7 +526,7 @@ export async function completeTrade(db: Database, tradeId: string): Promise<stri
       sql`update trade_withdrawals set state = 'expired', resolved_at = now()
           where trade_id = ${tradeId} and state = 'waiting'`,
     )
-    return released.map((row) => row['id']!)
+    return backOnTheMarket(released)
   })
 }
 
@@ -565,9 +595,9 @@ export async function endTrade(
   await lockItems(tx, sql`i.active_trade_id = ${tradeId}`)
 
   const freed = await tx.execute<Row>(
-    sql`update items set active_trade_id = null, status = 'available'
+    sql`update items set active_trade_id = null, status = ${RELEASED}
         where active_trade_id = ${tradeId}
-        returning id`,
+        returning id, status`,
   )
   await tx.execute(
     sql`update trades set state = 'cancelled', closed_at = now(),
@@ -595,5 +625,5 @@ export async function endTrade(
         and p.user_id is distinct from ${ending.actor ?? null}::uuid
     `)
   }
-  return freed.map((row) => row['id']!)
+  return backOnTheMarket(freed)
 }

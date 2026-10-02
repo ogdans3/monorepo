@@ -10,6 +10,8 @@ import { storedExists, toStoredPath } from '../lib/media.js'
 import { townFor, townOf } from '../lib/postcodes.js'
 import { coverSql, many, one, type Executor, type Row } from '../lib/rows.js'
 import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
+import { removeListings } from '../trades/removal.js'
+import { sweepForCycles } from '../trades/sweep.js'
 import { knownTown, publicItem, publicUser } from './serialize.js'
 
 /**
@@ -392,21 +394,28 @@ export default async function itemRoutes(app: FastifyInstance) {
   })
 
   // Retired, never removed: a listing that has been in an offer is part of a
-  // record somebody else may need.
+  // record somebody else may need. The negotiations it is on the table in end
+  // with it (`removeListings`).
   app.delete('/items/:id', async (request, reply) => {
     const userId = app.requireUser(request)
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
 
-    const item = await one(app.db, sql`select owner_id, active_trade_id from items where id = ${id}`)
+    const item = await one(app.db, sql`select owner_id, deleted_at from items where id = ${id}`)
     if (!item) throw notFound('Fant ikke gjenstanden.')
     if (item['owner_id'] !== userId) throw forbidden('Dette er ikke din gjenstand.')
-    if (item['active_trade_id']) {
-      throw badRequest('item_reserved', 'Gjenstanden er reservert i et bytte.')
-    }
+    // Removed already: the second press of «Fjern annonsen» changes nothing.
+    if (item['deleted_at']) return reply.code(204).send()
 
-    await app.db.execute(
-      sql`update items set deleted_at = now(), status = 'withdrawn' where id = ${id}`,
-    )
+    // Held is judged in the statement that removes it, so a yes landing in
+    // the same moment is refused here rather than left holding a removed
+    // listing.
+    const { removed, freed } = await removeListings(app.db, userId, [id])
+    if (removed.length === 0) {
+      throw conflict('item_reserved', 'Gjenstanden er reservert i et bytte.')
+    }
+    // The trades it ended let go of what they held, and that is back on the
+    // market — one of the three search triggers.
+    await sweepForCycles(app.db, freed)
     reply.code(204)
   })
 }
