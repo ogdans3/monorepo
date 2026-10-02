@@ -253,17 +253,13 @@ describe('the test tooling', () => {
   test('13. resetting an account opens the doors the product closes once', async () => {
     // Screen 02 is shown to an account with no interests, and a phone that has
     // been through it does not show it again, so emptying them is the way back
-    // to it; BankID is set once and nothing unsets it.
-    await call('POST', '/me/bankid', { token: kariToken, body: { subject: 'test-kari' } })
-    expect((await call('GET', '/me', { token: kariToken })).body!['bankidVerified']).toBe(true)
-
+    // to it; and a listing cannot be unmade into an empty profile.
     const res = await call('POST', `/admin/accounts/${kariId}/reset`, {
-      token: gabriel, body: { parts: ['bankid', 'interests', 'items'] },
+      token: gabriel, body: { parts: ['interests', 'items'] },
     })
     expect(res.status).toBe(200)
 
     const me = await call('GET', '/me', { token: kariToken })
-    expect(me.body!['bankidVerified']).toBe(false)
     expect(me.body!['interests']).toEqual([])
     expect(me.body!['items']).toEqual([])
   })

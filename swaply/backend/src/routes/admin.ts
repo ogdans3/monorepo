@@ -81,7 +81,6 @@ export default async function adminRoutes(app: FastifyInstance) {
         email: r['email'],
         town: r['town'],
         claimed: Boolean(r['claimed']),
-        bankid: Boolean(r['bankid']),
         itemCount: Number(r['item_count']),
         likeCount: Number(r['like_count']),
         openTrades: Number(r['open_trades']),
@@ -112,7 +111,6 @@ export default async function adminRoutes(app: FastifyInstance) {
         displayName: z.string().trim().max(60).nullish(),
         town: z.string().trim().max(60).nullish(),
         withItems: z.number().int().min(0).max(5).nullish(),
-        bankid: z.boolean().nullish(),
         claimed: z.boolean().nullish(),
         interests: z.array(z.enum(CATEGORIES)).nullish(),
       })
@@ -149,7 +147,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     const { parts } = z
       .object({
         parts: z
-          .array(z.enum(['likes', 'items', 'trades', 'interests', 'bankid', 'notifications']))
+          .array(z.enum(['likes', 'items', 'trades', 'interests', 'notifications']))
           .min(1),
       })
       .parse(request.body)

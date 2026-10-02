@@ -14,8 +14,8 @@ Our own boxes at OVH, not a managed cloud.
 OVH is French and EEA-owned, so there is **no third-country transfer to
 document**: no standard contractual clauses, no transfer impact assessment, no
 argument about the CLOUD Act. With a US-owned cloud that chapter has to be
-written even when the data sits in Frankfurt. For a Norwegian consumer app that
-verifies identity, an empty transfer chapter is worth more than elastic capacity
+written even when the data sits in Frankfurt. For a Norwegian consumer app meant
+to verify identity, an empty transfer chapter is worth more than elastic capacity
 we will not use.
 
 It is also where we already operate: Docker, a dashboard, Caddy. An invite-only
@@ -420,12 +420,26 @@ legal opinion; someone should look at it before launch.
 **Legal bases.** Contract for the service itself, consent for push, legitimate
 interest for abuse prevention and for the retention described below.
 
-**No national identity number.** BankID gives a pseudonymous subject and a
-timestamp, and that is all we keep. Personopplysningsloven § 12 only permits
-storing a fødselsnummer where there is an objective need for certain
-identification, and a barter app does not have one. If someone must genuinely be
-traced, the police take the subject to the provider, who holds the link. We hold
-the key without holding the person.
+**No national identity number.** BankID, once it is in place, gives a
+pseudonymous subject and a timestamp, and that is all we keep.
+Personopplysningsloven § 12 only permits storing a fødselsnummer where there is
+an objective need for certain identification, and a barter app does not have
+one. If someone must genuinely be traced, the police take the subject to the
+provider, who holds the link. We hold the key without holding the person.
+
+**Until then nobody is verified.** There is no agreement with a provider, and
+the stand-in took any subject a client sent, so «BankID-verifisert» said what
+nobody had checked; the product owner took BankID out of the app on
+02.10.2026. `POST /me/bankid` answers 410, `bankid_unavailable`, in words,
+because the build testers have from 30.09 still asks it and shows a refusal in
+a toast — a missing route would have said «Fant ikke det du ba om». 410 rather
+than anything that promises a return: a real check never takes the subject
+from the client, so this way of asking does not come back. `bankidVerified`
+stays in every answer that carries a person, read from `bankid_verified_at`;
+migration 0014 cleared what the stand-in, the test tooling and the seed had
+written, and `no-bankid-yet.test.ts` holds that nothing under `src/` writes
+either column. The columns, and erasure's handling of the subject, are kept
+for the day there is a provider.
 
 **Erasure happens in two layers**, because Article 17 is not absolute: 17(3)(e)
 preserves what is needed to establish, exercise or defend legal claims, which is
@@ -435,9 +449,10 @@ exactly the case where someone has been defrauded.
    interests, likes, push tokens: gone. The user becomes a tombstone everywhere
    in the app. This is what the user asked for and it happens at once.
 2. **A sealed record**, in its own `retained` schema with its own grants, which
-   the running application does not read from. It holds the BankID subject,
-   contact channel and display name — enough to identify a person to a court, and
-   no more — and it is reached through a documented process, not by a service.
+   the running application does not read from. It holds the contact channel
+   and display name, and the BankID subject once there is one — enough to
+   identify a person to a court, and no more — and it is reached through a
+   documented process, not by a service.
 
 **Retention: the last completed trade plus three years**, which is the general
 limitation period in foreldelsesloven § 2, **or the deletion plus three years
@@ -452,14 +467,14 @@ the schema. Messages follow the same window, because
 the evidence in a dispute is almost always in the chat.
 
 **A device that never made a profile leaves no sealed record.** Nothing
-identifies it to a court — a name, a contact channel and a BankID subject all
-come with a profile — and it cannot have been in a trade, so there is no claim
+identifies it to a court — a name and a contact channel come with a profile —
+and it cannot have been in a trade, so there is no claim
 either. `anonymiseUser` writes a row only when there is something to put in it.
 
 **Reports and blocks survive the reported user's deletion**, or
 delete-and-re-register is a free wash of the record. For the same reason a
-**hash** of the BankID subject stays on a block list: it recognises a banned
-person without storing who they are.
+**hash** of the BankID subject, once there are subjects, stays on a block list:
+it recognises a banned person without storing who they are.
 
 **A trade owns a copy of what was traded.** On completion the trade snapshots
 title, category, value and one cover image. The listing can then be deleted
@@ -494,8 +509,8 @@ erased (see *Anonymous, and why a wish waits*).
 **Age.** Norway set the digital age of consent at 13. Unless we intend to write
 the chapter on children's data, the terms say 16 or over.
 
-A one-page DPIA is cheap insurance given that we combine identity verification
-with interest-based personalisation.
+A one-page DPIA is cheap insurance given that we mean to combine identity
+verification with interest-based personalisation.
 
 ## Still open
 

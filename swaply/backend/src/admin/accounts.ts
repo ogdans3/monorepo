@@ -42,7 +42,6 @@ export async function ring(db: Database, adminId: string) {
     db,
     sql`select u.id, u.display_name, u.email, u.town, u.device_id,
                (u.email is not null) as claimed,
-               u.bankid_verified_at is not null as bankid,
                (select count(*) from items i
                 where i.owner_id = u.id and i.deleted_at is null) as item_count,
                (select count(*) from likes l where l.from_user = u.id) as like_count,
@@ -62,7 +61,6 @@ export type NewAccount = {
   displayName?: string | null
   town?: string | null
   withItems?: number | null
-  bankid?: boolean | null
   /** Born without a profile: a device that is looking around, for the 10c path. */
   claimed?: boolean | null
   interests?: string[] | null
@@ -119,11 +117,9 @@ export async function createTestAccount(
 
   const user = await one(
     db,
-    sql`insert into users (display_name, email, device_id, town, interests,
-                           bankid_subject, bankid_verified_at, test_account_of)
+    sql`insert into users (display_name, email, device_id, town, interests, test_account_of)
         values (${claimed ? displayName : null}, ${email}, ${deviceId}, ${claimed ? town : null},
                 ${sql.raw(`'{${interests.join(',')}}'::category[]`)},
-                ${opts.bankid ? `test-${tag}` : null}, ${opts.bankid ? sql`now()` : null},
                 ${adminId})
         returning *`,
   )
@@ -172,17 +168,16 @@ export async function strangerIn(
   return row ? (row['name'] as string) : null
 }
 
-export type ResetPart = 'likes' | 'items' | 'trades' | 'interests' | 'bankid' | 'notifications'
+export type ResetPart = 'likes' | 'items' | 'trades' | 'interests' | 'notifications'
 
 /**
  * Empty part of an account, so the screen in front of it can be seen again.
  *
- * Three of these are one-way doors in the product and that is the point of the
+ * Two of these are one-way doors in the product and that is the point of the
  * lever: screen 02 is shown to an account with no interests, and the phone
  * remembers once it has been through it, so emptying them and switching into
- * the account is the way to see it again; `POST /me/bankid` sets a subject and
- * nothing unsets it, so the prompt at the first accept is once per account;
- * and a listing, once it exists, cannot be unmade back into an empty profile.
+ * the account is the way to see it again; and a listing, once it exists,
+ * cannot be unmade back into an empty profile.
  */
 export async function resetAccount(
   db: Database,
@@ -281,13 +276,6 @@ export async function resetAccount(
   if (parts.includes('interests')) {
     await db.execute(sql`update users set interests = '{}'::category[] where id = ${userId}`)
     done.push('interesser tømt — skjerm 02 kommer igjen')
-  }
-
-  if (parts.includes('bankid')) {
-    await db.execute(
-      sql`update users set bankid_subject = null, bankid_verified_at = null where id = ${userId}`,
-    )
-    done.push('BankID nullstilt')
   }
 
   if (parts.includes('notifications')) {

@@ -22,11 +22,9 @@ const password = await hashPassword('swaply123')
 
 async function user(name: string, email: string, phone: string, town: string, interests: string[]) {
   const [row] = await db.execute<{ id: string }>(sql`
-    insert into users (display_name, email, phone, town, password_hash, interests,
-                       bankid_subject, bankid_verified_at)
+    insert into users (display_name, email, phone, town, password_hash, interests)
     values (${name}, ${email}, ${phone}, ${town}, ${password},
-            ${sql.raw(`'{${interests.join(',')}}'::category[]`)},
-            ${`dev-${email}`}, now())
+            ${sql.raw(`'{${interests.join(',')}}'::category[]`)})
     returning id`)
   return row!.id
 }

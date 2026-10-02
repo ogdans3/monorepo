@@ -7,7 +7,7 @@ import { hashPassword, verifyPassword } from '../auth/passwords.js'
 import { issueSession, revokeSession } from '../auth/sessions.js'
 import { hiddenCountColumn } from '../lib/hidden.js'
 import { admit } from '../lib/invites.js'
-import { ApiError, badRequest, conflict } from '../lib/errors.js'
+import { ApiError, conflict } from '../lib/errors.js'
 import { townOf } from '../lib/postcodes.js'
 import { one } from '../lib/rows.js'
 import { displayName, emailAddress, phoneNumber } from '../lib/validation.js'
@@ -266,24 +266,15 @@ export default async function authRoutes(app: FastifyInstance) {
     reply.code(204)
   })
 
-  // BankID is confirmed at the first trade, and the app only ever learns yes or
-  // no. The provider keeps the person; we keep a pseudonym. Until there is a
-  // provider contract this accepts the subject it is handed.
-  app.post('/me/bankid', async (request) => {
-    const userId = app.requireClaimedUser(request)
-    const body = z.object({ subject: z.string().min(4) }).parse(request.body)
-
-    const clash = await one(
-      app.db,
-      sql`select 1 from users where bankid_subject = ${body.subject} and id <> ${userId}`,
-    )
-    if (clash) throw badRequest('bankid_taken', 'Denne BankID-en er allerede i bruk.')
-
-    const user = await one(
-      app.db,
-      sql`update users set bankid_subject = ${body.subject}, bankid_verified_at = now()
-          where id = ${userId} returning *, ${hiddenCountColumn}`,
-    )
-    return publicMe(user!)
+  // BankID is out of the product until there is an agreement with a provider
+  // (docs/DESIGN.md, 02.10.2026). What stood here took any subject it was
+  // handed, so any tester could make themselves «BankID-verifisert» to
+  // everybody. The path stays only because the build testers have from 30.09
+  // asks it after a first accept and from 16b, and shows a refusal's words in
+  // a toast, where a missing route would say «Fant ikke det du ba om». 410,
+  // because a real check never takes the subject from the client: this way of
+  // asking does not come back.
+  app.post('/me/bankid', async () => {
+    throw new ApiError(410, 'bankid_unavailable', 'BankID er ikke på plass ennå.')
   })
 }

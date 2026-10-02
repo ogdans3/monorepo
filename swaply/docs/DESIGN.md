@@ -110,7 +110,7 @@ talking → pending ⇄ countered → accepted → completed
 - **pending** — a cycle was found, or a concrete offer is on the table. Each participant sees whose turn it is.
 - **countered** — a participant proposed a different composition (other items, different *mellomlegg*) instead of accepting. This is a state, not just a button: a trade can go back into negotiation rather than only forward. The counterparty then faces the same three actions.
 - Three actions are always available on your turn: **Avslå** · **Foreslå motbytte** · **Godta bytte**.
-- Accepting goes through **the agreement screen** before it counts: a plain-language summary of who gives what to whom and where, a terms checkbox, the non-facilitation sentence, and a swipe-to-accept that stays disabled until the box is ticked. BankID is prompted after this, on first accept.
+- Accepting goes through **the agreement screen** before it counts: a plain-language summary of who gives what to whom and where, a terms checkbox, the non-facilitation sentence, and a swipe-to-accept that stays disabled until the box is ticked.
 - **An acceptance belongs to a specific version of the offer**, not to the trade. A counter-offer creates a new version and leaves earlier acceptances on the version they were given for, which is the only way to avoid having accepted something else.
 - **Proposing a version is agreeing to it.** Whoever sends a counter-offer has said yes to the version they sent, so 09e draws them «✓ Har godtatt» and gives the other side «Godta endringen», and one yes is what is left. Like any owner's yes it holds their own things in that version. The app says so over «Send motbytte» and over a proposal from the chat, with the byttevilkår behind the line, and records the terms version it shows. A version with a side still empty is a question rather than a deal and is proposed without a yes, and an app that sends no terms version — the one released on 30.09 — proposes without one as it always did. Decided by the product owner 02.10.2026.
 - **accepted** — everyone has accepted; items flip to `traded`, and the trade takes a snapshot of what was traded so the listings can be deleted without erasing anyone's history.
@@ -138,7 +138,7 @@ A chain trade's thread holds all participants together — it only works if ever
 
 - Anonymous, device-scoped, until a match needs a stable identity.
 - On claim: display name, email *or* phone (one contact channel), coarse location.
-- **BankID** is prompted at the first accept and shows as a badge on the profile. It is a trust marker, not a login method.
+- **BankID is out of the app until there is an agreement with a provider**, decided by the product owner on 02.10.2026. What stood in for a provider took any subject the app sent it, so any tester could make themselves «BankID-verifisert» to everybody. The app says nothing about it now: no badge on 13, 13b or 04, no row on 16b, no question after the first accept, and no «BankID bekreftes ved ditt første bytte» on 10c. The field stays: `bankidVerified` is in every answer that carries a person and is always false, and the two columns behind it are kept, empty, for when it is real. `POST /me/bankid` refuses in words (`bankid_unavailable`), which the build testers have from 30.09 shows as a toast. When BankID comes it is a trust marker, not a login method.
 - **Login is email only.** Every other sign-in method is off the login screen: one field, one button, and a line saying we send a link.
 - **An address is one address whatever its case.** It is stored lower-cased and without the space autocomplete leaves, looked up the same way, and unique on `lower(email)` in the database. A mail server delivers «Ola@epost.no» and «ola@epost.no» to one mailbox, and a phone keyboard capitalises the first letter by itself; kept as typed, the same person had two accounts or a sign-in that said the password was wrong. The index keeps the old constraint's name, `users_email_unique`, so an image from before the change — a rollback — still answers a clash with «Det finnes allerede en konto med denne e-posten» instead of a 500. Decided 26.09.2026.
 
@@ -194,8 +194,9 @@ The schema is code now: `backend/src/db/schema.ts`, with the migration in
 `backend/drizzle/`. That file is the authority; this is the shape of it.
 
 - `users` — anonymous (device-scoped) until claimed, then display name, email
-  *or* phone, coarse location, the interests picked on 02, and a **pseudonymous BankID
-  subject**. Never a fødselsnummer.
+  *or* phone, coarse location, the interests picked on 02, and room for a
+  **pseudonymous BankID subject**, empty until BankID is real. Never a
+  fødselsnummer.
 - `items` — a listing, item or service, with an optional photo set and an
   `active_trade_id` that is the reservation.
 - `likes` — the directed edge, and nothing else.
@@ -224,8 +225,8 @@ the case where someone has been defrauded.
 1. **The profile is anonymised immediately** — name, contact details, interests,
    likes, push tokens. The user becomes a tombstone everywhere in the app.
 2. **A sealed record survives** in the `retained` schema, holding only enough to
-   identify a person to a court: the BankID subject, contact channel and display
-   name. The running app does not read from it.
+   identify a person to a court: the contact channel and display name, and the
+   BankID subject once there is one. The running app does not read from it.
 
 **Retention is the last completed trade plus three years**, the general limitation
 period in foreldelsesloven § 2 — **or the deletion plus three years for somebody
@@ -243,8 +244,8 @@ ever. Deleting by date is not reading: the purge compares the date the row was
 sealed with and hands nothing back, and the application still never reads
 `retained`.
 
-**A device that never made a profile leaves no sealed record.** It had no name,
-contact channel or BankID subject — those come with a profile — and it could
+**A device that never made a profile leaves no sealed record.** It had no name
+or contact channel — those come with a profile — and it could
 not have been in a trade, so there is nothing a court could use and no claim to
 use it in. It used to leave a row of nothing but nulls, kept three years.
 

@@ -121,9 +121,8 @@
     <h2 id="tillit">Tillit uten fødselsnummer</h2>
     <div class="trust-grid">
       <p>
-        <strong>BankID er et merke, ikke en innlogging.</strong> Den bekrefter at du er en
-        ekte person, og gir oss en pseudonym referanse og et tidspunkt. Fødselsnummeret
-        ditt ser vi aldri, og vi vil ikke ha det.
+        <strong>Fødselsnummeret ditt ser vi aldri.</strong> Vi spør ikke etter det, og vi
+        vil ikke ha det.
       </p>
       <p>
         <strong>Invitasjon, ikke torg.</strong> Man kommer inn via en lenke fra noen som

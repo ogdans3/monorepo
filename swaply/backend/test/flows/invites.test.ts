@@ -146,7 +146,7 @@ describe('sharing a listing with someone who is not here yet', () => {
     expect(like.body!['tradeId']).toBe(null)
   })
 
-  test('7. but not list, not write to Ola, and not be verified', async () => {
+  test('7. but not list, and not write to Ola', async () => {
     const listing = await call(app, 'POST', '/items', {
       token: kari,
       body: { title: 'Fiskestang', category: 'friluft', condition: 'good' },
@@ -159,9 +159,6 @@ describe('sharing a listing with someone who is not here yet', () => {
       body: { body: 'Hei! Er drillen ledig?' },
     })
     expect(message.status).toBe(403)
-
-    expect((await call(app, 'POST', '/me/bankid', { token: kari, body: { subject: 'x-1' } })).status)
-      .toBe(403)
   })
 
   test('7b. nor give herself a name, an address or a number outside 10c', async () => {

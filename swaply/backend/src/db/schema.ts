@@ -97,10 +97,11 @@ export const withdrawalState = pgEnum('withdrawal_state', [
 // Identity
 // ---------------------------------------------------------------------------
 
-// No national identity number, ever. BankID gives us a pseudonymous subject and
-// that is all we keep: police can resolve it with the provider, and we never
-// hold the person. Norwegian law only allows storing a fødselsnummer where there
-// is an objective need for certain identification, and a barter app has none.
+// No national identity number, ever. BankID, once it is real, gives us a
+// pseudonymous subject and that is all we keep: police can resolve it with the
+// provider, and we never hold the person. Norwegian law only allows storing a
+// fødselsnummer where there is an objective need for certain identification,
+// and a barter app has none.
 export const users = pgTable(
   'users',
   {
@@ -125,6 +126,11 @@ export const users = pgTable(
     // to three to five, and the product owner took that away on 30.09.2026,
     // along with the check that held the column to it (0012).
     interests: category('interests').array().notNull().default(sql`'{}'`),
+    // Empty for everybody until BankID is real (docs/DESIGN.md, 02.10.2026):
+    // there is no agreement with a provider, nothing writes either column, and
+    // 0014 cleared what the stand-in had stored. Kept for the day there is
+    // one. `bankidVerified` is still read from the second, so every build
+    // that asks is told false.
     bankidSubject: text('bankid_subject').unique(),
     bankidVerifiedAt: timestamp('bankid_verified_at', { withTimezone: true }),
     ratingAvg: numeric('rating_avg', { precision: 3, scale: 2 }),

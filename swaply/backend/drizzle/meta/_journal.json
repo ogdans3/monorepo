@@ -99,6 +99,13 @@
       "when": 1790962727511,
       "tag": "0013_close_codes_blocked_listing_removed",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790973052745,
+      "tag": "0014_bankid_stubs_cleared",
+      "breakpoints": true
     }
   ]
 }

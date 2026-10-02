@@ -1,0 +1,22 @@
+-- Nobody is BankID-verified until BankID is real.
+--
+-- There is no agreement with a BankID provider, and what stood in for one took
+-- any subject the app sent: «Verifiser» on 16b or after a first accept marked
+-- the account «BankID-verifisert» to everybody, with nothing checked. The test
+-- tooling and the seed wrote the same kind of stand-in. The product owner took
+-- BankID out of the product on 02.10.2026 (docs/DESIGN.md), and nothing writes
+-- either column any more. This clears what was written before that, so
+-- `bankidVerified` reads false for every account.
+--
+-- Tombstones included: erasure empties the subject and leaves the timestamp,
+-- and an erased account is no more verified than any other.
+--
+-- The sealed records in `retained` are left as they were sealed. The
+-- application never reads them, they go at their date, and a stand-in's
+-- subject in one names nobody the row does not already name.
+--
+-- Nothing in front of the columns is in the way: the trigger on `users` (0004)
+-- refuses only changes to `is_admin` and `test_account_of`, and the unique
+-- constraint on the subject holds any number of nulls.
+UPDATE "users" SET "bankid_subject" = NULL, "bankid_verified_at" = NULL
+WHERE "bankid_subject" IS NOT NULL OR "bankid_verified_at" IS NOT NULL;
