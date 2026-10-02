@@ -41,14 +41,57 @@ class _AdminScreenState extends State<AdminScreen> {
     _load();
   }
 
+  /// The overview, asked for when the tool opens, after every lever and on a
+  /// pull. Only the first asking can fail into the tool's error, which has
+  /// «Prøv igjen»: after that the tool stays and a failure is a toast over
+  /// it. One failed asking after a lever used to replace the whole tool with
+  /// a line of text, with no way to ask again, and a good answer after it
+  /// did not take the text away.
   Future<void> _load() async {
     try {
       final overview = await context.read<SwaplyApi>().adminOverview();
-      if (mounted) setState(() => _overview = overview);
+      if (mounted) {
+        setState(() {
+          _overview = overview;
+          _error = null;
+        });
+      }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (_overview == null) {
+        setState(() => _error = e.message);
+      } else {
+        showError(context, e);
+      }
     }
   }
+
+  /// Asks before a lever that cannot be taken back. Each was one tap in a
+  /// sheet of them, on somebody's test account.
+  Future<bool> _confirm(String question, String explanation, String yes) async =>
+      mounted &&
+      (await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          backgroundColor: AdminColors.surface,
+          title: Text(question,
+              style: const TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.w800, color: AdminColors.ink)),
+          content: Text(explanation,
+              style: const TextStyle(fontSize: 13, height: 1.4, color: AdminColors.muted)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(dialog).pop(false),
+                child: const Text('Avbryt', style: TextStyle(color: AdminColors.muted))),
+            TextButton(
+                onPressed: () => Navigator.of(dialog).pop(true),
+                child: Text(yes,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, color: SwaplyColors.coral))),
+          ],
+        ),
+      ) ??
+          false);
 
   /// Every lever reports what it did, in order, in the log at the foot of the
   /// screen: a tool whose buttons do things silently is a tool you stop
@@ -92,9 +135,19 @@ class _AdminScreenState extends State<AdminScreen> {
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(Insets.xl),
-                child: Text(_error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AdminColors.muted)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AdminColors.muted)),
+                    const SizedBox(height: Insets.md),
+                    AdminButton('Prøv igjen', onPressed: () {
+                      setState(() => _error = null);
+                      _load();
+                    }),
+                  ],
+                ),
               ),
             )
           : overview == null
@@ -120,7 +173,10 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Widget _accounts(AdminOverview overview) => AdminCard(
         title: 'Kontoer',
-        note: 'Du er ${overview.youName}. Trykk på en testkonto for å bli den — '
+        // A name ending in a full stop, «Tester T.», ended the sentence too:
+        // «Du er Tester T.. Trykk …».
+        note: 'Du er ${overview.youName}${overview.youName.endsWith('.') ? '' : '.'} '
+            'Trykk på en testkonto for å bli den — '
             'du kommer alltid tilbake fra linjen nederst på skjermen.',
         children: [
           for (final account in overview.accounts) _accountRow(account),
@@ -257,9 +313,14 @@ class _AdminScreenState extends State<AdminScreen> {
                   dense: true,
                   title: Text(part.$2,
                       style: const TextStyle(fontSize: 14, color: AdminColors.ink)),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.of(sheet).pop();
-                    _run('reset', (api) async {
+                    final lever = part.$2.split(' — ').first;
+                    if (!await _confirm('$lever for ${account.displayName}?',
+                        'Det kan ikke angres.', lever)) {
+                      return;
+                    }
+                    await _run('reset', (api) async {
                       final done = await api.adminReset(account.id, [part.$1]);
                       // And this phone's memory of having shown 10a: without it
                       // the count starts over and the sheet does not.
@@ -275,9 +336,14 @@ class _AdminScreenState extends State<AdminScreen> {
                     style: TextStyle(fontSize: 14, color: SwaplyColors.coral)),
                 subtitle: const Text('Går gjennom den ekte sletterutinen og frigjør enhets-id-en',
                     style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
-                onTap: () {
+                onTap: () async {
                   Navigator.of(sheet).pop();
-                  _run('delete', (api) async {
+                  if (!await _confirm('Slette ${account.displayName}?',
+                      'Testkontoen går gjennom den ekte sletterutinen og kan ikke hentes tilbake.',
+                      'Slett testkontoen')) {
+                    return;
+                  }
+                  await _run('delete', (api) async {
                     await api.adminDeleteAccount(account.id);
                     await session.forgetListingPrompt(account.id);
                     return 'Slettet ${account.displayName}';

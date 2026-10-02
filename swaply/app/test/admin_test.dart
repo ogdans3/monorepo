@@ -176,6 +176,9 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text(lever));
         await tester.pumpAndSettle();
+        // It asks first; see «it asks before a lever that cannot be undone».
+        await tester.tap(find.widgetWithText(TextButton, lever));
+        await tester.pumpAndSettle();
       }
 
       await reset('Nullstill gjenstander');
@@ -285,6 +288,81 @@ void main() {
 
       expect(toast(tester), 'Testbruker Én vil ha den. Sirkelen har allerede et åpent bytte.');
       expect(find.textContaining('lukket seg'), findsNothing);
+    });
+  });
+
+  group('the tool keeps itself together', () {
+    testWidgets('a failed reload after a lever keeps the tool, and says so', (tester) async {
+      // One failed asking after a lever replaced the whole tool with a line
+      // of text, with no way to ask again.
+      asAdmin();
+      await mount(tester, const AdminScreen());
+      server.overrides['GET /admin/overview'] = unreachable;
+
+      await tester.tap(find.text('Lag testkonto'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('KONTOER'), findsOneWidget);
+      expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
+      expect(find.text(noContact), findsOneWidget);
+      expect(find.byType(SwaplyToast), findsOneWidget);
+    });
+
+    testWidgets('a first asking that fails offers to ask again, and the tool comes', (tester) async {
+      asAdmin();
+      server.overrides['GET /admin/overview'] = unreachable;
+      await mount(tester, const AdminScreen());
+      expect(find.text(noContact), findsOneWidget);
+      expect(find.text('KONTOER'), findsNothing);
+
+      server.overrides.remove('GET /admin/overview');
+      await tester.tap(find.text('Prøv igjen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(noContact), findsNothing);
+      expect(find.text('KONTOER'), findsOneWidget);
+    });
+
+    testWidgets('it asks before a lever that cannot be undone, and «Avbryt» does nothing',
+        (tester) async {
+      asAdmin();
+      server.overrides['DELETE /admin/accounts/test-1'] = <String, Object?>{};
+      await mount(tester, const AdminScreen());
+
+      for (final lever in ['Nullstill gjenstander', 'Slett testkontoen']) {
+        await tester.tap(find.byTooltip('Nullstill eller slett'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(lever));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget, reason: lever);
+        expect(find.textContaining('Testbruker Én'), findsWidgets);
+        await tester.tap(find.text('Avbryt'));
+        await tester.pumpAndSettle();
+      }
+      expect(server.requests, isNot(contains('POST /admin/accounts/test-1/reset')));
+      expect(server.requests, isNot(contains('DELETE /admin/accounts/test-1')));
+
+      await tester.tap(find.byTooltip('Nullstill eller slett'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Slett testkontoen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Slette Testbruker Én?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Slett testkontoen'));
+      await tester.pumpAndSettle();
+      expect(server.requests, contains('DELETE /admin/accounts/test-1'));
+      expect(find.text('Slettet Testbruker Én'), findsOneWidget);
+    });
+
+    testWidgets('a name that ends in a full stop is not given a second', (tester) async {
+      asAdmin();
+      server.overrides['GET /admin/overview'] = {
+        'you': {'id': 'me-1', 'displayName': 'Tester T.'},
+        'accounts': const [],
+      };
+      await mount(tester, const AdminScreen());
+
+      expect(find.textContaining('Du er Tester T. Trykk'), findsOneWidget);
+      expect(find.textContaining('T..'), findsNothing);
     });
   });
 
