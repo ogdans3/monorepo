@@ -401,6 +401,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   bool _busy = false;
   final _message = TextEditingController();
 
+  /// A message from the card's field is on its way.
+  bool _sending = false;
+
   /// Which asking for the trade is the newest. The page asks from several
   /// places now, and an answer to an older asking — or a trade an action
   /// handed back after it — must not be overwritten by one that lands late.
@@ -1259,15 +1262,22 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ? 'alle'
         : trade.receivingFrom.displayName.split(' ').first;
 
+    // One message at a time, as on 06g and 04: «Send» pressed twice, or
+    // the return key and then «Send», while the first was on its way sent
+    // the same words twice.
     Future<void> send() async {
       final text = _message.text.trim();
-      if (text.isEmpty || trade.threadId == null) return;
+      if (text.isEmpty || trade.threadId == null || _sending) return;
+      setState(() => _sending = true);
       try {
         await context.read<SwaplyApi>().sendMessage(trade.threadId!, text);
+        if (!mounted) return;
         _message.clear();
         await _load();
       } on ApiException catch (e) {
         if (mounted) showError(context, e);
+      } finally {
+        if (mounted) setState(() => _sending = false);
       }
     }
 
@@ -1338,11 +1348,13 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
               ),
               const SizedBox(width: 10),
               TapArea(
-                onTap: trade.threadId == null ? null : send,
+                onTap: trade.threadId == null || _sending ? null : send,
                 keepsKeyboard: true,
-                child: const Text('Send',
+                child: Text('Send',
                     style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w700, color: SwaplyColors.greenText)),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _sending ? SwaplyColors.greyLight : SwaplyColors.greenText)),
               ),
             ],
           ),

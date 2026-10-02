@@ -249,6 +249,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
     setState(() => _sending = true);
     try {
       await context.read<SwaplyApi>().sendMessage(widget.threadId, text);
+      // Closed while it was on its way: the field went with the screen,
+      // and there is no conversation on screen to ask for again.
+      if (!mounted) return;
       _input.clear();
       await _load();
     } on ApiException catch (e) {
