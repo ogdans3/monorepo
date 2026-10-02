@@ -146,8 +146,15 @@ export async function tradeView(db: Database, tradeId: string, viewerId: string)
           youPay: Number(cash['payer_position']) === myPos,
           payer: giverOf(Number(cash['payer_position'])),
           payee: giverOf(Number(cash['payee_position'])),
-          // The number to Vipps it to. We show it; we never touch it.
-          payeePhone: at(Number(cash['payee_position']))['phone'],
+          // The number to Vipps it to. We show it; we never touch it. Only to
+          // the one paying, and only once everybody has agreed: anybody may
+          // write to a lister and put a mellomlegg on the table, and a number
+          // shown on a proposal was a number handed to whoever proposed it.
+          payeePhone:
+            Number(cash['payer_position']) === myPos &&
+            ['accepted', 'paused', 'completed'].includes(trade['state'])
+              ? at(Number(cash['payee_position']))['phone']
+              : null,
         }
       : null,
 

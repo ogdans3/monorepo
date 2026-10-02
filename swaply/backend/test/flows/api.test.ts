@@ -281,9 +281,14 @@ describe('the whole journey over HTTP', () => {
     expect(res.body!['cash']['amountNok']).toBe(350)
   })
 
-  test('06f — the counterparty’s Vipps number is shown, never used', async () => {
-    const res = await call('GET', `/trades/${tradeId}`, { token: ola })
-    expect(res.body!['cash']['payeePhone']).toBe('911 22 333')
+  test('09a — a mellomlegg on the table hands out nobody’s number yet', async () => {
+    // Anybody can write to a lister and propose a mellomlegg, so a number shown
+    // on a proposal is a number handed to whoever proposed it
+    // (vipps-number.test.ts).
+    for (const token of [ola, kari]) {
+      const res = await call('GET', `/trades/${tradeId}`, { token })
+      expect(res.body!['cash']['payeePhone']).toBeNull()
+    }
   })
 
   test('09b — things held by another trade come back marked locked', async () => {
@@ -308,6 +313,14 @@ describe('the whole journey over HTTP', () => {
     const res = await call('POST', `/trades/${tradeId}/accept`, { token: kari })
     expect(res.body!['everyoneAccepted']).toBe(true)
     expect(res.body!['trade']['state']).toBe('accepted')
+  })
+
+  test('06f — the counterparty’s Vipps number is shown to the one who pays, never used', async () => {
+    const res = await call('GET', `/trades/${tradeId}`, { token: ola })
+    expect(res.body!['cash']['payeePhone']).toBe('911 22 333')
+    // Kari is the one being paid, and has no use for her own number.
+    const hers = await call('GET', `/trades/${tradeId}`, { token: kari })
+    expect(hers.body!['cash']['payeePhone']).toBeNull()
   })
 
   test('08a — asking to withdraw pauses the trade while the other answers', async () => {
