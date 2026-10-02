@@ -362,6 +362,11 @@ final _thread1 = {
       'createdAt': _at(0, 14, 12),
     },
   ],
+  // Kari read Ola's message and answered it, so it is «Lest», as drawn.
+  'readBy': [
+    {'userId': 'me-1', 'lastReadMessageId': 'm3'},
+    {'userId': 'kari-1', 'lastReadMessageId': 'm2'},
+  ],
 };
 
 /// What the export's screens ask for; null falls through to the small set.

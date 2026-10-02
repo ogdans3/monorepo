@@ -361,9 +361,11 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // First names, as 06g and 07k write them — «Ola», «Du, Ola og Kari» — and
+    // as the Chats list already did: the full name belongs on a profile.
     final others = thread.participants
         .where((p) => p.id != context.read<Session>().me?.id)
-        .map((p) => p.displayName)
+        .map((p) => p.displayName.split(' ').first)
         .toList();
     final title = thread.kind == 'chain'
         ? 'Du, ${others.join(' og ')}'
@@ -371,6 +373,10 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
 
     final me = context.read<Session>().me?.id;
     final faces = thread.participants.where((p) => p.id != me).take(2).toList();
+    // «Lest» goes under your newest message once everybody else has read
+    // that far; the server sends where each of them has read to.
+    final newestMine = thread.messages.where((m) => m.mine).lastOrNull;
+    final read = newestMine != null && thread.readByOthers(newestMine, me);
 
     return Scaffold(
       appBar: AppBar(
@@ -429,6 +435,7 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
       body: SafeArea(
         child: Column(
           children: [
+            if (thread.kind == 'chain' && _trade != null) _ringSummary(_trade!),
             if (thread.banner != null)
               Container(
                 width: double.infinity,
@@ -465,7 +472,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
                   itemBuilder: (context, i) => Column(
                     children: [
                       if (i == 0) _dayLabel(thread.messages[i].createdAt),
-                      _bubble(thread.messages[i], thread.kind == 'chain'),
+                      _bubble(thread.messages[i], thread.kind == 'chain',
+                          read: read && identical(thread.messages[i], newestMine)),
                     ],
                   ),
                 ),
@@ -479,6 +487,74 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
               KeepClear(child: _composer()),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 07k's card over the conversation: who gives what to whom, with the
+  /// things side by side. A ring is agreed in words, so the words of it
+  /// stay in view while they are written.
+  Widget _ringSummary(Trade trade) {
+    String things(List<Item> items) =>
+        items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' og ');
+    String first(UserRef person) => person.displayName.split(' ').first;
+    final pictures = [
+      ...trade.youGet.take(1),
+      ...trade.youGive.take(1),
+      for (final leg in trade.otherLegs) ...leg.items.take(1),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SwaplyColors.cardLine),
+      ),
+      child: Row(
+        children: [
+          if (pictures.isNotEmpty) ...[
+            // 38 across, each tucked 12 under the one before it, in a white
+            // ring, as drawn.
+            SizedBox(
+              width: 42 + 26.0 * (pictures.length - 1),
+              height: 42,
+              child: Stack(
+                children: [
+                  for (final (i, item) in pictures.indexed)
+                    Positioned(
+                      left: 26.0 * i,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ItemThumb(item, size: 38, radius: 10),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: [
+                const TextSpan(text: 'Du får ', style: TextStyle(fontWeight: FontWeight.w700)),
+                TextSpan(text: '${things(trade.youGet)} fra ${first(trade.receivingFrom)} · '),
+                const TextSpan(text: 'du gir ', style: TextStyle(fontWeight: FontWeight.w700)),
+                TextSpan(text: '${things(trade.youGive)} til ${first(trade.givingTo)}'),
+                for (final leg in trade.otherLegs)
+                  TextSpan(
+                      text: ' · ${first(leg.giver)} gir ${things(leg.items)} '
+                          'til ${first(leg.receiver)}'),
+              ]),
+              style: const TextStyle(fontSize: 12, height: 1.45, color: SwaplyColors.inkBody),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -533,13 +609,9 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   Widget _dayLabel(DateTime? when) {
     if (when == null) return const SizedBox.shrink();
     final local = when.toLocal();
-    final today = now();
-    final days = DateTime(today.year, today.month, today.day)
-        .difference(DateTime(local.year, local.month, local.day))
-        .inDays;
     final time =
         '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-    final label = switch (days) {
+    final label = switch (_daysAgo(local)) {
       0 => 'I dag $time',
       1 => 'I går $time',
       _ => '${local.day}.${local.month}. $time',
@@ -554,52 +626,70 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
     );
   }
 
-  Widget _bubble(ChatMessage message, bool showName) => Padding(
+  /// One message. [read] is your newest one, read by everybody else: «Lest»
+  /// under it, at its right, as 06g and 07k draw it. The export has the time
+  /// it was read, «Lest 14:10»; the server keeps no such time, so the app
+  /// says what it knows and does not make one up.
+  Widget _bubble(ChatMessage message, bool showName, {bool read = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          mainAxisAlignment:
-              message.mine ? MainAxisAlignment.end : MainAxisAlignment.start,
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (!message.mine) ...[
-              Avatar(message.senderName ?? '?', size: 28),
-              const SizedBox(width: 8),
-            ],
-            Flexible(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 280),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: message.mine ? SwaplyColors.greenPressed : Colors.white,
-                  // 18 all round but the corner nearest the sender, which is 6.
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(18),
-                    topRight: const Radius.circular(18),
-                    bottomLeft: Radius.circular(message.mine ? 18 : 6),
-                    bottomRight: Radius.circular(message.mine ? 6 : 18),
-                  ),
-                  border: message.mine ? null : Border.all(color: SwaplyColors.cardLine),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (showName && !message.mine)
-                      Text(message.senderName ?? '',
-                          style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: SwaplyColors.greySoft)),
-                    Text(message.body,
-                        style: TextStyle(
-                            fontSize: 14.5,
-                            height: 1.35,
-                            color: message.mine ? Colors.white : SwaplyColors.ink)),
-                  ],
-                ),
+            _bubbleRow(message, showName),
+            if (read)
+              const Padding(
+                padding: EdgeInsets.only(top: 3, right: 6),
+                child: Text('Lest',
+                    style: TextStyle(fontSize: 10.5, color: SwaplyColors.greyLight)),
               ),
-            ),
           ],
         ),
+      );
+
+  Widget _bubbleRow(ChatMessage message, bool showName) => Row(
+        mainAxisAlignment:
+            message.mine ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!message.mine) ...[
+            Avatar(message.senderName ?? '?', size: 28),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 280),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: message.mine ? SwaplyColors.greenPressed : Colors.white,
+                // 18 all round but the corner nearest the sender, which is 6.
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(18),
+                  topRight: const Radius.circular(18),
+                  bottomLeft: Radius.circular(message.mine ? 18 : 6),
+                  bottomRight: Radius.circular(message.mine ? 6 : 18),
+                ),
+                border: message.mine ? null : Border.all(color: SwaplyColors.cardLine),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // «Kari», as 07k names who said it.
+                  if (showName && !message.mine)
+                    Text((message.senderName ?? '').split(' ').first,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: SwaplyColors.greySoft)),
+                  Text(message.body,
+                      style: TextStyle(
+                          fontSize: 14.5,
+                          height: 1.35,
+                          color: message.mine ? Colors.white : SwaplyColors.ink)),
+                ],
+              ),
+            ),
+          ),
+        ],
       );
 
   /// The three chips over the field. They are trade actions, not decoration:
@@ -660,8 +750,9 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
                       maxLines: 4,
                       style: const TextStyle(fontSize: 14.5, color: SwaplyColors.ink),
                       decoration: InputDecoration(
-                        hintText:
-                            _thread?.kind == 'chain' ? 'Skriv til begge…' : 'Skriv en melding…',
+                        // 07k as 06g: «Skriv til begge…» is the trade
+                        // page's card on 07j, not the conversation's field.
+                        hintText: 'Skriv en melding…',
                         hintStyle: const TextStyle(fontSize: 14.5, color: SwaplyColors.greyLight),
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
@@ -787,17 +878,31 @@ Future<UserRef?> choosePerson(
       ),
     );
 
+/// When on 11a: «nå», «12 min», «14:12» today, «i går», a weekday in the
+/// last week, a date before that. By the calendar's days, not by hours: a
+/// message from Tuesday evening, read on Thursday morning, was under 48
+/// hours old and said «i går».
 String _relative(DateTime? when) {
   if (when == null) return '';
-  final today = now();
-  final diff = today.difference(when);
+  final diff = now().difference(when);
   if (diff.inMinutes < 1) return 'nå';
   if (diff.inHours < 1) return '${diff.inMinutes} min';
-  if (today.day == when.day && diff.inHours < 24) {
+  final days = _daysAgo(when);
+  if (days <= 0) {
     return '${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}';
   }
-  if (diff.inDays < 2) return 'i går';
-  const days = ['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag'];
-  if (diff.inDays < 7) return days[when.weekday - 1];
+  if (days == 1) return 'i går';
+  const weekdays = ['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag'];
+  if (days < 7) return weekdays[when.weekday - 1];
   return '${when.day}.${when.month}.';
+}
+
+/// How many days of the calendar lie between [when] and today. Counted on
+/// the dates, not on the time between them, which is 23 or 25 hours across
+/// a change to or from summer time.
+int _daysAgo(DateTime when) {
+  final today = now();
+  return DateTime.utc(today.year, today.month, today.day)
+      .difference(DateTime.utc(when.year, when.month, when.day))
+      .inDays;
 }

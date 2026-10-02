@@ -1169,7 +1169,8 @@ void main() {
       await mount(tester, const ThreadScreen(threadId: 'thread-1'));
 
       expect(find.textContaining('Swaply fasiliterer ikke dette byttet'), findsOneWidget);
-      expect(find.text('Du, Kari N. og Per H.'), findsOneWidget);
+      // First names, as 07k writes them: «Du, Ola og Kari».
+      expect(find.text('Du, Kari og Per'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsNothing);
     });
 

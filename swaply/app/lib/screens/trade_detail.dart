@@ -1279,11 +1279,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   }
 
   /// «★ 4,7 · Trondheim» when the person has a rating and a town; what they
-  /// give otherwise, so the line is never empty.
+  /// give otherwise, so the line is never empty. A town may be there and
+  /// empty, which read «★ 4,7 · ».
   String _personMeta(UserRef p) {
     final parts = [
       if (p.ratingAvg != null) '★ ${p.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
-      if (p.town != null) p.town!,
+      if (p.town?.trim().isNotEmpty ?? false) p.town!.trim(),
     ];
     return parts.isEmpty ? 'gir ${p.gives.map((i) => i.title).join(' og ')}' : parts.join(' · ');
   }

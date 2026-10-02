@@ -517,12 +517,33 @@ class Thread {
         participants =
             ((j['participants'] as List?) ?? const []).map((e) => UserRef.fromJson(e)).toList(),
         messages =
-            ((j['messages'] as List?) ?? const []).map((e) => ChatMessage.fromJson(e)).toList();
+            ((j['messages'] as List?) ?? const []).map((e) => ChatMessage.fromJson(e)).toList(),
+        readBy = {
+          for (final r in (j['readBy'] as List?) ?? const [])
+            if ((r as Map)['userId'] is String)
+              r['userId'] as String: r['lastReadMessageId'] as String?,
+        };
 
   final String id, tradeId, state, kind;
   final String? banner;
   final List<UserRef> participants;
   final List<ChatMessage> messages;
+
+  /// How far each person in the conversation has read: the last message
+  /// they have seen, by their id, or null for nothing yet. Empty from a
+  /// server that did not say.
+  final Map<String, String?> readBy;
+
+  /// Whether everybody but [me] has read as far as [message].
+  bool readByOthers(ChatMessage message, String? me) {
+    final at = messages.indexWhere((m) => m.id == message.id);
+    final others = participants.where((p) => p.id != me).toList();
+    if (at < 0 || others.isEmpty) return false;
+    return others.every((p) {
+      final upTo = readBy[p.id];
+      return upTo != null && messages.indexWhere((m) => m.id == upTo) >= at;
+    });
+  }
 }
 
 class AppNotification {
