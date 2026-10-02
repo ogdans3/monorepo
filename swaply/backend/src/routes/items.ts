@@ -8,7 +8,7 @@ import { CATEGORIES, CONDITIONS, LISTING_KEY_HOURS } from '../lib/constants.js'
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
 import { storedExists, toStoredPath } from '../lib/media.js'
 import { townFor, townOf } from '../lib/postcodes.js'
-import { coverSql, many, one, type Row } from '../lib/rows.js'
+import { coverSql, many, one, type Executor, type Row } from '../lib/rows.js'
 import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
 import { publicItem, publicUser } from './serialize.js'
 
@@ -29,8 +29,8 @@ const itemBody = z.object({
   // usually have none, and discovery draws a generated card instead.
   //
   // A photograph is uploaded first and named here by the path `POST /media`
-  // gave back. An absolute URL is still accepted: the seed uses made-up ones,
-  // and a picture that already lives somewhere is not our business to refuse.
+  // gave back, or by the URL a listing was read with. The shape is all this
+  // checks; which of them may go on the listing is `assertMedia`'s to say.
   media: z
     .array(
       z
@@ -44,21 +44,42 @@ const itemBody = z.object({
     .default([]),
 })
 
+const unknownImage = () => badRequest('image_unknown', 'Ukjent bilde. Legg det til på nytt.')
+
 /**
- * Refuses a photograph of ours whose bytes are gone, before the listing is
- * written. An upload nobody listed within a day is swept, and a phone that
- * kept a half-written 10b across that day still holds its path — which the
- * pattern above accepts, and which would go on the market as a broken
- * picture. `kept` are the paths the listing already has: a picture that went
- * missing under a live listing is not the reason an edit of it should fail.
+ * Refuses a photograph that may not go on this listing, before anything is
+ * written. `media` are stored paths (see `toStoredPath`), and `kept` the ones
+ * the listing already has, which stay whatever is true of them now: a picture
+ * that went missing under a live listing is not the reason an edit of it
+ * should fail.
+ *
+ * Anything new has to be ours, still on disk, and on no other owner's listing.
+ * An absolute URL is somebody else's server: every phone that opens the
+ * listing, and the page behind a shared link, would fetch the picture from
+ * there and hand it the visitor's address. The seed's made-up ones are on
+ * their listings already, which is the one way such a URL still goes through.
+ * An upload nobody listed within a day is swept, and a phone that kept a
+ * half-written 10b across that day still holds its path, which would go on
+ * the market as a broken picture. And a name is random, but every listing
+ * hands its own out to whoever looks at it: copied onto somebody else's
+ * listing, erasing that somebody took the photograph with them, from under
+ * the person it belongs to.
  */
-async function assertStored(media: string[], kept: string[] = []) {
-  for (const value of media) {
-    const path = toStoredPath(value)
-    if (!path.startsWith('/media/') || kept.includes(path)) continue
+async function assertMedia(db: Executor, ownerId: string, media: string[], kept: string[] = []) {
+  for (const path of media) {
+    if (kept.includes(path)) continue
+    if (!path.startsWith('/media/')) throw unknownImage()
     if (!(await storedExists(path))) {
       throw badRequest('image_gone', 'Et av bildene er ikke lagret lenger. Legg det til på nytt.')
     }
+    const elsewhere = await one(
+      db,
+      sql`select 1 from item_media m join items i on i.id = m.item_id
+          where m.url = ${path} and i.owner_id <> ${ownerId} limit 1`,
+    )
+    // The same words as a picture that was never ours: whose it is is not
+    // this person's to learn.
+    if (elsewhere) throw unknownImage()
   }
 }
 
@@ -125,7 +146,8 @@ export default async function itemRoutes(app: FastifyInstance) {
     if (body.kind === 'item' && !body.condition) {
       throw badRequest('condition_required', 'Velg tilstand for gjenstanden.')
     }
-    await assertStored(body.media)
+    const media = body.media.map(toStoredPath)
+    await assertMedia(app.db, userId, media)
 
     // Where the thing is: the postcode typed on 10b, and only then wherever
     // the owner is (a town sent as words wins over both, and no screen sends
@@ -135,8 +157,6 @@ export default async function itemRoutes(app: FastifyInstance) {
     const typed = townOf(body.postalCode)
     const owner = await one(app.db, sql`select town, postal_code from users where id = ${userId}`)
     const town = body.town ?? typed ?? owner?.['town'] ?? townFor(owner?.['postal_code'])
-
-    const media = body.media.map(toStoredPath)
 
     // One transaction, so a listing is never seen without its photos — and so
     // a second press arriving while the first is still being written waits on
@@ -255,7 +275,12 @@ export default async function itemRoutes(app: FastifyInstance) {
     }
     if (body.media) {
       const kept = await many(app.db, sql`select url from item_media where item_id = ${id}`)
-      await assertStored(body.media, kept.map((row) => row['url']))
+      await assertMedia(
+        app.db,
+        userId,
+        body.media.map(toStoredPath),
+        kept.map((row) => row['url']),
+      )
     }
 
     const item = await one(

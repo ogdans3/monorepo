@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
 import { close, db, reset } from '../helpers.js'
+import { storedPhoto } from '../photo.js'
 
 let app: FastifyInstance
 
@@ -134,7 +135,7 @@ describe('the whole journey over HTTP', () => {
       token: ola,
       body: { title: 'Bosch drill 18V', description: 'Lite brukt', category: 'verktoy',
               subcategory: 'Elektroverktøy', condition: 'good', estimatedValueNok: 600,
-              media: ['https://img/drill.webp'] },
+              media: [await storedPhoto()] },
     })
     expect(a.status).toBe(201)
     drill = a.body!['id']

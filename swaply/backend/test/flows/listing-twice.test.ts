@@ -34,6 +34,7 @@ import { connect } from '../../src/db/index.js'
 import { env } from '../../src/env.js'
 import { acceptOffer, openTradeFromCycle } from '../../src/trades/trades.js'
 import { close, currentOffer, db, makeItem, reset } from '../helpers.js'
+import { storedPhoto } from '../photo.js'
 
 let app: FastifyInstance
 
@@ -64,13 +65,13 @@ async function register(name: string) {
   return { token: res.body!['token'] as string, id: res.body!['user']['id'] as string }
 }
 
-/** 10b's draft, as «Legg ut» sends it. */
+/** 10b's draft, as «Legg ut» sends it, with a picture Ola uploaded for it. */
 const draft = {
   title: 'Bosch drill 18V',
   category: 'verktoy',
   condition: 'good',
   estimatedValueNok: 600,
-  media: ['https://bilder.example/drill.webp'],
+  media: [] as string[],
 }
 
 /** What the phone does: one key for the draft, made when the draft was. */
@@ -92,6 +93,7 @@ beforeAll(async () => {
   app = await buildApp(db)
   ola = await register('Ola')
   kari = await register('Kari')
+  draft.media = [await storedPhoto()]
 })
 
 afterAll(async () => {
@@ -153,7 +155,10 @@ describe('the same draft sent twice', () => {
   })
 
   test('5. another account sending the same key lists its own thing', async () => {
-    const res = await call('POST', '/items', { token: kari.token, body: draft, key })
+    // With her own picture: Ola's is on his listing, and not hers to use.
+    const res = await call('POST', '/items', {
+      token: kari.token, body: { ...draft, media: [await storedPhoto()] }, key,
+    })
 
     expect(res.status).toBe(201)
     expect(res.body!['ownerId']).toBe(kari.id)
@@ -238,15 +243,13 @@ describe('from a browser', () => {
 describe('a draft changed after the lost answer', () => {
   const key = newKey()
   let first: Json = {}
+  let saw: string[] = []
 
   test('11. the changed draft sent with the same key is still the first listing, with 200', async () => {
     first = (await call('POST', '/items', { token: ola.token, body: { ...draft, title: 'Sag' }, key }))
       .body!
-    const changed = {
-      ...draft,
-      title: 'Sag, 60 cm',
-      media: ['https://bilder.example/sag.webp', 'https://bilder.example/sag-2.webp'],
-    }
+    saw = [await storedPhoto(), await storedPhoto()]
+    const changed = { ...draft, title: 'Sag, 60 cm', media: saw }
 
     const res = await call('POST', '/items', { token: ola.token, body: changed, key })
 
@@ -266,17 +269,14 @@ describe('a draft changed after the lost answer', () => {
         subcategory: '',
         condition: draft.condition,
         estimatedValueNok: draft.estimatedValueNok,
-        media: ['https://bilder.example/sag.webp', 'https://bilder.example/sag-2.webp'],
+        media: saw,
       },
     })
 
     expect(res.status).toBe(200)
     expect(res.body!['id']).toBe(first['id'])
     expect(res.body!['title']).toBe('Sag, 60 cm')
-    expect(res.body!['media']).toEqual([
-      'https://bilder.example/sag.webp',
-      'https://bilder.example/sag-2.webp',
-    ])
+    expect(res.body!['media']).toEqual(saw.map((path) => `http://test.local${path}`))
     expect(await listings(ola.id, 'Sag')).toBe(0)
     expect(await listings(ola.id, 'Sag, 60 cm')).toBe(1)
   })

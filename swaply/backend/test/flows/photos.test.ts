@@ -9,6 +9,11 @@
 // living room is personal data, so erasing them takes the bytes with it —
 // except the one a completed trade snapshotted, which is the counterparty's
 // record and lives until the claim window closes.
+//
+// Which is why a picture goes on its own owner's listings and nobody else's,
+// and a new one is always ours: a URL on somebody else's server hands every
+// visitor's address to that server, and a copy of Kari's path on Per's
+// listing let erasing Per take Kari's photograph.
 import { readFile, rm, stat, utimes } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -203,18 +208,99 @@ describe('a photograph on a listing', () => {
       sql`select url from item_media where item_id = ${itemId}`,
     )
     expect(stored[0]!.url).toBe(path)
-    // A picture that genuinely lives somewhere else is still left alone: the
-    // seed's made-up URLs are not ours to rewrite.
-    await app.inject({
+    // A picture that genuinely lives somewhere else is still left alone where
+    // it already is: the seed's made-up URLs are not ours to rewrite, and an
+    // edit that sends one back keeps it.
+    await db.execute(
+      sql`insert into item_media (item_id, url, position)
+          values (${itemId}, 'https://img.example/annet.webp', 1)`,
+    )
+    const kept = await app.inject({
       method: 'PATCH',
       url: `/items/${itemId}`,
       headers: { authorization: `Bearer ${ola}` },
       payload: { media: ['https://img.example/annet.webp'] },
     })
+    expect(kept.statusCode).toBe(200)
     const other = await db.execute<{ url: string }>(
       sql`select url from item_media where item_id = ${itemId}`,
     )
-    expect(other[0]!.url).toBe('https://img.example/annet.webp')
+    expect(other.map((row) => row.url)).toEqual(['https://img.example/annet.webp'])
+  })
+
+  test('5c. but no new picture from somebody else\'s server goes on a listing', async () => {
+    // Every phone that opens the listing, and the page behind a shared link,
+    // would fetch it from that server and hand it the visitor's address.
+    const listed = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${ola}` },
+      payload: {
+        title: 'Vinterjakke', category: 'klaer', condition: 'good',
+        media: ['https://img.example/jakke.webp'],
+      },
+    })
+    expect(listed.statusCode).toBe(400)
+    expect(listed.json()).toEqual({
+      code: 'image_unknown',
+      message: 'Ukjent bilde. Legg det til på nytt.',
+    })
+    expect(await db.execute(sql`select 1 from items where title = 'Vinterjakke'`)).toHaveLength(0)
+
+    // Nor added beside one the listing already has.
+    const [helmet] = await db.execute<{ id: string }>(
+      sql`select id from items where title = 'Sykkelhjelm'`,
+    )
+    const added = await app.inject({
+      method: 'PATCH',
+      url: `/items/${helmet!.id}`,
+      headers: { authorization: `Bearer ${ola}` },
+      payload: { media: ['https://img.example/annet.webp', 'https://img.example/ny.webp'] },
+    })
+    expect(added.statusCode).toBe(400)
+    expect(added.json()['code']).toBe('image_unknown')
+  })
+
+  test('5d. and a picture on somebody else\'s listing is not yours to put on one', async () => {
+    // Ola's drill hands its picture's name to anybody who looks at it. Copied
+    // onto Kari's listing, erasing Kari would take Ola's photograph with her.
+    for (const media of [[path], [`http://test.local${path}`]]) {
+      const listed = await app.inject({
+        method: 'POST',
+        url: '/items',
+        headers: { authorization: `Bearer ${kari}` },
+        payload: { title: 'Drill, lånt bilde', category: 'verktoy', condition: 'good', media },
+      })
+      expect(listed.statusCode, media[0]).toBe(400)
+      expect(listed.json()['code']).toBe('image_unknown')
+    }
+    expect(
+      await db.execute(sql`select 1 from items where title = 'Drill, lånt bilde'`),
+    ).toHaveLength(0)
+
+    const own = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { title: 'Drill', category: 'verktoy', condition: 'good' },
+    })
+    const edited = await app.inject({
+      method: 'PATCH',
+      url: `/items/${own.json()['id']}`,
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { media: [path] },
+    })
+    expect(edited.statusCode).toBe(400)
+    expect(edited.json()['code']).toBe('image_unknown')
+
+    // Ola himself may put it on a second listing of his.
+    const second = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${ola}` },
+      payload: { title: 'Bosch batteri', category: 'verktoy', condition: 'good', media: [path] },
+    })
+    expect(second.statusCode).toBe(201)
   })
 
   test('6. the share button sends a content type and no body, and is answered', async () => {
@@ -243,6 +329,44 @@ describe('a photograph on a listing', () => {
 
     await expect(stat(file)).rejects.toThrow()
     expect((await app.inject({ method: 'GET', url: path })).statusCode).toBe(404)
+  })
+
+  test('7b. but not one that somebody else\'s listing still shows', async () => {
+    // Kari's picture, on Kari's listing.
+    const hers = (await upload(kari, PNG)).body!['path']
+    const file = join(env.MEDIA_DIR, hers.split('/').pop()!)
+    const listed = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${kari}` },
+      payload: { title: 'Kano', category: 'bat', condition: 'good', media: [hers] },
+    })
+    expect(listed.statusCode).toBe(201)
+
+    // Per copied its path onto a listing of his before that was refused, so
+    // the row is written the way the API once let it be.
+    const per = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      payload: { displayName: 'Per H.', email: 'per@epost.no', password: 'padleaare1' },
+    })
+    const perId = per.json()['user']['id']
+    const copy = await app.inject({
+      method: 'POST',
+      url: '/items',
+      headers: { authorization: `Bearer ${per.json()['token']}` },
+      payload: { title: 'Kano, som ny', category: 'bat', condition: 'good' },
+    })
+    await db.execute(
+      sql`insert into item_media (item_id, url, position) values (${copy.json()['id']}, ${hers}, 0)`,
+    )
+
+    await anonymiseUser(db, perId)
+
+    expect((await stat(file)).isFile()).toBe(true)
+    const seen = await app.inject({ method: 'GET', url: `/items/${listed.json()['id']}` })
+    expect(seen.json()['media']).toEqual([`http://test.local${hers}`])
+    expect((await app.inject({ method: 'GET', url: hers })).statusCode).toBe(200)
   })
 
   test('8. an upload nobody finished listing is swept, once it is old enough', async () => {

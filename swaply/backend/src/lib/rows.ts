@@ -4,13 +4,20 @@ import type { Database } from '../db/index.js'
 
 export type Row = Record<string, any>
 
+/**
+ * A connection or an open transaction. Inside a transaction every read has to
+ * go through it: the test pool has one connection, and a read on the pool
+ * would wait for the transaction holding it.
+ */
+export type Executor = Pick<Database, 'execute'>
+
 /** One row or nothing, without the `[0]!` dance at every call site. */
-export async function one<T extends Row = Row>(db: Database, query: SQL): Promise<T | null> {
+export async function one<T extends Row = Row>(db: Executor, query: SQL): Promise<T | null> {
   const rows = await db.execute<T>(query)
   return (rows[0] as T | undefined) ?? null
 }
 
-export async function many<T extends Row = Row>(db: Database, query: SQL): Promise<T[]> {
+export async function many<T extends Row = Row>(db: Executor, query: SQL): Promise<T[]> {
   return (await db.execute<T>(query)) as unknown as T[]
 }
 

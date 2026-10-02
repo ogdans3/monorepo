@@ -146,11 +146,18 @@ export async function anonymiseUser(
     // counterparty's record of what they got and lives to the retention
     // horizon. `docs/ARCHITECTURE.md`: the image goes when the claim window
     // closes, and the text stays.
+    //
+    // And except one that somebody else's listing shows. A listing could once
+    // be given any stored path, so a copy of Kari's picture on a listing of
+    // this account's is still Kari's, and erasing this account must not take
+    // it off hers.
     const files = await tx.execute<Row>(sql`
       select distinct m.url from item_media m
       join items i on i.id = m.item_id
       where i.owner_id = ${userId} and m.url like '/media/%'
         and not exists (select 1 from trade_item_snapshots s where s.cover_url = m.url)
+        and not exists (select 1 from item_media o join items oi on oi.id = o.item_id
+                        where o.url = m.url and oi.owner_id <> ${userId})
     `)
     orphaned = files.map((row) => row['url']!).filter(Boolean)
 

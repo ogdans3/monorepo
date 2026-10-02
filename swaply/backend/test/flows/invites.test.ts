@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
 import { close, db, reset } from '../helpers.js'
+import { storedPhoto } from '../photo.js'
 
 let app: FastifyInstance
 // The same API with the wall up. `INVITE_ONLY` is parsed once at boot, so the
@@ -45,6 +46,7 @@ describe('sharing a listing with someone who is not here yet', () => {
   let kariId = ''
   let drill = '', board = ''
   let shared = '', plain = '', retiredLink = ''
+  let photo = ''
 
   const kariDevice = 'device-kari-0123456789abcdef'
 
@@ -69,10 +71,11 @@ describe('sharing a listing with someone who is not here yet', () => {
     expect(signup.body!['user']['anonymous']).toBe(false)
     ola = signup.body!['token']
 
+    photo = await storedPhoto()
     const listing = await call(app, 'POST', '/items', {
       token: ola,
       body: { title: 'Bosch drill 18V', category: 'verktoy', condition: 'good',
-              estimatedValueNok: 600, media: ['https://img/drill.webp'] },
+              estimatedValueNok: 600, media: [photo] },
     })
     drill = listing.body!['id']
   })
@@ -96,7 +99,7 @@ describe('sharing a listing with someone who is not here yet', () => {
       title: 'Bosch drill 18V',
       estimatedValueNok: 600,
       ownerName: 'Ola N.',
-      media: ['https://img/drill.webp'],
+      media: [`http://test.local${photo}`],
     })
     expect(page.body!['inviter']).toMatchObject({ displayName: 'Ola N.' })
     expect(page.body!['used']).toBe(false)
