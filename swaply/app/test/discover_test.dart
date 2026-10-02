@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/screens/discover.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/widgets/common.dart';
 
 import 'fake_server.dart';
 
@@ -302,6 +303,79 @@ void main() {
       expect(card(30), findsOneWidget);
       expect(card(0), findsNothing);
       expect(find.text('Ingen treff'), findsNothing);
+    });
+  });
+
+  group('the chips and 05b are one filter', () {
+    /// The chip on the row over the grid named [label].
+    Pill chip(WidgetTester tester, String label) =>
+        tester.widget<Pill>(find.widgetWithText(Pill, label).first);
+
+    Future<void> openFilters(WidgetTester tester) async {
+      await tester.tap(find.bySemanticsLabel('Avansert søk'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('1. a chip takes the place of 05b\'s category, and lets go of its subcategory',
+        (tester) async {
+      // Gaming and «PS5» on 05b, then «Alt», showed the same three PS5s; and
+      // «Klær» asked for clothes that were PS5s, and found none.
+      serve(listings(3));
+      server.overrides['GET /discover/subcategories'] = {'subcategories': ['PS5']};
+      await mount(tester, const DiscoverScreen());
+
+      await openFilters(tester);
+      await tester.tap(find.byType(DropdownButtonFormField<String?>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Gaming').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('PS5'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('treff').last);
+      await tester.pumpAndSettle();
+
+      expect(asked.last, containsPair('category', 'gaming'));
+      expect(asked.last, containsPair('subcategory', 'PS5'));
+      expect(chip(tester, 'Gaming').selected, isTrue);
+
+      await tester.tap(find.text('Alt'));
+      await tester.pumpAndSettle();
+      expect(asked.last.containsKey('category'), isFalse);
+      expect(asked.last.containsKey('subcategory'), isFalse);
+      expect(chip(tester, 'Alt').selected, isTrue);
+
+      await tester.tap(find.text('Klær'));
+      await tester.pumpAndSettle();
+      expect(asked.last, containsPair('category', 'klaer'));
+      expect(asked.last.containsKey('subcategory'), isFalse);
+    });
+
+    testWidgets('2. 05b opens on the chip\'s category, and «Vis N treff» keeps the chip',
+        (tester) async {
+      // It opened on what was last chosen in it: on «Klær» it said «Alle»,
+      // counted every category, and pressed, put the chip back to «Alt».
+      serve(listings(3));
+      await mount(tester, const DiscoverScreen());
+      await tester.tap(find.text('Klær'));
+      await tester.pumpAndSettle();
+
+      await openFilters(tester);
+      expect(find.byType(AdvancedSearchScreen), findsOneWidget);
+      expect(
+          tester
+              .widget<DropdownButtonFormField<String?>>(find.byType(DropdownButtonFormField<String?>))
+              .initialValue,
+          'klaer');
+      // The count on the button is for the chip's category.
+      expect(asked.last, containsPair('category', 'klaer'));
+
+      await tester.tap(find.textContaining('treff').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AdvancedSearchScreen), findsNothing);
+      expect(chip(tester, 'Klær').selected, isTrue);
+      expect(chip(tester, 'Alt').selected, isFalse);
+      expect(asked.last, containsPair('category', 'klaer'));
     });
   });
 }

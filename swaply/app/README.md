@@ -334,6 +334,14 @@ over. A page that gets no answer leaves the grid as it is and says so in a
 toast, and the next drag asks again; one that lands after a new search is
 dropped. `test/discover_test.dart` holds it.
 
+The chips over the grid are 05b's category, chosen from above it, and nothing
+else. A chip takes the place of the category chosen on 05b and lets go of the
+subcategory chosen under it, and 05b opens on the chip's category. They used
+to be two filters: after Gaming and «PS5» on 05b, «Alt» still showed the PS5s
+and «Klær» asked for clothes that were PS5s; and 05b opened on «Alle» under
+«Klær», so its «Vis N treff» put the chip back to «Alt». The square button
+over the grid is lit for what only 05b shows, since the category is on a chip.
+
 The long press holds «Ikke vis meg slike», «Se profil» and «Rapporter».
 Hiding takes the kind — the category and the subcategory, or the listing alone
 when it has none — out of the grid on the tap and tells the server

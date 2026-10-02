@@ -127,9 +127,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   /// the grid the page would go under.
   int _settled = 0;
 
-  /// «Alt» is null. The chip row is a filter on one grid, which is what the
-  /// export draws: one home tab, not a shelf per interest.
-  String? _chip;
+  /// The chip lit above the grid, «Alt» being null. The chip row is a filter
+  /// on one grid, which is what the export draws: one home tab, not a shelf
+  /// per interest. It is 05b's category and nothing else, so the two cannot
+  /// disagree; see [_chipButton] and [_openFilters].
+  String? get _chip => _filters.category;
 
   /// How many times the collage has been asked for, and which asking the one
   /// on screen is the answer to. Only the newest asking is taken: two can be
@@ -255,9 +257,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
   /// The search and the filters as they stand, to ask with.
   _Ask _asking() => (
         q: _search.text.trim(),
-        // The chip wins over the filter sheet's category: it is the one the
-        // person can see.
-        category: _chip ?? _filters.category,
+        category: _filters.category,
         subcategory: _filters.subcategory,
         minValue: _filters.minValue,
         maxValue: _filters.maxValue,
@@ -442,19 +442,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
     await _load(quiet: true);
   }
 
+  /// 05b, opened on the grid's own search: the chip's category included. It
+  /// used to open on what was last chosen in it, so on «Klær» it showed
+  /// «Alle», counted every category, and its «Vis N treff» put the chip back
+  /// to «Alt». What it comes back with is the grid's filter, the chip with it.
   Future<void> _openFilters() async {
     // 05b is drawn without the bar, so it covers it.
     final result = await pushOverBar<SearchFilters>(
         context, AdvancedSearchScreen(initial: _filters, query: _search.text));
     if (result != null) {
-      setState(() {
-        _filters = result;
-        // The sheet's «Vis 24 treff» counted with the category chosen in it,
-        // and the chip above the grid used to win afterwards — so the button
-        // promised one number and the page showed another. Whichever was
-        // touched last is the one that means something.
-        _chip = result.category;
-      });
+      setState(() => _filters = result);
       if (result.query != null) _search.text = result.query!;
       await _load();
     }
@@ -517,7 +514,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
                 const SizedBox(width: 10),
                 _SquareIconButton(
                   icon: Icons.tune,
-                  active: _filters.isActive,
+                  // Lit for what only 05b shows: the category is on a chip.
+                  active: _filters.narrows,
                   onTap: _openFilters,
                 ),
               ],
@@ -566,11 +564,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
         ),
       );
 
+  /// A chip is 05b's category, chosen from above the grid: it takes the place
+  /// of the one chosen there, and lets go of the subcategory chosen under
+  /// that, which belongs to it. Gaming and «PS5» on 05b, then «Alt», used to
+  /// show the same three PS5s, and «Klær» asked for clothes that were PS5s.
   Widget _chipButton(String label, String? category) => TapArea(
         room: const EdgeInsets.fromLTRB(_halfGap, 10, _halfGap, 12),
         onTap: () {
-          if (_chip == category) return;
-          setState(() => _chip = category);
+          if (_chip == category && _filters.subcategory == null) return;
+          setState(() => _filters = _filters.inCategory(category));
           _load();
         },
         child: Center(child: Pill(label, selected: _chip == category)),
@@ -590,7 +592,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
 
     final results = _visible;
     if (results.isEmpty) {
-      final filtered = _search.text.trim().isNotEmpty || _chip != null || _filters.isActive;
+      final filtered = _search.text.trim().isNotEmpty || _filters.isActive;
       return EmptyState(
         icon: filtered ? Icons.search_off : Icons.explore_outlined,
         title: filtered ? 'Ingen treff' : 'Ingenting å vise ennå',
@@ -1107,13 +1109,28 @@ class SearchFilters {
   final int? minValue, maxValue;
   final String sort;
 
-  bool get isActive =>
-      category != null ||
+  bool get isActive => category != null || narrows;
+
+  /// Whether the search is narrowed past its category: what 05b shows and the
+  /// chips above the grid do not.
+  bool get narrows =>
       subcategory != null ||
       minValue != null ||
       maxValue != null ||
       condition != null ||
       sort != 'newest';
+
+  /// The same search under [category], chosen on a chip above the grid. The
+  /// subcategory goes: it was chosen under the category it belongs to, and
+  /// under another one it finds nothing.
+  SearchFilters inCategory(String? category) => SearchFilters(
+        query: query,
+        category: category,
+        minValue: minValue,
+        maxValue: maxValue,
+        condition: condition,
+        sort: sort,
+      );
 }
 
 class AdvancedSearchScreen extends StatefulWidget {
