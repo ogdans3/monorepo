@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { forbidden, notFound } from '../lib/errors.js'
 import { iso, many, one } from '../lib/rows.js'
-import { postMessage } from '../trades/conversation.js'
+import { markReadUpTo, postMessage } from '../trades/conversation.js'
 import { publicMessage } from './serialize.js'
 
 const idParam = z.object({ id: z.string().uuid() })
@@ -143,7 +143,26 @@ export default async function chatRoutes(app: FastifyInstance) {
   app.post('/threads/:id/read', async (request, reply) => {
     const userId = app.requireUser(request)
     const { id } = idParam.parse(request.params)
+    const body = z
+      .object({
+        // The last message the screen had in front of it. Without it,
+        // everything in the thread is marked read, including whatever arrived
+        // between loading the screen and saying so — which is what the app
+        // as released on 30.09 sends, and what this did for everybody.
+        upTo: z.string().uuid().nullish(),
+      })
+      .parse(request.body ?? {})
     await seatIn(app, id, userId)
+
+    if (body.upTo) {
+      const message = await one(
+        app.db,
+        sql`select 1 from messages where id = ${body.upTo} and thread_id = ${id}`,
+      )
+      if (!message) throw notFound('Fant ikke meldingen.')
+      await markReadUpTo(app.db, id, userId, body.upTo)
+      return reply.code(204).send()
+    }
 
     await app.db.execute(sql`
       update thread_participants set last_read_message_id =

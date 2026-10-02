@@ -4,20 +4,48 @@ import type { Database } from '../db/index.js'
 import { blocked } from '../lib/blocks.js'
 import { iso, one, type Row } from '../lib/rows.js'
 import { blockedInThread } from './blocking.js'
+import type { Tx } from './trades.js'
+
+/**
+ * Move somebody's read mark in a conversation up to and including a message
+ * in it, and never back: marking up to an older message does not make the
+ * newer ones unread again. A message from another thread moves nothing.
+ */
+export async function markReadUpTo(
+  db: Database | Tx,
+  threadId: string,
+  userId: string,
+  messageId: string,
+) {
+  await db.execute(sql`
+    update thread_participants tp set last_read_message_id = m.id
+    from messages m
+    where m.id = ${messageId} and m.thread_id = ${threadId}
+      and tp.thread_id = ${threadId} and tp.user_id = ${userId}
+      and (tp.last_read_message_id is null
+           or m.created_at >= (select r.created_at from messages r
+                               where r.id = tp.last_read_message_id))
+  `)
+}
 
 /**
  * Say something in a conversation: the message, and the notification the
  * others get for it.
  *
- * One function for the places a message is written into a conversation that
- * exists — the thread's own field, and «Som motparten» — so the refusals and
- * the notification cannot drift apart between them.
+ * One function for every place a message is written into a conversation that
+ * exists — the thread's own field, the box on 04 once there is a conversation,
+ * and «Som motparten» — so the refusals and the notification cannot drift
+ * apart between them. The box on 04 used to write the message and no
+ * notification: a second message from there arrived in silence.
  *
  * Not across a block, either way: a conversation that was going on when
  * somebody blocked somebody is kept, but neither of them writes in it, and so
  * no notification crosses the block either. Judged inside the transaction
  * that writes, and the notification asks again, so a block made in the same
  * moment is not crossed by the one row that would.
+ *
+ * Whoever writes has read the conversation up to what they wrote: answering
+ * is reading, and their own message is the newest thing in it.
  */
 export async function postMessage(
   db: Database,
@@ -31,6 +59,7 @@ export async function postMessage(
       sql`insert into messages (thread_id, sender_id, body)
           values (${threadId}, ${senderId}, ${body}) returning *`,
     )
+    await markReadUpTo(tx, threadId, senderId, message!['id'])
     await tx.execute(sql`
       insert into notifications (user_id, type, payload)
       select tp.user_id, 'message', jsonb_build_object('threadId', ${threadId}::text)

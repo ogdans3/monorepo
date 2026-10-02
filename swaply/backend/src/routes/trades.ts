@@ -15,7 +15,7 @@ import {
   withdrawEarly,
 } from '../trades/actions.js'
 import { acceptTrade } from '../trades/accept.js'
-import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
+import { conversationAbout, lastMessageIn, postMessage } from '../trades/conversation.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import {
   completeTrade,
@@ -63,10 +63,10 @@ export default async function tradeRoutes(app: FastifyInstance) {
     const existing = await conversationAbout(app.db, userId, item['owner_id'], id)
 
     if (existing) {
-      await app.db.execute(
-        sql`insert into messages (thread_id, sender_id, body)
-            values (${existing.threadId}, ${userId}, ${body.body})`,
-      )
+      // As the thread's own field writes it: refused across a block, and the
+      // others told. This branch used to write the message and nothing else,
+      // so a second message from 04 arrived without a notification.
+      await postMessage(app.db, existing.threadId, userId, body.body)
       reply.code(201)
       // What was said, as the box on 04 draws it. 04 shows it straight away,
       // and it is the server's words, trimmed as it kept them.
