@@ -1,7 +1,48 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
-import { iso, one } from '../lib/rows.js'
+import { blocked } from '../lib/blocks.js'
+import { iso, one, type Row } from '../lib/rows.js'
+import { blockedInThread } from './blocking.js'
+
+/**
+ * Say something in a conversation: the message, and the notification the
+ * others get for it.
+ *
+ * One function for the places a message is written into a conversation that
+ * exists — the thread's own field, and «Som motparten» — so the refusals and
+ * the notification cannot drift apart between them.
+ *
+ * Not across a block, either way: a conversation that was going on when
+ * somebody blocked somebody is kept, but neither of them writes in it, and so
+ * no notification crosses the block either. Judged inside the transaction
+ * that writes, and the notification asks again, so a block made in the same
+ * moment is not crossed by the one row that would.
+ */
+export async function postMessage(
+  db: Database,
+  threadId: string,
+  senderId: string,
+  body: string,
+): Promise<Row> {
+  return db.transaction(async (tx) => {
+    if (await blockedInThread(tx, threadId, senderId)) throw blocked()
+    const [message] = await tx.execute<Row>(
+      sql`insert into messages (thread_id, sender_id, body)
+          values (${threadId}, ${senderId}, ${body}) returning *`,
+    )
+    await tx.execute(sql`
+      insert into notifications (user_id, type, payload)
+      select tp.user_id, 'message', jsonb_build_object('threadId', ${threadId}::text)
+      from thread_participants tp
+      where tp.thread_id = ${threadId} and tp.user_id <> ${senderId}
+        and not exists (select 1 from blocks b
+                        where (b.blocker = ${senderId} and b.blocked = tp.user_id)
+                           or (b.blocker = tp.user_id and b.blocked = ${senderId}))
+    `)
+    return message!
+  })
+}
 
 /** The last thing said in a thread, as the one asking sees it. 06b's card and
  * 04's box draw it the same way, so it is written down once. */

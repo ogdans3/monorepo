@@ -1,8 +1,10 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
+import { blocked } from '../lib/blocks.js'
 import { conflict } from '../lib/errors.js'
 import { uuidArray } from '../lib/rows.js'
+import { blockedInTrade } from './blocking.js'
 import { TOLD, closeReasonSql, type CloseCode } from './close.js'
 import type { Cycle } from './cycles.js'
 import { lockItems, lockTrades } from './locks.js'
@@ -184,6 +186,8 @@ export async function proposeCounterOffer(
         'Forslaget er endret. Se over det nye før du foreslår noe annet.',
       )
     }
+    // Nothing new on the table across a block (`blocking.ts`).
+    if (await blockedInTrade(tx, tradeId, proposedBy)) throw blocked()
     await validateOffer(tx, tradeId, items, cash)
 
     const [offer] = await tx.execute<Row>(
@@ -309,6 +313,9 @@ export async function acceptOffer(
     // they said yes to is no longer what is proposed; and enough yeses to an
     // old version agreed a trade on a deal nobody had on the table.
     if ((await newestOffer(tx, tradeId)) !== offerId) throw offerChanged()
+    // And no yes across a block: a trade the block did not end — agreed, and
+    // then taken back — or a block from before blocks ended anything.
+    if (await blockedInTrade(tx, tradeId, userId)) throw blocked()
     // Only a negotiation loses its things to another trade's yes, judged as
     // it stands now that it is held. An agreed trade holding one of them is
     // refused below, as `item_reserved`.

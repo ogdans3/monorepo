@@ -3,8 +3,8 @@ import { sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { WITHDRAWAL_RESPONSE_HOURS } from '../lib/constants.js'
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
-import { many, one, type Row } from '../lib/rows.js'
-import { lockTrades } from './locks.js'
+import { many, one, uuidArray, type Row } from '../lib/rows.js'
+import { lockItems, lockTrades, lockTradesWhere } from './locks.js'
 import { NEGOTIABLE, cancelTrade, endTrade, type Tx } from './trades.js'
 
 export { NEGOTIABLE }
@@ -43,6 +43,55 @@ export async function declineTrade(db: Database, tradeId: string, userId: string
 export async function withdrawEarly(db: Database, tradeId: string, userId: string) {
   await participantOf(db, tradeId, userId)
   return cancelTrade(db, tradeId, 'withdrawn_early', { actor: userId, onlyWhileNegotiating: true })
+}
+
+/**
+ * Block somebody, and end every negotiation the two of you are both in.
+ *
+ * Talking, pending and countered — a negotiation — end with `blocked`, which
+ * tells the others in each trade and never says who blocked whom. An agreed
+ * trade is left standing: `docs/DESIGN.md` says what a block hides and stops
+ * matching, and nothing about undoing an agreement, which is what the
+ * withdrawal question on 08a is for. What is left of it refuses the moves
+ * across the block (`blocking.ts`).
+ *
+ * In one transaction with the block, so there is no moment in which the block
+ * exists and a yes can still land in one of those trades. In the one order
+ * (`index.ts`): the trades, then everything they hold in one batch, then each
+ * ending, which takes nothing new.
+ *
+ * Returns the listings those trades held, back on the market: the caller runs
+ * the search over them once this has committed.
+ */
+export async function blockAndEnd(db: Database, blocker: string, blocked: string) {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`insert into blocks (blocker, blocked) values (${blocker}, ${blocked})
+          on conflict do nothing`,
+    )
+    // Judged again on each row once it is held, so a trade agreed while this
+    // waited for it is left standing like any other agreed one.
+    const shared = [
+      ...(
+        await lockTradesWhere(
+          tx,
+          sql`t.state in ('talking', 'pending', 'countered')
+              and exists (select 1 from trade_participants p
+                          where p.trade_id = t.id and p.user_id = ${blocker})
+              and exists (select 1 from trade_participants p
+                          where p.trade_id = t.id and p.user_id = ${blocked})`,
+        )
+      ).keys(),
+    ]
+    if (shared.length === 0) return [] as string[]
+    await lockItems(tx, sql`i.active_trade_id = any(${uuidArray(shared)})`)
+
+    const freed: string[] = []
+    for (const tradeId of shared) {
+      freed.push(...(await endTrade(tx, tradeId, 'blocked', { actor: blocker })))
+    }
+    return freed
+  })
 }
 
 /**

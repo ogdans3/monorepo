@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { forbidden, notFound } from '../lib/errors.js'
 import { iso, many, one } from '../lib/rows.js'
+import { postMessage } from '../trades/conversation.js'
 import { publicMessage } from './serialize.js'
 
 const idParam = z.object({ id: z.string().uuid() })
@@ -132,19 +133,11 @@ export default async function chatRoutes(app: FastifyInstance) {
     const body = z.object({ body: z.string().trim().min(1).max(2000) }).parse(request.body)
     await seatIn(app, id, userId)
 
-    const message = await one(
-      app.db,
-      sql`insert into messages (thread_id, sender_id, body)
-          values (${id}, ${userId}, ${body.body}) returning *`,
-    )
-    await app.db.execute(sql`
-      insert into notifications (user_id, type, payload)
-      select tp.user_id, 'message', jsonb_build_object('threadId', ${id}::text)
-      from thread_participants tp where tp.thread_id = ${id} and tp.user_id <> ${userId}
-    `)
+    // Refused across a block, and the others told (`postMessage`).
+    const message = await postMessage(app.db, id, userId, body.body)
 
     reply.code(201)
-    return publicMessage({ ...message!, mine: true })
+    return publicMessage({ ...message, mine: true })
   })
 
   app.post('/threads/:id/read', async (request, reply) => {

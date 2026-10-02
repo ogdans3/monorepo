@@ -55,6 +55,11 @@ export const tradeCloseCode = pgEnum('trade_close_code', [
   'account_deleted',
   // The test tooling's «Nullstill → bytter».
   'ended_by_admin',
+  // One person in it blocked another, which ends every negotiation the two
+  // are both in (drizzle/0013).
+  'blocked',
+  // The owner removed a listing that was on the table (drizzle/0013).
+  'listing_removed',
 ])
 
 export const itemStatus = pgEnum('item_status', ['available', 'reserved', 'traded', 'withdrawn'])

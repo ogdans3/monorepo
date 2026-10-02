@@ -12,6 +12,8 @@ export type CloseCode =
   | 'withdrawal_approved'
   | 'account_deleted'
   | 'ended_by_admin'
+  | 'blocked'
+  | 'listing_removed'
 
 /**
  * The words each code is stored with in `close_reason`.
@@ -38,6 +40,15 @@ const REASONS: Record<CloseCode, string | { pair: string; ring: string }> = {
     ring: 'En av de andre slettet kontoen sin',
   },
   ended_by_admin: 'Byttet ble avsluttet fra testverktøyet',
+  // Read by the one who blocked, the one blocked and, in a ring, the third,
+  // so it says neither who nor that anybody blocked anybody — the same thing
+  // the refusal across a block says («Dette er ikke mulig mellom dere.»).
+  blocked: {
+    pair: 'Byttet er ikke mulig mellom dere lenger',
+    ring: 'Byttet er ikke mulig mellom to av dere lenger',
+  },
+  // True for the owner who removed it as much as for the others.
+  listing_removed: 'En av tingene i byttet ble fjernet av eieren',
 }
 
 /**
@@ -59,6 +70,8 @@ export const TOLD: Record<CloseCode, boolean> = {
   withdrawal_approved: true,
   account_deleted: false,
   ended_by_admin: false,
+  blocked: true,
+  listing_removed: true,
 }
 
 /**

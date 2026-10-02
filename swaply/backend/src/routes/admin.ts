@@ -23,6 +23,7 @@ import {
   requestWithdrawal,
 } from '../trades/actions.js'
 import { expireWithdrawals } from '../trades/actions.js'
+import { postMessage } from '../trades/conversation.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import { acceptTrade } from '../trades/accept.js'
 import { completeTrade, proposeCounterOffer } from '../trades/trades.js'
@@ -277,19 +278,11 @@ export default async function adminRoutes(app: FastifyInstance) {
       case 'message': {
         const thread = await one(app.db, sql`select id from threads where trade_id = ${id}`)
         if (!thread) throw notFound('Fant ikke samtalen.')
-        await app.db.execute(
-          sql`insert into messages (thread_id, sender_id, body)
-              values (${thread['id']}, ${body.as}, 'Hei! Dette er en testmelding.')`,
-        )
-        // The same row `/threads/:id/messages` writes: without it the unread
-        // badge and screen 12a are being tested against a message the product
-        // would never have sent silently.
-        await app.db.execute(sql`
-          insert into notifications (user_id, type, payload)
-          select tp.user_id, 'message', jsonb_build_object('threadId', ${thread['id']}::text)
-          from thread_participants tp
-          where tp.thread_id = ${thread['id']} and tp.user_id <> ${body.as}
-        `)
+        // Through what `/threads/:id/messages` calls: the same refusals, and
+        // the same notification — without it the unread badge and screen 12a
+        // are being tested against a message the product would never have
+        // sent silently.
+        await postMessage(app.db, thread['id'], body.as, 'Hei! Dette er en testmelding.')
         break
       }
       case 'mark-sent':

@@ -4,7 +4,8 @@ import { z } from 'zod'
 
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { iso, many, one, textArray } from '../lib/rows.js'
-import { participantOf } from '../trades/actions.js'
+import { blockAndEnd, participantOf } from '../trades/actions.js'
+import { sweepForCycles } from '../trades/sweep.js'
 
 export default async function miscRoutes(app: FastifyInstance) {
   // Screen 12a. The payload is ids; the words are assembled by the client, so a
@@ -157,10 +158,9 @@ export default async function miscRoutes(app: FastifyInstance) {
     `)
 
     if (body.block && blockTarget && blockTarget !== userId) {
-      await app.db.execute(
-        sql`insert into blocks (blocker, blocked) values (${userId}, ${blockTarget})
-            on conflict do nothing`,
-      )
+      // The same block as `/blocks/:id`, and so the same end to what the two
+      // of them were negotiating.
+      await sweepForCycles(app.db, await blockAndEnd(app.db, userId, blockTarget))
     }
 
     reply.code(201)
@@ -172,9 +172,10 @@ export default async function miscRoutes(app: FastifyInstance) {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
     if (id === userId) throw badRequest('self_block', 'Du kan ikke blokkere deg selv.')
 
-    await app.db.execute(
-      sql`insert into blocks (blocker, blocked) values (${userId}, ${id}) on conflict do nothing`,
-    )
+    // A block reaches what is already going on, not only what has yet to
+    // start: the negotiations the two share end (`blockAndEnd`), and what
+    // they were holding is back on the market for the search.
+    await sweepForCycles(app.db, await blockAndEnd(app.db, userId, id))
     reply.code(204)
   })
 
