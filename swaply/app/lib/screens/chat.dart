@@ -10,6 +10,7 @@ import '../util/clock.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
+import 'profile.dart';
 import 'proposal_sheets.dart';
 
 /// 11a Chats. One row per conversation, with what the trade is about under the
@@ -386,30 +387,43 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         titleSpacing: 0,
-        title: Row(
-          children: [
-            for (final p in faces)
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Avatar(p.displayName, size: faces.length > 1 ? 30 : 38),
-              ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(title,
-                      style: Type.heading, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  if (_trade != null)
-                    Text(_tradeLine(_trade!),
-                        style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                ],
-              ),
+        // The face and the name open who it is, 13b, which is where report
+        // and block live: a chat had no way to either. In a ring there are
+        // two, so a small sheet asks which. Nothing new is drawn for it, as
+        // a name in a header is where a person looks for them. A finger
+        // tall, centred where the row was, so nothing moves.
+        title: TapArea(
+          onTap: () => _openPerson(thread),
+          child: SizedBox(
+            height: kTapTarget,
+            child: Row(
+              children: [
+                for (final p in faces)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    // The initial says nothing the name does not.
+                    child: ExcludeSemantics(
+                        child: Avatar(p.displayName, size: faces.length > 1 ? 30 : 38)),
+                  ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title,
+                          style: Type.heading, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      if (_trade != null)
+                        Text(_tradeLine(_trade!),
+                            style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
       body: SafeArea(
@@ -661,6 +675,19 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
                   fontSize: 12, fontWeight: FontWeight.w600, color: SwaplyColors.chipInk)),
         ),
       );
+
+  /// 13b for the other person, or for the one of the two in a ring this
+  /// person picks. 13b is drawn with the bar, so it goes into the tab under
+  /// this conversation, which covers the bar and is taken down for it.
+  Future<void> _openPerson(Thread thread) async {
+    final me = context.read<Session>().me?.id;
+    final others = thread.participants.where((p) => p.id != me).toList();
+    final person = others.length > 1
+        ? await choosePerson(context, title: 'Se profil', people: others)
+        : others.firstOrNull;
+    if (person == null || !mounted) return;
+    await pushInTab<void>(context, OtherProfileScreen(userId: person.id));
+  }
 
   Future<void> _propose(Trade trade, ProposalKind kind) async {
     final sent = await showProposalSheet(context, trade: trade, kind: kind);

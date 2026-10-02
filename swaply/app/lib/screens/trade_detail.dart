@@ -1207,25 +1207,47 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             if (i > 0) const SizedBox(height: 7),
             SectionCard(
               radius: 16,
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+              // 8 over and under the face, 6 of each inside its target.
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 2),
               child: Row(
                 children: [
-                  Avatar(p.displayName, size: 32),
-                  const SizedBox(width: 12),
+                  // The face and the name open who it is, 13b, where report
+                  // and block live: a trade under way had no way to either,
+                  // short of finishing it. As wide as they are drawn and no
+                  // wider: the rest of the card is where «Åpne ›» under it
+                  // answers up into, as it did before the card answered.
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(p.displayName.split(' ').first,
-                            style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: SwaplyColors.ink)),
-                        Text(_personMeta(p),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey)),
-                      ],
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TapArea(
+                        room: const EdgeInsets.symmetric(vertical: 6),
+                        onTap: () => _openProfile(p),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // The initial says nothing the name does not.
+                            ExcludeSemantics(child: Avatar(p.displayName, size: 32)),
+                            const SizedBox(width: 12),
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(p.displayName.split(' ').first,
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: SwaplyColors.ink)),
+                                  Text(_personMeta(p),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 11.5, color: SwaplyColors.grey)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1242,6 +1264,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           ],
         ],
       );
+
+  /// 13b, over this page in its tab, as 13b is drawn with the bar. A block
+  /// made there ends this trade, so the trade is asked for again on the way
+  /// back — quietly, as the block's own toast is the news.
+  Future<void> _openProfile(UserRef person) async {
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => OtherProfileScreen(userId: person.id)));
+    if (mounted) await _load(quiet: true);
+  }
 
   /// «★ 4,7 · Trondheim» when the person has a rating and a town; what they
   /// give otherwise, so the line is never empty.
