@@ -1174,32 +1174,46 @@ class EmptyState extends StatelessWidget {
   static const footerRoom = EdgeInsets.only(top: 15, bottom: 14);
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: footer == null
-              ? const EdgeInsets.all(Insets.xl)
-              : EdgeInsets.fromLTRB(Insets.xl, Insets.xl, Insets.xl, Insets.xl - footerRoom.bottom),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 64, width: 64,
-                decoration: const BoxDecoration(color: SwaplyColors.greenSoft, shape: BoxShape.circle),
-                child: Icon(icon, color: SwaplyColors.greenDeep),
-              ),
-              const SizedBox(height: Insets.lg),
-              Text(title, style: Type.title, textAlign: TextAlign.center),
-              const SizedBox(height: Insets.sm),
-              Text(body, style: Type.secondary, textAlign: TextAlign.center),
-              if (actionLabel != null) ...[
-                const SizedBox(height: Insets.lg),
-                SizedBox(width: 230, child: PrimaryButton(actionLabel!, onPressed: onAction)),
-              ],
-              ?footer,
-            ],
+  Widget build(BuildContext context) {
+    final content = Padding(
+      padding: footer == null
+          ? const EdgeInsets.all(Insets.xl)
+          : EdgeInsets.fromLTRB(Insets.xl, Insets.xl, Insets.xl, Insets.xl - footerRoom.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: 64, width: 64,
+            decoration: const BoxDecoration(color: SwaplyColors.greenSoft, shape: BoxShape.circle),
+            child: Icon(icon, color: SwaplyColors.greenDeep),
           ),
+          const SizedBox(height: Insets.lg),
+          Text(title, style: Type.title, textAlign: TextAlign.center),
+          const SizedBox(height: Insets.sm),
+          Text(body, style: Type.secondary, textAlign: TextAlign.center),
+          if (actionLabel != null) ...[
+            const SizedBox(height: Insets.lg),
+            SizedBox(width: 230, child: PrimaryButton(actionLabel!, onPressed: onAction)),
+          ],
+          ?footer,
+        ],
+      ),
+    );
+    return LayoutBuilder(builder: (context, box) {
+      // In a list, as 17c's is, the list does the scrolling.
+      if (!box.hasBoundedHeight) return Center(child: content);
+      // In the middle of the room it has, and scrolling when it is more than
+      // that: larger text on a small phone ran the words, the button and the
+      // way on under it past the foot of the screen — on a device's 13, «Logg
+      // inn» and «Juridisk og personvern», with no way to them.
+      return SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: box.maxHeight),
+          child: Center(child: content),
         ),
       );
+    });
+  }
 }
 
 /// A page that could not get the one thing it shows — a trade, a listing, a

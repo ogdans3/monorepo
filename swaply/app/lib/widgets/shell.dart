@@ -99,49 +99,59 @@ class SwaplyNavBar extends StatelessWidget {
     final colour = selected ? SwaplyColors.greenPressed : SwaplyColors.grey;
 
     return Expanded(
-      child: InkWell(
-        onTap: onSelect != null
-            ? () => onSelect!(index)
-            : selected
-                ? null
-                : () => Navigator.of(context)
-                    .pushNamedAndRemoveUntil(tabRoutes[index], (r) => false),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(icon, size: 21, color: colour),
-                if (badge > 0)
-                  Positioned(
-                    top: -5,
-                    right: -9,
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 16),
-                      height: 16,
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: SwaplyColors.badge,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        badge > 9 ? '9+' : '$badge',
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
+      // The tab you are in is said as well as drawn: in green alone, a
+      // screen reader had five buttons and no way to tell where it was.
+      child: Semantics(
+        container: true,
+        selected: selected,
+        child: InkWell(
+          onTap: onSelect != null
+              ? () => onSelect!(index)
+              : selected
+                  ? null
+                  : () => Navigator.of(context)
+                      .pushNamedAndRemoveUntil(tabRoutes[index], (r) => false),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(icon, size: 21, color: colour),
+                  if (badge > 0)
+                    Positioned(
+                      top: -5,
+                      right: -9,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 16),
+                        height: 16,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: SwaplyColors.badge,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          badge > 9 ? '9+' : '$badge',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    color: colour)),
-          ],
+                ],
+              ),
+              const SizedBox(height: 2),
+              // One line, however large the text: «Legg ut» broke in two
+              // under a large text setting and ran out of the bar.
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                      color: colour)),
+            ],
+          ),
         ),
       ),
     );

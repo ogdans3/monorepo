@@ -783,9 +783,14 @@ class SettingsScreen extends StatelessWidget {
             // lock screen: it never drew a way into the list of them inside
             // the app. The screen exists and was built, and until now nothing
             // in the app could open it.
-            _tile('Se alle varsler', null,
-                onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
+            // A node of its own beside the three switches, which are each
+            // theirs: left to the card, its tap was the whole card's.
+            Semantics(
+              container: true,
+              child: _tile('Se alle varsler', null,
+                  onTap: () => Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
+            ),
             const _NotificationToggle(label: 'Swaps og bytter'),
             const _NotificationToggle(label: 'Meldinger'),
             const _NotificationToggle(label: 'Likes på tingene mine'),
@@ -1378,36 +1383,41 @@ class _NotificationToggleState extends State<_NotificationToggle> {
 
   @override
   // A 58-tall row with the export's own switch: 50×31, green when on, the
-  // field-line grey when off, a 23px white thumb.
-  Widget build(BuildContext context) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _toggle,
-        child: SizedBox(
-          height: 58,
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(widget.label,
-                    style: const TextStyle(
-                        fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 50,
-                height: 31,
-                padding: const EdgeInsets.all(4),
-                alignment: _on ? Alignment.centerRight : Alignment.centerLeft,
-                decoration: BoxDecoration(
-                  color: _on ? SwaplyColors.greenPressed : SwaplyColors.fieldLine,
-                  borderRadius: BorderRadius.circular(Radii.pill),
+  // field-line grey when off, a 23px white thumb. Drawn, it said nothing to a
+  // screen reader about being a switch or which way it stood.
+  Widget build(BuildContext context) => Semantics(
+        container: true,
+        toggled: _on,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _toggle,
+          child: SizedBox(
+            height: 58,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(widget.label,
+                      style: const TextStyle(
+                          fontSize: 14.5, fontWeight: FontWeight.w600, color: SwaplyColors.ink)),
                 ),
-                child: Container(
-                  width: 23,
-                  height: 23,
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 50,
+                  height: 31,
+                  padding: const EdgeInsets.all(4),
+                  alignment: _on ? Alignment.centerRight : Alignment.centerLeft,
+                  decoration: BoxDecoration(
+                    color: _on ? SwaplyColors.greenPressed : SwaplyColors.fieldLine,
+                    borderRadius: BorderRadius.circular(Radii.pill),
+                  ),
+                  child: Container(
+                    width: 23,
+                    height: 23,
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );

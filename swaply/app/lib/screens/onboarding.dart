@@ -969,41 +969,52 @@ class _InterestsScreenState extends State<InterestsScreen> {
                       childAspectRatio: 166 / 66,
                       children: categoryLabels.entries.map((entry) {
                         final selected = _chosen.contains(entry.key);
-                        return GestureDetector(
-                          onTap: () => setState(() =>
-                              selected ? _chosen.remove(entry.key) : _chosen.add(entry.key)),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 160),
-                            curve: Curves.easeOut,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: selected ? SwaplyColors.tileSelected : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: selected
-                                      ? SwaplyColors.greenPressed
-                                      : SwaplyColors.fieldLine),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(entry.value,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: selected
-                                          ? SwaplyColors.greenDeep
-                                          : SwaplyColors.inkBody,
-                                    )),
-                                if (selected) ...[
-                                  const SizedBox(width: 6),
-                                  const Text('✓',
+                        // Chosen is said as well as drawn: a screen reader
+                        // had only the «✓» in the label to go by.
+                        return Semantics(
+                          container: true,
+                          button: true,
+                          selected: selected,
+                          child: GestureDetector(
+                            onTap: () => setState(() =>
+                                selected ? _chosen.remove(entry.key) : _chosen.add(entry.key)),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 160),
+                              curve: Curves.easeOut,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: selected ? SwaplyColors.tileSelected : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                    color: selected
+                                        ? SwaplyColors.greenPressed
+                                        : SwaplyColors.fieldLine),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(entry.value,
                                       style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: SwaplyColors.greenText)),
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: selected
+                                            ? SwaplyColors.greenDeep
+                                            : SwaplyColors.inkBody,
+                                      )),
+                                  if (selected) ...[
+                                    const SizedBox(width: 6),
+                                    // Said by `selected` above, so not read
+                                    // out as a tick as well.
+                                    const ExcludeSemantics(
+                                      child: Text('✓',
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: SwaplyColors.greenText)),
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         );
