@@ -10,7 +10,7 @@ import { hiddenCountColumn, hiddenCountOf } from '../lib/hidden.js'
 import { ApiError, badRequest, conflict, notFound } from '../lib/errors.js'
 import { townOf } from '../lib/postcodes.js'
 import { coverSql, many, one } from '../lib/rows.js'
-import { emailAddress } from '../lib/validation.js'
+import { displayName, emailAddress, phoneNumber } from '../lib/validation.js'
 import { anonymiseUser } from '../trades/erasure.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import { publicItem, publicMe, publicUser } from './serialize.js'
@@ -147,9 +147,9 @@ export default async function profileRoutes(app: FastifyInstance) {
     const userId = app.requireUser(request)
     const body = z
       .object({
-        displayName: z.string().trim().min(1).max(60).optional(),
+        displayName: displayName.optional(),
         email: emailAddress.optional(),
-        phone: z.string().min(6).max(20).nullish(),
+        phone: phoneNumber.nullish(),
         // Null and '' empty it: «Rediger profil» sends the box as typed, and
         // an emptied box was kept as '' — a town of nothing, which 13 drew
         // as « · medlem siden …».

@@ -189,4 +189,40 @@ describe('signing up with something taken', () => {
       db.execute(sql`insert into users (display_name, email) values ('Kopi', 'OLA@EPOST.NO')`),
     ).rejects.toMatchObject({ cause: { constraint_name: 'users_email_unique' } })
   })
+
+  test('11. a name or a number that does not fit says which box it is about', async () => {
+    // Under four boxes, «Dette feltet kan ikke være tomt.» and «Skriv minst 6
+    // tegn.» did not say which one to fix.
+    const name = await post('/auth/register', {
+      displayName: '  ', email: 'navnlos@epost.no', password: 'et langt passord',
+    })
+    expect(name.status).toBe(400)
+    expect(name.body).toMatchObject({ message: 'Skriv et visningsnavn.', field: 'displayName' })
+
+    for (const phone of ['12345', '+47 412 34 567 89 00 11']) {
+      const res = await post('/auth/register', {
+        displayName: 'Tor', email: 'tor@epost.no', phone, password: 'et langt passord',
+      })
+      expect(res.status, phone).toBe(400)
+      expect(res.body).toMatchObject({
+        message: 'Telefonnummeret må ha mellom 6 og 20 tegn.',
+        field: 'phone',
+      })
+    }
+
+    // «Rediger profil» says the same about the same boxes.
+    for (const [body, message] of [
+      [{ displayName: '' }, 'Skriv et visningsnavn.'],
+      [{ phone: '1234' }, 'Telefonnummeret må ha mellom 6 og 20 tegn.'],
+    ] as const) {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/me',
+        headers: { authorization: `Bearer ${olaToken}` },
+        payload: body,
+      })
+      expect(res.statusCode).toBe(400)
+      expect(res.json()['message']).toBe(message)
+    }
+  })
 })

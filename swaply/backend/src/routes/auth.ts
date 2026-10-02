@@ -10,16 +10,16 @@ import { admit } from '../lib/invites.js'
 import { ApiError, badRequest, conflict } from '../lib/errors.js'
 import { townOf } from '../lib/postcodes.js'
 import { one } from '../lib/rows.js'
-import { emailAddress } from '../lib/validation.js'
+import { displayName, emailAddress, phoneNumber } from '../lib/validation.js'
 import { closeLoopThrough } from '../trades/wish.js'
 import { publicMe } from './serialize.js'
 
 // Screen 10c asks for name, e-mail, phone and a password in one go, because it
 // only appears when you are already trying to list something.
 const registerBody = z.object({
-  displayName: z.string().trim().min(1).max(60),
+  displayName,
   email: emailAddress,
-  phone: z.string().min(6).max(20).nullish(),
+  phone: phoneNumber.nullish(),
   password: z.string().min(8, 'Passordet må ha minst 8 tegn.'),
   postalCode: z.string().regex(/^\d{4}$/, 'Et postnummer har fire sifre.').nullish(),
   // An empty box is no town, rather than a town called ''.

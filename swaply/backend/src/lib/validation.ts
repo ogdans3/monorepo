@@ -95,3 +95,24 @@ export function speakNorwegian() {
  * rule in the database.
  */
 export const emailAddress = z.string().trim().toLowerCase().email()
+
+/**
+ * «Visningsnavn» on 10c and «Rediger profil», refused in words about that
+ * box. The map above says «Dette feltet kan ikke være tomt.», which under a
+ * form of four boxes does not say which one.
+ */
+export const displayName = z
+  .string()
+  .trim()
+  .min(1, 'Skriv et visningsnavn.')
+  .max(60, 'Visningsnavnet kan ha høyst 60 tegn.')
+
+/**
+ * «Telefonnummer». Six to twenty characters of whatever was typed — «412 34
+ * 567», «+47 412 34 567» — is the whole rule, so it is the whole message:
+ * «Skriv minst 6 tegn.» did not say which box, nor that there is a ceiling.
+ */
+export const phoneNumber = z
+  .string()
+  .min(6, 'Telefonnummeret må ha mellom 6 og 20 tegn.')
+  .max(20, 'Telefonnummeret må ha mellom 6 og 20 tegn.')
