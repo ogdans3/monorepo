@@ -149,25 +149,44 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'Noen vil trekke seg',
             'Byttet er pauset mens du svarer.',
           ),
-        'message' => ('Ny melding', 'Åpne samtalen for å svare.'),
-        // A trade that ended without anybody in it saying so here: today only
-        // because somebody in it deleted their account, and the server ended
-        // every trade they were in. The payload says why with a code and the
-        // words are ours, as for every other kind. A reason this app does not
-        // know yet still gets the part it can say, and the trade says the
-        // rest — its own reason is on it, in words.
-        //
-        // «Noen i byttet», not «den andre parten»: a ring has three people in
-        // it. And nothing about the things coming free: most trades a
-        // deletion ends were still a conversation or an offer, where nothing
-        // was ever held, and a thing reserved by another trade still is.
-        'trade_cancelled' => (
-            'Byttet er avsluttet',
-            n.payload['reason'] == 'account_deleted'
-                ? 'Noen i byttet slettet kontoen sin.'
-                : 'Åpne byttet for å se hvorfor.',
+        // To the one who asked to pull out, when the answer was no: 08c's
+        // own words, and «noen» for a ring.
+        'withdrawal_rejected' => (
+            'Du kan ikke trekke deg',
+            'Noen i byttet sa nei, så byttet fortsetter som vanlig.',
           ),
+        // To everybody in it, once the 72 hours to answer are up: as 08b
+        // says it will, the trade goes on.
+        'withdrawal_lapsed' => (
+            'Byttet fortsetter',
+            'Fristen for å svare gikk ut, så byttet fortsetter som vanlig.',
+          ),
+        'message' => ('Ny melding', 'Åpne samtalen for å svare.'),
+        // A trade that ended, said to everybody in it the server tells. The
+        // payload says why with a code and the words are ours, as for every
+        // other kind; see [_whyEnded].
+        'trade_cancelled' => ('Byttet er avsluttet', _whyEnded(n.payload['reason'])),
         _ => ('Varsel', 'Åpne Swaply for å se hva som skjedde.'),
+      };
+
+  /// Why a trade ended, from its code, in words true for everybody it is
+  /// sent to: «noen i byttet», not «den andre parten», since a ring has three
+  /// people in it, and nothing that names who blocked whom. And nothing about
+  /// the things coming free: most trades that end were still a conversation
+  /// or an offer, where nothing was ever held, and a thing reserved by
+  /// another trade still is. A reason this app does not know yet still says
+  /// the trade ended, and the trade says the rest — its own reason is on it,
+  /// in words.
+  static String _whyEnded(Object? reason) => switch (reason) {
+        'declined' => 'Noen i byttet avslo det.',
+        'withdrawn_early' => 'Noen i byttet trakk seg før det var godtatt.',
+        'displaced' => 'En av tingene i byttet ble reservert i et annet bytte.',
+        'withdrawal_approved' => 'Dere ble enige om å avbryte det.',
+        'blocked' => 'Det kan ikke fortsette mellom dere.',
+        'listing_removed' => 'En av tingene i byttet ble tatt ned.',
+        'account_deleted' => 'Noen i byttet slettet kontoen sin.',
+        'ended_by_admin' => 'Det ble avsluttet fra testverktøyet.',
+        _ => 'Åpne byttet for å se hvorfor.',
       };
 
   static String _firstName(String? name) {

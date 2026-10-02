@@ -83,4 +83,54 @@ void main() {
       expect(find.text('Noen likte Bosch drill 18V'), findsOneWidget);
     });
   });
+
+  group('a trade that ended says why, true for a pair and for a ring', () {
+    for (final (reason, words) in [
+      ('declined', 'Noen i byttet avslo det.'),
+      ('withdrawn_early', 'Noen i byttet trakk seg før det var godtatt.'),
+      ('displaced', 'En av tingene i byttet ble reservert i et annet bytte.'),
+      ('withdrawal_approved', 'Dere ble enige om å avbryte det.'),
+      ('blocked', 'Det kan ikke fortsette mellom dere.'),
+      ('listing_removed', 'En av tingene i byttet ble tatt ned.'),
+      ('account_deleted', 'Noen i byttet slettet kontoen sin.'),
+      ('ended_by_admin', 'Det ble avsluttet fra testverktøyet.'),
+      ('something_new', 'Åpne byttet for å se hvorfor.'),
+    ]) {
+      testWidgets(reason, (tester) async {
+        one('trade_cancelled', payload: {'tradeId': 'trade-1', 'reason': reason});
+        await mount(tester, const NotificationsScreen());
+
+        expect(find.text('Byttet er avsluttet'), findsOneWidget);
+        expect(find.text(words), findsOneWidget);
+        // Never «den andre», which a ring of three makes untrue.
+        expect(find.textContaining('andre parten'), findsNothing);
+      });
+    }
+  });
+
+  group('a withdrawal that did not end the trade', () {
+    testWidgets('1. refused, the one who asked is told it goes on, and it opens', (tester) async {
+      one('withdrawal_rejected');
+      await mount(tester, const NotificationsScreen());
+
+      expect(find.text('Du kan ikke trekke deg'), findsOneWidget);
+      expect(find.text('Noen i byttet sa nei, så byttet fortsetter som vanlig.'), findsOneWidget);
+      expect(find.text('Varsel'), findsNothing);
+
+      await tester.tap(find.text('Du kan ikke trekke deg'));
+      await tester.pumpAndSettle();
+      expect(server.requests, contains('GET /trades/trade-1'));
+    });
+
+    testWidgets('2. unanswered in time, everybody is told it goes on', (tester) async {
+      one('withdrawal_lapsed');
+      await mount(tester, const NotificationsScreen());
+
+      expect(find.text('Byttet fortsetter'), findsOneWidget);
+      expect(find.text('Fristen for å svare gikk ut, så byttet fortsetter som vanlig.'),
+          findsOneWidget);
+      expect(find.text('Varsel'), findsNothing);
+    });
+  });
 }
+

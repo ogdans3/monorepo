@@ -654,11 +654,17 @@ a door into the list of them inside the app. The screen was built anyway, and
 without that row nothing could open it.
 
 12a words every kind the server sends, from ids, as the lock screen the
-export drew it as would. A trade ended because somebody in it deleted their
-account comes as `trade_cancelled` with the reason `account_deleted`, and says
-«Byttet er avsluttet» and why; a reason the app does not know yet still says
-the trade ended, and the trade says the rest. It opens the trade, which shows
-it ended, with the server's reason on it.
+export drew it as would. A trade that ended comes as `trade_cancelled` with a
+reason code — declined, pulled out of early, displaced by another trade, ended
+by agreement after a withdrawal, a block, a listing taken down, an account
+deleted, the test tooling — and says «Byttet er avsluttet» and why, in words
+true for everybody it reaches: «Noen i byttet …», since a ring has three
+people in it, and nothing that names who blocked whom. A reason the app does
+not know yet still says the trade ended, and the trade says the rest. A
+withdrawal refused tells the one who asked «Du kan ikke trekke deg», and one
+nobody answered in time tells everybody «Byttet fortsetter», in 08b's and 08c's
+words. Each opens the trade, which shows how it stands, with the server's
+reason on it. `test/notifications_test.dart` holds the words.
 
 **«‹» on 12 Likt.** Round 5 draws 12 as a tab's first screen, without one,
 and it was built that way on 10.09. It is only ever opened over something now
