@@ -254,7 +254,9 @@ PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
                 ),
                 if (under)
                   Padding(
-                    padding: const EdgeInsets.only(top: 3),
+                    // Under the title, which a «‹» moves along: 12 is drawn
+                    // without one, and has one where it is opened over 13.
+                    padding: EdgeInsets.only(top: 3, left: showBack ? _backWidth : 0),
                     child: Text(subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

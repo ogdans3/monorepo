@@ -565,8 +565,23 @@ class AppNotification {
 class LikedByRow {
   LikedByRow.fromJson(Map<String, dynamic> j)
       : item = Item.fromJson(j['item']),
-        likers = ((j['likers'] as List?) ?? const []).map((e) => UserRef.fromJson(e)).toList();
+        likers = ((j['likers'] as List?) ?? const []).map((e) => Liker.fromJson(e)).toList();
 
   final Item item;
-  final List<UserRef> likers;
+  final List<Liker> likers;
+}
+
+/// Somebody who liked one of your things, as 12 lists them.
+class Liker {
+  Liker.fromJson(Map<String, dynamic> j)
+      : user = UserRef.fromJson(j),
+        anonymous = j['anonymous'] as bool? ?? false;
+
+  final UserRef user;
+
+  /// A device looking around, which has no profile: no name to show and no
+  /// things to see. It has no name to send either, and read as a person it
+  /// was «Slettet bruker», somebody who had left. A server from before it
+  /// said so says nothing, and that is not one.
+  final bool anonymous;
 }

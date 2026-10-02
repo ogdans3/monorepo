@@ -12,6 +12,11 @@ import 'profile.dart';
 /// 12 Likt, and 17b when nobody has liked anything yet. Reached from the
 /// profile and from the like notification — the two ways in that survived the
 /// tab being taken by Chats.
+///
+/// Round 5 draws it as a tab's first screen, with no «‹», and it was built
+/// that way on 10.09. It is only ever opened over something now, so it has
+/// the way back whenever there is one; mounted on its own, as the goldens
+/// mount it, it is the export's.
 class LikedScreen extends StatefulWidget {
   const LikedScreen({super.key});
 
@@ -69,7 +74,9 @@ class _LikedScreenState extends State<LikedScreen> {
     return SwaplyScaffold(
       currentTab: 4,
       appBar: swaplyAppBar(context, 'Likt',
-          subtitle: 'Folk som har likt tingene dine', big: true, showBack: false),
+          subtitle: 'Folk som har likt tingene dine',
+          big: true,
+          showBack: ModalRoute.of(context)?.canPop ?? false),
       child: _error != null
           ? EmptyState(
               title: 'Fikk ikke kontakt',
@@ -193,50 +200,62 @@ class _LikedScreenState extends State<LikedScreen> {
                   children: [
                     for (final (i, liker) in row.likers.indexed) ...[
                       if (i > 0) const SizedBox(height: 11),
-                      TapArea(
-                        child: InkWell(
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => OtherProfileScreen(userId: liker.id))),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(minHeight: 44),
-                            child: Row(
-                              children: [
-                                Avatar(liker.displayName, size: 36),
-                                const SizedBox(width: 11),
-                                Expanded(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(liker.displayName.split(' ').first,
-                                          style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w700,
-                                              color: SwaplyColors.ink)),
-                                      Text(
-                                        [
-                                          if (liker.itemCount != null)
-                                            '${liker.itemCount} gjenstander',
-                                          if (liker.town != null) liker.town!,
-                                        ].join(' · '),
-                                        style: const TextStyle(
-                                            fontSize: 11.5, color: SwaplyColors.grey),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Text('Se tingene deres ›', style: Type.link),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                      _liker(liker),
                     ],
                   ],
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// One person who liked the thing, 44 tall, and their things a tap away.
+  ///
+  /// A device looking around has no profile: it is «Noen», with nothing to
+  /// open. It had no name to send, and was drawn as «Slettet bruker» — read
+  /// as somebody who had deleted their account — with «Se tingene deres» to
+  /// a profile that was not there.
+  Widget _liker(Liker liker) {
+    final user = liker.user;
+    final facts = [
+      if (!liker.anonymous && user.itemCount != null)
+        user.itemCount == 1 ? '1 gjenstand' : '${user.itemCount} gjenstander',
+      if (user.town != null) user.town!,
+    ].join(' · ');
+    final name = liker.anonymous ? 'Noen' : user.displayName.split(' ').first;
+
+    final drawn = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 44),
+      child: Row(
+        children: [
+          // No initial for nobody in particular.
+          Avatar(liker.anonymous ? '' : user.displayName, size: 36),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                if (facts.isNotEmpty)
+                  Text(facts, style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey)),
+              ],
+            ),
+          ),
+          if (!liker.anonymous) const Text('Se tingene deres ›', style: Type.link),
+        ],
+      ),
+    );
+    if (liker.anonymous) return drawn;
+    return TapArea(
+      child: InkWell(
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: user.id))),
+        child: drawn,
       ),
     );
   }

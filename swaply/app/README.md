@@ -644,6 +644,14 @@ account comes as `trade_cancelled` with the reason `account_deleted`, and says
 the trade ended, and the trade says the rest. It opens the trade, which shows
 it ended, with the server's reason on it.
 
+**«‹» on 12 Likt.** Round 5 draws 12 as a tab's first screen, without one,
+and it was built that way on 10.09. It is only ever opened over something now
+— 13's «Se hvem ›», or a like on 12a — so it has the way back whenever there is
+one, with the line under the title moved along with it; mounted on its own, as
+its golden is, it is the export's. A device that liked a thing has no profile,
+so it is «Noen» there, with no «Se tingene deres ›»: it used to be «Slettet
+bruker». `test/liked_test.dart` holds both.
+
 **«Vis alt på Oppdag igjen» on 16b**, under «Oppdag», with how much is hidden
 beside it — kinds, and listings hidden alone while they can still be shown —
 and only while any are, which is why the export's 16b, whose Ola has hidden
