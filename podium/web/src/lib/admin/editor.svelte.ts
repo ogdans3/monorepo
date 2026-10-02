@@ -3,6 +3,7 @@
 // the server's half a second later; the server is told the slide whole, as it
 // is now, so a save that is late is never a save that is wrong.
 
+import { nextColour } from '$lib/answers';
 import { api, ApiError, message, upload } from '$lib/api';
 import { bytes } from '$lib/format';
 import { session } from './session.svelte';
@@ -222,7 +223,13 @@ export class Editor {
 			return;
 		}
 		const box = nextAnswer(s.options);
-		const option: Option = { id: uid('new-'), label: `Svar ${s.options.length + 1}`, ...box, count: 0 };
+		const option: Option = {
+			id: uid('new-'),
+			label: `Svar ${s.options.length + 1}`,
+			color: nextColour(s.options.map((o) => o.color)),
+			...box,
+			count: 0
+		};
 		this.edit((s) => {
 			if (!s.title) s.title = heading(s);
 			s.options.push(option);
@@ -245,7 +252,13 @@ export class Editor {
 			this.edit((s) => s.elements.push(copy));
 			this.select('element', copy.id);
 		} else {
-			const copy = { ...$state.snapshot(item as Option), id: uid('new-'), count: 0, ...shifted };
+			const copy = {
+				...$state.snapshot(item as Option),
+				id: uid('new-'),
+				count: 0,
+				color: nextColour(this.slide?.options.map((o) => o.color) ?? []),
+				...shifted
+			};
 			this.edit((s) => s.options.push(copy));
 			this.select('option', copy.id);
 		}
@@ -390,6 +403,17 @@ export class Editor {
 		try {
 			await api('PATCH', `/api/admin/presentations/${this.p.id}`, { title });
 		} catch (err) {
+			this.notice = message(err);
+		}
+	}
+
+	async setMarks(marks: 'letters' | 'numbers') {
+		const before = this.p.marks;
+		this.p.marks = marks;
+		try {
+			await api('PATCH', `/api/admin/presentations/${this.p.id}`, { marks });
+		} catch (err) {
+			this.p.marks = before;
 			this.notice = message(err);
 		}
 	}

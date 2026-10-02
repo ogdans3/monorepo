@@ -28,6 +28,8 @@ export interface SlideElement {
 export interface Option {
 	id: string;
 	label: string;
+	/** Its tile's colour on the phones, and its mark's on the slide. */
+	color: string;
 	x: number;
 	y: number;
 	w: number;
@@ -59,6 +61,8 @@ export interface Presentation {
 	id: string;
 	title: string;
 	code: string;
+	/** What marks the answers besides their colour. */
+	marks: 'letters' | 'numbers';
 	liveSlideId: string | null;
 	soundMediaId: string | null;
 	updatedAt: string;
@@ -72,6 +76,7 @@ export interface LiveState {
 	id: string;
 	title: string;
 	code: string;
+	marks?: 'letters' | 'numbers';
 	/** The uploaded vote sound, or empty for the built-in chime. */
 	sound: string;
 	slide: Slide | null;
@@ -88,10 +93,17 @@ export interface VoteEvent {
 	total: number;
 }
 
+export interface BallotQuestion {
+	slideId: string;
+	title: string;
+	options: { id: string; label: string; color: string }[];
+}
+
 export interface Ballot {
 	title: string;
 	code: string;
+	marks: 'letters' | 'numbers';
 	live: boolean;
-	question: { slideId: string; title: string; options: { id: string; label: string }[] } | null;
+	question: BallotQuestion | null;
 	voted: string | null;
 }

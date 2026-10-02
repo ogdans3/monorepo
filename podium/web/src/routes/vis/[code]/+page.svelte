@@ -151,7 +151,7 @@
 		{:else if live?.slide}
 			{#key live.slide.id}
 				<div class="layer" transition:fade={{ duration: 180 }}>
-					<Stage slide={live.slide} code={live.code} {moving} />
+					<Stage slide={live.slide} code={live.code} marks={live.marks} {moving} />
 				</div>
 			{/key}
 		{:else if live}

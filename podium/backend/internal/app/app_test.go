@@ -195,18 +195,163 @@ func TestAFormOnAnotherSiteCannotPassForJSON(t *testing.T) {
 	}
 }
 
-func TestAPresentationStartsWithASlideAndACode(t *testing.T) {
+// codes are the QR codes on a slide.
+func codes(s Slide) []Element {
+	var out []Element
+	for _, e := range s.Elements {
+		if e.Type == "qr" {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func TestAPresentationOpensWithTheWayIn(t *testing.T) {
 	e := setup(t)
 	p := e.newPresentation("Er vi fucked?")
 	if len(p.Code) != 5 || strings.ContainsAny(p.Code, "01ILO") {
 		t.Fatalf("code %q", p.Code)
 	}
-	if len(p.Slides) != 1 || p.Slides[0].Elements[0].Text != "Overskrift" {
+	if p.Marks != "letters" {
+		t.Fatalf("answers are marked with letters to begin with: %q", p.Marks)
+	}
+	// The first slide is the title and the code, big.
+	if len(p.Slides) != 1 || p.Slides[0].Elements[0].Text != "Er vi fucked?" {
 		t.Fatalf("slides %+v", p.Slides)
 	}
+	if c := codes(p.Slides[0]); len(c) != 1 || c[0].W < 20 {
+		t.Fatalf("the way in has its code big: %+v", c)
+	}
+
 	q := e.addSlide(p.ID, "question")
 	if q.Title != "Hva tror du?" || len(q.Options) != 2 || q.Options[0].Label != "Ja" {
 		t.Fatalf("question %+v", q)
+	}
+	if q.Options[0].Color != answerColours[0] || q.Options[1].Color != answerColours[1] {
+		t.Fatalf("the answers have the first two colours: %+v", q.Options)
+	}
+	// Every slide after it has the code small, in its corner.
+	for _, s := range []Slide{q, e.addSlide(p.ID, "content")} {
+		if c := codes(s); len(c) != 1 || c[0] != cornerCode {
+			t.Fatalf("the corner code on %q: %+v", s.Title, c)
+		}
+	}
+}
+
+func TestAnswersHaveColoursAndMarks(t *testing.T) {
+	e := setup(t)
+	p := e.newPresentation("Farger")
+	q := e.addSlide(p.ID, "question")
+	var saved struct{ Slide Slide }
+	e.call(e.admin, "PUT", "/api/admin/slides/"+q.ID, map[string]any{
+		"title": "Hvilken?", "background": "#111418", "elements": q.Elements,
+		"options": []map[string]any{
+			{"id": q.Options[0].ID, "label": "Egen", "color": "#12ab34", "x": 10, "y": 50, "w": 20, "h": 30},
+			{"id": q.Options[1].ID, "label": "Ugyldig", "color": "rød", "x": 40, "y": 50, "w": 20, "h": 30},
+			{"id": "ny-1", "label": "Ingen", "x": 70, "y": 50, "w": 20, "h": 30},
+		},
+	}, &saved)
+	got := saved.Slide.Options
+	if len(got) != 3 || got[0].Color != "#12AB34" || got[1].Color != answerColours[1] || got[2].Color != answerColours[2] {
+		t.Fatalf("a colour of its own, and the answers' next where it is not one: %+v", got)
+	}
+
+	if st, _ := e.call(e.admin, "PATCH", "/api/admin/presentations/"+p.ID, map[string]string{"marks": "roman"}, nil); st != 400 {
+		t.Fatalf("marks are letters or numbers: %d", st)
+	}
+	var updated presentationBody
+	e.call(e.admin, "PATCH", "/api/admin/presentations/"+p.ID, map[string]string{"marks": "numbers"}, &updated)
+	if updated.Presentation.Marks != "numbers" {
+		t.Fatalf("numbers: %+v", updated.Presentation)
+	}
+	var live liveState
+	e.call(e.admin, "PUT", "/api/admin/presentations/"+p.ID+"/live", map[string]string{"slideId": q.ID}, &live)
+	if live.Marks != "numbers" {
+		t.Fatalf("the display is told the marks: %+v", live)
+	}
+	_, ballot := e.call(phone(), "GET", "/api/stem/"+p.Code, nil, nil)
+	options := ballot["question"].(map[string]any)["options"].([]any)
+	if ballot["marks"] != "numbers" || options[0].(map[string]any)["color"] != "#12AB34" {
+		t.Fatalf("the phone is told the colours and the marks: %v", ballot)
+	}
+}
+
+// scratchDatabase makes an empty database of its own for one test, beside the
+// test database, and takes it away after.
+func scratchDatabase(t *testing.T, name string) string {
+	t.Helper()
+	u, _ := url.Parse(testDB.Config().ConnString())
+	admin := *u
+	admin.Path = "/postgres"
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, admin.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ident := pgx.Identifier{name}.Sanitize()
+	conn.Exec(ctx, `drop database if exists `+ident+` with (force)`)
+	if _, err := conn.Exec(ctx, `create database `+ident); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		conn.Exec(ctx, `drop database if exists `+ident+` with (force)`)
+		conn.Close(ctx)
+	})
+	u.Path = "/" + name
+	return u.String()
+}
+
+func TestOldPresentationsAreBroughtToTheWayIn(t *testing.T) {
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, scratchDatabase(t, "podium_test_migrate"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	// A database as the first version left it, with a presentation as the
+	// first version made it.
+	first, _ := migrations.ReadFile("migrations/001_init.sql")
+	for _, sql := range []string{string(first),
+		`create table schema_migrations (name text primary key, applied_at timestamptz not null default now())`,
+		`insert into schema_migrations (name) values ('migrations/001_init.sql')`} {
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var p, content, question string
+	pool.QueryRow(ctx, `insert into presentations (title, code) values ('Gammel', 'GAMLE') returning id`).Scan(&p)
+	pool.QueryRow(ctx, `insert into slides (presentation_id, position, title, elements) values ($1, 0, '', $2) returning id`, p,
+		`[{"id":"heading","type":"text","x":8,"y":38,"w":84,"h":24,"text":"Overskrift","size":10,"weight":700,"align":"left"}]`).Scan(&content)
+	pool.QueryRow(ctx, `insert into slides (presentation_id, position, title, elements) values ($1, 1, 'Hva tror du?', $2) returning id`, p,
+		`[{"id":"q-title","type":"text","x":6,"y":8,"w":64,"h":24,"text":"Hva tror du?","size":8,"weight":700,"align":"left"},
+		  {"id":"q-code","type":"qr","x":77,"y":8,"w":17,"h":44}]`).Scan(&question)
+	pool.Exec(ctx, `insert into options (slide_id, position, label, x, y, w, h)
+		values ($1, 0, 'Ja', 6, 42, 32, 44), ($1, 1, 'Nei', 41, 42, 32, 44)`, question)
+
+	if err := Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+
+	all, err := slides(ctx, pool, p)
+	if err != nil || len(all) != 3 {
+		t.Fatalf("three slides: %v %+v", err, all)
+	}
+	if c := codes(all[0]); all[0].Elements[0].Text != "Gammel" || len(c) != 1 || c[0].W != 25 {
+		t.Fatalf("the way in comes first, with the title: %+v", all[0])
+	}
+	if all[1].ID != content || len(codes(all[1])) != 1 || codes(all[1])[0] != cornerCode {
+		t.Fatalf("the old first slide is second, with the code in its corner: %+v", all[1])
+	}
+	q := all[2]
+	if c := codes(q); q.ID != question || len(c) != 1 || c[0].ID != "q-code" || c[0].X != 87.5 || c[0].W != 9.375 {
+		t.Fatalf("the question's own code moves to the corner, and no second one is added: %+v", c)
+	}
+	if q.Options[0].Color != answerColours[0] || q.Options[1].Color != answerColours[1] {
+		t.Fatalf("the answers have colours: %+v", q.Options)
+	}
+	if pres, _ := presentationByID(ctx, pool, p); pres.Marks != "letters" {
+		t.Fatalf("marks: %+v", pres)
 	}
 }
 

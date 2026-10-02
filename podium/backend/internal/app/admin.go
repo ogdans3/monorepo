@@ -113,6 +113,8 @@ func (s *Server) updatePresentation(w http.ResponseWriter, r *http.Request) {
 		// The sound to play for each vote; an empty string goes back to the
 		// built-in chime.
 		SoundMediaID *string `json:"soundMediaId"`
+		// What marks the answers besides their colour.
+		Marks *string `json:"marks"`
 	}
 	if !readJSON(w, r, &body) {
 		return
@@ -128,6 +130,17 @@ func (s *Server) updatePresentation(w http.ResponseWriter, r *http.Request) {
 			s.oops(w, err)
 			return
 		}
+	}
+	if body.Marks != nil {
+		if *body.Marks != "letters" && *body.Marks != "numbers" {
+			fail(w, http.StatusBadRequest, "bad_marks", "Svarene merkes med bokstaver eller tall.")
+			return
+		}
+		if _, err := s.db.Exec(ctx, `update presentations set marks = $2, updated_at = now() where id = $1`, id, *body.Marks); err != nil {
+			s.oops(w, err)
+			return
+		}
+		s.publishState(ctx, id)
 	}
 	if body.SoundMediaID != nil {
 		var sound *string
@@ -209,7 +222,11 @@ func (s *Server) createSlide(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		var err error
-		slide, err = insertSlide(ctx, tx, id, position, body.Kind)
+		kind := body.Kind
+		if kind != "question" {
+			kind = "content"
+		}
+		slide, err = insertSlide(ctx, tx, id, position, kind, "")
 		if err != nil {
 			return err
 		}
@@ -284,21 +301,26 @@ func (s *Server) saveSlide(w http.ResponseWriter, r *http.Request) {
 				return invalid
 			}
 			x, y, w, h := clampBox(o.X, o.Y, o.W, o.H)
+			// A colour that is not one is the next of the answers' own.
+			color := strings.ToUpper(o.Color)
+			if !hexColour.MatchString(color) {
+				color = answerColour(i)
+			}
 			// An answer the editor has just made has no id of ours yet, and
 			// asking Postgres about one that is not a uuid would end the
 			// transaction, not answer the question.
 			updated := false
 			if uuidPattern.MatchString(o.ID) {
-				tag, err := tx.Exec(ctx, `update options set position = $3, label = $4, x = $5, y = $6, w = $7, h = $8
-					where id = $1 and slide_id = $2`, o.ID, id, i, label, x, y, w, h)
+				tag, err := tx.Exec(ctx, `update options set position = $3, label = $4, color = $5, x = $6, y = $7, w = $8, h = $9
+					where id = $1 and slide_id = $2`, o.ID, id, i, label, color, x, y, w, h)
 				if err != nil {
 					return err
 				}
 				updated = tag.RowsAffected() > 0
 			}
 			if !updated {
-				if _, err := tx.Exec(ctx, `insert into options (slide_id, position, label, x, y, w, h)
-					values ($1, $2, $3, $4, $5, $6, $7)`, id, i, label, x, y, w, h); err != nil {
+				if _, err := tx.Exec(ctx, `insert into options (slide_id, position, label, color, x, y, w, h)
+					values ($1, $2, $3, $4, $5, $6, $7, $8)`, id, i, label, color, x, y, w, h); err != nil {
 					return err
 				}
 			}
@@ -373,8 +395,8 @@ func (s *Server) duplicateSlide(w http.ResponseWriter, r *http.Request) {
 			returning id`, id).Scan(&copy); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `insert into options (slide_id, position, label, x, y, w, h)
-			select $2, position, label, x, y, w, h from options where slide_id = $1`, id, copy); err != nil {
+		if _, err := tx.Exec(ctx, `insert into options (slide_id, position, label, color, x, y, w, h)
+			select $2, position, label, color, x, y, w, h from options where slide_id = $1`, id, copy); err != nil {
 			return err
 		}
 		return touch(ctx, tx, presentation)

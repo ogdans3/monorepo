@@ -9,6 +9,7 @@
 	import OptionBox from './OptionBox.svelte';
 	import QrTile from './QrTile.svelte';
 	import Video from './Video.svelte';
+	import { mark } from '$lib/answers';
 	import { DARK, textOn } from '$lib/colour';
 	import type { Slide } from '$lib/types';
 
@@ -21,12 +22,23 @@
 		mode?: 'show' | 'edit' | 'thumb';
 		/** Answers whose count has just moved. */
 		moving?: Record<string, boolean>;
+		/** What marks the answers besides their colour. */
+		marks?: 'letters' | 'numbers';
 		/** An element the editor is drawing itself just now, as it is typed in. */
 		hidden?: string | null;
 		overlay?: Snippet;
 	}
 
-	let { slide, code, origin = location.origin, mode = 'show', moving = {}, hidden = null, overlay }: Props = $props();
+	let {
+		slide,
+		code,
+		origin = location.origin,
+		mode = 'show',
+		moving = {},
+		marks = 'letters',
+		hidden = null,
+		overlay
+	}: Props = $props();
 
 	const ink = $derived(textOn(slide.background));
 </script>
@@ -70,11 +82,13 @@
 						<div class="empty">Video</div>
 					{/if}
 				{:else if el.type === 'qr'}
-					<QrTile {code} {origin} />
+					<!-- A narrow code is the corner one: the code to scan and the
+					     presentation's code, without the address. -->
+					<QrTile {code} {origin} compact={el.w < 15} />
 				{/if}
 			</div>
 		{/each}
-		{#each slide.options as option (option.id)}
+		{#each slide.options as option, i (option.id)}
 			<div
 				class="el"
 				data-type="option"
@@ -83,7 +97,7 @@
 				style:width="{option.w}%"
 				style:height="{option.h}%"
 			>
-				<OptionBox {option} total={slide.total} moving={!!moving[option.id]} />
+				<OptionBox {option} total={slide.total} mark={mark(i, marks)} moving={!!moving[option.id]} />
 			</div>
 		{/each}
 		{@render overlay?.()}

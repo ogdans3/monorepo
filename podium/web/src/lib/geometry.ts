@@ -98,8 +98,11 @@ export function bounds(boxes: Box[]): Box | null {
 	return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
-/** Where the answers go when the presenter has not placed any yet. */
-export const ANSWER_AREA: Box = { x: 6, y: 42, w: 67, h: 44 };
+/**
+ * Where the answers go when the presenter has not placed any yet: below the
+ * question, the width of the slide, clear of the code in the corner.
+ */
+export const ANSWER_AREA: Box = { x: 6.25, y: 38.889, w: 87.5, h: 50 };
 
 /**
  * Lays [n] answers out evenly over [area]: in one row up to four, then in

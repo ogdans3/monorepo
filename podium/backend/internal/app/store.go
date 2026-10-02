@@ -41,10 +41,12 @@ type Element struct {
 }
 
 // Option is an answer on a question slide, placed by the presenter like any
-// element, and counted.
+// element, and counted. Its colour is its tile's on the phones and its
+// mark's on the slide.
 type Option struct {
 	ID    string  `json:"id"`
 	Label string  `json:"label"`
+	Color string  `json:"color"`
 	X     float64 `json:"x"`
 	Y     float64 `json:"y"`
 	W     float64 `json:"w"`
@@ -73,9 +75,11 @@ type Media struct {
 }
 
 type Presentation struct {
-	ID           string    `json:"id"`
-	Title        string    `json:"title"`
-	Code         string    `json:"code"`
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Code  string `json:"code"`
+	// What marks the answers besides their colour: «letters» or «numbers».
+	Marks        string    `json:"marks"`
 	LiveSlideID  *string   `json:"liveSlideId"`
 	SoundMediaID *string   `json:"soundMediaId"`
 	UpdatedAt    time.Time `json:"updatedAt"`
@@ -89,6 +93,14 @@ var (
 	uuidPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	hexColour   = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 )
+
+// answerColours are the answers' colours, in order: white reads on each of
+// them (4.5:1 or more), each reads on the ink and on the paper slide (3:1),
+// they are far enough apart to tell, and none of them is the amber, which on
+// the display means a count that has just moved.
+var answerColours = []string{"#D0273A", "#2A68CF", "#1D8452", "#7448C8", "#0C7F8E", "#BB2F82", "#8E5A35", "#56677D"}
+
+func answerColour(i int) string { return answerColours[i%len(answerColours)] }
 
 // codeAlphabet leaves out what reads as two things on a projector at the
 // back of a room: 0 and O, 1, I and L.
@@ -146,7 +158,7 @@ func slides(ctx context.Context, q querier, presentation string) ([]Slide, error
 		return nil, err
 	}
 
-	rows, err = q.Query(ctx, `select o.slide_id, o.id, o.label, o.x, o.y, o.w, o.h,
+	rows, err = q.Query(ctx, `select o.slide_id, o.id, o.label, o.color, o.x, o.y, o.w, o.h,
 			(select count(*) from votes v where v.option_id = o.id)
 		from options o join slides s on s.id = o.slide_id
 		where s.presentation_id = $1 order by o.slide_id, o.position`, presentation)
@@ -157,7 +169,7 @@ func slides(ctx context.Context, q querier, presentation string) ([]Slide, error
 	for rows.Next() {
 		var slide string
 		var o Option
-		if err := rows.Scan(&slide, &o.ID, &o.Label, &o.X, &o.Y, &o.W, &o.H, &o.Count); err != nil {
+		if err := rows.Scan(&slide, &o.ID, &o.Label, &o.Color, &o.X, &o.Y, &o.W, &o.H, &o.Count); err != nil {
 			return nil, err
 		}
 		i := index[slide]
@@ -197,12 +209,12 @@ func presentationByCode(ctx context.Context, q querier, code string) (Presentati
 	return scanPresentation(q.QueryRow(ctx, presentationColumns+` where p.code = $1`, strings.ToUpper(code)))
 }
 
-const presentationColumns = `select p.id, p.title, p.code, p.live_slide_id, p.sound_media_id, p.updated_at,
+const presentationColumns = `select p.id, p.title, p.code, p.marks, p.live_slide_id, p.sound_media_id, p.updated_at,
 	(select count(*) from slides s where s.presentation_id = p.id) from presentations p`
 
 func scanPresentation(row pgx.Row) (Presentation, error) {
 	var p Presentation
-	err := row.Scan(&p.ID, &p.Title, &p.Code, &p.LiveSlideID, &p.SoundMediaID, &p.UpdatedAt, &p.SlideCount)
+	err := row.Scan(&p.ID, &p.Title, &p.Code, &p.Marks, &p.LiveSlideID, &p.SoundMediaID, &p.UpdatedAt, &p.SlideCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return p, errNotFound
 	}
@@ -334,8 +346,8 @@ func cleanElements(ctx context.Context, q querier, presentation string, in []Ele
 	return out, nil
 }
 
-// newPresentation makes a presentation with one slide to start from, under a
-// code nobody else has.
+// newPresentation makes a presentation under a code nobody else has, opening
+// with the way in: a slide with its title and the code to scan, big.
 func newPresentation(ctx context.Context, db *pgxpool.Pool, title string) (string, error) {
 	for range 8 {
 		var id string
@@ -344,7 +356,7 @@ func newPresentation(ctx context.Context, db *pgxpool.Pool, title string) (strin
 				title, newCode()).Scan(&id); err != nil {
 				return err
 			}
-			_, err := insertSlide(ctx, tx, id, 0, "content")
+			_, err := insertSlide(ctx, tx, id, 0, "join", title)
 			return err
 		})
 		if isUniqueViolation(err) {
@@ -355,10 +367,15 @@ func newPresentation(ctx context.Context, db *pgxpool.Pool, title string) (strin
 	return "", errors.New("no free code after eight tries")
 }
 
+// cornerCode is the small QR code every new slide carries in its top right
+// corner, the same code on all of them, for whoever came in late. The
+// presenter can take it off a slide like anything else.
+var cornerCode = Element{ID: "corner-code", Type: "qr", X: 87.5, Y: 5.556, W: 9.375, H: 22.222}
+
 // insertSlide puts a new slide at [position], with something on it to start
-// from: a heading on a content slide, and on a question slide the question,
-// two answers and the QR code, already placed.
-func insertSlide(ctx context.Context, q querier, presentation string, position int, kind string) (string, error) {
+// from: the way in (the title, and the code big), a heading, or a question
+// with two answers; and on the last two, the code small in the corner.
+func insertSlide(ctx context.Context, q querier, presentation string, position int, kind, name string) (string, error) {
 	if _, err := q.Exec(ctx, `update slides set position = position + 1
 		where presentation_id = $1 and position >= $2`, presentation, position); err != nil {
 		return "", err
@@ -366,15 +383,22 @@ func insertSlide(ctx context.Context, q querier, presentation string, position i
 	var elements []Element
 	title := ""
 	switch kind {
+	case "join":
+		elements = []Element{
+			{ID: "join-title", Type: "text", X: 6.25, Y: 27.778, W: 56.25, H: 33.333, Text: name, Size: 11, Weight: 700, Align: "left"},
+			{ID: "join-text", Type: "text", X: 6.25, Y: 66.667, W: 50, H: 11.111, Text: "Skann koden og stem underveis.", Size: 4, Weight: 400, Align: "left"},
+			{ID: "join-code", Type: "qr", X: 68.75, Y: 16.667, W: 25, H: 66.667},
+		}
 	case "question":
 		title = "Hva tror du?"
 		elements = []Element{
-			{ID: "q-title", Type: "text", X: 6, Y: 8, W: 64, H: 24, Text: title, Size: 8, Weight: 700, Align: "left"},
-			{ID: "q-code", Type: "qr", X: 77, Y: 8, W: 17, H: 44},
+			{ID: "q-title", Type: "text", X: 6.25, Y: 8.333, W: 75, H: 22.222, Text: title, Size: 8, Weight: 700, Align: "left"},
+			cornerCode,
 		}
 	default:
 		elements = []Element{
-			{ID: "heading", Type: "text", X: 8, Y: 38, W: 84, H: 24, Text: "Overskrift", Size: 10, Weight: 700, Align: "left"},
+			{ID: "heading", Type: "text", X: 6.25, Y: 38.889, W: 75, H: 22.222, Text: "Overskrift", Size: 10, Weight: 700, Align: "left"},
+			cornerCode,
 		}
 	}
 	raw, _ := json.Marshal(elements)
@@ -385,8 +409,8 @@ func insertSlide(ctx context.Context, q querier, presentation string, position i
 	}
 	if kind == "question" {
 		for i, label := range []string{"Ja", "Nei"} {
-			if _, err := q.Exec(ctx, `insert into options (slide_id, position, label, x, y, w, h)
-				values ($1, $2, $3, $4, 42, 32, 44)`, id, i, label, 6+float64(i)*35); err != nil {
+			if _, err := q.Exec(ctx, `insert into options (slide_id, position, label, color, x, y, w, h)
+				values ($1, $2, $3, $4, $5, 38.889, 42.188, 50)`, id, i, label, answerColour(i), 6.25+float64(i)*45.313); err != nil {
 				return "", err
 			}
 		}

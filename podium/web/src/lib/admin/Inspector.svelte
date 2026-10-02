@@ -16,6 +16,7 @@
 		Upload
 	} from '@lucide/svelte';
 	import Swatches from './Swatches.svelte';
+	import { ANSWER_COLOURS, mark } from '$lib/answers';
 	import { BACKGROUNDS, INKS, textOn } from '$lib/colour';
 	import { chime } from '$lib/chime';
 	import { bytes, share, votes } from '$lib/format';
@@ -55,6 +56,15 @@
 			const far = key === 'x' || key === 'w' ? (key === 'x' ? 100 - it.w : 100 - it.x) : key === 'y' ? 100 - it.h : 100 - it.y;
 			it[key] = Math.round(Math.max(lo, Math.min(far, v)) * 100) / 100;
 		}, `box:${key}:${id}`);
+	}
+
+	function setColour(value: string) {
+		const id = option?.id;
+		if (!id) return;
+		ed.edit((s) => {
+			const o = s.options.find((x) => x.id === id);
+			if (o) o.color = value || ANSWER_COLOURS[0];
+		});
 	}
 
 	function setLabel(value: string) {
@@ -219,14 +229,22 @@
 		</section>
 		{@render placement(true)}
 	{:else if option && slide}
+		{@const index = slide.options.findIndex((o) => o.id === option.id)}
 		<section>
-			<h2>Svar</h2>
+			<h2>Svar {mark(index, ed.p.marks)}</h2>
 			<label class="field">
 				<span>Svaret</span>
 				<input class="input" value={option.label} maxlength="200" oninput={(e) => setLabel(e.currentTarget.value)} />
 			</label>
+			<div class="field">
+				<span>Farge, på siden og på telefonene</span>
+				<Swatches label="Svarets farge" value={option.color} colours={ANSWER_COLOURS} onpick={setColour} />
+			</div>
 			<p class="tally"><span class="figure">{votes(option.count)}</span><span class="quiet tabular">{share(option.count, slide.total)}</span></p>
-			<p class="hint">Svaret står på siden der du legger det, og på telefonene i samme rekkefølge som her.</p>
+			<p class="hint">
+				Svaret står på siden der du legger det. På telefonene er det en flis i samme farge, med {ed.p.marks === 'numbers' ? 'tallet' : 'bokstaven'}
+				{mark(index, ed.p.marks)}.
+			</p>
 		</section>
 		{@render placement(false)}
 	{:else if slide}
@@ -268,6 +286,13 @@
 
 		<section>
 			<h2>Presentasjonen</h2>
+			<div class="field">
+				<span id="marks-label">Svarene merkes med</span>
+				<div class="segments" role="radiogroup" aria-labelledby="marks-label">
+					<button role="radio" aria-checked={ed.p.marks !== 'numbers'} onclick={() => ed.setMarks('letters')}>A B C</button>
+					<button role="radio" aria-checked={ed.p.marks === 'numbers'} onclick={() => ed.setMarks('numbers')}>1 2 3</button>
+				</div>
+			</div>
 			<div class="field" role="radiogroup" aria-labelledby="sound-label">
 				<span id="sound-label">Lyd for hver stemme</span>
 				<div class="sounds">

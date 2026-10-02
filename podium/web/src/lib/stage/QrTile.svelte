@@ -1,23 +1,24 @@
 <!--
 	The way in: the code a phone scans, and under it, for anyone who would
 	rather type, the address and the presentation's code. A paper tile, so the
-	code reads on any slide and any scanner.
+	code reads on any slide and any scanner. [compact] is the small one in a
+	slide's corner, which keeps the presentation's code and drops the address.
 -->
 <script lang="ts">
 	import { ballotUrl, qrPath, shortHost } from '$lib/qr';
 
-	let { code, origin }: { code: string; origin: string } = $props();
+	let { code, origin, compact = false }: { code: string; origin: string; compact?: boolean } = $props();
 
 	const qr = $derived(qrPath(ballotUrl(origin, code)));
 </script>
 
-<div class="tile">
+<div class="tile" class:compact>
 	<div class="inner">
 		<svg viewBox="-1 -1 {qr.size + 2} {qr.size + 2}" role="img" aria-label="QR-kode til stemmesiden" shape-rendering="crispEdges">
 			<path d={qr.path} />
 		</svg>
 		<div class="words">
-			<span class="host">{shortHost(origin)}</span>
+			{#if !compact}<span class="host">{shortHost(origin)}</span>{/if}
 			<span class="code figure">{code}</span>
 		</div>
 	</div>
@@ -74,6 +75,16 @@
 		font-size: 22cqw;
 		letter-spacing: 0.05em;
 		margin-right: -0.05em;
+	}
+
+	.compact .inner {
+		gap: 2cqmin;
+		padding: 6cqmin;
+	}
+
+	.compact .code {
+		font-size: 19cqw;
+		letter-spacing: 0.04em;
 	}
 
 	/* Wider than it is tall: the code to the left, the words beside it. */

@@ -15,6 +15,8 @@ type liveState struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 	Code  string `json:"code"`
+	// What marks the answers besides their colour: «letters» or «numbers».
+	Marks string `json:"marks,omitempty"`
 	// The uploaded vote sound, or empty for the built-in chime.
 	Sound string `json:"sound"`
 	Slide *Slide `json:"slide"`
@@ -34,7 +36,7 @@ type voteEvent struct {
 }
 
 func (s *Server) stateOf(ctx context.Context, p Presentation) (liveState, error) {
-	st := liveState{ID: p.ID, Title: p.Title, Code: p.Code, Count: p.SlideCount}
+	st := liveState{ID: p.ID, Title: p.Title, Code: p.Code, Marks: p.Marks, Count: p.SlideCount}
 	if p.SoundMediaID != nil {
 		st.Sound = mediaURL(*p.SoundMediaID)
 	}
@@ -250,6 +252,7 @@ type ballotQuestion struct {
 type ballotOption struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
+	Color string `json:"color"`
 }
 
 // ballot is the phone page's state: the question on screen, if there is one,
@@ -262,13 +265,13 @@ func (s *Server) ballot(w http.ResponseWriter, r *http.Request) {
 		s.notFoundOr500(w, err, "presentasjonen")
 		return
 	}
-	out := map[string]any{"title": p.Title, "code": p.Code, "live": p.LiveSlideID != nil, "question": nil, "voted": nil}
+	out := map[string]any{"title": p.Title, "code": p.Code, "marks": p.Marks, "live": p.LiveSlideID != nil, "question": nil, "voted": nil}
 	if p.LiveSlideID != nil {
 		slide, _, err := slideByID(ctx, s.db, *p.LiveSlideID)
 		if err == nil && len(slide.Options) > 0 {
 			q := ballotQuestion{SlideID: slide.ID, Title: slide.Title, Options: []ballotOption{}}
 			for _, o := range slide.Options {
-				q.Options = append(q.Options, ballotOption{ID: o.ID, Label: o.Label})
+				q.Options = append(q.Options, ballotOption{ID: o.ID, Label: o.Label, Color: o.Color})
 			}
 			out["question"] = q
 			var voted string

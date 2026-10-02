@@ -67,8 +67,8 @@ describe('placing answers', () => {
 		expect(new Set(boxes.map((b) => b.y)).size).toBe(1);
 		expect(new Set(boxes.map((b) => b.w)).size).toBe(1);
 		const area = bounds(boxes)!;
-		expect(area.x).toBeCloseTo(6, 1);
-		expect(area.x + area.w).toBeCloseTo(73, 1);
+		expect(area.x).toBeCloseTo(6.25, 2);
+		expect(area.x + area.w).toBeCloseTo(93.75, 2);
 	});
 
 	it('puts more in rows, inside the area', () => {

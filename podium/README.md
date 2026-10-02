@@ -5,14 +5,19 @@ A presentation tool where the room votes back. Three parts, one server:
 - **The desk**, `/admin`: build presentations and run them. A slide is a 16:9
   canvas with text, pictures, video and the QR code placed on it. A question
   slide has as many answers as you like, each one placed on the slide where
-  you want its count to appear.
+  you want its count to appear. Each answer has a colour and a mark, a letter
+  or a number. Every presentation opens with the way in, its title and the QR
+  code big. Every slide after it carries the code small in its corner, which
+  you can delete from any slide.
 - **The display**, `/vis/<code>`: the slide on screen and nothing else. Every
   vote chimes, and its count rolls up in the answer's own place on the slide.
   Signed in, you step through it with the arrow keys or a clicker.
-- **The ballot**, `/stem/<code>`: what a phone opens from the QR code. It shows
-  the question on screen. One tap is one vote, and each phone gets one vote. The
-  next question arrives by itself. `/` takes the five-letter code for anyone who
-  would rather type.
+- **The ballot**, `/stem/<code>`: what a phone opens from the QR code. It
+  follows the presentation. While a question is on screen, its answers are
+  tiles in their colours and marks, the same as on the slide. One tap is one
+  vote, and each phone gets one. Between questions the page is empty, and the
+  next question arrives by itself. `/` takes the five-letter code for anyone
+  who would rather type.
 
 Svelte (SvelteKit, built static) for every screen, Go for the API, Postgres,
 and a local folder for uploads. In production that folder is a Docker volume.

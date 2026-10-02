@@ -81,7 +81,15 @@ next number.
 
 - The amber is for change and for the live state only: a count that has just
   moved, the «Direkte» marks. It is not an accent. It is also not offered as a
-  text colour on slides.
+  text colour on slides, and it is not one of the answer colours.
+- The answer colours (`ANSWER_COLOURS` in `lib/answers.ts`, `answerColours` in
+  `store.go`) are one list in two places, and must stay the same. White must
+  read on each of them, and each must read on the ink slide and the paper one.
+  A colour never stands alone: every answer also carries its mark, a letter or
+  a number.
+- Every presentation opens with the way in (`insertSlide` kind `join`). Every
+  new slide carries `cornerCode`. The presenter may delete either, so code must
+  never assume a slide has a QR code.
 - Hairlines, not cards. Counts are tabular figures (`.figure` for the counting
   face).
 - The display has no chrome. The only things the tool adds there are the
@@ -102,7 +110,9 @@ next number.
   - It uses ports 4130 and 5462, away from the development defaults, so a test
     run there can never reach the live database. For development on that
     machine, override them:
-    `POSTGRES_PORT=5452 APP_PORT=4120 docker compose -p podium up -d db`.
+    `POSTGRES_PASSWORD=podium POSTGRES_PORT=5452 APP_PORT=4120 docker compose -p podium up -d db`.
+    The password matters too: `.env` holds the live one, and the tests expect
+    `podium`.
   - It sets `MAX_UPLOAD_MB=95`, because Cloudflare refuses request bodies over
     100 MB. Caddy also allows 2 minutes to read a request body.
 - To deploy a change, push it and restart the project through the dashboard

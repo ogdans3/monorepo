@@ -228,7 +228,7 @@
 	ondrop={drop}
 >
 	{#if slide}
-		<Stage {slide} code={ed.p.code} mode="edit" hidden={ed.typing} moving={ed.moving}>
+		<Stage {slide} code={ed.p.code} mode="edit" marks={ed.p.marks} hidden={ed.typing} moving={ed.moving}>
 			{#snippet overlay()}
 				<div
 					class="surface"

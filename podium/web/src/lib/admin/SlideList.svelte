@@ -57,7 +57,7 @@
 					onclick={() => ed.goTo(i)}
 				>
 					<span class="n tabular">{i + 1}</span>
-					<span class="mini"><Stage slide={s} code={ed.p.code} mode="thumb" /></span>
+					<span class="mini"><Stage slide={s} code={ed.p.code} mode="thumb" marks={ed.p.marks} /></span>
 				</button>
 				{#if s.id === ed.p.liveSlideId || s.options.length}
 					<div class="meta">

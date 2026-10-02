@@ -1,21 +1,31 @@
 <!--
-	An answer as the room sees it: where the presenter put it, its label, its
-	count and its share. When a vote lands the count and its bar turn amber,
-	and stay amber until the votes stop coming.
+	An answer as the room sees it: where the presenter put it, its mark in
+	its colour (the same as the tile on the phones), its label, its count and
+	its share. When a vote lands the count turns amber, and stays amber until
+	the votes stop coming.
 -->
 <script lang="ts">
 	import Tally from './Tally.svelte';
+	import { ANSWER_COLOURS, inkOn } from '$lib/answers';
 	import { share } from '$lib/format';
 	import type { Option } from '$lib/types';
 
-	let { option, total, moving = false }: { option: Option; total: number; moving?: boolean } = $props();
+	let {
+		option,
+		total,
+		mark,
+		moving = false
+	}: { option: Option; total: number; mark: string; moving?: boolean } = $props();
 
 	const part = $derived(total > 0 ? option.count / total : 0);
+	const colour = $derived(option.color || ANSWER_COLOURS[0]);
 </script>
 
-<div class="option" class:moving>
+<div class="option" class:moving style:--answer={colour}>
 	<div class="head">
-		<span class="label">{option.label || 'Svar'}</span>
+		<span class="label"
+			><span class="mark figure" style:color={inkOn(colour)}>{mark}</span>{option.label || 'Svar'}</span
+		>
 		<span class="share figure">{share(option.count, total)}</span>
 	</div>
 	<div class="count figure"><Tally value={option.count} /></div>
@@ -48,6 +58,23 @@
 		line-height: 1.12;
 		letter-spacing: -0.01em;
 		overflow-wrap: anywhere;
+	}
+
+	/* The mark the phones show, in the answer's colour: a square the height
+	   of the label's capitals and a little more, set before it. */
+	.mark {
+		display: inline-grid;
+		place-items: center;
+		min-width: 1.3em;
+		height: 1.3em;
+		margin-right: 0.45em;
+		padding: 0 0.22em;
+		border-radius: 2px;
+		background: var(--answer);
+		font-size: 0.92em;
+		font-weight: 800;
+		letter-spacing: 0.01em;
+		vertical-align: -0.24em;
 	}
 
 	.share {
@@ -83,11 +110,9 @@
 		position: relative;
 		display: block;
 		height: 100%;
-		background: currentColor;
+		background: var(--answer);
 		transform-origin: left;
-		transition:
-			transform 640ms var(--ease-out),
-			background-color 700ms var(--ease-out);
+		transition: transform 640ms var(--ease-out);
 	}
 
 	.moving .count {
@@ -95,10 +120,5 @@
 		transition-duration: 90ms;
 	}
 
-	.moving .bar span {
-		background: var(--change);
-		transition:
-			transform 640ms var(--ease-out),
-			background-color 90ms;
-	}
+
 </style>
