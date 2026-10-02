@@ -217,7 +217,6 @@ class _AdminScreenState extends State<AdminScreen> {
       if (account.town != null) account.town!,
       '${account.itemCount} ting',
       if (account.openTrades > 0) '${account.openTrades} åpne bytter',
-      if (account.bankid) 'BankID',
     ].join(' · ');
 
     return Container(
@@ -273,9 +272,9 @@ class _AdminScreenState extends State<AdminScreen> {
       context: context,
       useRootNavigator: true,
       // As tall as what is in it. A sheet is held to nine sixteenths of the
-      // screen otherwise, which at 844 is a quarter of a point short of the
-      // eight rows here; the scroll view is for a screen shorter still, and
-      // the safe area keeps the sheet out from under the status bar there.
+      // screen otherwise, which on a short phone is less than these rows need;
+      // the scroll view is for a screen shorter still, and the safe area keeps
+      // the sheet out from under the status bar there.
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: AdminColors.surface,
@@ -297,7 +296,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Text(
                   'Nullstill åpner dørene produktet bare lar deg gå gjennom én gang: '
-                  'skjerm 02 vises én gang, og BankID kan ikke settes tilbake.',
+                  'skjerm 02 vises én gang.',
                   style: TextStyle(fontSize: 12.5, height: 1.4, color: AdminColors.muted),
                 ),
               ),
@@ -306,7 +305,6 @@ class _AdminScreenState extends State<AdminScreen> {
                 ('items', 'Nullstill gjenstander'),
                 ('trades', 'Avslutt åpne bytter'),
                 ('interests', 'Nullstill interesser — skjerm 02 kommer igjen'),
-                ('bankid', 'Nullstill BankID — spørsmålet kommer igjen'),
                 ('notifications', 'Slett varsler'),
               ])
                 ListTile(

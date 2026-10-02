@@ -746,13 +746,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     children: [
                       Text(owner.displayName, style: Type.heading),
                       const SizedBox(height: 2),
-                      // «★ 4,8 · 23 bytter · BankID-verifisert», one grey line.
+                      // «★ 4,8 · 23 bytter», one grey line. The export ends it
+                      // with «· BankID-verifisert», which is left out until
+                      // BankID is real: docs/DESIGN.md.
                       Text(
                         [
                           if (owner.ratingAvg != null)
                             '★ ${owner.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
                           if (owner.tradeCount != null) '${owner.tradeCount} bytter',
-                          if (owner.bankidVerified) 'BankID-verifisert',
                         ].join(' · '),
                         style: const TextStyle(
                             fontSize: 12, height: 1.35, color: SwaplyColors.grey),

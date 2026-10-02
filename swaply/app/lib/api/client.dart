@@ -240,9 +240,6 @@ class SwaplyApi {
     token = null;
   }
 
-  Future<Me> verifyBankid(String subject) async =>
-      Me.fromJson(await _post('/me/bankid', {'subject': subject}));
-
   // --- profile --------------------------------------------------------------
 
   Future<Me> me() async => Me.fromJson(await _get('/me'));
@@ -611,14 +608,12 @@ class SwaplyApi {
     String? displayName,
     String? town,
     int withItems = 2,
-    bool bankid = false,
     bool claimed = true,
   }) async =>
       TestAccount.fromJson(await _post('/admin/accounts', {
         if (displayName != null && displayName.isNotEmpty) 'displayName': displayName,
         if (town != null && town.isNotEmpty) 'town': town,
         'withItems': withItems,
-        'bankid': bankid,
         'claimed': claimed,
       }));
 

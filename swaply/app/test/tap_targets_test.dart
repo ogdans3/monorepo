@@ -696,11 +696,6 @@ final _screens = <_Screen>[
     server.overrides['POST /auth/login'] = {'token': 'tok', 'user': hiding};
     server.overrides['GET /me'] = hiding;
   }),
-  _Screen('16b BankID', () => const SettingsScreen(), before: () async {
-    final unverified = {...fx.me, 'bankidVerified': false};
-    server.overrides['POST /auth/login'] = {'token': 'tok', 'user': unverified};
-    server.overrides['GET /me'] = unverified;
-  }, act: (t) => _tap(t, find.text('BankID-verifisering'))),
   _Screen('16b as admin', () => const SettingsScreen(), before: () async {
     server.overrides['POST /auth/login'] = {'token': 'tok', 'user': FakeServer.admin};
     server.overrides['GET /me'] = FakeServer.admin;

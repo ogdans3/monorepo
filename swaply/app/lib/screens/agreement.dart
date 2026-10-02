@@ -6,7 +6,6 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
-import 'profile.dart';
 
 /// 06c Avtalen. The explicit agreement, in words, with a checkbox and a swipe.
 ///
@@ -39,14 +38,6 @@ class _AgreementScreenState extends State<AgreementScreen> {
       await context
           .read<SwaplyApi>()
           .accept(widget.trade.id, termsVersion: termsVersion, offerId: widget.trade.offerId);
-      if (!mounted) return true;
-      // «BankID bekreftes ved ditt første bytte», which 10c promises and this
-      // is the moment of. After the swipe, not before: the agreement is what
-      // the screen is for, and a verification dialog in front of it would be
-      // one more thing between a person and the thing they came to do.
-      await promptBankid(context,
-          because: 'Dette er ditt første bytte, og et bytte er to personer som '
-              'stoler på hverandre. ');
       if (mounted) Navigator.of(context).pop(true);
       return true;
     } on ApiException catch (e) {

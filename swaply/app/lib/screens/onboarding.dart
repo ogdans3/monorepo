@@ -799,11 +799,13 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           ),
               ),
             ),
-            // Pinned at the foot, as the export keeps it.
+            // Pinned at the foot, as the export keeps it. The export goes on
+            // «BankID bekreftes ved ditt første bytte», which is left out until
+            // BankID is real: docs/DESIGN.md.
             const Padding(
               padding: EdgeInsets.fromLTRB(28, 0, 28, 26),
               child: Text(
-                'Vi varsler deg om swaps, aldri spam. BankID bekreftes ved ditt første bytte.',
+                'Vi varsler deg om swaps, aldri spam.',
                 style: TextStyle(fontSize: 11.5, height: 1.4, color: SwaplyColors.greyLight),
                 textAlign: TextAlign.center,
               ),

@@ -877,7 +877,7 @@ search goes on without them, so no answer about them leaves them out quietly,
 as it does the count on the button.
 `test/no_contact_test.dart` holds each of them.
 
-## Two things that are honest about being unfinished
+## Three things that are honest about being unfinished
 
 **Sign-in with Google, Facebook and Apple** is drawn in the export and not
 offered: each needs an agreement with the provider, and App Review turns down a
@@ -887,11 +887,25 @@ buttons are still in `screens/onboarding.dart` behind `socialSignIn`, and they
 come back together — Apple requires its own wherever another provider's is
 offered.
 
+**BankID** is drawn in the export and not in the app: «BankID-verifisert» beside
+the name on 13 and 13b and at the end of the owner's line on 04 («★ 4,8 · 23
+bytter · BankID-verifisert»), «BankID-verifisering» with «Verifisert» on 16b,
+and «BankID bekreftes ved ditt første bytte» after «Vi varsler deg om swaps,
+aldri spam.» at the foot of 10c. There is no agreement with a BankID provider,
+and what stood in for one marked any account verified for the asking, so the
+product owner took it out on 02.10.2026 — those words, the question that came up
+after a first accept, the sentence about a BankID reference on «Juridisk og
+personvern», and the lever in Testverktøy. The goldens of 04, 10c, 13, 13b and
+16b differ from the export on purpose. The server still says `bankidVerified`,
+always false, for the build from 30.09, which reads it; this app does not.
+
 **An invitation link opens the app in a browser**, not on the phone. A universal
 link needs a registered domain and a bundle id, and there is neither; on the web
 build the token is read straight out of the address.
 
-Both are one screen away once the accounts exist. Neither pretends to work.
+Sign-in with a provider and the link are one screen away once the accounts
+exist, and BankID is a flow of its own once there is a provider. None of the
+three pretends to work.
 
 ## The icon and the launch
 

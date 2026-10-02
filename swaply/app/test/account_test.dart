@@ -99,6 +99,8 @@ void main() {
       // What the product already said about itself, kept.
       expect(find.textContaining('Swaply er ikke part i byttene'), findsOneWidget);
       expect(find.textContaining('Vi lagrer aldri fødselsnummer'), findsOneWidget);
+      // Nothing about a BankID reference: there is none until BankID is real.
+      expect(find.textContaining('BankID'), findsNothing);
       expect(find.textContaining('tre år etter siste gjennomførte bytte'), findsOneWidget);
       // And for somebody who never completed one, which is what the engine
       // keeps too: three years from the deletion.

@@ -13,7 +13,6 @@ class Me {
         phone = j['phone'] as String?,
         town = j['town'] as String?,
         interests = (j['interests'] as List?)?.cast<String>() ?? const [],
-        bankidVerified = j['bankidVerified'] as bool? ?? false,
         ratingAvg = _double(j['ratingAvg']),
         ratingCount = _int(j['ratingCount']) ?? 0,
         memberSince = _date(j['memberSince']),
@@ -31,7 +30,6 @@ class Me {
   final String id;
   final String? displayName, email, phone, town;
   final List<String> interests;
-  final bool bankidVerified;
   final double? ratingAvg;
   final int ratingCount, likedByCount, unreadMessages, tradesNeedingYou;
   final DateTime? memberSince;
@@ -83,14 +81,13 @@ class TestAccount {
         email = j['email'] as String?,
         town = j['town'] as String?,
         claimed = j['claimed'] as bool? ?? true,
-        bankid = j['bankid'] as bool? ?? false,
         itemCount = _int(j['itemCount']) ?? 0,
         likeCount = _int(j['likeCount']) ?? 0,
         openTrades = _int(j['openTrades']) ?? 0;
 
   final String id, displayName;
   final String? email, town;
-  final bool claimed, bankid;
+  final bool claimed;
   final int itemCount, likeCount, openTrades;
 }
 
@@ -215,7 +212,6 @@ class UserRef {
       : id = j['id'] as String? ?? '',
         displayName = j['displayName'] as String? ?? 'Slettet bruker',
         town = j['town'] as String?,
-        bankidVerified = j['bankidVerified'] as bool? ?? false,
         ratingAvg = _double(j['ratingAvg']),
         ratingCount = _int(j['ratingCount']) ?? 0,
         itemCount = _int(j['itemCount']),
@@ -233,7 +229,7 @@ class UserRef {
 
   final String id, displayName;
   final String? town;
-  final bool bankidVerified, blockedByYou;
+  final bool blockedByYou;
   final double? ratingAvg;
   final int ratingCount;
   final int? itemCount, tradeCount, position;

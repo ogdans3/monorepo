@@ -187,8 +187,10 @@ void main() {
       expect(find.text('Telefonnummer'), findsOneWidget);
       expect(find.text('Lag profil og legg ut'), findsOneWidget);
       expect(find.text('2/2'), findsOneWidget);
-      expect(
-          find.textContaining('BankID bekreftes ved ditt første bytte'), findsOneWidget);
+      // The export's footnote goes on «BankID bekreftes ved ditt første
+      // bytte», which is left out until BankID is real.
+      expect(find.text('Vi varsler deg om swaps, aldri spam.'), findsOneWidget);
+      expect(find.textContaining('BankID'), findsNothing);
     });
   });
 
@@ -367,6 +369,10 @@ void main() {
       expect(find.text('Retro spillkonsoll'), findsOneWidget);
       expect(find.text('Verdi 1 200 kr'), findsOneWidget);
       expect(find.text('Kari N.'), findsOneWidget);
+      // The export's line ends «· BankID-verifisert», which is left out until
+      // BankID is real, and the line ends where the facts do.
+      expect(find.text('★ 4,8 · 23 bytter'), findsOneWidget);
+      expect(find.textContaining('BankID'), findsNothing);
       expect(find.text('Se profil ›'), findsOneWidget);
       expect(find.text('SAMTALE MED KARI'), findsOneWidget);
       expect(find.text('Send'), findsOneWidget);
@@ -1039,13 +1045,11 @@ void main() {
       expect(server.requests, contains('POST /trades/trade-1/accept'));
     });
 
-    testWidgets('BankID is asked for at the first accept, and only then',
+    testWidgets('a first accept asks nothing more once the swipe has landed',
         (tester) async {
-      // «BankID bekreftes ved ditt første bytte» is the promise 10c makes, and
-      // the settings row was the only place that kept it.
-      final unverified = {...FakeServer.me, 'bankidVerified': false};
-      server.overrides['POST /auth/login'] = {'token': 'tok', 'user': unverified};
-      server.overrides['GET /me'] = unverified;
+      // It used to ask for BankID here, the moment 10c promised it for. BankID
+      // is out of the app until there is an agreement with a provider, and the
+      // question went with it: the yes goes back to the trade.
       await mount(tester, AgreementScreen(trade: Trade.fromJson(FakeServer.trade)));
 
       await tester.tap(find.text('Jeg har lest og godtar vilkårene'));
@@ -1053,9 +1057,10 @@ void main() {
       await tester.drag(find.text('›'), const Offset(400, 0));
       await tester.pumpAndSettle();
 
-      expect(find.text('BankID-verifisering'), findsOneWidget);
-      expect(find.textContaining('ditt første bytte'), findsOneWidget);
-      expect(find.textContaining('aldri fødselsnummer'), findsOneWidget);
+      expect(server.requests, contains('POST /trades/trade-1/accept'));
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(AgreementScreen), findsNothing);
+      expect(server.requests, isNot(contains('POST /me/bankid')));
     });
   });
 
@@ -1391,7 +1396,9 @@ void main() {
       await mount(tester, const ProfileScreen());
 
       expect(find.text('Ola N.'), findsOneWidget);
-      expect(find.text('BankID-verifisert'), findsOneWidget);
+      // Round 5 draws «BankID-verifisert» beside the name, which is left out
+      // until BankID is real.
+      expect(find.textContaining('BankID'), findsNothing);
       expect(find.textContaining('4,9 · 12 vurderinger'), findsOneWidget);
       expect(find.text('♥ 4 har likt tingene dine'), findsOneWidget);
       expect(find.text('Mine gjenstander · 1'), findsOneWidget);
@@ -1411,6 +1418,7 @@ void main() {
       await mount(tester, const OtherProfileScreen(userId: 'kari-1'));
 
       expect(find.text('Kari N.'), findsWidgets);
+      expect(find.textContaining('BankID'), findsNothing);
       expect(find.text('Kari sine gjenstander · 1'), findsOneWidget);
       expect(find.text('Retro spillkonsoll'), findsOneWidget);
       expect(find.text('Friluft'), findsOneWidget);
@@ -1422,8 +1430,11 @@ void main() {
 
       expect(find.text('KONTO'), findsOneWidget);
       expect(find.text('E-post og telefon'), findsOneWidget);
-      expect(find.text('BankID-verifisering'), findsOneWidget);
-      expect(find.text('Verifisert'), findsOneWidget);
+      // Round 5 draws «BankID-verifisering · Verifisert» between these two,
+      // which is left out until BankID is real.
+      expect(find.textContaining('BankID'), findsNothing);
+      expect(find.text('Verifisert'), findsNothing);
+      expect(find.text('Inviter en venn'), findsOneWidget);
       expect(find.text('VARSLER'), findsOneWidget);
       expect(find.text('Logg ut'), findsOneWidget);
     });

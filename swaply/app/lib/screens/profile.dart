@@ -188,15 +188,6 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                                   child: Text(me.displayName ?? 'Uten navn',
                                       style: Type.title, overflow: TextOverflow.ellipsis),
                                 ),
-                                if (me.bankidVerified) ...[
-                                  const SizedBox(width: 8),
-                                  // Green words on the name's line, not a badge.
-                                  const Text('BankID-verifisert',
-                                      style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: SwaplyColors.greenText)),
-                                ],
                                 // Whoever holds the key should never be able to
                                 // forget they are holding it.
                                 if (me.isAdmin) ...[
@@ -603,29 +594,13 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Flexible(
-                          child: Text(user.displayName,
-                              style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.4,
-                                  color: SwaplyColors.ink),
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                        if (user.bankidVerified) ...[
-                          const SizedBox(width: 8),
-                          const Text('BankID-verifisert',
-                              style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: SwaplyColors.greenText)),
-                        ],
-                      ],
-                    ),
+                    Text(user.displayName,
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.4,
+                            color: SwaplyColors.ink),
+                        overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 4),
                     Text.rich(
                       TextSpan(children: [
@@ -763,12 +738,9 @@ class SettingsScreen extends StatelessWidget {
           _tile('E-post og telefon', null,
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
-          _tile(
-            'BankID-verifisering',
-            me?.bankidVerified == true ? 'Verifisert' : 'Ikke verifisert',
-            good: me?.bankidVerified == true,
-            onTap: me?.bankidVerified == true ? null : () => promptBankid(context),
-          ),
+          // «BankID-verifisering», which round 5 draws here, is left out until
+          // there is an agreement with a BankID provider: docs/DESIGN.md.
+          //
           // Round 5 took the colour off this row: an invitation is an ordinary
           // thing you do, not a promotion.
           _tile('Inviter en venn', null,
@@ -981,8 +953,8 @@ Widget _group(List<Widget> rows) => Container(
     );
 
 /// A 48-tall row: the label, a word at the right if there is one
-/// («Verifisert», green), and the chevron.
-Widget _tile(String title, String? value, {VoidCallback? onTap, bool good = false}) => InkWell(
+/// («2 skjult»), and the chevron.
+Widget _tile(String title, String? value, {VoidCallback? onTap}) => InkWell(
       onTap: onTap,
       child: SizedBox(
         height: 48,
@@ -997,10 +969,8 @@ Widget _tile(String title, String? value, {VoidCallback? onTap, bool good = fals
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: Text(value,
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: good ? SwaplyColors.greenText : SwaplyColors.grey)),
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.grey)),
               ),
             const Icon(Icons.chevron_right, size: 20, color: SwaplyColors.chevron),
           ],
@@ -1069,8 +1039,7 @@ class LegalScreen extends StatelessWidget {
           for (final paragraph in const [
             'Swaply er ikke part i byttene og fasiliterer verken frakt eller betaling. '
                 'Avtalen er mellom deg og den du bytter med.',
-            'Vi lagrer aldri fødselsnummer. BankID gir oss en pseudonym referanse og et '
-                'tidspunkt.',
+            'Vi lagrer aldri fødselsnummer.',
             'Sletter du kontoen, tømmes profilen din med en gang. En minimal '
                 'identitetspost beholdes adskilt i tre år etter siste gjennomførte bytte, '
                 'eller etter slettingen om du aldri har byttet, slik at et krav kan '
@@ -1761,47 +1730,3 @@ String _whereAndSince(String? town, DateTime? memberSince) => [
     ].join(' · ');
 
 bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
-
-/// BankID, which `docs/DESIGN.md` asks for at the first accept and again from
-/// the settings. A trust marker, never a login method: what we store is a
-/// pseudonymous subject and a timestamp, and never a fødselsnummer.
-///
-/// Returns true when the account came back verified.
-Future<bool> promptBankid(BuildContext context, {String? because}) async {
-  final session = context.read<Session>();
-  if (session.me?.bankidVerified == true) return true;
-
-  // A real check goes through a provider we have no contract with yet, so the
-  // screen says so rather than pretending.
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialog) => AlertDialog(
-      title: const Text('BankID-verifisering', style: Type.heading),
-      content: Text(
-        '${because ?? ''}Vi har ikke avtale med en BankID-leverandør ennå. Denne '
-        'knappen markerer kontoen som verifisert med en pseudonym referanse, slik '
-        'flyten vil fungere når avtalen er på plass. Vi lagrer aldri '
-        'fødselsnummer.',
-        style: Type.body,
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.of(dialog).pop(false),
-            child: const Text('Senere')),
-        TextButton(
-            onPressed: () => Navigator.of(dialog).pop(true),
-            child: const Text('Verifiser')),
-      ],
-    ),
-  );
-  if (confirmed != true || !context.mounted) return false;
-
-  try {
-    await context.read<SwaplyApi>().verifyBankid('dev-${session.me!.id}');
-    await session.refresh();
-    return true;
-  } on ApiException catch (e) {
-    if (context.mounted) showError(context, e);
-    return false;
-  }
-}
