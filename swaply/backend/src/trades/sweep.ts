@@ -1,9 +1,65 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
-import { many, uuidArray } from '../lib/rows.js'
-import { findCyclesThrough } from './cycles.js'
+import { many, one, uuidArray } from '../lib/rows.js'
+import { findCyclesThrough, type Cycle } from './cycles.js'
 import { openTradeFromCycle } from './trades.js'
+
+/**
+ * Whether somebody in this ring has already said no to it.
+ *
+ * «A ring is opened once» (`docs/DESIGN.md`). A trade over exactly this ring —
+ * the same people, each giving the same listing to the same next one, in some
+ * version of its offer — that ended in a no: «Avslå», «Trekk deg» before
+ * everybody agreed, or a yes to a withdrawal after. And ended after every
+ * wish in the ring was made, so the no answered these wishes and not older
+ * ones: a heart taken back and pressed again since is a new wish, and opens
+ * the ring anew (`closeLoopThrough`, which never asks this).
+ *
+ * Nothing else decides a ring. Pushed out by another trade's yes, it was never
+ * answered; ended by an erasure, a block or the tool, it was not refused by
+ * the people in it.
+ */
+async function decidedRing(db: Database, ring: Cycle): Promise<boolean> {
+  const n = ring.length
+  // (giver, listing, receiver), as `openTradeOver` matches a ring, since a
+  // three-way ring and its mirror image give the same things to other people.
+  const hops = ring.map(
+    (hop, i) => sql`(${hop.userId}::uuid, ${hop.givesItemId}::uuid, ${ring[(i + 1) % n]!.userId}::uuid)`,
+  )
+  // The wishes behind the ring: each receiver wants what is given to them.
+  const wishes = ring.map(
+    (hop, i) => sql`(${ring[(i + 1) % n]!.userId}::uuid, ${hop.givesItemId}::uuid)`,
+  )
+
+  const row = await one(
+    db,
+    sql`select 1 from trade_participants mine
+        join trades t on t.id = mine.trade_id
+        where mine.user_id = ${ring[0]!.userId}
+          and t.state = 'cancelled'
+          and t.close_code in ('declined', 'withdrawn_early', 'withdrawal_approved')
+          and (select count(*) from trade_participants p where p.trade_id = t.id) = ${n}
+          and exists (
+            select 1 from trade_offers o
+            where o.trade_id = t.id
+              and (select count(*)
+                   from trade_offer_items oi
+                   join trade_participants giver
+                     on giver.trade_id = t.id and giver.position = oi.giver_position
+                   join trade_participants taker
+                     on taker.trade_id = t.id and taker.position = (oi.giver_position + 1) % ${n}
+                   where oi.offer_id = o.id
+                     and (giver.user_id, oi.item_id, taker.user_id) in (${sql.join(hops, sql`, `)})
+                  ) = ${n})
+          and not exists (
+            select 1 from likes l
+            where (l.from_user, l.target_item) in (${sql.join(wishes, sql`, `)})
+              and l.created_at >= t.closed_at)
+        limit 1`,
+  )
+  return Boolean(row)
+}
 
 /**
  * Look for cycles through the wishes pointing at listings that are free again.
@@ -12,6 +68,11 @@ import { openTradeFromCycle } from './trades.js'
  * that comes back on the market after a cancelled trade takes its old wishes
  * with it and nobody notices. This is the other two triggers from
  * `docs/ARCHITECTURE.md`: an item becoming available, and a nightly sweep.
+ *
+ * A ring somebody in it has said no to is left alone (`decidedRing`). The
+ * listings a no frees are swept on the way out of it, and the wishes that made
+ * the ring are still there, so without that the same ring came straight back
+ * as a new «Dere kan swappe!» — or an hour later, from the job.
  */
 export async function sweepForCycles(db: Database, itemIds?: string[]): Promise<string[]> {
   if (itemIds && itemIds.length === 0) return []
@@ -22,7 +83,7 @@ export async function sweepForCycles(db: Database, itemIds?: string[]): Promise<
       ? sql`select l.from_user, l.target_item from likes l
             join items i on i.id = l.target_item
             where i.status = 'available' and i.active_trade_id is null
-              and l.target_item = any(${sql.raw(`array['${itemIds.join("','")}']::uuid[]`)})`
+              and l.target_item = any(${uuidArray(itemIds)})`
       : sql`select l.from_user, l.target_item from likes l
             join items i on i.id = l.target_item
             where i.status = 'available' and i.active_trade_id is null`,
@@ -34,8 +95,13 @@ export async function sweepForCycles(db: Database, itemIds?: string[]): Promise<
   for (const wish of wishes) {
     if (spoken.has(wish.target_item)) continue
 
-    const cycles = await findCyclesThrough(db, wish.from_user, wish.target_item)
-    const cycle = cycles.find((c) => c.every((hop) => !spoken.has(hop.givesItemId)))
+    let cycle: Cycle | undefined
+    for (const candidate of await findCyclesThrough(db, wish.from_user, wish.target_item)) {
+      if (candidate.some((hop) => spoken.has(hop.givesItemId))) continue
+      if (await decidedRing(db, candidate)) continue
+      cycle = candidate
+      break
+    }
     if (!cycle) continue
 
     // One trade per listing per sweep: a second would open on things the first
