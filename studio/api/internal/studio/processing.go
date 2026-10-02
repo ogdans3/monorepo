@@ -114,7 +114,7 @@ func (a *App) startJob(w http.ResponseWriter, r *http.Request) {
 	var maxActive, active int
 	e = tx.QueryRow(ctx, "SELECT max_active_jobs FROM workspace_limits WHERE singleton FOR UPDATE").Scan(&maxActive)
 	if e == nil {
-		e = tx.QueryRow(ctx, "SELECT count(*) FROM jobs WHERE status IN('queued','running')").Scan(&active)
+		e = tx.QueryRow(ctx, "SELECT (SELECT count(*) FROM jobs WHERE status IN('queued','running'))+(SELECT count(*) FROM media_imports WHERE status IN('queued','downloading'))").Scan(&active)
 	}
 	if e != nil || active >= maxActive {
 		fail(w, 409, "Jobbkøen er full")
@@ -206,6 +206,9 @@ func (a *App) executeJob(parent context.Context, j jobRecord) {
 	}
 	if result == nil {
 		result = map[string]any{}
+	}
+	if j.Kind == "media" && (err != nil || ctx.Err() != nil) {
+		a.db.Exec(parent, "UPDATE items SET metadata=jsonb_set(metadata,'{classification,status}','\"failed\"') WHERE current_version_id=$1 AND metadata ? 'import' AND metadata->'classification'->>'status'='pending'", j.Version)
 	}
 	tag, e := a.db.Exec(parent, "UPDATE jobs SET status=$1,progress=$2,result=$3,finished_at=now() WHERE id=$4 AND status='running'", status, progress, jsonBytes(result), j.ID)
 	if e == nil && tag.RowsAffected() > 0 {
@@ -322,12 +325,19 @@ func (a *App) processMedia(ctx context.Context, j jobRecord) (any, error) {
 			a.indexFrame(ctx, j.Version, i, f.at, out.Vectors[0])
 		}
 	}
+	if e = a.classifyImported(ctx, j.Version); e != nil {
+		warnings = append(warnings, "Kategorisering kunne ikke fullføres. Velg kategori manuelt eller prøv mediebehandling på nytt.")
+	}
 	return map[string]any{"frames": len(frames), "ocr_segments": len(parts), "warnings": warnings, "proxy_max_seconds": 600, "frame_interval_seconds": 10}, nil
 }
 func (a *App) transcribe(ctx context.Context, j jobRecord) (any, error) {
 	var key, mt string
-	if a.db.QueryRow(ctx, "SELECT file_key,mime FROM versions WHERE id=$1", j.Version).Scan(&key, &mt) != nil || (!strings.HasPrefix(mt, "video/") && !strings.HasPrefix(mt, "audio/")) {
+	var hasAudio bool
+	if a.db.QueryRow(ctx, "SELECT file_key,mime,coalesce((provenance->>'has_audio')::boolean,true) FROM versions WHERE id=$1", j.Version).Scan(&key, &mt, &hasAudio) != nil || (!strings.HasPrefix(mt, "video/") && !strings.HasPrefix(mt, "audio/")) {
 		return nil, fmt.Errorf("velg lyd eller video")
+	}
+	if !hasAudio {
+		return map[string]any{"segments": 0, "message": "Videoen har ingen lydspor"}, nil
 	}
 	a.jobProgress(ctx, j.ID, "Transkriberer lokalt")
 	var out struct {

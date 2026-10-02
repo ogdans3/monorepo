@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, uploadFile, seconds, formatDate, type Row } from '$lib/api';
+  import { api, contentCategories, uploadFile, seconds, formatDate, type Row } from '$lib/api';
   export let detail: Row;
   export let items: Row[];
   export let canEdit = false;
@@ -25,6 +25,7 @@
       'Uklart eller i strid med briefen\nDelvis relevant\nTydelig og relevant\nSvært tydelig og troverdig',
     brief = '',
     progress = 0;
+  $: category = detail.item.metadata?.classification?.category || 'ukategorisert';
   let left = detail.versions?.[1]?.id || detail.versions?.[0]?.id,
     right = detail.item.current_version_id;
   $: lv = detail.versions?.find((v: Row) => v.id === left);
@@ -66,6 +67,39 @@
 </script>
 
 <div class="item-tools">
+  {#if detail.item.metadata?.import || detail.item.metadata?.classification}
+    <div class="tool-panel">
+      <label
+        >Kategori<select
+          bind:value={category}
+          disabled={!canEdit}
+          onchange={() =>
+            act(async () => {
+              await api('/items/' + detail.item.id + '/category', 'PATCH', { category });
+              notice = 'Kategori lagret';
+            })}
+          >{#each Object.entries(contentCategories) as [id, label]}<option value={id}
+              >{label}</option
+            >{/each}</select
+        ></label
+      >
+      <p class="small muted">
+        {detail.item.metadata?.classification?.status === 'manual'
+          ? 'Valgt av dere'
+          : detail.item.metadata?.classification?.status === 'pending'
+            ? 'Kategoriseres når videoen er behandlet'
+            : detail.item.metadata?.classification?.status === 'failed'
+              ? 'Kategorisering feilet · velg manuelt'
+              : detail.item.metadata?.classification?.status === 'uncertain'
+                ? 'Usikker kategori · velg manuelt'
+                : 'Automatisk forslag · kan endres'}
+      </p>
+      {#if detail.item.metadata?.import?.uploader}<p class="small">
+          Fra {detail.item.metadata.import.uploader} · {detail.item.metadata.import.platform}
+        </p>{/if}
+    </div>
+  {/if}
+
   {#if error}<p class="error" role="alert">{error}</p>{/if}{#if notice}<p
       class="small"
       role="status"

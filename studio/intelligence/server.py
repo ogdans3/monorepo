@@ -48,6 +48,17 @@ def execute(path, data):
         with Image.open(source) as im:
             im = ImageOps.exif_transpose(im).convert("RGB")
             return {"model": IMAGE_MODEL, "vectors": model(IMAGE_MODEL).encode([im], normalize_embeddings=True).tolist()}
+    if path == "/categorize":
+        from categories import classify
+        from PIL import Image, ImageOps
+        text = data.get("text", "")
+        if not isinstance(text,str) or len(text)>16000:
+            raise ValueError("Text too long")
+        if data.get("key"):
+            with Image.open(file_path(data["key"])) as raw:
+                im=ImageOps.exif_transpose(raw).convert("RGB")
+                return classify(text,im,model,TEXT_MODEL,IMAGE_MODEL)
+        return classify(text,None,model,TEXT_MODEL,IMAGE_MODEL)
     if path == "/transcribe":
         from faster_whisper import WhisperModel
         if "whisper" not in models:

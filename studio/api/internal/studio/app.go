@@ -25,6 +25,7 @@ import (
 
 type App struct {
 	db                         *pgxpool.Pool
+	importDownload             importDownloadFunc
 	storage, origin, bootstrap string
 	http                       *http.Client
 	mu                         sync.Mutex

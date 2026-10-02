@@ -10,5 +10,7 @@ export LISTEN_ADDR=127.0.0.1:18088
 export STORAGE_PATH="$PWD/.data/test-files"
 export BOOTSTRAP_TOKEN=test-browser-bootstrap
 export AI_ENABLED=false
+export SOCIAL_IMPORT_PYTHON=python3
+export SOCIAL_IMPORT_SCRIPT="$PWD/scripts/fixtures/social-download.py"
 cd api
 exec go run ./cmd/server

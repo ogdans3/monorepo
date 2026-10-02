@@ -36,6 +36,7 @@
   } from '@lucide/svelte';
   import {
     api,
+    contentCategories,
     uploadFile,
     seconds,
     kinds,
@@ -46,6 +47,7 @@
     type Row,
   } from '$lib/api';
   import '$lib/style.css';
+  import ImportPanel from '$lib/components/ImportPanel.svelte';
   import LibraryTools from '$lib/components/LibraryTools.svelte';
   import ItemTools from '$lib/components/ItemTools.svelte';
   import Workbench from '$lib/components/Workbench.svelte';
@@ -113,6 +115,7 @@
     searching = false,
     searchTimer: ReturnType<typeof setTimeout>,
     searchGeneration = 0;
+  let categoryFilter = '';
   let filter = '',
     statusFilter = '',
     boardState = 'ready',
@@ -158,6 +161,8 @@
   $: visibleItems = items.filter(
     (i) =>
       (!filter || i.kind === filter) &&
+      (!categoryFilter ||
+        (i.metadata?.classification?.category || 'ukategorisert') === categoryFilter) &&
       (!statusFilter || i.status === statusFilter) &&
       (libraryFilterIDs === null || libraryFilterIDs.includes(i.id)),
   );
@@ -204,6 +209,7 @@
     runSource?.close();
     searchSelection = [];
     libraryFilterIDs = null;
+    categoryFilter = '';
     conversationID = '';
     messages = [];
     latestRun = null;
@@ -1014,6 +1020,13 @@
                 ><Plus size={17} />Legg til</button
               >{/if}
           </section>
+          {#key product}<ImportPanel
+              {product}
+              {canEdit}
+              onrefresh={refresh}
+              onopen={openItem}
+              onupload={() => openModal('item')}
+            />{/key}
           <div class="filterbar">
             <div class="chips">
               <button class:selected={!filter} onclick={() => (filter = '')}
@@ -1023,6 +1036,12 @@
                   onclick={() => (filter = kind)}>{kinds[kind]}</button
                 >{/each}
             </div>
+            <select aria-label="Filtrer kategori" bind:value={categoryFilter}
+              ><option value="">Alle kategorier</option
+              >{#each Object.entries(contentCategories) as [id, label]}<option value={id}
+                  >{label}</option
+                >{/each}</select
+            >
             <select aria-label="Filtrer status" bind:value={statusFilter}
               ><option value="">Alle statuser</option><option value="draft">Utkast</option><option
                 value="approved">Godkjent</option

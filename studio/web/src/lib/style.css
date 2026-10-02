@@ -2642,3 +2642,82 @@ progress {
     max-width: 220px;
   }
 }
+
+.link-import {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 0 0 24px;
+  background: var(--surface);
+}
+.import-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.import-input-row input {
+  flex: 1;
+  min-width: 0;
+}
+.import-input-row button {
+  flex-shrink: 0;
+}
+.link-import form > label {
+  margin-bottom: 10px;
+}
+.link-import details summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.import-history {
+  margin-top: 12px;
+}
+.import-rows {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  max-height: min(50dvh, 24rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.import-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.import-row-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.import-row p {
+  margin: 0;
+}
+.import-row strong {
+  overflow-wrap: anywhere;
+}
+.import-row progress {
+  width: 100%;
+  margin-top: 6px;
+}
+@media (max-width: 600px) {
+  .link-import {
+    padding: 16px;
+  }
+  .import-input-row {
+    flex-wrap: wrap;
+  }
+  .import-input-row input {
+    flex-basis: 100%;
+  }
+  .import-input-row button {
+    width: 100%;
+  }
+  .import-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

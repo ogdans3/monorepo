@@ -24,6 +24,7 @@ func main() {
 	go app.Worker(ctx)
 	go app.ProcessingWorker(ctx)
 	go app.IndexWorker(ctx)
+	go app.ImportWorker(ctx)
 	go func() {
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)

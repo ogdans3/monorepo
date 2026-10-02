@@ -4,7 +4,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
 COPY requirements.lock ./
 RUN pip install --no-cache-dir -r requirements.lock
-COPY server.py ./
+COPY server.py categories.py ./
 ENV HF_HOME=/models OMP_NUM_THREADS=2 TOKENIZERS_PARALLELISM=false
 USER studio
 EXPOSE 8090

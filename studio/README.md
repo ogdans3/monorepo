@@ -34,6 +34,8 @@ Docker-volumer. `docker compose down` beholder data; `down -v` sletter dem.
   rettigheter, kommentarer, CSV, papirkurv, delingslenker og eksportpakker.
 - Gjenopptakbar opplasting opptil 2 GB, duplikatsjekk, miniatyrer, mobilvideo,
   norsk/engelsk OCR og lokal Whisper-transkribering.
+- Lenkeimport av offentlige Instagram-/TikTok-videoer og Snapchat Spotlight,
+  med importkø, kildeinformasjon og redigerbare kategoriforslag.
 - Fulltekst, semantisk søk, visuell likhet, bildesøk, tidskoder, filtre og lagrede søk.
 - Privat chat med vedlegg, strømmede svar, produkt-/rolleprofiler, oppgaveidéer,
   manus, analyse og TypeSafe Jev-vurdering.
@@ -61,6 +63,33 @@ behandling vises på elementet; de lokale jobbene kan kjøres på nytt derfra.
 
 PyAV er låst til 16.1.0 fordi 19 fjernet argumentet som faster-whisper 1.2.1 bruker.
 `intelligence/requirements.lock` låser hele det testede Python-miljøet.
+
+## Importere sosiale videoer
+
+Lim inn lenken under **Bibliotek → Hent en video fra en lenke**. Velg eventuelt
+tittel, samling og rettigheter. Studio lagrer videoen, opphavet og en fast første
+versjon, og legger forhåndsvisning, OCR, transkript og kategorisering i lokal kø.
+Kategorier foreslås fra tekst og eventuelt videobildet med MiniLM/CLIP. Usikre
+forslag blir «Ukategorisert». Kategorien kan endres på videoen og brukes som
+bibliotekfilter; kategori, opphav og transkript inngår i søket.
+
+Støtten gjelder enkeltvideoer i offentlige Instagram-poster/Reels, TikTok og
+Snapchat Spotlight. Private snaps, innloggingsbeskyttet innhold, hele profiler,
+album, direktesendinger og HLS-strømmer importeres ikke. Plattformene kan blokkere
+nedlastingen; statusen viser feilen og tilbyr manuell opplasting. Ingen innlogging,
+nettleser-cookies eller tredjeparts nedlastingsserver brukes.
+
+Importen har fem minutters tidsgrense, maks 512 MiB og 30 minutter video, og velger
+direkte nedlastbare HTTP-formater opptil 1080p, også stående. Lagring reserveres
+før start. Like lenker og filer dedupliseres innen produktet. Stopp avbryter
+prosessen; en feil eller omstart krever et nytt, eksplisitt forsøk. Den lokale
+API-containeren skal ha én instans, som øvrige Studio-workers.
+
+Rettigheter settes til **Kun referanse** som standard. Import godkjenner aldri
+publisering. Klassifisering bruker de lokale modellene og ingen betalte API-kall.
+`api/importer/requirements.txt` låser yt-dlp; oppdater og test låsen når plattformene
+endrer format. FFprobe validerer faktiske spor, også Instagrams ISO5-MP4-filer.
+Nedlasterens nettverkstilgang avviser private adresser, inkludert videresendinger.
 
 ## Aktivere betalt AI
 
@@ -167,3 +196,15 @@ Testene dekker tilgang, versjoner, deling, invitasjoner, gjenoppretting, samtidi
 reservasjoner, opplastinger, budsjetter, provider-kontrakter, konverteringer og
 brukerflyter på desktop/mobil. De gjør ingen betalte API-kall. Se
 [verifiseringsstatus](docs/implementation.md).
+
+Ekstra importtester, etter at containerne er bygget:
+
+```sh
+docker run --rm -v "$PWD:/workspace:ro" -w /workspace/api/importer --entrypoint /opt/importer/bin/python studio-api -m unittest -v test_download
+docker compose -f compose.yml -f compose.test.yml exec -T intelligence-test python < intelligence/test_categories.py
+python3 scripts/import-smoke.py '<offentlig-videolenke>'
+```
+
+Siste kommando bruker kun den isolerte API-porten 18089. Nettlesertestene bruker
+en lokal syntetisk nedlaster i `studio_e2e`, slik at plattformblokkering ikke gjør
+testene ustabile. Vanlig Studio bruker alltid den ekte nedlasteren.

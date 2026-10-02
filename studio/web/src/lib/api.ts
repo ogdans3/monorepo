@@ -141,3 +141,18 @@ export function seconds(value: number) {
       .padStart(2, '0')
   );
 }
+
+export const contentCategories: Record<string, string> = {
+  ukategorisert: 'Ukategorisert',
+  merkevare_design: 'Merkevare og design',
+  mat_drikke: 'Mat og drikke',
+  mote_skjonnhet: 'Mote og skjønnhet',
+  teknologi: 'Teknologi',
+  bil_transport: 'Bil og transport',
+  trening_helse: 'Trening og helse',
+  reise_natur: 'Reise og natur',
+  hjem_interior: 'Hjem og interiør',
+  laering: 'Læring',
+  humor_underholdning: 'Humor og underholdning',
+  bedrift_markedsforing: 'Bedrift og markedsføring',
+};

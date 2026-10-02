@@ -38,3 +38,29 @@ OpenRouter/TypeSafe trenger brukerens nøkler og valgte modeller. En ekstern age
 må kobles til MCP for å produsere video og design. Konverteringsavsenderen må
 integreres mot Studio-mottaket. Disse forbindelsene, serverdrift og punktene under
 «Senere» er ikke kjørt eller presentert som ferdige integrasjoner.
+
+## Lenkeimport — 2. oktober 2026
+
+- Implementert varig importkø, fremdrift, stopp og manuelt nytt forsøk. Kilde,
+  opphav, rettigheter, filversjon og kategoriforslag følger videoen i biblioteket.
+- Offentlige enkeltvideoer fra Instagram, TikTok og Snapchat Spotlight. Direkte
+  HTTP-video, maks 512 MiB / 30 minutter, fem minutters nedlasting. Ingen cookies
+  eller påloggede/private plattformdata. Ingen automatisk retry.
+- Go/Postgres med race-detektor: produkttilgang, agentavgrensning/tilbakekalling,
+  samtidige kvoter, URL-/filduplikater, avbrudd/opprydding, gjenforsøk og at et
+  menneskes kategori vinner over pågående modellberegning.
+- Python: faktisk yt-dlp-nedlasting fra kontrollerte HTTP-svar og FFprobe på en
+  syntetisk MP4. Tester for ISO5-MP4, ugyldige filer, direktestrøm/album/størrelse,
+  private nettadresser, blandet DNS og videresendinger.
+- Lokale modeller: riktig kategori for design, norsk baking og norsk bilkjøring;
+  tom tekst og et blankt videobilde forblir ukategorisert.
+- Hele Playwright-settet: **6/6** bestått på desktop og 390 px mobil. Importens
+  eksterne nedlaster er en lokal fixture i nettlesertestene; kø, API, database,
+  stopp, feilhåndtering, kategoriendring og filtrering bruker reell Studio-kode.
+- Faktiske plattformtester: **Instagram Reel og Snapchat Spotlight lastet ned**,
+  lagret og ferdig mediebehandlet med lokal kategorisering. Instagrams ISO5-brand
+  avdekket en MIME-feil som er rettet med validering av faktiske videospor.
+  Lydløse importer hopper over talegjenkjenning. **TikTok blokkerte testlenken**;
+  vellykket nedlasting derfra er derfor ikke bekreftet fra dette nettverket.
+- TypeScript/Svelte og containerbygg bestått. Ingen betalte AI-kall eller ekstern
+  publisering. Plattformenes tilgjengelighet kan endre seg mellom forespørsler.

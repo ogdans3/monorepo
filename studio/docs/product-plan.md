@@ -13,6 +13,7 @@ mobil og desktop. Lokal mediebehandling kjører i en egen CPU-container.
 | Bibliotek | Medier, manus, hooks, referanser, samlinger, favoritter, etiketter, innboks, CSV, massehandlinger, relasjoner, papirkurv og eksport |
 | Versjoner | Uforanderlige tekst-/filversjoner, samtidig redigeringsvern, tekstsammenligning, medier side ved side og godkjenning av en bestemt versjon |
 | Opplasting | Gjenopptakbare 8 MB-deler, opptil 2 GB per fil, SHA-256-duplikatsjekk, private filer og rettighetsdokumentasjon med utløp |
+| Lenkeimport | Instagram, TikTok og Snapchat Spotlight; varig kø, fremdrift, stopp, eksplisitt nytt forsøk, kilde/opphav, duplikater og lokal kategorisering med manuell overstyring |
 | Medier | FFmpeg-miniatyrer, mobilproxy, rammeuttrekk, norsk/engelsk OCR, lokal Whisper-transkribering og tidsfestede segmenter |
 | Søk | Norsk fulltekst, tittel-likhet, flerspråklig semantikk, visuell tekst-/bildelikhet, tidskoder, filtre, lagrede søk og massevalg |
 | Chat | Private samtaler, vedlegg/faste versjoner/kampanjer, strømmede svar, søk, utkast og produksjonsidéer; stopp og kjøringslogg |
@@ -31,6 +32,10 @@ mobil og desktop. Lokal mediebehandling kjører i en egen CPU-container.
 - **Betalte modeller er avslått lokalt.** OpenRouter og TypeSafe trenger egne nøkler
   og eksplisitt modellvalg. Adapterne testes uten betaling mot kontrollerte svar.
   Faktiske provider-kall er ikke kjørt uten brukerens nøkler.
+- Lenkeimport krever en offentlig enkeltvideo i et støttet direkte HTTP-format.
+  Plattformblokkering og innlogging kan hindre import. Private snaps/stories, album
+  og profiler støttes ikke. Standardrettigheten er «Kun referanse». Kategorier er
+  lokale likhetsforslag, med usikkerhet og mulighet for manuell retting.
 - **Video/design utføres av en tilkoblet ekstern agent.** Studio leverer brief,
   låste malfelt, referanser, ønskede klipp/lyd/undertekster/logo/mockup, formater og
   sjekkliste. Agenten må ha produksjonsverktøy og eget kostnadstak. Ingen automatisk

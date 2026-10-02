@@ -15,7 +15,7 @@ import (
 )
 
 // Count stored files once even when several immutable versions reference them.
-const storageUsedSQL = `(SELECT coalesce(sum(bytes),0) FROM (SELECT file_key,max(bytes) AS bytes FROM (SELECT file_key,bytes FROM versions WHERE file_key<>'' UNION ALL SELECT file_key,bytes FROM media_artifacts) files GROUP BY file_key) unique_files)+(SELECT coalesce(sum(size),0) FROM upload_sessions WHERE completed_at IS NULL AND expires_at>now())`
+const storageUsedSQL = `(SELECT coalesce(sum(bytes),0) FROM (SELECT file_key,max(bytes) AS bytes FROM (SELECT file_key,bytes FROM versions WHERE file_key<>'' UNION ALL SELECT file_key,bytes FROM media_artifacts) files GROUP BY file_key) unique_files)+(SELECT coalesce(sum(size),0) FROM upload_sessions WHERE completed_at IS NULL AND expires_at>now())+(SELECT coalesce(sum(reserved_bytes),0) FROM media_imports)`
 
 func (a *App) startUpload(w http.ResponseWriter, r *http.Request) {
 	var v struct {

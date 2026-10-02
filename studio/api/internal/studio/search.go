@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const documentSQL = `SELECT 'item:'||i.id::text AS id,i.product_id,NULL::uuid AS user_id,i.id::text AS target_id,i.current_version_id AS version_id,'item'::text AS entity,i.kind,i.title,i.body||' '||array_to_string(i.tags,' ')||' '||i.source_url AS body,NULL::double precision AS start_seconds,i.status FROM items i WHERE i.deleted_at IS NULL
+const documentSQL = `SELECT 'item:'||i.id::text AS id,i.product_id,NULL::uuid AS user_id,i.id::text AS target_id,i.current_version_id AS version_id,'item'::text AS entity,i.kind,i.title,i.body||' '||array_to_string(i.tags,' ')||' '||i.source_url||' '||coalesce(i.metadata->'classification'->>'label','')||' '||coalesce(i.metadata->'import'->>'uploader','') AS body,NULL::double precision AS start_seconds,i.status FROM items i WHERE i.deleted_at IS NULL
  UNION ALL SELECT 'note:'||n.id::text,i.product_id,NULL::uuid,i.id::text,n.version_id,'note','note',i.title,n.body,n.at_seconds::double precision,i.status FROM notes n JOIN items i ON i.id=n.item_id WHERE i.deleted_at IS NULL
  UNION ALL SELECT 'segment:'||s.id::text,i.product_id,NULL::uuid,i.id::text,s.version_id,'segment',s.kind,i.title,s.body,s.start_seconds,i.status FROM segments s JOIN items i ON i.current_version_id=s.version_id WHERE i.deleted_at IS NULL
  UNION ALL SELECT 'task:'||id::text,product_id,NULL::uuid,id::text,NULL::uuid,'task','task',title,brief,NULL::double precision,status FROM tasks
