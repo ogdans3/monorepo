@@ -76,7 +76,7 @@
 
 <svelte:head>
 	<title>{ballot?.title ? `Stem · ${ballot.title}` : 'Stem · Podium'}</title>
-	<meta name="theme-color" content="#0d1014" />
+	<meta name="theme-color" content="#080d11" />
 </svelte:head>
 
 <main class="room ballot">

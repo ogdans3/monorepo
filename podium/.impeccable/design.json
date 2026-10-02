@@ -1,0 +1,553 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-02T18:43:47+00:00",
+  "title": "Design System: Podium",
+  "extensions": {
+    "colorMeta": {
+      "amber": {
+        "role": "primary",
+        "displayName": "Count Amber",
+        "canonical": "oklch(0.81 0.155 74)",
+        "tonalRamp": [
+          "oklch(0.15 0.155 74)",
+          "oklch(0.26 0.155 74)",
+          "oklch(0.37 0.155 74)",
+          "oklch(0.48 0.155 74)",
+          "oklch(0.60 0.155 74)",
+          "oklch(0.72 0.155 74)",
+          "oklch(0.84 0.155 74)",
+          "oklch(0.95 0.155 74)"
+        ]
+      },
+      "amber-deep": {
+        "role": "primary",
+        "displayName": "Deep Amber",
+        "canonical": "oklch(0.58 0.14 60)",
+        "tonalRamp": [
+          "oklch(0.15 0.14 60)",
+          "oklch(0.26 0.14 60)",
+          "oklch(0.37 0.14 60)",
+          "oklch(0.48 0.14 60)",
+          "oklch(0.60 0.14 60)",
+          "oklch(0.72 0.14 60)",
+          "oklch(0.84 0.14 60)",
+          "oklch(0.95 0.14 60)"
+        ]
+      },
+      "amber-ink": {
+        "role": "primary",
+        "displayName": "Amber Ink",
+        "canonical": "oklch(0.27 0.05 60)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 60)",
+          "oklch(0.26 0.05 60)",
+          "oklch(0.37 0.05 60)",
+          "oklch(0.48 0.05 60)",
+          "oklch(0.60 0.05 60)",
+          "oklch(0.72 0.05 60)",
+          "oklch(0.84 0.05 60)",
+          "oklch(0.95 0.05 60)"
+        ]
+      },
+      "room": {
+        "role": "neutral",
+        "displayName": "Room Ink",
+        "canonical": "oklch(0.155 0.012 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 250)",
+          "oklch(0.26 0.012 250)",
+          "oklch(0.37 0.012 250)",
+          "oklch(0.48 0.012 250)",
+          "oklch(0.60 0.012 250)",
+          "oklch(0.72 0.012 250)",
+          "oklch(0.84 0.012 250)",
+          "oklch(0.95 0.012 250)"
+        ]
+      },
+      "room-letterbox": {
+        "role": "neutral",
+        "displayName": "Letterbox",
+        "canonical": "oklch(0.1 0.008 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 250)",
+          "oklch(0.26 0.008 250)",
+          "oklch(0.37 0.008 250)",
+          "oklch(0.48 0.008 250)",
+          "oklch(0.60 0.008 250)",
+          "oklch(0.72 0.008 250)",
+          "oklch(0.84 0.008 250)",
+          "oklch(0.95 0.008 250)"
+        ]
+      },
+      "room-raised": {
+        "role": "neutral",
+        "displayName": "Room Raised",
+        "canonical": "oklch(0.205 0.013 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.013 250)",
+          "oklch(0.26 0.013 250)",
+          "oklch(0.37 0.013 250)",
+          "oklch(0.48 0.013 250)",
+          "oklch(0.60 0.013 250)",
+          "oklch(0.72 0.013 250)",
+          "oklch(0.84 0.013 250)",
+          "oklch(0.95 0.013 250)"
+        ]
+      },
+      "room-rule": {
+        "role": "neutral",
+        "displayName": "Room Rule",
+        "canonical": "oklch(0.34 0.012 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 250)",
+          "oklch(0.26 0.012 250)",
+          "oklch(0.37 0.012 250)",
+          "oklch(0.48 0.012 250)",
+          "oklch(0.60 0.012 250)",
+          "oklch(0.72 0.012 250)",
+          "oklch(0.84 0.012 250)",
+          "oklch(0.95 0.012 250)"
+        ]
+      },
+      "room-text": {
+        "role": "neutral",
+        "displayName": "Room Text",
+        "canonical": "oklch(0.965 0.004 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 250)",
+          "oklch(0.26 0.004 250)",
+          "oklch(0.37 0.004 250)",
+          "oklch(0.48 0.004 250)",
+          "oklch(0.60 0.004 250)",
+          "oklch(0.72 0.004 250)",
+          "oklch(0.84 0.004 250)",
+          "oklch(0.95 0.004 250)"
+        ]
+      },
+      "room-quiet": {
+        "role": "neutral",
+        "displayName": "Room Quiet",
+        "canonical": "oklch(0.75 0.01 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 250)",
+          "oklch(0.26 0.01 250)",
+          "oklch(0.37 0.01 250)",
+          "oklch(0.48 0.01 250)",
+          "oklch(0.60 0.01 250)",
+          "oklch(0.72 0.01 250)",
+          "oklch(0.84 0.01 250)",
+          "oklch(0.95 0.01 250)"
+        ]
+      },
+      "desk": {
+        "role": "neutral",
+        "displayName": "Desk Paper",
+        "canonical": "oklch(0.972 0.004 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 250)",
+          "oklch(0.26 0.004 250)",
+          "oklch(0.37 0.004 250)",
+          "oklch(0.48 0.004 250)",
+          "oklch(0.60 0.004 250)",
+          "oklch(0.72 0.004 250)",
+          "oklch(0.84 0.004 250)",
+          "oklch(0.95 0.004 250)"
+        ]
+      },
+      "desk-sunk": {
+        "role": "neutral",
+        "displayName": "Desk Sunk",
+        "canonical": "oklch(0.938 0.006 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 250)",
+          "oklch(0.26 0.006 250)",
+          "oklch(0.37 0.006 250)",
+          "oklch(0.48 0.006 250)",
+          "oklch(0.60 0.006 250)",
+          "oklch(0.72 0.006 250)",
+          "oklch(0.84 0.006 250)",
+          "oklch(0.95 0.006 250)"
+        ]
+      },
+      "desk-raised": {
+        "role": "neutral",
+        "displayName": "Desk Raised",
+        "canonical": "oklch(0.995 0.002 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.002 250)",
+          "oklch(0.26 0.002 250)",
+          "oklch(0.37 0.002 250)",
+          "oklch(0.48 0.002 250)",
+          "oklch(0.60 0.002 250)",
+          "oklch(0.72 0.002 250)",
+          "oklch(0.84 0.002 250)",
+          "oklch(0.95 0.002 250)"
+        ]
+      },
+      "desk-rule": {
+        "role": "neutral",
+        "displayName": "Desk Rule",
+        "canonical": "oklch(0.875 0.006 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 250)",
+          "oklch(0.26 0.006 250)",
+          "oklch(0.37 0.006 250)",
+          "oklch(0.48 0.006 250)",
+          "oklch(0.60 0.006 250)",
+          "oklch(0.72 0.006 250)",
+          "oklch(0.84 0.006 250)",
+          "oklch(0.95 0.006 250)"
+        ]
+      },
+      "desk-rule-strong": {
+        "role": "neutral",
+        "displayName": "Desk Rule Strong",
+        "canonical": "oklch(0.76 0.009 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.009 250)",
+          "oklch(0.26 0.009 250)",
+          "oklch(0.37 0.009 250)",
+          "oklch(0.48 0.009 250)",
+          "oklch(0.60 0.009 250)",
+          "oklch(0.72 0.009 250)",
+          "oklch(0.84 0.009 250)",
+          "oklch(0.95 0.009 250)"
+        ]
+      },
+      "desk-text": {
+        "role": "neutral",
+        "displayName": "Desk Text",
+        "canonical": "oklch(0.22 0.016 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.016 250)",
+          "oklch(0.26 0.016 250)",
+          "oklch(0.37 0.016 250)",
+          "oklch(0.48 0.016 250)",
+          "oklch(0.60 0.016 250)",
+          "oklch(0.72 0.016 250)",
+          "oklch(0.84 0.016 250)",
+          "oklch(0.95 0.016 250)"
+        ]
+      },
+      "desk-quiet": {
+        "role": "neutral",
+        "displayName": "Desk Quiet",
+        "canonical": "oklch(0.47 0.014 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.014 250)",
+          "oklch(0.26 0.014 250)",
+          "oklch(0.37 0.014 250)",
+          "oklch(0.48 0.014 250)",
+          "oklch(0.60 0.014 250)",
+          "oklch(0.72 0.014 250)",
+          "oklch(0.84 0.014 250)",
+          "oklch(0.95 0.014 250)"
+        ]
+      },
+      "alarm": {
+        "role": "neutral",
+        "displayName": "Alarm",
+        "canonical": "oklch(0.53 0.18 27)",
+        "tonalRamp": [
+          "oklch(0.15 0.18 27)",
+          "oklch(0.26 0.18 27)",
+          "oklch(0.37 0.18 27)",
+          "oklch(0.48 0.18 27)",
+          "oklch(0.60 0.18 27)",
+          "oklch(0.72 0.18 27)",
+          "oklch(0.84 0.18 27)",
+          "oklch(0.95 0.18 27)"
+        ]
+      },
+      "alarm-room": {
+        "role": "neutral",
+        "displayName": "Alarm Room",
+        "canonical": "oklch(0.74 0.14 27)",
+        "tonalRamp": [
+          "oklch(0.15 0.14 27)",
+          "oklch(0.26 0.14 27)",
+          "oklch(0.37 0.14 27)",
+          "oklch(0.48 0.14 27)",
+          "oklch(0.60 0.14 27)",
+          "oklch(0.72 0.14 27)",
+          "oklch(0.84 0.14 27)",
+          "oklch(0.95 0.14 27)"
+        ]
+      },
+      "slide-ink-light": {
+        "role": "neutral",
+        "displayName": "Slide Ink Light",
+        "canonical": "#F2F4F6"
+      },
+      "slide-ink-dark": {
+        "role": "neutral",
+        "displayName": "Slide Ink Dark",
+        "canonical": "#111418"
+      },
+      "qr-paper": {
+        "role": "neutral",
+        "displayName": "QR Paper",
+        "canonical": "#f4f5f6"
+      },
+      "qr-ink": {
+        "role": "neutral",
+        "displayName": "QR Ink",
+        "canonical": "#111418"
+      }
+    },
+    "typographyMeta": {
+      "stage-heading": {
+        "displayName": "Stage Heading",
+        "purpose": "Bold slide text, sized in --u."
+      },
+      "stage-text": {
+        "displayName": "Stage Text",
+        "purpose": "Regular slide text, sized in --u."
+      },
+      "option-label": {
+        "displayName": "Option Label",
+        "purpose": "An answer's label on the stage."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Every count, share and code, and the «Stemt» stamp: 72% width, 780, tabular."
+      },
+      "ballot-question": {
+        "displayName": "Ballot Question",
+        "purpose": "The question on the phone."
+      },
+      "ballot-option": {
+        "displayName": "Ballot Option",
+        "purpose": "An answer target on the phone."
+      },
+      "desk-body": {
+        "displayName": "Desk Body",
+        "purpose": "Editor and admin text."
+      },
+      "desk-control": {
+        "displayName": "Desk Control",
+        "purpose": "Buttons and inputs on the desk."
+      },
+      "desk-label": {
+        "displayName": "Desk Label",
+        "purpose": "Field labels and table heads, in Desk Quiet."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "'Podium' beside the three-bar mark, in the text colour, never amber."
+      }
+    },
+    "shadows": [
+      {
+        "name": "canvas-lift",
+        "value": "0 1px 2px oklch(0.2 0.02 250 / 0.12), 0 8px 28px -12px oklch(0.2 0.02 250 / 0.3)",
+        "purpose": "The editor canvas on its well; the only ambient shadow."
+      },
+      {
+        "name": "selection-frame",
+        "value": "0 0 0 1px oklch(0.99 0 0 / 0.95), 0 0 0 2px oklch(0.16 0.012 250 / 0.92)",
+        "purpose": "Selected element on the canvas; reads on any slide."
+      },
+      {
+        "name": "current-ring",
+        "value": "0 0 0 2px var(--desk), 0 0 0 3.5px var(--desk-text)",
+        "purpose": "Current thumbnail, chosen swatch."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "All settling motion: reels, share bar, amber fade."
+      },
+      {
+        "name": "reel-turn",
+        "value": "560ms",
+        "purpose": "Digit reel rolling to a new count."
+      },
+      {
+        "name": "share-bar",
+        "value": "640ms",
+        "purpose": "Share bar length change."
+      },
+      {
+        "name": "change-on",
+        "value": "90ms",
+        "purpose": "Count and bar turning amber when a vote lands."
+      },
+      {
+        "name": "change-hold",
+        "value": "1400ms",
+        "purpose": "Amber held after an answer's last vote."
+      },
+      {
+        "name": "change-off",
+        "value": "700ms",
+        "purpose": "Amber fading back to the slide's ink."
+      },
+      {
+        "name": "ballot-land",
+        "value": "420ms",
+        "purpose": "Chosen ballot option landing from amber."
+      },
+      {
+        "name": "stamp",
+        "value": "380ms",
+        "purpose": "«Stemt» stamping in from 1.5x, -9deg to -2.5deg."
+      },
+      {
+        "name": "control",
+        "value": "120ms",
+        "purpose": "Desk control hover colour."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "qr-wide",
+        "value": "container aspect-ratio > 1.3"
+      }
+    ],
+    "stage": {
+      "aspectRatio": "16 / 9",
+      "unit": "--u = 1cqh (registered @property <length>, inherited)",
+      "geometry": "percent of stage",
+      "editorGrid": "32 x 18 square; lines 9% ink (18% dragging), centre axes 30% (45% dragging)"
+    }
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Desk control: quiet until used.",
+      "html": "<button class=\"ds-btn\">Avslutt</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:.45rem;height:2rem;padding:0 .75rem;border:1px solid var(--desk-rule-strong,oklch(0.76 0.009 250));border-radius:3px;background:transparent;color:var(--desk-text,oklch(0.22 0.016 250));font-family:var(--font,'Archivo Variable',sans-serif);font-size:.875rem;font-weight:520;cursor:pointer;transition:background-color 120ms,border-color 120ms}.ds-btn:hover{background:var(--desk-sunk,oklch(0.938 0.006 250))}.ds-btn:active{transform:translateY(.5px)}.ds-btn:focus-visible{outline:2px solid var(--desk-text,oklch(0.22 0.016 250));outline-offset:2px}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action to press: ink on paper.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M12 5v14M5 12h14\"/></svg>Ny presentasjon</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:.45rem;height:2rem;padding:0 .75rem;border:1px solid var(--desk-text,oklch(0.22 0.016 250));border-radius:3px;background:var(--desk-text,oklch(0.22 0.016 250));color:var(--desk,oklch(0.972 0.004 250));font-family:var(--font,'Archivo Variable',sans-serif);font-size:.875rem;font-weight:520;cursor:pointer}.ds-btn-primary:hover{background:color-mix(in oklab,oklch(0.22 0.016 250) 86%,oklch(0.972 0.004 250))}.ds-btn-primary:focus-visible{outline:2px solid oklch(0.22 0.016 250);outline-offset:2px}"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Label above, raised field, border turns ink on focus.",
+      "html": "<label class=\"ds-field\"><span>Svaret</span><input class=\"ds-input\" value=\"Hver dag\"></label>",
+      "css": ".ds-field{display:grid;gap:.3rem;font-family:var(--font,'Archivo Variable',sans-serif)}.ds-field>span{font-size:.75rem;font-weight:600;letter-spacing:.01em;color:oklch(0.47 0.014 250)}.ds-input{min-height:2rem;padding:.3rem .55rem;border:1px solid oklch(0.76 0.009 250);border-radius:3px;background:oklch(0.995 0.002 250);color:oklch(0.22 0.016 250);font:inherit;font-size:.875rem}.ds-input:hover{border-color:color-mix(in oklab,oklch(0.76 0.009 250) 60%,oklch(0.22 0.016 250))}.ds-input:focus-visible{outline:2px solid oklch(0.22 0.016 250);outline-offset:0;border-color:oklch(0.22 0.016 250)}"
+    },
+    {
+      "name": "Live Chip",
+      "kind": "chip",
+      "refersTo": "live-chip",
+      "description": "The live state, the only amber on the desk.",
+      "html": "<span class=\"ds-live\">Direkte</span>",
+      "css": ".ds-live{display:inline-flex;align-items:center;height:1.5rem;padding:0 .5rem;border-radius:3px;background:oklch(0.81 0.155 74);color:oklch(0.27 0.05 60);font-family:var(--font,'Archivo Variable',sans-serif);font-size:.75rem;font-weight:700}"
+    },
+    {
+      "name": "Answer Box",
+      "kind": "custom",
+      "refersTo": "option-box",
+      "description": "An answer on the stage: top rule, label and share, figure count, hairline share bar; amber while moving.",
+      "html": "<div class=\"ds-stage\"><div class=\"ds-option ds-moving\"><div class=\"ds-head\"><span class=\"ds-label\">Hver dag</span><span class=\"ds-share\">46 %</span></div><div class=\"ds-count\">17</div><div class=\"ds-bar\"><span style=\"transform:scaleX(.46)\"></span></div></div></div>",
+      "css": ".ds-stage{container-type:size;width:480px;aspect-ratio:16/9;background:oklch(0.155 0.012 250);color:#F2F4F6;font-family:var(--font,'Archivo Variable',sans-serif);position:relative;--u:2.7px}.ds-option{position:absolute;left:6%;top:30%;width:45%;height:45%;display:grid;grid-template-rows:auto 1fr auto;padding:calc(var(--u)*1.5) calc(var(--u)*1.7);border-top:max(1px,calc(var(--u)*.16)) solid color-mix(in oklab,currentColor 62%,transparent)}.ds-head{display:flex;justify-content:space-between;align-items:baseline}.ds-label{font-size:calc(var(--u)*4.2);font-weight:600;line-height:1.12}.ds-share,.ds-count{font-stretch:72%;font-weight:780;font-variant-numeric:tabular-nums;line-height:1}.ds-share{font-size:calc(var(--u)*3.2);font-weight:600;opacity:.72}.ds-count{align-self:end;font-size:calc(var(--u)*14);transition:color 700ms cubic-bezier(.16,1,.3,1)}.ds-bar{position:relative;height:max(2px,calc(var(--u)*.36));margin-top:calc(var(--u)*1.1)}.ds-bar::before{content:'';position:absolute;inset:auto 0 0;height:1px;background:color-mix(in oklab,currentColor 32%,transparent)}.ds-bar span{position:relative;display:block;height:100%;background:currentColor;transform-origin:left;transition:transform 640ms cubic-bezier(.16,1,.3,1),background-color 700ms}.ds-moving .ds-count{color:oklch(0.81 0.155 74);transition-duration:90ms}.ds-moving .ds-bar span{background:oklch(0.81 0.155 74)}.ds-option:hover .ds-count{color:oklch(0.81 0.155 74)}"
+    },
+    {
+      "name": "Ballot Option",
+      "kind": "custom",
+      "refersTo": "ballot-option",
+      "description": "Full-width hairline-divided targets; the chosen one filled and stamped «Stemt».",
+      "html": "<ul class=\"ds-ballot\"><li><button class=\"ds-bopt\">Hver dag</button></li><li><button class=\"ds-bopt ds-chosen\">Noen ganger i uka<span class=\"ds-stamp\">Stemt</span></button></li></ul>",
+      "css": ".ds-ballot{margin:0;padding:1rem;list-style:none;background:oklch(0.155 0.012 250);font-family:var(--font,'Archivo Variable',sans-serif)}.ds-ballot li{border-top:1px solid oklch(0.34 0.012 250)}.ds-bopt{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:4rem;padding:.85rem 1rem;border:0;border-bottom:1px solid oklch(0.34 0.012 250);background:transparent;color:oklch(0.965 0.004 250);font:inherit;font-size:1.1875rem;font-weight:600;text-align:left;cursor:pointer;transition:background-color 160ms}.ds-bopt:active{background:oklch(0.205 0.013 250)}.ds-bopt:focus-visible{outline:2px solid oklch(0.965 0.004 250);outline-offset:2px}.ds-chosen{background:oklch(0.965 0.004 250);color:oklch(0.155 0.012 250)}.ds-stamp{padding:.3rem .55rem .25rem;border:2.5px solid currentColor;border-radius:2px;font-size:1.25rem;font-stretch:72%;font-weight:860;letter-spacing:.08em;text-transform:uppercase;transform:rotate(-2.5deg)}"
+    },
+    {
+      "name": "QR Tile",
+      "kind": "card",
+      "refersTo": "qr-tile",
+      "description": "Paper tile on any slide: QR, short host, code in the figure face.",
+      "html": "<div class=\"ds-qr\"><svg viewBox=\"0 0 7 7\" width=\"96\" height=\"96\" shape-rendering=\"crispEdges\"><path fill=\"currentColor\" d=\"M0 0h7v1H0zM0 6h7v1H0zM0 0h1v7H0zM6 0h1v7H6zM2 2h3v3H2z\"/></svg><span class=\"ds-host\">podium.no</span><span class=\"ds-code\">9JY2X</span></div>",
+      "css": ".ds-qr{display:inline-grid;justify-items:center;gap:.4rem;padding:1rem;background:#f4f5f6;color:#111418;font-family:var(--font,'Archivo Variable',sans-serif)}.ds-host{font-size:.8rem;font-weight:560}.ds-code{font-size:2rem;font-stretch:72%;font-weight:780;font-variant-numeric:tabular-nums;letter-spacing:.05em;line-height:1}"
+    },
+    {
+      "name": "Corner Caption",
+      "kind": "custom",
+      "refersTo": "corner-caption",
+      "description": "The display's only chrome: flat solid captions, bottom right.",
+      "html": "<div class=\"ds-corner\"><p class=\"ds-cap ds-sound\">Trykk en tast eller klikk for lyd</p><p class=\"ds-cap\">→ neste · ← forrige · F fullskjerm · M lyd</p></div>",
+      "css": ".ds-corner{display:inline-grid;justify-items:end;font-family:var(--font,'Archivo Variable',sans-serif)}.ds-cap{margin:0;padding:.4rem .8rem;background:oklch(0.155 0.012 250);color:oklch(0.75 0.01 250);font-size:.8125rem;font-weight:520}.ds-cap+.ds-cap{border-top:1px solid oklch(0.34 0.012 250)}.ds-sound{color:oklch(0.965 0.004 250)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Counting Room",
+    "overview": "Podium is election night. The room, where the projector and the phones are, is dark ink; the desk, where the presenter builds, is cool paper. Counts are what the room watches, so every count is set in one counting face: condensed, heavy, tabular, lined up in columns and never shifting what is around it. A vote does not replace the slide with a chart. It ticks up a count in the place the presenter put that answer, lights amber for as long as votes keep coming, and is heard as a bell.\n\nThe system is flat and ruled. Hairlines do the work cards do elsewhere: an answer is a rule across the top, a label, a share, a large count and a measured hairline under it. The only colour that belongs to the tool is one amber, and it is kept for change and for the live state. Every other colour on a slide is the presenter's. The display carries nothing of the tool except flat captions in the corner when it has something to say.\n\nGeometry is relative to the stage. A slide is a 16:9 plane where every position and size is a percent of the stage and every type size is a multiple of `--u`, one percent of the stage's height. The same slide is drawn by the same renderer on the projector, on the editor canvas and in the slide list, and is the same slide at every size. All interface copy is Norwegian.",
+    "keyCharacteristics": [
+      "Two grounds from one cool hue (250): ink room, paper desk.",
+      "Hairline rules, not cards or panels.",
+      "One counting face (Archivo at 72% width, weight 780, tabular) for every count, share and code.",
+      "One amber for change and live only.",
+      "Stage geometry in percent, stage type in `--u`.",
+      "No chrome on the display.",
+      "Norwegian copy throughout."
+    ],
+    "rules": [
+      {
+        "name": "The One Amber Rule",
+        "body": "Amber means \"this just changed\" or \"this is live\", and nothing else. It is never an accent, a hover, a link, a brand colour or part of the wordmark, and it is never in the presenter's palettes. If amber appears and nothing is moving or live, that is a bug.",
+        "section": "colors"
+      },
+      {
+        "name": "The Presenter's Colour Rule",
+        "body": "Apart from the amber signal and the paper QR tile, every colour on a slide is the presenter's. The tool adds no tinted panels, badges or highlights to the stage.",
+        "section": "colors"
+      },
+      {
+        "name": "The Counting Face Rule",
+        "body": "Every number the room or the presenter reads as a count, share or code is set in the figure face (72% width, weight 780, tabular). A count never shifts its neighbours as it changes.",
+        "section": "typography"
+      },
+      {
+        "name": "The Stage Unit Rule",
+        "body": "Type on a slide is sized only as a multiple of `--u` (1% of stage height, registered with `@property` and inherited). Never px or rem on the stage.",
+        "section": "typography"
+      },
+      {
+        "name": "The Percent Plane Rule",
+        "body": "Stage geometry is percent of the stage and stage type is `--u`. Nothing on a slide is sized in viewport or pixel units, so the projector, the canvas and the thumbnail show the same slide.",
+        "section": "layout"
+      },
+      {
+        "name": "The No Chrome Rule",
+        "body": "The display shows the slide and nothing else. When the tool must speak, it does so in flat, solid captions in the bottom-right corner (0.8125rem, 520, Room ground, Quiet text, stacked with a hairline between them): the sound prompt («Trykk en tast eller klikk for lyd», «Lyden er av · M»), the lost-connection notice («Mistet forbindelsen. Kobler til igjen …») and the key hints shown for the first seconds. The cursor hides when idle.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Group with a rule, not a box. Answers get a top rule. Ballot options, list rows and panels are divided by 1px hairlines. No cards, no tinted panels, no shadows in the room.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep amber for a count that has just moved (held 1400 ms after that answer's last vote) and for the live state («Direkte»). Use Deep Amber on light slides.",
+      "Do set every count, share and code in the figure face (72% width, 780, tabular).",
+      "Do place and size everything on the stage in percent of the stage and size stage type in `--u`, so the display, canvas and thumbnail stay identical.",
+      "Do separate with 1px hairlines: a top rule on an answer, rules between ballot options and list rows.",
+      "Do show the editor's 32×18 square snap grid with its centre axes drawn stronger, and strengthen it while dragging.",
+      "Do keep the display free of chrome. The tool speaks only in flat corner captions: the sound prompt, the lost connection and the first-seconds key hints.",
+      "Do stamp «Stemt» in the figure face, uppercase, rotated −2.5°.",
+      "Do write all interface copy in Norwegian.",
+      "Do keep ballot targets at least 4rem tall and ballot type in rem, so it follows the phone's text size."
+    ],
+    "donts": [
+      "Don't use amber as an accent, hover, link, brand colour or wordmark colour, and don't offer it in the presenter's palettes.",
+      "Don't replace the slide with a results chart. Votes land in the boxes the presenter placed.",
+      "Don't put cards, tinted panels or shadows in the room. The only desk shadow is the canvas lift.",
+      "Don't size slide content in px, rem or viewport units.",
+      "Don't add toolbars, logos, progress bars or vote totals to the display.",
+      "Don't ship Nintendo's Brain Training sound. The vote sound is the synthesized bell, or the presenter's own upload.",
+      "Don't colour slide content with anything the presenter did not choose, except the amber signal and the paper QR tile."
+    ]
+  }
+}

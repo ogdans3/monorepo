@@ -30,8 +30,10 @@
 		position: absolute;
 		inset: 0;
 		container-type: size;
+		/* The palette's paper and ink, fixed: a code reads on any slide only
+		   dark on light. */
 		background: #f4f5f6;
-		color: #0d1014;
+		color: #111418;
 	}
 
 	.inner {

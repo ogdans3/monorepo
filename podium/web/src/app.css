@@ -145,8 +145,8 @@ a {
 	--focus: var(--room-text);
 	background: var(--room);
 	color: var(--room-text);
-	caret-color: var(--amber);
-	accent-color: var(--amber);
+	caret-color: var(--room-text);
+	accent-color: var(--room-text);
 	color-scheme: dark;
 }
 
