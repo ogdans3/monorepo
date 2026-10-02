@@ -154,12 +154,16 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
           const SizedBox(height: 6),
           // A dot, not a count: the number is already on the tab in the nav,
           // and a red badge on every row makes a quiet list look like an alarm.
+          // A screen reader has no dot to see, so it is told the count.
           if (thread.unread > 0)
-            Container(
-              height: 9,
-              width: 9,
-              decoration: const BoxDecoration(
-                  color: SwaplyColors.greenPressed, shape: BoxShape.circle),
+            Semantics(
+              label: thread.unread == 1 ? '1 ulest melding' : '${thread.unread} uleste meldinger',
+              child: Container(
+                height: 9,
+                width: 9,
+                decoration: const BoxDecoration(
+                    color: SwaplyColors.greenPressed, shape: BoxShape.circle),
+              ),
             ),
         ],
       ),

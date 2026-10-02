@@ -230,4 +230,40 @@ void main() {
     expect(find.text('★ 4,8'), findsOneWidget);
     expect(find.text('★ 4,8 · '), findsNothing);
   });
+
+  testWidgets('12. 11a\'s unread dot tells a screen reader how many', (tester) async {
+    final semantics = tester.ensureSemantics();
+    server.overrides['GET /threads'] = {
+      'threads': [
+        {
+          'id': 'thread-1',
+          'tradeId': 'trade-1',
+          'state': 'pending',
+          'kind': 'direct',
+          'others': [
+            {'id': 'kari-1', 'displayName': 'Kari N.'}
+          ],
+          'unread': 2,
+          'lastMessage': {'body': 'Hei!', 'mine': false, 'createdAt': '2026-09-08T14:12:00Z'},
+        },
+        {
+          'id': 'thread-2',
+          'tradeId': 'trade-2',
+          'state': 'pending',
+          'kind': 'direct',
+          'others': [
+            {'id': 'per-1', 'displayName': 'Per H.'}
+          ],
+          'unread': 1,
+          'lastMessage': {'body': 'Hallo', 'mine': false, 'createdAt': '2026-09-08T14:12:00Z'},
+        },
+      ],
+      'unreadTotal': 3,
+    };
+    await mount(tester, const ChatsScreen());
+
+    expect(find.bySemanticsLabel(RegExp('2 uleste meldinger')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('1 ulest melding')), findsOneWidget);
+    semantics.dispose();
+  });
 }
