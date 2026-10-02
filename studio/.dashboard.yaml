@@ -1,0 +1,12 @@
+name: Studio
+description: "Privat arbeidsrom for innhold, produksjon og publisering."
+
+# The one hostname goes to the web app, which proxies /api/* to the API itself.
+# APP_ORIGIN in .env must be https://studio.<host>: the API rejects any other
+# Origin and only sets Secure cookies for an https origin.
+#
+# The MCP endpoint (/mcp) is on the API and not behind that proxy. Agents on
+# this server reach it at http://127.0.0.1:8088/mcp, which compose.yml binds
+# to loopback only.
+compose_service: web
+compose_port: 5178
