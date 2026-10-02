@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { ApiError } from './errors.js'
@@ -23,6 +23,15 @@ export async function blockedBetween(db: Database, a: string | null, b: string |
   )
   return Boolean(row)
 }
+
+/**
+ * [blockedBetween] as a predicate, for a query that leaves somebody out
+ * rather than refusing a request: a count of likes, say, where a liker
+ * across a block is somebody the owner can no longer see or trade with.
+ */
+export const blockSeparates = (a: SQL, b: SQL) => sql`exists (
+  select 1 from blocks bl
+  where (bl.blocker = ${a} and bl.blocked = ${b}) or (bl.blocker = ${b} and bl.blocked = ${a}))`
 
 /** 403, with a code the app can switch on. Never says who blocked whom. */
 export const blocked = () =>

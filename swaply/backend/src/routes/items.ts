@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import type { Database } from '../db/index.js'
-import { blockedBetween } from '../lib/blocks.js'
+import { blockedBetween, blockSeparates } from '../lib/blocks.js'
 import { CATEGORIES, CONDITIONS, LISTING_KEY_HOURS, MAX_VALUE_NOK } from '../lib/constants.js'
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
 import { storedExists, toStoredPath } from '../lib/media.js'
@@ -228,12 +228,17 @@ export default async function itemRoutes(app: FastifyInstance) {
     const viewer = request.userId
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
 
+    // «3 har likt denne» counts who 12 shows the owner, and 12 leaves out a
+    // liker on the other side of a block: neither can see the other's
+    // things, and no trade can open between them.
     const item = await one(
       app.db,
       sql`select i.*, ${coverSql('i')} as cover,
                  exists (select 1 from likes l
                          where l.target_item = i.id and l.from_user = ${viewer ?? null}) as liked_by_me,
-                 (select count(*) from likes l where l.target_item = i.id) as like_count
+                 (select count(*) from likes l
+                  where l.target_item = i.id
+                    and not ${blockSeparates(sql`i.owner_id`, sql`l.from_user`)}) as like_count
           from items i where i.id = ${id} and i.deleted_at is null`,
     )
     if (!item) throw notFound('Fant ikke gjenstanden.')

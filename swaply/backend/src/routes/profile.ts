@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { deleteTestAccount } from '../admin/accounts.js'
 import { verifyPassword } from '../auth/passwords.js'
-import { blockedBetween } from '../lib/blocks.js'
+import { blockedBetween, blockSeparates } from '../lib/blocks.js'
 import { CATEGORIES } from '../lib/constants.js'
 import { hiddenCountColumn, hiddenCountOf } from '../lib/hidden.js'
 import { ApiError, badRequest, conflict, notFound } from '../lib/errors.js'
@@ -26,10 +26,14 @@ export default async function profileRoutes(app: FastifyInstance) {
           where i.owner_id = ${userId} and i.deleted_at is null
           order by i.created_at desc`,
     )
+    // «♥ N har likt tingene dine» is the sum of what 12 lists under it: the
+    // listings still up, and nobody on the other side of a block. A like on
+    // a listing taken down was counted here for ever after.
     const likedBy = await one(
       app.db,
       sql`select count(*) as n from likes l join items i on i.id = l.target_item
-          where i.owner_id = ${userId}`,
+          where i.owner_id = ${userId} and i.deleted_at is null
+            and not ${blockSeparates(sql`${userId}::uuid`, sql`l.from_user`)}`,
     )
     const unread = await one(
       app.db,
