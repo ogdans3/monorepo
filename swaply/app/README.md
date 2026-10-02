@@ -630,7 +630,12 @@ whole of it.
 ## Rows the export does not draw
 
 The share sheet behind the button on 04 and «Inviter en venn» on 16b: round 5
-drew the invitation as a link somebody already had, not as one you make.
+drew the invitation as a link somebody already had, not as one you make. A link
+is an invitation from somebody, so the server makes one only for a profile,
+and a device looking around was shown why with nothing to press. The sheet
+offers «Lag profil» for that refusal — 10c, as writing a message on 04 is — and
+comes back with the link once the profile is made, and «Prøv igjen» for no
+answer. `test/share_test.dart` holds it.
 
 **«Se alle varsler» on 16b**, which opens 12a. The export drew 12a as a lock
 screen — a push notification, not a screen with a back button — so it never drew

@@ -529,10 +529,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 Row(
                   children: [
                     _round(Icons.ios_share, 'Del', () {
+                      final session = context.read<Session>();
                       showShareSheet(
                         context,
                         title: 'Del ${item.title}',
                         mint: (api) => api.shareItem(item.id),
+                        // A link is an invitation from somebody, and a device
+                        // has no profile to send it from: 10c, as writing a
+                        // message here is.
+                        makeProfile: () async {
+                          if (!mounted) return false;
+                          await pushOverBar<bool>(context, const CreateProfileScreen());
+                          return mounted && session.signedIn && !session.anonymous;
+                        },
                       );
                     }),
                     const SizedBox(width: 8 - 2 * _roundRoom),
