@@ -13,7 +13,7 @@ import {
 import { SCENARIO_STATES, buildScenario } from '../admin/scenarios.js'
 import { issueSession } from '../auth/sessions.js'
 import { env } from '../env.js'
-import { CATEGORIES } from '../lib/constants.js'
+import { CATEGORIES, TERMS_VERSION } from '../lib/constants.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { iso, many, one, type Row } from '../lib/rows.js'
 import {
@@ -25,8 +25,8 @@ import {
 import { expireWithdrawals } from '../trades/actions.js'
 import { postMessage } from '../trades/conversation.js'
 import { sweepForCycles } from '../trades/sweep.js'
-import { acceptTrade } from '../trades/accept.js'
-import { completeTrade, proposeCounterOffer } from '../trades/trades.js'
+import { acceptTrade, counterAndAgree } from '../trades/accept.js'
+import { completeTrade } from '../trades/trades.js'
 import { expressWish, openRingCovering } from '../trades/wish.js'
 import { publicItem } from './serialize.js'
 
@@ -260,8 +260,11 @@ export default async function adminRoutes(app: FastifyInstance) {
           payeePosition: Number(seat['position']),
           amountNok: 200,
         }
-        // Validated inside, under the trade's lock, as the product's own is.
-        const { freed } = await proposeCounterOffer(app.db, id, body.as, composition, cash)
+        // Validated inside, under the trade's lock, as the product's own is,
+        // and agreed to by whoever proposes it, as the product's own is now.
+        const { freed } = await counterAndAgree(app.db, id, body.as, composition, cash, {
+          termsVersion: TERMS_VERSION,
+        })
         await app.db.execute(sql`
           insert into notifications (user_id, type, payload)
           select p.user_id, 'counter_offer', jsonb_build_object('tradeId', ${id}::text)

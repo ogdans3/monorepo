@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
+import { TERMS_VERSION } from '../lib/constants.js'
 import { badRequest, conflict } from '../lib/errors.js'
 import { many, one, type Row } from '../lib/rows.js'
 import {
@@ -8,7 +9,8 @@ import {
   markHandover,
   requestWithdrawal,
 } from '../trades/actions.js'
-import { acceptOffer, completeTrade, proposeCounterOffer, startTalking } from '../trades/trades.js'
+import { counterAndAgree } from '../trades/accept.js'
+import { acceptOffer, completeTrade, startTalking } from '../trades/trades.js'
 import { expressWish } from '../trades/wish.js'
 import { CATALOGUE } from './fixtures.js'
 
@@ -21,7 +23,7 @@ import { CATALOGUE } from './fixtures.js'
  * them and then somebody else's move.
  *
  * Every one of them is built by pressing the product's own buttons in order —
- * `expressWish`, `acceptOffer`, `proposeCounterOffer`, `declineTrade`,
+ * `expressWish`, `acceptOffer`, `counterAndAgree`, `declineTrade`,
  * `markHandover`, `requestWithdrawal`, `completeTrade`. Nothing here writes a
  * trade, a like, an offer or an acceptance directly. `db/seed.ts` took that
  * shortcut once and advertised a three-way ring that nothing would ever have
@@ -193,7 +195,9 @@ export async function buildScenario(
       payeePosition: Number(other['position']),
       amountNok: 200,
     }
-    await proposeCounterOffer(db, tradeId, other['id'], composition, cash)
+    // Agreed to by the one proposing it, as in the product: 09e draws them
+    // as «✓ Har godtatt».
+    await counterAndAgree(db, tradeId, other['id'], composition, cash, { termsVersion: TERMS_VERSION })
     steps.push(`${firstName(other)} foreslo 200 kr i mellomlegg`)
     return { tradeId, steps, participants: ring.map((p) => p['id']) }
   }

@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { blocked, blockedBetween } from '../lib/blocks.js'
+import { TERMS_VERSION } from '../lib/constants.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import {
@@ -14,13 +15,12 @@ import {
   respondToWithdrawal,
   withdrawEarly,
 } from '../trades/actions.js'
-import { acceptTrade } from '../trades/accept.js'
+import { acceptTrade, counterAndAgree } from '../trades/accept.js'
 import { conversationAbout, lastMessageIn, postMessage } from '../trades/conversation.js'
 import { ringsApart, testRing } from '../trades/ring.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import {
   completeTrade,
-  proposeCounterOffer,
   revokeAcceptance,
   startTalking,
 } from '../trades/trades.js'
@@ -104,7 +104,7 @@ export default async function tradeRoutes(app: FastifyInstance) {
     const { id } = idParam.parse(request.params)
     const body = z
       .object({
-        termsVersion: z.string().default('2026-09-06'),
+        termsVersion: z.string().default(TERMS_VERSION),
         // The version 06c showed. Absent, the yes is for the newest, which is
         // what an app from before this sends.
         offerId: z.string().uuid().nullish(),
@@ -169,6 +169,10 @@ export default async function tradeRoutes(app: FastifyInstance) {
         // The version the proposal answers. Absent, it answers whatever is on
         // the table, which is what an app from before this sends.
         baseOfferId: z.string().uuid().nullish(),
+        // The terms the person agreed to by sending: proposing a version is
+        // saying yes to it (`counterAndAgree`). Absent — the app as released
+        // on 30.09 — the proposal is made without a yes, as it always was.
+        termsVersion: z.string().min(1).max(40).nullish(),
       })
       .parse(request.body)
 
@@ -177,9 +181,10 @@ export default async function tradeRoutes(app: FastifyInstance) {
     // would silently undo everybody's acceptance, and on a closed one it would
     // reopen something that is over — so the state, and the offer, are judged
     // in `proposeCounterOffer`, under the trade's lock.
-    const { freed } = await proposeCounterOffer(
-      app.db, id, userId, body.items, body.cash ?? undefined, { baseOfferId: body.baseOfferId },
-    )
+    const { freed } = await counterAndAgree(app.db, id, userId, body.items, body.cash ?? undefined, {
+      baseOfferId: body.baseOfferId,
+      termsVersion: body.termsVersion,
+    })
 
     await app.db.execute(sql`
       insert into notifications (user_id, type, payload)

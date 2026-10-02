@@ -1,10 +1,11 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
-import { conflict, notFound } from '../lib/errors.js'
+import { ApiError, conflict, notFound } from '../lib/errors.js'
 import { one } from '../lib/rows.js'
+import type { OfferCash, OfferItem } from './offer.js'
 import { sweepForCycles } from './sweep.js'
-import { acceptOffer, offerChanged, type AcceptResult } from './trades.js'
+import { acceptOffer, offerChanged, proposeCounterOffer, type AcceptResult } from './trades.js'
 import { tradeView } from './view.js'
 
 /**
@@ -28,6 +29,12 @@ export async function acceptTrade(
    * Either way `acceptOffer` checks under the lock that it still is.
    */
   offerId?: string | null,
+  /**
+   * No «Noen godtok byttet» to the others. For the yes that comes with a
+   * counter-offer (`counterAndAgree`): they are told about the new version
+   * once, as «Nytt forslag i byttet», and the yes is part of that news.
+   */
+  opts: { quiet?: boolean } = {},
 ): Promise<AcceptResult> {
   const view = await tradeView(db, tradeId, userId)
   if (!view) throw notFound('Fant ikke byttet.')
@@ -66,7 +73,7 @@ export async function acceptTrade(
   // Asked again under the lock: a counter-offer may land after the read above.
   const result = await acceptOffer(db, view.offerId, userId, termsVersion)
 
-  await db.execute(sql`
+  if (!opts.quiet || result.everyoneAccepted) await db.execute(sql`
     insert into notifications (user_id, type, payload)
     select p.user_id, ${result.everyoneAccepted ? 'trade_accepted' : 'trade_partly_accepted'},
            jsonb_build_object('tradeId', ${tradeId}::text)
@@ -77,4 +84,48 @@ export async function acceptTrade(
   // item becoming available again is one of the three search triggers.
   await sweepForCycles(db, result.freed)
   return result
+}
+
+/**
+ * A counter-offer, and the yes of whoever proposed it.
+ *
+ * Proposing a version is agreeing to it: 09e draws the one who proposed it as
+ * «✓ Har godtatt», and the other side's button as «Godta endringen» — decided
+ * by the product owner 02.10.2026. So the proposal is followed by the
+ * proposer's own yes, through every guard any yes goes through, and like any
+ * owner's yes it holds their things in the new version for this trade.
+ *
+ * Only when the client names the terms the person agreed to: the app says
+ * under «Send motbytte» that sending is agreeing, and an app from before that,
+ * which names none, proposes without agreeing as it always did. Never for a
+ * device, which may not say yes at all, and never to a version with a side
+ * still empty, which nobody can say yes to. And if the yes cannot be given —
+ * the other side countered in the same moment, or a thing went to another
+ * trade first — the proposal stands without it, as one from the old app does:
+ * the trade then shows what is true, and «Godta byttet» is there to press.
+ */
+export async function counterAndAgree(
+  db: Database,
+  tradeId: string,
+  userId: string,
+  items: OfferItem[],
+  cash: OfferCash | undefined,
+  opts: { baseOfferId?: string | null; termsVersion?: string | null } = {},
+): Promise<{ offerId: string; freed: string[]; agreed: boolean }> {
+  const { offerId, freed } = await proposeCounterOffer(db, tradeId, userId, items, cash, {
+    baseOfferId: opts.baseOfferId,
+  })
+  if (!opts.termsVersion) return { offerId, freed, agreed: false }
+
+  const person = await one(db, sql`select email from users where id = ${userId}`)
+  if (!person?.['email']) return { offerId, freed, agreed: false }
+
+  try {
+    await acceptTrade(db, tradeId, userId, opts.termsVersion, offerId, { quiet: true })
+    return { offerId, freed, agreed: true }
+  } catch (e) {
+    // A refusal is a state of the trade, not a failure of the proposal.
+    if (e instanceof ApiError && e.statusCode === 409) return { offerId, freed, agreed: false }
+    throw e
+  }
 }

@@ -41,6 +41,14 @@ export const LISTING_PROMPT_EVERY = 10
 export const WITHDRAWAL_RESPONSE_HOURS = 72
 
 /**
+ * The version of the byttevilkår a yes is recorded against when nobody says
+ * otherwise: an app from before 06c sent one, and the test tooling, which says
+ * yes on somebody's behalf. 06c shows it as «Versjon …». Change it with the
+ * terms, and with the app's `AgreementScreen.termsVersion`.
+ */
+export const TERMS_VERSION = '2026-09-06'
+
+/**
  * «Each side of a hop is a list of 1–3 items» — `docs/DESIGN.md`. The cap is
  * what the counter-offer screens are drawn for, not a storage limit.
  */
