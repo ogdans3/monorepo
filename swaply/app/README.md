@@ -663,6 +663,16 @@ its golden is, it is the export's. A device that liked a thing has no profile,
 so it is «Noen» there, with no «Se tingene deres ›»: it used to be «Slettet
 bruker». `test/liked_test.dart` holds both.
 
+**An eye in the password field on 10c and 16c.** The export draws the dots
+alone. There is no way to reset a password yet, so one letter wrong in the
+password made on 10c locked a tester out for good, with nothing on screen to
+catch it. The eye at the field's right edge shows what was typed and hides it
+again (`PasswordField` in `widgets/common.dart`). It adds nothing to the
+field's height, so the eye is all that differs in the two goldens. There is no
+second field to type it twice: seeing it is the check. The password on «Slett
+kontoen» has none, since it is typed to delete an account and not to make one.
+`test/onboarding_test.dart` holds it.
+
 **«Vis alt på Oppdag igjen» on 16b**, under «Oppdag», with how much is hidden
 beside it — kinds, and listings hidden alone while they can still be shown —
 and only while any are, which is why the export's 16b, whose Ola has hidden

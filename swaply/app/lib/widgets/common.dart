@@ -1082,6 +1082,71 @@ class SectionCard extends StatelessWidget {
       );
 }
 
+/// A password field on 10c and 16c, with a small eye at its right edge that
+/// shows what was typed and hides it again.
+///
+/// There is no way to reset a password yet, so one letter wrong in the
+/// password made on 10c locked a tester out for good, with nothing on screen
+/// to catch it. The export draws the dots alone; this is a deliberate
+/// deviation, listed in `app/README.md`. No second field to type it twice:
+/// seeing it is the check. Hidden, as drawn, until the eye is pressed.
+class PasswordField extends StatefulWidget {
+  const PasswordField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    required this.autofillHints,
+    this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final List<String> autofillHints;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  State<PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<PasswordField> {
+  bool _shown = false;
+
+  @override
+  Widget build(BuildContext context) => TextField(
+        controller: widget.controller,
+        obscureText: !_shown,
+        // Shown, a keyboard would otherwise offer to correct it.
+        autocorrect: false,
+        enableSuggestions: false,
+        textInputAction: TextInputAction.done,
+        autofillHints: widget.autofillHints,
+        onSubmitted: widget.onSubmitted,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          // Drawn 20 across, 14 in from the edge as the text is, in a box
+          // a finger tall: the field lays the box out at its own size and
+          // asks nothing outside it about a touch. It adds nothing to the
+          // field's height, which the export sets.
+          suffixIcon: TapArea(
+            label: _shown ? 'Skjul passordet' : 'Vis passordet',
+            onTap: () => setState(() => _shown = !_shown),
+            child: SizedBox(
+              height: kTapTarget,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Icon(
+                  _shown ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  size: 20,
+                  color: SwaplyColors.greySoft,
+                ),
+              ),
+            ),
+          ),
+          suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+        ),
+      );
+}
+
 /// Empty states teach the interface: what this place is for, and one way out.
 class EmptyState extends StatelessWidget {
   const EmptyState({

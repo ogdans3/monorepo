@@ -426,12 +426,10 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               const Text('Passord', style: Type.section),
               const SizedBox(height: 6),
-              TextField(
+              PasswordField(
                 controller: _password,
-                obscureText: true,
-                textInputAction: TextInputAction.done,
+                hint: '••••••••',
                 autofillHints: const [AutofillHints.password],
-                decoration: const InputDecoration(hintText: '••••••••'),
                 onSubmitted: (_) => _submit(),
               ),
               // Words, not a button: 10 under the field, 16 over the button —
@@ -757,8 +755,17 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                     _field('Telefonnummer', _phone, '412 34 567',
                         keyboard: TextInputType.phone,
                         hints: const [AutofillHints.telephoneNumber]),
-                    _field('Passord', _password, 'Velg et passord',
-                        obscure: true, hints: const [AutofillHints.newPassword], last: true),
+                    // With the eye to see it by: there is no reset yet, and
+                    // a typo here was a profile nobody could sign in to.
+                    _labelled(
+                      'Passord',
+                      PasswordField(
+                        controller: _password,
+                        hint: 'Velg et passord',
+                        autofillHints: const [AutofillHints.newPassword],
+                        onSubmitted: (_) => _submit(),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -808,30 +815,30 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   }
 
   Widget _field(String label, TextEditingController controller, String hint,
-      {TextInputType? keyboard,
-      bool obscure = false,
-      List<String>? hints,
-      bool last = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Type.section),
-          const SizedBox(height: 6),
-          TextField(
-            controller: controller,
-            keyboardType: keyboard,
-            obscureText: obscure,
-            autofillHints: hints,
-            textInputAction: last ? TextInputAction.done : TextInputAction.next,
-            onSubmitted: last ? (_) => _submit() : null,
-            decoration: InputDecoration(hintText: hint),
-          ),
-        ],
-      ),
-    );
-  }
+          {TextInputType? keyboard, List<String>? hints}) =>
+      _labelled(
+        label,
+        TextField(
+          controller: controller,
+          keyboardType: keyboard,
+          autofillHints: hints,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(hintText: hint),
+        ),
+      );
+
+  /// A field with its label over it, and the 15 under it.
+  Widget _labelled(String label, Widget field) => Padding(
+        padding: const EdgeInsets.only(bottom: 15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Type.section),
+            const SizedBox(height: 6),
+            field,
+          ],
+        ),
+      );
 }
 
 /// 02 Interesser. As many as somebody likes, none included, and the counter
