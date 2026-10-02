@@ -536,7 +536,12 @@ class SwaplyApi {
   Future<ChatMessage> sendMessage(String threadId, String body) async =>
       ChatMessage.fromJson(await _post('/threads/$threadId/messages', {'body': body}));
 
-  Future<void> markThreadRead(String threadId) async => _post('/threads/$threadId/read');
+  /// Read up to and including [upTo], the last message the screen has drawn,
+  /// and no further: one that arrived after the screen asked is not read
+  /// until it is on screen. A server from before the field reads the body
+  /// not at all, and marks everything read, as it always has.
+  Future<void> markThreadRead(String threadId, {String? upTo}) async =>
+      _post('/threads/$threadId/read', upTo == null ? null : {'upTo': upTo});
 
   // --- the rest -------------------------------------------------------------
 

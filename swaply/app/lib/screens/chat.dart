@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -176,11 +178,18 @@ class ThreadScreen extends StatefulWidget {
 
   final String threadId;
 
+  /// How often an open conversation asks whether anything was said. It
+  /// never asked: a reply landed on the server and not on the screen until
+  /// the person left and came back. Not a socket — there is none to listen
+  /// on — and not every second, on a server shared with real testers;
+  /// pulling the list down asks at once.
+  static const pollEvery = Duration(seconds: 10);
+
   @override
   State<ThreadScreen> createState() => _ThreadScreenState();
 }
 
-class _ThreadScreenState extends State<ThreadScreen> {
+class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver {
   Thread? _thread;
   Trade? _trade;
   ApiException? _error;
@@ -188,51 +197,127 @@ class _ThreadScreenState extends State<ThreadScreen> {
   final _scroll = ScrollController();
   bool _sending = false;
 
+  Timer? _poll;
+
+  /// Whether the app is in front. Nothing is asked from the background.
+  bool _inFront = true;
+
+  /// The newest asking, so an older answer landing late does not put an
+  /// older conversation back; and how many are on their way, so a poll
+  /// does not pile onto a slow one.
+  int _asking = 0, _inFlight = 0;
+
+  /// The last message the server has been told this person has read.
+  String? _readUpTo;
+
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addObserver(this);
+    final state = WidgetsBinding.instance.lifecycleState;
+    _inFront = state == null || state == AppLifecycleState.resumed;
+    _load(toEnd: true);
+    _startPolling();
   }
 
   @override
   void dispose() {
+    _poll?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _input.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  /// Asked for when the page opens, and again after a message or a proposal
-  /// is sent. Only the first asking can fail into [LoadFailure]: after that
-  /// the conversation stays and the failure is a toast over it. A message
-  /// that went, followed by a reload that did not, used to replace the
-  /// conversation with «Fant ikke samtalen».
-  Future<void> _load() async {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final inFront = state == AppLifecycleState.resumed;
+    if (inFront == _inFront) return;
+    _inFront = inFront;
+    if (inFront) {
+      // Back from the background: what was said meanwhile, at once.
+      _load(quiet: true);
+      _startPolling();
+    } else {
+      _poll?.cancel();
+    }
+  }
+
+  void _startPolling() {
+    _poll?.cancel();
+    _poll = Timer.periodic(ThreadScreen.pollEvery, (_) {
+      // Only while this is the screen on top: not under a sheet, and not
+      // under a page opened over it.
+      if (!mounted || !_inFront || _inFlight > 0) return;
+      if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
+      _load(quiet: true);
+    });
+  }
+
+  /// Asked for when the page opens, after a message or a proposal is sent,
+  /// on a pull, every [ThreadScreen.pollEvery] while it is on screen, and
+  /// when the app comes back. Only the first asking can fail into
+  /// [LoadFailure]: after that the conversation stays and the failure is a
+  /// toast over it — or nothing, when [quiet], for the askings nobody
+  /// pressed anything for. A message that went, followed by a reload that
+  /// did not, used to replace the conversation with «Fant ikke samtalen».
+  ///
+  /// The list goes to the newest message on opening and after a send, with
+  /// [toEnd]; otherwise only when something new arrived and the list was at
+  /// its end already, so a poll does not pull somebody away from what they
+  /// had scrolled up to read.
+  Future<void> _load({bool quiet = false, bool toEnd = false}) async {
     final api = context.read<SwaplyApi>();
+    final session = context.read<Session>();
+    final asking = ++_asking;
+    _inFlight++;
     try {
       final thread = await api.thread(widget.threadId);
       final trade = await api.trade(thread.tradeId);
-      await api.markThreadRead(widget.threadId);
-      if (!mounted) return;
+      if (!mounted || asking != _asking) return;
+      final before = _thread?.messages.lastOrNull?.id;
+      final atEnd = !_scroll.hasClients ||
+          _scroll.position.pixels >= _scroll.position.maxScrollExtent - 24;
       setState(() {
         _thread = thread;
         _trade = trade;
         _error = null;
       });
-      await context.read<Session>().refresh();
-      _scrollToEnd();
+      final last = thread.messages.lastOrNull?.id;
+      if (toEnd || (last != before && atEnd)) _scrollToEnd();
+      await _markRead(api, session, last);
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || asking != _asking) return;
       if (_thread == null) {
         setState(() => _error = e);
-      } else {
+      } else if (!quiet) {
         showError(context, e);
       }
+    } finally {
+      _inFlight--;
+    }
+  }
+
+  /// Read up to [last], the newest message now on screen, and no further:
+  /// the server used to mark read whatever was newest when the call reached
+  /// it, a message that arrived after this screen asked included. Once per
+  /// message, so a poll that brings nothing new tells the server nothing.
+  /// The badge on Chats follows from the session.
+  Future<void> _markRead(SwaplyApi api, Session session, String? last) async {
+    if (last == null || last == _readUpTo) return;
+    try {
+      await api.markThreadRead(widget.threadId, upTo: last);
+      _readUpTo = last;
+      await session.refresh();
+    } on ApiException {
+      // Not read, as far as the server knows; the next asking tries again.
+      // Nothing to say about it: the conversation is on screen.
     }
   }
 
   void _retry() {
     setState(() => _error = null);
-    _load();
+    _load(toEnd: true);
   }
 
   void _scrollToEnd() {
@@ -253,7 +338,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
       // and there is no conversation on screen to ask for again.
       if (!mounted) return;
       _input.clear();
-      await _load();
+      await _load(toEnd: true);
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -353,15 +438,22 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 ),
               ),
             Expanded(
-              child: ListView.builder(
-                controller: _scroll,
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                itemCount: thread.messages.length,
-                itemBuilder: (context, i) => Column(
-                  children: [
-                    if (i == 0) _dayLabel(thread.messages[i].createdAt),
-                    _bubble(thread.messages[i], thread.kind == 'chain'),
-                  ],
+              // Pulled down, it asks at once, as every list in the app does,
+              // and says so in a toast when there is no answer.
+              child: RefreshIndicator(
+                onRefresh: _load,
+                child: ListView.builder(
+                  controller: _scroll,
+                  // A short conversation can be pulled as well.
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  itemCount: thread.messages.length,
+                  itemBuilder: (context, i) => Column(
+                    children: [
+                      if (i == 0) _dayLabel(thread.messages[i].createdAt),
+                      _bubble(thread.messages[i], thread.kind == 'chain'),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -572,7 +664,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
   Future<void> _propose(Trade trade, ProposalKind kind) async {
     final sent = await showProposalSheet(context, trade: trade, kind: kind);
-    if (sent) await _load();
+    // Its line in the conversation is the newest thing in it.
+    if (sent) await _load(toEnd: true);
   }
 
 }
