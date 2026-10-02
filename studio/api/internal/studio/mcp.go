@@ -31,7 +31,7 @@ func (a *App) createAgentToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.audit(r.Context(), actor(r).Name, "agent.created", id)
-	write(w, 201, map[string]string{"id": id, "token": t, "endpoint": "http://localhost:8088/mcp"})
+	write(w, 201, map[string]string{"id": id, "token": t, "endpoint": strings.TrimRight(a.origin, "/") + "/mcp"})
 }
 func (a *App) revokeAgentToken(w http.ResponseWriter, r *http.Request) {
 	tag, e := a.db.Exec(r.Context(), "UPDATE agent_tokens SET revoked_at=now() WHERE id::text=$1", r.PathValue("id"))
@@ -54,6 +54,9 @@ func rpcError(w http.ResponseWriter, id json.RawMessage, code int, message strin
 	write(w, 200, map[string]any{"jsonrpc": "2.0", "id": id, "error": map[string]any{"code": code, "message": message}})
 }
 func mcpTool(name, description string, fields map[string]any, required ...string) map[string]any {
+	if required == nil {
+		required = []string{}
+	}
 	return map[string]any{"name": name, "description": description, "inputSchema": map[string]any{"type": "object", "properties": fields, "required": required, "additionalProperties": false}}
 }
 func mcpTools() []map[string]any {
@@ -72,16 +75,27 @@ func mcpTools() []map[string]any {
 }
 func (a *App) mcp(w http.ResponseWriter, r *http.Request) {
 	if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="Studio"`)
 		fail(w, 401, "Agent bearer token required")
 		return
 	}
 	u, e := a.auth(r)
 	if e != nil || !u.Agent {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="Studio", error="invalid_token"`)
 		fail(w, 401, "Invalid agent key")
 		return
 	}
 	if !a.allowed("mcp:"+u.ID, 60) {
 		fail(w, 429, "Agent rate limit reached")
+		return
+	}
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		fail(w, http.StatusMethodNotAllowed, "Studio bruker MCP Streamable HTTP med POST; en separat SSE-strøm støttes ikke")
+		return
+	}
+	if version := r.Header.Get("MCP-Protocol-Version"); version != "" && !supportedMCPVersion(version) {
+		fail(w, http.StatusBadRequest, "Unsupported MCP protocol version")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
@@ -106,7 +120,7 @@ func (a *App) mcp(w http.ResponseWriter, r *http.Request) {
 		}
 		json.Unmarshal(req.Params, &init)
 		version := "2025-06-18"
-		if init.Version == "2025-11-25" {
+		if supportedMCPVersion(init.Version) {
 			version = init.Version
 		}
 		result = map[string]any{"protocolVersion": version, "capabilities": map[string]any{"tools": map[string]bool{"listChanged": false}}, "serverInfo": map[string]string{"name": "studio", "version": "0.1.0"}, "instructions": "Use only this product. Claim a task before work and deliver using its lease. No automatic child tasks, publishing, approval, or secret access is available."}
@@ -137,6 +151,9 @@ func (a *App) mcp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, 200, map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": result})
+}
+func supportedMCPVersion(version string) bool {
+	return version == "2025-03-26" || version == "2025-06-18" || version == "2025-11-25"
 }
 func (a *App) callMCP(ctx context.Context, u Actor, name string, args map[string]string) (any, error) {
 	switch name {

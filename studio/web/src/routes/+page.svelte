@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import {
     ArrowUp,
     ArrowUpRight,
@@ -52,6 +53,7 @@
   import ItemTools from '$lib/components/ItemTools.svelte';
   import Workbench from '$lib/components/Workbench.svelte';
   import TaskPanel from '$lib/components/TaskPanel.svelte';
+  $: mcpEndpoint = $page.url.origin + '/mcp';
   let workArea = 'production',
     productionSeed = '',
     libraryFilterIDs: string[] | null = null,
@@ -1613,7 +1615,7 @@
                 Hver nøkkel gir tilgang til ett produkt. Agenten kan hente oppgaver og levere
                 innhold til gjennomgang.
               </p>
-              <code class="endpoint">http://localhost:8088/mcp</code>{#each agentKeys as key}<div
+              <code class="endpoint">{mcpEndpoint}</code>{#each agentKeys as key}<div
                   class="settings-list-row"
                 >
                   <span>{key.name}<small>{key.product_name}</small></span>{#if key.revoked_at}<span
@@ -2182,7 +2184,7 @@
         class="primary"
         onclick={() => copy(freshSecret)}><Copy size={16} />Kopier nøkkel</button
       >
-      <p class="small muted">MCP: http://localhost:8088/mcp · Authorization: Bearer nøkkel</p>
+      <p class="small muted">MCP: {mcpEndpoint} · Authorization: Bearer nøkkel</p>
     {:else if inviteLink}<p>Del denne lenken med {draft.email}.</p>
       <code class="secret">{inviteLink}</code><button
         class="primary"

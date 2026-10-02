@@ -46,7 +46,7 @@ Docker-volumer. `docker compose down` beholder data; `down -v` sletter dem.
 - MCP/CLI, produktroller, lagringsgrenser, daglig AI-budsjett og driftsoversikt.
 
 [Produktplanen](docs/product-plan.md) beskriver detaljene og de praktiske grensene.
-Ingen server er eksponert eksternt. Publisering på plattformene gjøres manuelt.
+Compose binder tjenestene til loopback. Publisering på sosiale plattformer gjøres manuelt.
 
 ## Lokale modeller og medier
 
@@ -118,9 +118,29 @@ utløper etter 90 dager og kan tilbakekalles. MCP-klienten må støtte Streamabl
 HTTP med eksplisitt header:
 
 ```text
-URL: http://localhost:8088/mcp
+URL: https://studio.freelunch.no/mcp
 Authorization: Bearer <agentnøkkel>
 ```
+
+Lokalt brukes `http://localhost:5178/mcp` gjennom samme webproxy; direkte API på
+`http://localhost:8088/mcp` virker også. Innstillinger og nye agentnøkler viser
+adressen til det aktuelle arbeidsrommet. `POST /mcp` håndterer MCP-meldinger.
+Et autentisert `GET /mcp` gir 405 fordi serveren ikke tilbyr en separat SSE-strøm;
+det er forventet for denne [Streamable HTTP-transporten](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
+En vanlig nettleser uten agentnøkkel får 401.
+
+På serveren skal `APP_ORIGIN=https://studio.freelunch.no`. Domenet peker til
+`web:5178`, som videresender både `/api/*` og `/mcp` til API-et og beholder
+Authorization, Origin og MCP-headere. Port 8088 skal fortsatt være intern.
+Etter pull av `studio`-branchen må **både api og web** bygges og startes på nytt:
+
+```sh
+docker compose up -d --build api web
+```
+
+Deploy startes manuelt. Cloudflare må slippe MCP-trafikken frem til applikasjonens
+Bearer-autentisering; MCP-klienter kan ikke fullføre nettleserutfordringer. En
+Cloudflare-feil før forespørselen når Studio må rettes i domenets Cloudflare-oppsett.
 
 Agenten trenger egne verktøy for video/design og eget kostnadstak. Studio leverer
 brief, mal, kilder, ønskede formater og sjekkliste. Leveranser valideres og legges

@@ -4,7 +4,7 @@ Studio fordeler arbeid over MCP. Agenten bruker sin egen modell og setter sitt e
 budsjett. Nøkkelen har kun tilgang til ett produkt. Ikke la agenten kjøre uten grenser.
 
 ```sh
-export STUDIO_URL=http://localhost:8088
+export STUDIO_URL=https://studio.freelunch.no
 # Sett STUDIO_AGENT_TOKEN med nøkkelen fra Innstillinger; ikke commit den.
 python3 agent/studio.py context
 python3 agent/studio.py tools
@@ -13,6 +13,10 @@ python3 agent/studio.py call studio_claim_task '{"task_id":"UUID"}'
 python3 agent/studio.py call studio_get_task '{"task_id":"UUID"}'
 python3 agent/studio.py upload video.mp4 --rights owned
 ```
+
+MCP-adressen er `$STUDIO_URL/mcp`, med `Authorization: Bearer <agentnøkkel>`.
+Bruk `http://localhost:5178` som `STUDIO_URL` lokalt. Webserveren videresender både
+MCP og agentens fil-API, så samme domene brukes gjennom hele arbeidsflyten.
 
 Arbeidsrekkefølge:
 

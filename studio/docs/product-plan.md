@@ -56,8 +56,9 @@ mobil og desktop. Lokal mediebehandling kjører i en egen CPU-container.
 - Koblinger til Teorimester mottar hendelser via API; Studio endrer ikke andre
   monorepo-prosjekter. Avsenderen må koble seg til mottaket.
 - Delingslenker gjelder én fast versjon, har utløp og kan tilbakekalles.
-- Kun lokal loopback-drift er satt opp. Sikkerhetskopier må kjøres og flyttes til
-  ønsket backupmål av driftsansvarlig. Ingen ekstern tjeneste eller server er satt opp.
+- Compose bruker loopback. Den deployede adressen `studio.freelunch.no` peker til
+  webserveren, som videresender API og MCP. Deploy startes manuelt. Sikkerhetskopier
+  må kjøres og flyttes til ønsket backupmål av driftsansvarlig.
 
 ## Senere, utenfor avtalt lokal lanseringsversjon
 

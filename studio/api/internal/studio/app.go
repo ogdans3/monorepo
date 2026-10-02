@@ -228,7 +228,7 @@ func (a *App) Handler() http.Handler {
 		m.HandleFunc(route.pattern, a.protected(route.handler, route.write, route.admin))
 	}
 	a.extendedRoutes(m)
-	m.HandleFunc("POST /mcp", a.mcp)
+	m.HandleFunc("/mcp", a.mcp)
 	m.HandleFunc("POST /api/agent/uploads", a.protected(a.upload, true, false))
 	m.HandleFunc("GET /api/agent/files/{id}", a.protected(a.file, false, false))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -239,7 +239,7 @@ func (a *App) Handler() http.Handler {
 			fail(w, 403, "Origin not allowed")
 			return
 		}
-		if r.Method != "GET" && r.Method != "HEAD" && r.Header.Get("Authorization") == "" && r.Header.Get("Origin") != a.origin {
+		if r.URL.Path != "/mcp" && r.Method != "GET" && r.Method != "HEAD" && r.Header.Get("Authorization") == "" && r.Header.Get("Origin") != a.origin {
 			fail(w, 403, "Origin required")
 			return
 		}

@@ -64,3 +64,20 @@ integreres mot Studio-mottaket. Disse forbindelsene, serverdrift og punktene und
   vellykket nedlasting derfra er derfor ikke bekreftet fra dette nettverket.
 - TypeScript/Svelte og containerbygg bestått. Ingen betalte AI-kall eller ekstern
   publisering. Plattformenes tilgjengelighet kan endre seg mellom forespørsler.
+
+## MCP på samme domene — 2. oktober 2026
+
+- Rettet manglende `/mcp`-proxy i SvelteKit. Den offentlige webporten videresender
+  MCP til intern API, med Bearer-, Origin- og MCP-headere og uendrede statuser.
+- Innstillinger og opprettelse av agentnøkler bruker arbeidsrommets adresse.
+  `.dashboard.yaml` peker fortsatt til web; API-porten forblir intern.
+- Manglende/ugyldig agentnøkkel gir 401 med Bearer-challenge. Autentisert GET og
+  DELETE gir 405: serveren er stateless og bruker POST med JSON-svar. Ugyldig
+  Origin avvises fortsatt. Verktøyskjemaer har tom required-liste i stedet for null.
+- Go/Postgres med race-detektor bestått. Åtte nettlesertester bestått; egne MCP-
+  tester verifiserer initialize, notifications, tools/list, headerformidling,
+  ugyldig protokoll, tilbakekalling og riktig adresse på desktop og mobil.
+- Produksjonscontainerne bygget og startet lokalt; web svarer 200, og GET/POST
+  på webportens `/mcp` svarer 401 uten nøkkel. Deploy til `studio.freelunch.no`
+  startes manuelt. Ekstern kontroll ble stoppet foran appen av Cloudflare 403/1010;
+  vellykket MCP-tilkobling på det deployede domenet er foreløpig ikke verifisert.
