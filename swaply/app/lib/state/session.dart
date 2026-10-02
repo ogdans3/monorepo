@@ -881,7 +881,16 @@ class Session extends ChangeNotifier {
     await drafts.handOver(stranger, now, finish: listingToFinish != null);
   }
 
-  Future<void> logout() async {
+  /// A sign-out on its way; see [logout].
+  Future<void>? _loggingOut;
+
+  /// Signs out here and on the server, once however often it is asked: on a
+  /// bad line the server's answer takes up to the api's patience, and each
+  /// tap meanwhile signed out again and kept another new device id after the
+  /// first.
+  Future<void> logout() => _loggingOut ??= _logout().whenComplete(() => _loggingOut = null);
+
+  Future<void> _logout() async {
     try {
       await api.logout();
     } catch (_) {

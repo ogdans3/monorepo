@@ -2,6 +2,7 @@
 //
 // Everything on 13 is the session's — the things, the likes, the rating — so
 // 13 is only as current as the last time the session asked who you are.
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -291,6 +292,59 @@ void main() {
       expect(session.actingAs, isTrue);
       expect(session.actingAsAdminName, 'Ola N.');
       expect(session.interestsPending, isFalse);
+    });
+  });
+
+  group('«Logg ut» on a bad line', () {
+    testWidgets('1. it says it is on its way, and a second press is not a second sign-out',
+        (tester) async {
+      // It showed nothing for up to twenty seconds, and each press meanwhile
+      // signed out again and kept another new device id.
+      final answer = Completer<Object?>();
+      server.overrides['POST /auth/logout'] = (http.Request _) => answer.future;
+      await mount(tester, const SettingsScreen());
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.ensureVisible(find.text('Logg ut'));
+      await tester.tap(find.text('Logg ut'));
+      await tester.pump();
+      expect(find.text('Logger ut …'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.tap(find.text('Logger ut …'));
+      await tester.pump();
+      expect(server.asked('POST /auth/logout'), 1);
+
+      answer.complete(<String, Object?>{});
+      // The gate takes 16b down in the app; mounted alone it stays, busy.
+      await tester.pump(const Duration(seconds: 1));
+      expect(session.signedIn, isFalse);
+      expect(server.asked('POST /auth/logout'), 1);
+      expect(prefs.getString('deviceId'), isNotNull);
+    });
+
+    test('2. asked twice at once, the session signs out once, with one new device id', () async {
+      await session.login('ola@epost.no', 'passord');
+      final answer = Completer<Object?>();
+      server.overrides['POST /auth/logout'] = (http.Request _) => answer.future;
+      final prefs = await SharedPreferences.getInstance();
+      final ids = <String?>[];
+
+      final first = session.logout();
+      final second = session.logout();
+      expect(identical(first, second), isTrue);
+      answer.complete(<String, Object?>{});
+      await first;
+      ids.add(prefs.getString('deviceId'));
+      await second;
+      ids.add(prefs.getString('deviceId'));
+
+      expect(server.asked('POST /auth/logout'), 1);
+      expect(ids.toSet(), hasLength(1));
+      // And a later sign-out is a sign-out of its own again.
+      await session.login('ola@epost.no', 'passord');
+      await session.logout();
+      expect(server.asked('POST /auth/logout'), 2);
     });
   });
 }

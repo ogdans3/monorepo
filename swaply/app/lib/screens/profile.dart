@@ -904,27 +904,52 @@ class SettingsScreen extends StatelessWidget {
             // where the export puts it, and it is not something to advertise.
             // Still the screen's last action, and a toast goes up over it
             // when it is at the foot.
-            KeepClear(
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Logg ut',
-                    style: TextStyle(
-                        fontSize: 14.5, fontWeight: FontWeight.w700, color: SwaplyColors.redText)),
-                onTap: () async {
-                  await context.read<Session>().logout();
-                  // Not to the sign-in: the gate makes whoever holds the phone
-                  // next a new stranger, and 02 is the first thing they see.
-                  if (context.mounted) backThroughGate(context);
-                },
-              ),
-            ),
+            const KeepClear(child: _LogOutRow()),
           ]),
           const SizedBox(height: Insets.xl),
         ],
       ),
     );
   }
+}
+
+/// «Logg ut» on 16b. It waits for the server to end the session, which on a
+/// bad line takes up to the api's patience, and it showed nothing for all of
+/// it: the row was pressed again, and each press signed out once more. It
+/// says it is on its way, and takes no second press.
+class _LogOutRow extends StatefulWidget {
+  const _LogOutRow();
+
+  @override
+  State<_LogOutRow> createState() => _LogOutRowState();
+}
+
+class _LogOutRowState extends State<_LogOutRow> {
+  bool _busy = false;
+
+  Future<void> _logOut() async {
+    setState(() => _busy = true);
+    await context.read<Session>().logout();
+    // Not to the sign-in: the gate makes whoever holds the phone next a new
+    // stranger, and 02 is the first thing they see.
+    if (mounted) backThroughGate(context);
+  }
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+        title: Text(_busy ? 'Logger ut …' : 'Logg ut',
+            style: const TextStyle(
+                fontSize: 14.5, fontWeight: FontWeight.w700, color: SwaplyColors.redText)),
+        trailing: _busy
+            ? const SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: SwaplyColors.redText))
+            : null,
+        onTap: _busy ? null : _logOut,
+      );
 }
 
 /// The export keeps a group of rows inside one card rather than letting them
