@@ -676,13 +676,22 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
     if (yes != true || !mounted) return;
 
+    final session = context.read<Session>();
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await context.read<SwaplyApi>().deleteItem(item.id);
-      if (mounted) Navigator.of(context).maybePop();
     } on ApiException catch (e) {
       // «Gjenstanden er reservert i et bytte» is the one refusal worth reading.
       if (mounted) showError(context, e);
+      return;
     }
+    // Gone, and said so over whatever the page goes back to. The session is
+    // asked again for 13's list of things and its count, which went on
+    // showing the listing after it was taken down — quietly: it is gone
+    // whatever that says.
+    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
+    if (mounted) Navigator.of(context).maybePop();
+    showDoneOn(messenger, 'Annonsen er fjernet.');
   }
 
   /// Round, 38 across, over the photograph. The ripple stays the circle; the

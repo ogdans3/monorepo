@@ -358,10 +358,15 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
       _ => ('Tilgjengelig', SwaplyColors.greenText),
     };
 
-    // The whole cell, to the foot of the caption row.
+    // The whole cell, to the foot of the caption row. 13 asks again as the
+    // page closes: corrected or taken down there, the listing stood here as
+    // it was until the tab was left and come back to.
     return TapArea(
-      onTap: () => Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: item.id))),
+      onTap: () async {
+        await Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: item.id)));
+        _askAgain();
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
