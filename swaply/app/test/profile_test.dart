@@ -15,6 +15,7 @@ import 'package:swaply_app/screens/item_detail.dart';
 import 'package:swaply_app/screens/onboarding.dart';
 import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/util/clock.dart';
 import 'package:swaply_app/widgets/common.dart';
 
 import 'fake_server.dart';
@@ -459,6 +460,59 @@ void main() {
 
       expect(sheet, findsNothing);
       expect(outcomes, [false]);
+    });
+  });
+
+  group('17c as the export draws it', () {
+    testWidgets('1. one «+ Legg ut», the empty state\'s, and no second one floating', (tester) async {
+      server.overrides['GET /me'] = {...FakeServer.me, 'items': const [], 'likedByCount': 0};
+      await mount(tester, const ProfileScreen());
+
+      expect(find.text('Du har ingen ting ute'), findsOneWidget);
+      expect(find.text('+ Legg ut'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, '+ Legg ut'), findsOneWidget);
+      // The bar's tab is the export's too; nothing else says it.
+      expect(
+          find.descendant(
+              of: find.byType(ListView),
+              matching: find.byWidgetPredicate(
+                  (w) => w is Text && (w.data == 'Legg ut' || w.data == '+ Legg ut'))),
+          findsOneWidget);
+    });
+
+    testWidgets('2. …and 13 with things keeps its floating «+ Legg ut»', (tester) async {
+      await mount(tester, const ProfileScreen());
+
+      expect(find.text('+ Legg ut'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, '+ Legg ut'), findsNothing);
+    });
+
+    testWidgets('3. somebody who joined today is «ny i dag», not «medlem siden» this month',
+        (tester) async {
+      now = () => DateTime(2026, 10, 2, 15);
+      addTearDown(() => now = DateTime.now);
+      server.overrides['GET /me'] = {
+        ...FakeServer.me,
+        'items': const [],
+        'memberSince': DateTime(2026, 10, 2, 9).toUtc().toIso8601String(),
+      };
+      await mount(tester, const ProfileScreen());
+
+      expect(find.text('Trondheim · ny i dag'), findsOneWidget);
+      expect(find.textContaining('medlem siden'), findsNothing);
+    });
+
+    testWidgets('4. …and somebody who joined yesterday has been a member since the month',
+        (tester) async {
+      now = () => DateTime(2026, 10, 2, 15);
+      addTearDown(() => now = DateTime.now);
+      server.overrides['GET /me'] = {
+        ...FakeServer.me,
+        'memberSince': DateTime(2026, 10, 1, 9).toUtc().toIso8601String(),
+      };
+      await mount(tester, const ProfileScreen());
+
+      expect(find.text('Trondheim · medlem siden oktober'), findsOneWidget);
     });
   });
 }

@@ -8,6 +8,7 @@ import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
 import '../state/session.dart';
+import '../util/clock.dart';
 import '../widgets/admin_chrome.dart';
 import '../widgets/common.dart';
 import '../widgets/share_sheet.dart';
@@ -112,8 +113,10 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
     return SwaplyScaffold(
       currentTab: 4,
       // «+ Legg ut» floats at the bottom right, 20 in from the edge and 44
-      // above the tab bar, exactly where the export leaves it.
-      floatingActionButton: Padding(
+      // above the tab bar, exactly where the export leaves it. Not on 17c,
+      // where the export makes it the empty state's own button: there were
+      // two «Legg ut» on one empty screen.
+      floatingActionButton: me.items.isEmpty ? null : Padding(
         padding: const EdgeInsets.only(right: 4, bottom: 28),
         child: GestureDetector(
           onTap: () => openListingForm(context),
@@ -320,7 +323,8 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                 icon: Icons.inventory_2_outlined,
                 title: 'Du har ingen ting ute',
                 body: 'Legg ut den første tingen din. Det tar under et minutt.',
-                actionLabel: 'Legg ut',
+                // The export's words for the one button 17c has.
+                actionLabel: '+ Legg ut',
                 onAction: () => openListingForm(context),
               )
             else
@@ -1737,10 +1741,16 @@ String _month(DateTime date) => _months[date.month - 1];
 /// what is not known left out rather than joined in empty. A town saved as ''
 /// — what «Rediger profil» sent for an emptied field, and what real testers
 /// may have stored — drew « · medlem siden mai».
+///
+/// Somebody who joined today is «ny i dag», as 17c draws it: «medlem siden
+/// oktober», on the day itself, said they had been around a while.
 String _whereAndSince(String? town, DateTime? memberSince) => [
       if (town != null && town.trim().isNotEmpty) town.trim(),
-      if (memberSince != null) 'medlem siden ${_month(memberSince)}',
+      if (memberSince != null)
+        _sameDay(memberSince, now()) ? 'ny i dag' : 'medlem siden ${_month(memberSince)}',
     ].join(' · ');
+
+bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
 /// BankID, which `docs/DESIGN.md` asks for at the first accept and again from
 /// the settings. A trust marker, never a login method: what we store is a

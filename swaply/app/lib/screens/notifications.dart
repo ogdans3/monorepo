@@ -119,8 +119,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   (String, String) _copy(AppNotification n) => switch (n.type) {
+        // By first name, as the export writes it and every other screen
+        // names people: the server sends the whole name, «Kari N.».
         'item_liked' => (
-            '${n.actorName ?? 'Noen'} likte ${n.itemTitle ?? 'noe av ditt'}',
+            '${_firstName(n.actorName)} likte ${n.itemTitle ?? 'noe av ditt'}',
             'Se tingene deres og lik tilbake, det lukker bytter raskere.',
           ),
         'trade_opened' => (
@@ -167,6 +169,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         _ => ('Varsel', 'Åpne Swaply for å se hva som skjedde.'),
       };
+
+  static String _firstName(String? name) {
+    final whole = (name ?? '').trim();
+    return whole.isEmpty ? 'Noen' : whole.split(' ').first;
+  }
 
   void _open(AppNotification n) {
     final tradeId = n.payload['tradeId'] as String?;
