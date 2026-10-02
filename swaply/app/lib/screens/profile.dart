@@ -224,14 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              [
-                                if (me.town != null) me.town!,
-                                if (me.memberSince != null)
-                                  'medlem siden ${_month(me.memberSince!)}',
-                              ].join(' · '),
-                              style: Type.secondary,
-                            ),
+                            Text(_whereAndSince(me.town, me.memberSince), style: Type.secondary),
                           ],
                         ),
                       ),
@@ -615,14 +608,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                       style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      [
-                        if (user.town != null) user.town!,
-                        if (user.memberSince != null)
-                          'medlem siden ${_month(user.memberSince!)}',
-                      ].join(' · '),
-                      style: Type.secondary,
-                    ),
+                    Text(_whereAndSince(user.town, user.memberSince), style: Type.secondary),
                   ],
                 ),
               ),
@@ -1372,13 +1358,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _save() async {
     setState(() => _busy = true);
+    final api = context.read<SwaplyApi>();
+    final had = context.read<Session>().me?.town;
+    final town = _town.text.trim();
+    final patch = <String, dynamic>{
+      'displayName': _name.text.trim(),
+      'email': _email.text.trim(),
+      'phone': _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+      // Emptied, it is null, which clears it: it was sent as '', which was
+      // kept, and 13 said « · medlem siden mai» with nothing in front. Left
+      // out when there is none to clear, since a server from before it took
+      // null refuses one.
+      if (town.isNotEmpty) 'town': town else if (had != null) 'town': null,
+    };
     try {
-      await context.read<SwaplyApi>().updateMe({
-        'displayName': _name.text.trim(),
-        'email': _email.text.trim(),
-        'phone': _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-        'town': _town.text.trim(),
-      });
+      try {
+        await api.updateMe(patch);
+      } on ApiException catch (e) {
+        // That server, asked to clear the town: the rest is saved without
+        // it, and the town stays, which is all such a server can do.
+        if (e.code != 'invalid_request' || !patch.containsKey('town') || patch['town'] != null) {
+          rethrow;
+        }
+        await api.updateMe({...patch}..remove('town'));
+      }
       if (!mounted) return;
       await context.read<Session>().refresh();
       if (mounted) Navigator.of(context).pop();
@@ -1616,6 +1619,15 @@ const _months = [
 ];
 
 String _month(DateTime date) => _months[date.month - 1];
+
+/// «Trondheim · medlem siden mai», the line under a name on 13 and 13b, with
+/// what is not known left out rather than joined in empty. A town saved as ''
+/// — what «Rediger profil» sent for an emptied field, and what real testers
+/// may have stored — drew « · medlem siden mai».
+String _whereAndSince(String? town, DateTime? memberSince) => [
+      if (town != null && town.trim().isNotEmpty) town.trim(),
+      if (memberSince != null) 'medlem siden ${_month(memberSince)}',
+    ].join(' · ');
 
 /// BankID, which `docs/DESIGN.md` asks for at the first accept and again from
 /// the settings. A trust marker, never a login method: what we store is a

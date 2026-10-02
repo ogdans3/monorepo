@@ -222,7 +222,8 @@ class _LikedScreenState extends State<LikedScreen> {
     final facts = [
       if (!liker.anonymous && user.itemCount != null)
         user.itemCount == 1 ? '1 gjenstand' : '${user.itemCount} gjenstander',
-      if (user.town != null) user.town!,
+      // An empty town is none: «4 gjenstander · » said nothing more.
+      if (user.town != null && user.town!.trim().isNotEmpty) user.town!.trim(),
     ].join(' · ');
     final name = liker.anonymous ? 'Noen' : user.displayName.split(' ').first;
 

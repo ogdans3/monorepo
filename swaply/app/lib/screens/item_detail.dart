@@ -292,7 +292,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           if (item.kind == 'service') const Pill('Tjeneste', small: true),
                           // The town is not a pill in the export: where a thing
                           // is, is a note, not a label on it.
-                          if (item.town != null) Text(item.town!, style: Type.secondary),
+                          if (item.town != null && item.town!.trim().isNotEmpty)
+                            Text(item.town!, style: Type.secondary),
                         ],
                       ),
                       if (item.likeCount != null) ...[

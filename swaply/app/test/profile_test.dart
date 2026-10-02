@@ -2,6 +2,8 @@
 //
 // Everything on 13 is the session's — the things, the likes, the rating — so
 // 13 is only as current as the last time the session asked who you are.
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -142,4 +144,81 @@ void main() {
       expect(find.text('Bosch drill 18V med koffert'), findsOneWidget);
     });
   });
+
+  group('an empty town is no town', () {
+    Finder field(int i) => find.byType(TextField).at(i);
+    const town = 3;
+
+    testWidgets('1. «Rediger profil» clears an emptied town with null, not \'\'', (tester) async {
+      await mount(tester, const EditProfileScreen());
+      expect(tester.widget<TextField>(field(town)).controller!.text, 'Trondheim');
+
+      await tester.enterText(field(town), '  ');
+      await tester.tap(find.text('Lagre'));
+      await tester.pumpAndSettle();
+
+      final sent = server.bodies['PATCH /me']!;
+      expect(sent.containsKey('town'), isTrue);
+      expect(sent['town'], isNull);
+      expect(find.byType(EditProfileScreen), findsNothing);
+    });
+
+    testWidgets('2. …and a server that does not take null saves the rest without it',
+        (tester) async {
+      // Before the server cleared on null it refused one for the town, and
+      // «Lagre» failed over a field that was only being emptied.
+      server.overrides['PATCH /me'] = (http.Request request) {
+        final body = jsonDecode(request.body) as Map;
+        return body.containsKey('town') && body['town'] == null
+            ? const Refusal(400, 'invalid_request', 'Noe mangler i det du sendte.')
+            : FakeServer.profileOnly(FakeServer.me);
+      };
+      await mount(tester, const EditProfileScreen());
+
+      await tester.enterText(field(0), 'Ola Nordmann');
+      await tester.enterText(field(town), '');
+      await tester.tap(find.text('Lagre'));
+      await tester.pumpAndSettle();
+
+      expect(server.asked('PATCH /me'), 2);
+      expect(server.bodies['PATCH /me']!.containsKey('town'), isFalse);
+      expect(server.bodies['PATCH /me']!['displayName'], 'Ola Nordmann');
+      expect(find.text('Noe mangler i det du sendte.'), findsNothing);
+      expect(find.byType(EditProfileScreen), findsNothing);
+    });
+
+    testWidgets('3. none to clear is not sent at all', (tester) async {
+      server.overrides['POST /auth/login'] = {
+        'token': 'tok',
+        'user': FakeServer.profileOnly({...FakeServer.me, 'town': null}),
+      };
+      server.overrides['GET /me'] = {...FakeServer.me, 'town': null};
+      await mount(tester, const EditProfileScreen());
+
+      await tester.tap(find.text('Lagre'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['PATCH /me']!.containsKey('town'), isFalse);
+    });
+
+    testWidgets('4. 13 and 13b leave an empty town out of the line under the name',
+        (tester) async {
+      // Real testers may have '' stored already, from before.
+      server.overrides['GET /me'] = {...FakeServer.me, 'town': ''};
+      server.overrides['GET /users/kari-1'] = {
+        ...FakeServer.kari,
+        'town': '',
+        'items': [FakeServer.console],
+      };
+      await mount(tester, const ProfileScreen());
+      expect(find.text('medlem siden mai'), findsOneWidget);
+      expect(find.textContaining(' · medlem siden'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox());
+      await mount(tester, const OtherProfileScreen(userId: 'kari-1'), signedIn: false);
+      expect(find.text('medlem siden februar'), findsOneWidget);
+      expect(find.textContaining(' · medlem siden'), findsNothing);
+    });
+  });
 }
+
