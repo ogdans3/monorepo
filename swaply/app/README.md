@@ -699,6 +699,17 @@ never reach it, so its 13 is drawn as it was. The answer to `PUT
 taken whole, 13 lost its things and an admin acting as somebody lost the floor.
 `test/profile_test.dart` holds both.
 
+**A line over «Send motbytte»: «Når du sender forslaget, har du godtatt det
+og byttevilkårene.»** 09a draws the button alone. Sending a counter-offer is
+its proposer's yes (DESIGN.md, 02.10.2026) — the one 09e draws as «✓ Har
+godtatt» — and a yes holds the person's own things in the deal, so they are
+told before they press, and the whole line opens the terms (`showTradeTerms`
+in `screens/terms.dart`). A chip's proposal in the chat says the same when it
+makes a deal with something on both sides; with a side still empty it is a
+question, and says nothing. 09e's «Godta endringen» is the export's own
+words, used now that the other side has agreed by proposing.
+`test/counter_is_a_yes_test.dart` holds it, and the 09a golden has the line.
+
 **No proposal chips in a ring's chat.** 07k draws «Foreslå ting», «Be om
 ekstra» and «Foreslå mellomlegg» under the field as 06g does, but a proposal is
 an offer between two people, and the server refuses one in a ring of three: the

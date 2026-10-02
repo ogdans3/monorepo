@@ -5,6 +5,7 @@ import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
 import '../widgets/common.dart';
+import 'terms.dart';
 
 /// The three sheets behind the chips over the message field: 09c «Foreslå
 /// ting», 09c2 «Be om ekstra» and 09d «Foreslå mellomlegg».
@@ -58,6 +59,14 @@ class _ProposalSheetState extends State<_ProposalSheet> {
   bool _busy = false;
 
   String get _other => widget.trade.receivingFrom.displayName.split(' ').first;
+
+  /// Whether the version this sends has something on both sides — the only
+  /// kind the server takes as its proposer's yes.
+  bool get _makesADeal => switch (widget.kind) {
+        ProposalKind.offerMine => widget.trade.youGet.isNotEmpty,
+        ProposalKind.askTheirs => widget.trade.youGive.isNotEmpty,
+        ProposalKind.cash => widget.trade.youGive.isNotEmpty && widget.trade.youGet.isNotEmpty,
+      };
 
   int get _theirPosition =>
       widget.trade.receivingFrom.position ?? (widget.trade.youPosition == 0 ? 1 : 0);
@@ -131,7 +140,8 @@ class _ProposalSheetState extends State<_ProposalSheet> {
     try {
       // On the offer this sheet was opened over, like a counter-offer from
       // 09a: one proposed meanwhile is refused rather than written over.
-      await widget.api.counter(trade.id, items, cash, baseOfferId: trade.offerId);
+      await widget.api.counter(trade.id, items, cash,
+          baseOfferId: trade.offerId, termsVersion: termsVersion);
       proposed = true;
       if (trade.threadId != null) {
         await widget.api.sendMessage(trade.threadId!, _messageLine());
@@ -194,6 +204,9 @@ class _ProposalSheetState extends State<_ProposalSheet> {
                     ..._pickList(
                         widget.kind == ProposalKind.offerMine ? _mine : _theirs),
                   const SizedBox(height: Insets.lg),
+                  // Only where sending makes a deal somebody can say yes to:
+                  // with a side still empty it is a question, not a yes.
+                  if (_makesADeal) AgreesBySending(other: _other),
                   PrimaryButton(
                     _confirmLabel(),
                     busy: _busy,

@@ -481,9 +481,16 @@ class SwaplyApi {
     List<Map<String, dynamic>> items,
     Map<String, dynamic>? cash, {
     String? baseOfferId,
+    // The terms the person agreed to by sending: a proposal is its proposer's
+    // yes (`screens/terms.dart`). A server from before that ignores it.
+    String? termsVersion,
   }) async =>
-      Trade.fromJson(await _post('/trades/$tradeId/counter',
-          {'items': items, 'cash': cash, 'baseOfferId': ?baseOfferId}));
+      Trade.fromJson(await _post('/trades/$tradeId/counter', {
+        'items': items,
+        'cash': cash,
+        'baseOfferId': ?baseOfferId,
+        'termsVersion': ?termsVersion,
+      }));
 
   Future<Trade> decline(String tradeId) async =>
       Trade.fromJson(await _post('/trades/$tradeId/decline'));

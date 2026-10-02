@@ -543,8 +543,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           withdrawal.blockedBySent)
         _blockedBanner(trade),
       // 09e: a new proposal is on the table.
-      if (trade.state == 'countered' && trade.counterOfferBy != trade.participants
-              .firstWhere((p) => p.position == trade.youPosition, orElse: () => trade.receivingFrom).id)
+      if (_counteredByOther(trade))
         _noticeCard('Nytt forslag fra ${trade.receivingFrom.displayName.split(' ').first}. '
             'Godta, avslå eller foreslå noe annet.'),
       // Nothing to accept yet: one side of the offer is still empty.
@@ -738,6 +737,16 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       ),
     );
   }
+
+  /// 09e: the version on the table was proposed by somebody else, which
+  /// since 02.10.2026 also means they have said yes to it.
+  bool _counteredByOther(Trade trade) =>
+      trade.state == 'countered' &&
+      trade.counterOfferBy != null &&
+      trade.counterOfferBy !=
+          trade.participants
+              .firstWhere((p) => p.position == trade.youPosition, orElse: () => trade.receivingFrom)
+              .id;
 
   Widget _noticeCard(String text) => Padding(
         padding: const EdgeInsets.only(top: Insets.sm),
@@ -1472,7 +1481,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             decline,
             const SizedBox(width: 10),
             Expanded(
-              child: PrimaryButton('Godta byttet',
+              // 09e's words for a version somebody else proposed, and agreed
+              // to by proposing it: what is left is to agree to the change.
+              child: PrimaryButton(_counteredByOther(trade) ? 'Godta endringen' : 'Godta byttet',
                   height: 50,
                   busy: _busy,
                   onPressed: () async {

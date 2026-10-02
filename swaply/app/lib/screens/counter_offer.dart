@@ -6,6 +6,7 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
+import 'terms.dart';
 
 /// 09a Foreslå motbytte, with 09b «Legg til ting», 09c «Foreslå ting»,
 /// 09c2 «Be om ekstra» and 09d «Foreslå mellomlegg» folded into it as sheets.
@@ -95,6 +96,8 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
         // What this was composed on. Another proposal landing while it was
         // composed is refused rather than silently written over.
         baseOfferId: widget.trade.offerId,
+        // Sending it is saying yes to it, as the line over the button says.
+        termsVersion: termsVersion,
       );
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
@@ -160,6 +163,7 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                     padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
                     child: Column(
                       children: [
+                        AgreesBySending(other: other),
                         PrimaryButton('Send motbytte',
                             busy: _busy,
                             // Both sides, because a deal where one of them
