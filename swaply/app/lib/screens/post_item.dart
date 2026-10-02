@@ -78,6 +78,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
   String _kind = 'item';
   String _category = 'verktoy';
   String? _condition = 'good';
+
+  /// The condition a service had as a thing, for when it is one again.
+  String _conditionAsThing = 'good';
   bool _busy = false;
   String? _error;
 
@@ -350,7 +353,41 @@ class _PostItemScreenState extends State<PostItemScreen> {
     return true;
   }
 
+  /// The server's limits on a listing (`itemBody` in
+  /// `backend/src/routes/items.ts`; the two change together).
+  static const _mostTitle = 80, _mostDescription = 2000, _mostSubcategory = 60;
+  static const _mostValue = 10000000;
+
+  /// What the server would refuse in the form as it stands, in words that
+  /// name the field, or null. Only the postcode used to be asked about before
+  /// 10c, so a stranger made a profile for a listing the server then refused
+  /// — a title of 81 letters, a thing with no condition — and was told so in
+  /// words that name nothing: «Bruk høyst 80 tegn.»
+  String? get _unfit {
+    final title = _title.text.trim();
+    if (title.isEmpty) return 'Gi gjenstanden en tittel.';
+    if (title.length > _mostTitle) return 'Tittelen kan ha høyst $_mostTitle tegn.';
+    if (_description.text.trim().length > _mostDescription) {
+      return 'Beskrivelsen kan ha høyst $_mostDescription tegn.';
+    }
+    if (_subcategory.text.trim().length > _mostSubcategory) {
+      return 'Underkategorien kan ha høyst $_mostSubcategory tegn.';
+    }
+    final value = _valueTyped;
+    if (_value.text.trim().isNotEmpty && (value == null || value > _mostValue)) {
+      return 'Anslått verdi kan være høyst ${kr(_mostValue)}.';
+    }
+    // The server's own words for it, which name the field.
+    if (_kind == 'item' && _condition == null) return 'Velg tilstand for gjenstanden.';
+    return null;
+  }
+
   Future<void> _submit() async {
+    // Before 10c, not after it, as the postcode is below.
+    if (_unfit case final unfit?) {
+      setState(() => _error = unfit);
+      return;
+    }
     // Before 10c, not after it: a stranger whose postcode was wrong used to
     // make a profile for a listing the server then refused.
     if (!await _postcodeHolds() || !mounted) return;
@@ -668,9 +705,6 @@ class _PostItemScreenState extends State<PostItemScreen> {
                   TapArea(
                     child: TextField(
                       controller: _title,
-                      // The button below reads this field, so it has to be
-                      // rebuilt as it is typed into.
-                      onChanged: (_) => setState(() {}),
                       style: _fieldText,
                       decoration: _field('Bosch drill 18V'),
                     ),
@@ -739,13 +773,21 @@ class _PostItemScreenState extends State<PostItemScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _pick('Gjenstand', _kind == 'item', () {
-                          setState(() => _kind = 'item');
+                          // With the condition it had as a thing. Made a
+                          // service and back it had none, which nothing on
+                          // the form showed, and the server refused the
+                          // listing after 10c.
+                          setState(() {
+                            _kind = 'item';
+                            _condition ??= _conditionAsThing;
+                          });
                           _changed();
                         }),
                         const SizedBox(width: Insets.sm),
                         _pick('Tjeneste', _kind == 'service', () {
                           // A service has no condition, and it is never reserved.
                           setState(() {
+                            if (_condition case final kept?) _conditionAsThing = kept;
                             _kind = 'service';
                             _condition = null;
                           });
@@ -871,10 +913,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
                   // says what is being waited for.
                   enabled: !_uploading,
                   // Enabled otherwise: a disabled button explains nothing,
-                  // and an empty title should be told, not silently refused.
-                  onPressed: _title.text.trim().isEmpty
-                      ? () => setState(() => _error = 'Gi gjenstanden en tittel.')
-                      : _submit,
+                  // and an empty title should be told, not silently refused;
+                  // see [_unfit].
+                  onPressed: _submit,
                 ),
               ],
             ),

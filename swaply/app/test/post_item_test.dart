@@ -5,7 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/screens/item_detail.dart';
+import 'package:swaply_app/screens/onboarding.dart';
+import 'package:swaply_app/screens/post_item.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/widgets/common.dart';
 
 import 'fake_server.dart';
 
@@ -117,4 +120,76 @@ void main() {
       expect(sent['condition'], isNull);
     });
   });
+
+  group('10b says what the server would refuse before 10c, and names the field', () {
+    /// A device's 10b with a title, and «Neste» pressed after [fill].
+    Future<void> next(WidgetTester tester, Future<void> Function() fill) async {
+      await session.lookAround();
+      await mount(tester, const PostItemScreen(), signedIn: false);
+      await tester.enterText(field(title), 'Fiskestang');
+      await fill();
+      await tester.tap(find.text('Neste'));
+      await tester.pumpAndSettle();
+    }
+
+    for (final (what, at, typed, words) in [
+      ('a title over 80', title, 'x' * 81, 'Tittelen kan ha høyst 80 tegn.'),
+      ('a description over 2000', description, 'y' * 2001, 'Beskrivelsen kan ha høyst 2000 tegn.'),
+      ('a subcategory over 60', subcategory, 'z' * 61, 'Underkategorien kan ha høyst 60 tegn.'),
+      ('a value over ten million', value, '10000001',
+          'Anslått verdi kan være høyst 10 000 000 kr.'),
+      ('a value too long to be a number', value, '9' * 25,
+          'Anslått verdi kan være høyst 10 000 000 kr.'),
+    ]) {
+      testWidgets('$what stays on 10b, over the button', (tester) async {
+        // Found out after 10c had made a profile for it, in words that name
+        // no field: «Bruk høyst 80 tegn.»
+        await next(tester, () => tester.enterText(field(at), typed));
+
+        expect(find.text(words), findsOneWidget);
+        expect(find.byType(CreateProfileScreen), findsNothing);
+        expect(server.requests, isNot(contains('POST /auth/register')));
+        expect(server.requests, isNot(contains('POST /items')));
+      });
+    }
+
+    testWidgets('and what is just inside the limits goes on to 10c', (tester) async {
+      await next(tester, () async {
+        await tester.enterText(field(title), 'x' * 80);
+        await tester.enterText(field(description), 'y' * 2000);
+        await tester.enterText(field(subcategory), 'z' * 60);
+        await tester.enterText(field(value), '10000000');
+      });
+
+      expect(find.byType(CreateProfileScreen), findsOneWidget);
+    });
+
+    testWidgets('a title is asked for, as before', (tester) async {
+      await next(tester, () => tester.enterText(field(title), '  '));
+
+      expect(find.text('Gi gjenstanden en tittel.'), findsOneWidget);
+      expect(find.byType(CreateProfileScreen), findsNothing);
+    });
+
+    testWidgets('a thing made a service and back has the condition it had', (tester) async {
+      // It had none: nothing on the form said so, and the server refused the
+      // listing after 10c with «Velg tilstand for gjenstanden.»
+      server.overrides['POST /items'] = FakeServer.drill;
+      await mount(tester, const PostItemScreen());
+      await tester.enterText(field(title), 'Fiskestang');
+      await tester.tap(find.text('Ny'));
+      await tester.pump();
+      await tester.tap(find.text('Tjeneste'));
+      await tester.pump();
+      expect(find.text('Ny'), findsNothing);
+      await tester.tap(find.text('Gjenstand'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Legg ut'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /items']!['kind'], 'item');
+      expect(server.bodies['POST /items']!['condition'], 'new');
+    });
+  });
 }
+
