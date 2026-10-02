@@ -85,8 +85,14 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// me says whether this browser is signed in, and to the admin how big an
+// upload may be, so the editor can say so before a long upload is refused.
 func (s *Server) me(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]bool{"admin": s.isAdmin(r)})
+	if !s.isAdmin(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"admin": false})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"admin": true, "maxUploadBytes": s.cfg.MaxUploadBytes})
 }
 
 // admin guards a handler: the cookie, or a 401 the admin pages turn into the

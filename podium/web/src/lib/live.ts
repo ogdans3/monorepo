@@ -13,6 +13,13 @@ interface Handlers {
 export const SILENT_MS = 45_000;
 
 /**
+ * How long a stream may be away before it is said to be lost. A deployment's
+ * proxy ends every stream after two minutes and the browser is back within a
+ * second, which is nothing to tell a room about.
+ */
+export const LOST_MS = 4_000;
+
+/**
  * Follows a presentation as it happens, over server-sent events. A dropped
  * connection is picked up again by the browser, and when the browser gives
  * up, by this: unless the presentation is gone, which is said once, as
@@ -27,6 +34,11 @@ export function follow(code: string, on: Handlers, ballot = false): () => void {
 	let retry: ReturnType<typeof setTimeout> | undefined;
 	let stopped = false;
 	let heard = Date.now();
+	let lostTimer: ReturnType<typeof setTimeout> | undefined;
+	const away = () => {
+		clearTimeout(lostTimer);
+		lostTimer = setTimeout(() => !stopped && on.link?.('lost'), LOST_MS);
+	};
 
 	const restart = () => {
 		source?.close();
@@ -56,7 +68,10 @@ export function follow(code: string, on: Handlers, ballot = false): () => void {
 		heard = Date.now();
 		const es = new EventSource(`/api/live/${encodeURIComponent(code)}/events${ballot ? '?ballot' : ''}`);
 		source = es;
-		es.onopen = () => on.link?.('open');
+		es.onopen = () => {
+			clearTimeout(lostTimer);
+			on.link?.('open');
+		};
 		es.addEventListener('state', (e) => {
 			heard = Date.now();
 			const s = parse<LiveState>(e);
@@ -75,8 +90,9 @@ export function follow(code: string, on: Handlers, ballot = false): () => void {
 		es.addEventListener('ping', () => (heard = Date.now()));
 		es.onerror = async () => {
 			if (stopped) return;
+			// The browser is already on its way back: say so only if it takes long.
 			if (es.readyState !== EventSource.CLOSED) {
-				on.link?.('lost');
+				away();
 				return;
 			}
 			// The browser stops trying on an answer that is not a stream: a
@@ -84,11 +100,12 @@ export function follow(code: string, on: Handlers, ballot = false): () => void {
 			const res = await fetch(`/api/live/${encodeURIComponent(code)}`).catch(() => null);
 			if (stopped) return;
 			if (res?.status === 404) {
+				clearTimeout(lostTimer);
 				on.link?.('missing');
 				return;
 			}
-			on.link?.('lost');
-			retry = setTimeout(open, 2000);
+			away();
+			retry = setTimeout(open, 1500);
 		};
 	};
 
@@ -96,6 +113,7 @@ export function follow(code: string, on: Handlers, ballot = false): () => void {
 	return () => {
 		stopped = true;
 		clearTimeout(retry);
+		clearTimeout(lostTimer);
 		clearInterval(watch);
 		document.removeEventListener('visibilitychange', woke);
 		source?.close();

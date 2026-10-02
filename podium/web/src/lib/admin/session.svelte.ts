@@ -3,6 +3,8 @@ import { api, signedOut } from '$lib/api';
 /** Whether this browser is signed in to the admin, once it is known. */
 class Session {
 	admin = $state<boolean | null>(null);
+	/** The biggest upload the server takes, in bytes; 0 while unknown. */
+	maxUpload = $state(0);
 
 	constructor() {
 		signedOut.addEventListener('signedout', () => (this.admin = false));
@@ -10,7 +12,9 @@ class Session {
 
 	async check() {
 		try {
-			this.admin = (await api<{ admin: boolean }>('GET', '/api/admin/me')).admin;
+			const me = await api<{ admin: boolean; maxUploadBytes?: number }>('GET', '/api/admin/me');
+			this.maxUpload = me.maxUploadBytes ?? 0;
+			this.admin = me.admin;
 		} catch {
 			this.admin = false;
 		}
@@ -18,7 +22,7 @@ class Session {
 
 	async signIn(password: string) {
 		await api('POST', '/api/admin/login', { password });
-		this.admin = true;
+		await this.check();
 	}
 
 	async signOut() {

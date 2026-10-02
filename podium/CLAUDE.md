@@ -52,6 +52,14 @@ vote is a hundred squared frames, for nothing.
 the page. `follow()` in `live.ts` restarts a stream that has heard nothing for
 `SILENT_MS`, and checks again when a sleeping phone wakes.
 
+**A stream that ends picks up where it left off.** Frames carry ids,
+`<epoch>.<seq>`. A room keeps its last 256 frames, and stays around for 45 s
+after its last watcher leaves. A screen that reconnects with `Last-Event-ID` is
+sent what it missed, not a fresh state, so a vote in the gap still chimes. The
+deployment's Caddy ends every response after two minutes, so in production this
+happens every two minutes, with `retry: 500`. The page says a connection is lost
+only after `LOST_MS`. Phones always start fresh.
+
 **Uploads are what their bytes say.** The kind is sniffed from the first
 512 bytes: only image, video or audio is taken. SVG and HTML sniff as text and
 are refused, which keeps scripts out of `/media`. Files are served with
@@ -81,6 +89,28 @@ next number.
   in the bottom corner.
 - Nintendo's Brain Training sound is never shipped, whatever the brief says.
   The chime in `chime.ts` is Podium's own.
+
+## Where it runs
+
+<https://podium.freelunch.no> runs on server 2 through master-dashboard.
+
+- The symlink `/home/ai_user/git/podium` points to `monorepo/podium`.
+- `.dashboard.yaml` sends the hostname to the `app` service.
+- The dashboard runs compose as the project `aicentral-podium`.
+- The `.env` beside the compose file belongs to the deployment. It is
+  gitignored and mode 600.
+  - It uses ports 4130 and 5462, away from the development defaults, so a test
+    run there can never reach the live database. For development on that
+    machine, override them:
+    `POSTGRES_PORT=5452 APP_PORT=4120 docker compose -p podium up -d db`.
+  - It sets `MAX_UPLOAD_MB=95`, because Cloudflare refuses request bodies over
+    100 MB. Caddy also allows 2 minutes to read a request body.
+- To deploy a change, push it and restart the project through the dashboard
+  (`POST /api/projects/podium/restart`). That rebuilds the image.
+- The data is in two volumes, `aicentral-podium_podium-db` and
+  `aicentral-podium_podium-media`. Dump the database before anything risky
+  (`docker exec aicentral-podium-db-1 pg_dump -U podium -Fc podium`), and never
+  run `down -v`.
 
 ## Checks
 

@@ -67,10 +67,11 @@ func (s *Server) publishState(ctx context.Context, presentation string) {
 	s.hub.Publish(presentation, "state", st)
 }
 
-// publishIfLive is for an edit: only a running presentation has anyone to
-// tell, and an edit to its live slide shows on the projector as it is made.
+// publishIfLive is for an edit: only a presentation somebody is watching, or
+// was a moment ago, has anyone to tell, and an edit to its live slide shows on
+// the projector as it is made.
 func (s *Server) publishIfLive(ctx context.Context, presentation string) {
-	if s.hub.Watchers(presentation) > 0 {
+	if s.hub.Active(presentation) {
 		s.publishState(ctx, presentation)
 	}
 }
@@ -168,9 +169,10 @@ func (s *Server) live(w http.ResponseWriter, r *http.Request) {
 
 // events streams a presentation as it happens: the slide on screen whenever
 // it changes, every vote, and how many phones are on the ballot. Server-sent
-// events, so a dropped connection comes back by itself, and the first thing
-// it gets is where things stand. A phone's ballot asks with ?ballot, and is
-// sent the slide changes only.
+// events, so a dropped connection comes back by itself. A screen coming back
+// in time is sent what it missed (see [Hub]); anyone else starts from where
+// things stand. A phone's ballot asks with ?ballot, and is sent the slide
+// changes only.
 func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	p, err := presentationByCode(ctx, s.db, r.PathValue("code"))
@@ -184,8 +186,8 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, phone := r.URL.Query()["ballot"]
-	frames, stop := s.hub.Subscribe(p.ID, phone)
-	defer stop()
+	joined := s.hub.Subscribe(p.ID, phone, r.Header.Get("Last-Event-ID"))
+	defer joined.Stop()
 
 	h := w.Header()
 	h.Set("Content-Type", "text/event-stream")
@@ -194,14 +196,22 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 
-	st, err := s.stateOf(ctx, p)
-	if err != nil {
-		return
-	}
-	w.Write([]byte("retry: 1500\n\n"))
-	w.Write(sseFrame("state", st))
-	if !phone {
-		w.Write(sseFrame("room", map[string]int{"phones": s.hub.Phones(p.ID)}))
+	// Back quickly: the proxy in front of a deployment ends any response
+	// after two minutes, so a stream ends often, and on purpose.
+	w.Write([]byte("retry: 500\n\n"))
+	if joined.Resumed {
+		for _, frame := range joined.Missed {
+			w.Write(frame)
+		}
+	} else {
+		st, err := s.stateOf(ctx, p)
+		if err != nil {
+			return
+		}
+		w.Write(sseFrame(joined.LastID, "state", st))
+		if !phone {
+			w.Write(sseFrame("", "room", map[string]int{"phones": s.hub.Phones(p.ID)}))
+		}
 	}
 	flusher.Flush()
 
@@ -215,7 +225,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ctx.Done():
 			return
-		case frame := <-frames:
+		case frame := <-joined.Frames:
 			if _, err := w.Write(frame); err != nil {
 				return
 			}

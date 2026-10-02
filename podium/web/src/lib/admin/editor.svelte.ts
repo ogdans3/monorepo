@@ -4,6 +4,8 @@
 // is now, so a save that is late is never a save that is wrong.
 
 import { api, ApiError, message, upload } from '$lib/api';
+import { bytes } from '$lib/format';
+import { session } from './session.svelte';
 import { nextAnswer, type Box } from '$lib/geometry';
 import type { LiveState, Media, Option, Presentation, Slide, SlideElement, VoteEvent } from '$lib/types';
 
@@ -480,6 +482,12 @@ export class Editor {
 	}
 
 	async upload(file: File): Promise<Media | null> {
+		// Said before the upload rather than after it: a refused 400 MB video
+		// is minutes of waiting for nothing.
+		if (session.maxUpload && file.size > session.maxUpload) {
+			this.notice = `«${file.name}» er ${bytes(file.size)}. Grensen er ${bytes(session.maxUpload)}; gjør filen mindre og prøv igjen.`;
+			return null;
+		}
 		const job = { id: uid('u'), name: file.name, done: 0 };
 		this.uploads.push(job);
 		const entry = this.uploads[this.uploads.length - 1];

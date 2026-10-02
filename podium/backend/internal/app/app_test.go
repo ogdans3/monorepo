@@ -350,42 +350,62 @@ func TestSteppingThroughTheSlides(t *testing.T) {
 	}
 }
 
-// listen opens a presentation's event stream and returns the next event on
-// it, by name and data, failing the test if none comes.
-func (e *env) listen(path string) func() (string, string) {
+// stream is a presentation's event stream as a test reads it.
+type stream struct {
+	t      *testing.T
+	events chan [3]string
+	close  func()
+}
+
+// listen opens a presentation's event stream, as a returning watcher if
+// [lastID] is given.
+func (e *env) listen(path, lastID string) *stream {
 	ctx, cancel := context.WithCancel(context.Background())
-	e.t.Cleanup(cancel)
 	req, _ := http.NewRequestWithContext(ctx, "GET", e.srv.URL+path, nil)
+	if lastID != "" {
+		req.Header.Set("Last-Event-ID", lastID)
+	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
+		cancel()
 		e.t.Fatal(err)
 	}
-	e.t.Cleanup(func() { res.Body.Close() })
 	if res.Header.Get("Content-Type") != "text/event-stream" {
 		e.t.Fatalf("content type %q", res.Header.Get("Content-Type"))
 	}
-	events := make(chan [2]string, 16)
+	s := &stream{t: e.t, events: make(chan [3]string, 64)}
+	s.close = func() {
+		cancel()
+		res.Body.Close()
+	}
+	e.t.Cleanup(s.close)
 	go func() {
 		scan := bufio.NewScanner(res.Body)
-		var name string
+		var id, name string
 		for scan.Scan() {
 			line := scan.Text()
-			if v, ok := strings.CutPrefix(line, "event: "); ok {
+			if v, ok := strings.CutPrefix(line, "id: "); ok {
+				id = v
+			} else if v, ok := strings.CutPrefix(line, "event: "); ok {
 				name = v
 			} else if v, ok := strings.CutPrefix(line, "data: "); ok {
-				events <- [2]string{name, v}
+				s.events <- [3]string{name, v, id}
+				id = ""
 			}
 		}
 	}()
-	return func() (string, string) {
-		e.t.Helper()
-		select {
-		case ev := <-events:
-			return ev[0], ev[1]
-		case <-time.After(5 * time.Second):
-			e.t.Fatal("nothing came down the stream")
-			return "", ""
-		}
+	return s
+}
+
+// next is the next event: its name, its data and its id, if it has one.
+func (s *stream) next() (string, string, string) {
+	s.t.Helper()
+	select {
+	case ev := <-s.events:
+		return ev[0], ev[1], ev[2]
+	case <-time.After(5 * time.Second):
+		s.t.Fatal("nothing came down the stream")
+		return "", "", ""
 	}
 }
 
@@ -395,19 +415,19 @@ func TestTheStreamCarriesTheSlideAndEveryVote(t *testing.T) {
 	q := e.addSlide(p.ID, "question")
 	e.call(e.admin, "PUT", "/api/admin/presentations/"+p.ID+"/live", map[string]string{"slideId": q.ID}, nil)
 
-	next := e.listen("/api/live/" + p.Code + "/events")
-	name, data := next()
+	screen := e.listen("/api/live/"+p.Code+"/events", "")
+	name, data, id := screen.next()
 	var st liveState
 	json.Unmarshal([]byte(data), &st)
-	if name != "state" || st.Slide == nil || st.Slide.ID != q.ID {
-		t.Fatalf("the first frame is where things stand: %s %s", name, data)
+	if name != "state" || st.Slide == nil || st.Slide.ID != q.ID || id == "" {
+		t.Fatalf("the first frame is where things stand, numbered: %s %s %q", name, data, id)
 	}
-	if name, data = next(); name != "room" || data != `{"phones":0}` {
+	if name, data, _ = screen.next(); name != "room" || data != `{"phones":0}` {
 		t.Fatalf("then how many phones are in: %s %s", name, data)
 	}
 
 	e.call(phone(), "POST", "/api/stem/"+p.Code, map[string]string{"optionId": q.Options[1].ID}, nil)
-	name, data = next()
+	name, data, _ = screen.next()
 	var v voteEvent
 	json.Unmarshal([]byte(data), &v)
 	if name != "vote" || v.OptionID != q.Options[1].ID || v.Counts[q.Options[1].ID] != 1 || v.Total != 1 {
@@ -415,7 +435,7 @@ func TestTheStreamCarriesTheSlideAndEveryVote(t *testing.T) {
 	}
 
 	e.call(e.admin, "PUT", "/api/admin/presentations/"+p.ID+"/live", map[string]string{"slideId": p.Slides[0].ID}, nil)
-	name, data = next()
+	name, data, _ = screen.next()
 	json.Unmarshal([]byte(data), &st)
 	if name != "state" || st.Slide.ID != p.Slides[0].ID {
 		t.Fatalf("a new slide on screen: %s %s", name, data)
@@ -428,24 +448,63 @@ func TestAPhoneIsToldOnlyWhatIsOnScreen(t *testing.T) {
 	q := e.addSlide(p.ID, "question")
 	e.call(e.admin, "PUT", "/api/admin/presentations/"+p.ID+"/live", map[string]string{"slideId": q.ID}, nil)
 
-	screen := e.listen("/api/live/" + p.Code + "/events")
-	screen()
-	screen()
-	ballot := e.listen("/api/live/" + p.Code + "/events?ballot")
-	if name, _ := ballot(); name != "state" {
+	screen := e.listen("/api/live/"+p.Code+"/events", "")
+	screen.next()
+	screen.next()
+	ballot := e.listen("/api/live/"+p.Code+"/events?ballot", "")
+	if name, _, _ := ballot.next(); name != "state" {
 		t.Fatalf("a phone starts from what is on screen: %s", name)
 	}
-	if name, data := screen(); name != "room" || data != `{"phones":1}` {
+	if name, data, _ := screen.next(); name != "room" || data != `{"phones":1}` {
 		t.Fatalf("the screen hears a phone come in: %s %s", name, data)
 	}
 
 	e.call(phone(), "POST", "/api/stem/"+p.Code, map[string]string{"optionId": q.Options[0].ID}, nil)
-	if name, _ := screen(); name != "vote" {
+	if name, _, _ := screen.next(); name != "vote" {
 		t.Fatalf("the screen hears the vote: %s", name)
 	}
 	e.call(e.admin, "PUT", "/api/admin/presentations/"+p.ID+"/live", map[string]int{"step": -1}, nil)
-	if name, data := ballot(); name != "state" || strings.Contains(data, `"phones"`) {
+	if name, data, _ := ballot.next(); name != "state" || strings.Contains(data, `"phones"`) {
 		t.Fatalf("the phone hears the next slide, and no vote before it: %s %s", name, data)
+	}
+}
+
+func TestAScreenThatComesBackIsToldWhatItMissed(t *testing.T) {
+	e := setup(t)
+	p := e.newPresentation("Tilbake")
+	q := e.addSlide(p.ID, "question")
+	e.call(e.admin, "PUT", "/api/admin/presentations/"+p.ID+"/live", map[string]string{"slideId": q.ID}, nil)
+	path := "/api/live/" + p.Code + "/events"
+
+	first := e.listen(path, "")
+	_, _, last := first.next()
+	first.next()
+	first.close()
+
+	// Two votes while the screen is away, the way a proxy ends a stream.
+	e.call(phone(), "POST", "/api/stem/"+p.Code, map[string]string{"optionId": q.Options[0].ID}, nil)
+	e.call(phone(), "POST", "/api/stem/"+p.Code, map[string]string{"optionId": q.Options[1].ID}, nil)
+
+	back := e.listen(path, last)
+	var v voteEvent
+	name, data, id := back.next()
+	json.Unmarshal([]byte(data), &v)
+	if name != "vote" || v.OptionID != q.Options[0].ID || v.Total != 1 || id == "" {
+		t.Fatalf("the first missed vote, not a fresh start: %s %s %q", name, data, id)
+	}
+	name, data, _ = back.next()
+	json.Unmarshal([]byte(data), &v)
+	if name != "vote" || v.OptionID != q.Options[1].ID || v.Total != 2 {
+		t.Fatalf("then the second: %s %s", name, data)
+	}
+
+	// A number from another run of the server is a fresh start.
+	if name, _, _ := e.listen(path, "andre.3").next(); name != "state" {
+		t.Fatalf("an unknown number starts from where things stand: %s", name)
+	}
+	// So is a phone, whatever it says.
+	if name, _, _ := e.listen(path+"?ballot", last).next(); name != "state" {
+		t.Fatalf("a phone starts fresh: %s", name)
 	}
 }
 

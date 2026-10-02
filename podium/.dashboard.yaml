@@ -1,0 +1,13 @@
+name: Podium
+description: "Presentasjoner der salen stemmer fra mobilen."
+
+# The one hostname goes to the app container: the Go server serves the API,
+# the uploads and the built app on one port, and does its own auth (one admin
+# password in .env). The display and the ballot are public by design.
+#
+# The display, the editor and the phones each hold a server-sent event stream
+# open, which the dashboard's proxy streams through. Caddy ends any response
+# after two minutes, and Podium is built for it: the browser is back within a
+# second and a screen is sent the votes it missed (Last-Event-ID).
+compose_service: app
+compose_port: 8080

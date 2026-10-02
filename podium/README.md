@@ -92,9 +92,14 @@ Compose reads `.env` for the same settings, plus `POSTGRES_PASSWORD`,
 - Run **one** instance. Live updates go through an in-memory hub, so a second
   server would not see the first one's votes.
 - Put an HTTPS proxy in front that passes `X-Forwarded-Proto: https`, so the
-  cookies are marked `Secure`. The proxy must let a response stay open, since
-  the display and the phones hold an event stream for the whole talk, and must
-  not buffer it. Podium sends `X-Accel-Buffering: no` for nginx.
+  cookies are marked `Secure`. The display and the phones hold an event stream
+  for the whole talk, so the proxy must not buffer it. Podium sends
+  `X-Accel-Buffering: no` for nginx. A proxy that ends long responses is fine.
+  The browser is back within a second, and a display or editor is sent the
+  votes it missed.
+- Behind Cloudflare, uploads over 100 MB are refused before they reach Podium.
+  Set `MAX_UPLOAD_MB` under that, and the editor will say so before an upload
+  starts.
 - Two volumes hold everything: `podium-db` and `podium-media`. Back up both.
   Replacing the container keeps them; `docker compose down -v` deletes them.
 
