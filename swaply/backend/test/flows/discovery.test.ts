@@ -10,6 +10,7 @@
 // holding, things already traded, and things that have been taken down. The
 // collage is the front page of the product and a thing you cannot have on it is
 // worse than an empty one.
+import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
@@ -203,5 +204,32 @@ describe('searching the collage', () => {
 
     expect(res.body!['owner']).toMatchObject({ id: kariId, displayName: 'Kari N.' })
     expect(res.body!['owner']['email']).toBeUndefined()
+  })
+
+  test('14. paging through Oppdag shows every listing once, in every order', async () => {
+    // Listings that tie on everything a sort looks at — the same moment, the
+    // same value, the same town — are where a page used to repeat one listing
+    // and never show another. A seed or a script writes many in one moment.
+    const per = (await register('Per H.', 'per@epost.no')).token
+    const toys: string[] = []
+    for (let n = 1; n <= 8; n++) {
+      const res = await call('POST', '/items', {
+        token: per,
+        body: { title: `Leke ${n}`, category: 'barn', condition: 'good', estimatedValueNok: 100 },
+      })
+      toys.push(res.body!['id'])
+    }
+    await db.execute(sql`update items set created_at = '2026-10-01T12:00:00Z' where category = 'barn'`)
+
+    for (const sort of ['newest', 'nearest', 'value']) {
+      const seen: string[] = []
+      for (let offset = 0; offset < toys.length; offset++) {
+        const page = await call('GET', `/discover?category=barn&sort=${sort}&limit=3&offset=${offset}`, {
+          token: ola,
+        })
+        seen.push(page.body!['items'][0]['id'])
+      }
+      expect(seen.sort(), sort).toEqual([...toys].sort())
+    }
   })
 })

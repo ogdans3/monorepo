@@ -81,10 +81,15 @@ export default async function discoveryRoutes(app: FastifyInstance) {
 
     // «Nærmest» needs the viewer's town, so it is written out below with the
     // rest of the query rather than as a fragment with a placeholder in it.
+    //
+    // Every order ends on the id. A page is an offset into the order, and
+    // listings that tie on everything before it — one value, one town, one
+    // moment — came back in whatever order the plan liked that time, so the
+    // next page could repeat one and never show another.
     const order =
       args.sort === 'value'
-        ? sql`order by i.estimated_value_nok asc nulls last`
-        : sql`order by ${personal} i.created_at desc`
+        ? sql`order by i.estimated_value_nok asc nulls last, i.id`
+        : sql`order by ${personal} i.created_at desc, i.id`
 
     const counted = await one<{ n: string }>(app.db, sql`select count(*) as n ${base}`)
     const n = counted?.['n'] ?? '0'
@@ -97,7 +102,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
                              and l.from_user = ${viewer ?? null}) as liked_by_me
               ${base}
               order by (u.town is distinct from (select town from users where id = ${viewer ?? null})) asc,
-                       i.created_at desc
+                       i.created_at desc, i.id
               limit ${args.limit} offset ${args.offset}`
         : sql`select i.*, ${coverSql('i')} as cover,
                      exists (select 1 from likes l where l.target_item = i.id
@@ -138,7 +143,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
                 where (b.blocker = ${viewer} and b.blocked = i.owner_id)
                    or (b.blocker = i.owner_id and b.blocked = ${viewer}))
               and ${notHiddenFrom(viewer, 'i')}
-            order by i.created_at desc limit 12`,
+            order by i.created_at desc, i.id limit 12`,
       )
       rows.push({ category: c, items: items.map(publicItem) })
     }
