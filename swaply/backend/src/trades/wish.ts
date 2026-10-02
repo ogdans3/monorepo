@@ -189,9 +189,10 @@ export async function closeLoopThrough(
  * the ring's listing to the next one round — the version the search opened it
  * with, or a counter-offer that kept those and added to them. Any state but
  * `completed` and `cancelled`: `talking` counts, because «Jeg vil ha» plus a
- * counter-offer can reach the same swap by hand.
+ * counter-offer can reach the same swap by hand. The sweep asks it too: a
+ * ring of services is never reserved, so an agreed one is still found.
  */
-async function openTradeOver(db: Database, ring: Cycle): Promise<string | null> {
+export async function openTradeOver(db: Database, ring: Cycle): Promise<string | null> {
   const n = ring.length
   // (giver, listing, receiver), since a three-way ring and its mirror image
   // give the same things to different people.

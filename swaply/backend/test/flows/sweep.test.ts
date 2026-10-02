@@ -270,4 +270,20 @@ describe('a ring somebody said no to', () => {
     expect(await sweepForCycles(db)).toEqual([])
     expect(await openBetween(ola, kari)).toHaveLength(1)
   })
+
+  test('12. nor a ring of services both sides have agreed to, which nothing reserves', async () => {
+    // A service is never exclusive, so an agreed trade over two of them
+    // leaves both available — and the sweep used to find the ring again.
+    const [anne, bjorn] = [await makeUser('Anne'), await makeUser('Bjorn')]
+    const painting = await makeItem(anne, 'Maling av stue', { kind: 'service' })
+    const shovelling = await makeItem(bjorn, 'Snømåking', { kind: 'service' })
+    await like(bjorn, painting)
+    const agreed = (await expressWish(db, anne, shovelling)).tradeId!
+    const offer = await currentOffer(agreed)
+    for (const who of [anne, bjorn]) await acceptOffer(db, offer, who, 'terms-2026-09')
+    expect(await tradeState(agreed)).toBe('accepted')
+
+    expect(await sweepForCycles(db)).toEqual([])
+    expect(await openBetween(anne, bjorn)).toEqual([agreed])
+  })
 })

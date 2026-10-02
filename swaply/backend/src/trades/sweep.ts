@@ -4,6 +4,7 @@ import type { Database } from '../db/index.js'
 import { many, one, uuidArray } from '../lib/rows.js'
 import { findCyclesThrough, type Cycle } from './cycles.js'
 import { openTradeFromCycle } from './trades.js'
+import { openTradeOver } from './wish.js'
 
 /**
  * Whether somebody in this ring has already said no to it.
@@ -99,6 +100,10 @@ export async function sweepForCycles(db: Database, itemIds?: string[]): Promise<
     for (const candidate of await findCyclesThrough(db, wish.from_user, wish.target_item)) {
       if (candidate.some((hop) => spoken.has(hop.givesItemId))) continue
       if (await decidedRing(db, candidate)) continue
+      // Nor a ring with a trade going on over it, in any state: the check
+      // below sees only negotiations, and a ring of services is never
+      // reserved, so an agreed one was found and opened a second time.
+      if (await openTradeOver(db, candidate)) continue
       cycle = candidate
       break
     }
