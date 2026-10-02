@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
+import { SignInBackoff, waitInWords } from '../auth/backoff.js'
 import { mergeDeviceAccount } from '../auth/merge.js'
 import { hashPassword, verifyPassword } from '../auth/passwords.js'
 import { issueSession, revokeSession } from '../auth/sessions.js'
@@ -35,7 +36,12 @@ const registerBody = z.object({
   invite: z.string().nullish(),
 })
 
-export default async function authRoutes(app: FastifyInstance) {
+export default async function authRoutes(
+  app: FastifyInstance,
+  opts: { signIns?: SignInBackoff } = {},
+) {
+  const signIns = opts.signIns ?? new SignInBackoff()
+
   /**
    * Looking around without an account.
    *
@@ -201,8 +207,22 @@ export default async function authRoutes(app: FastifyInstance) {
     }
   })
 
-  app.post('/auth/login', async (request) => {
+  app.post('/auth/login', async (request, reply) => {
     const body = z.object({ email: emailAddress, password: z.string() }).parse(request.body)
+
+    // Too soon after a run of wrong passwords for this address, and the
+    // password is not looked at — not even a right one, or the wait would tell
+    // a guesser the moment they had it. Decided before the account is looked
+    // up, and the same for an address nobody has: see auth/backoff.ts.
+    const wait = signIns.attempt(body.email)
+    if (wait > 0) {
+      reply.header('retry-after', String(Math.ceil(wait / 1000)))
+      throw new ApiError(
+        429,
+        'too_many_attempts',
+        `For mange forsøk med feil passord. Prøv igjen om ${waitInWords(wait)}.`,
+      )
+    }
 
     // `lower(email)` rather than `email`: the address arrives lower-cased, and
     // this is the expression the unique index is on, so a row written before
@@ -218,6 +238,7 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!user?.['password_hash'] || !(await verifyPassword(body.password, user['password_hash']))) {
       throw new ApiError(401, 'wrong_credentials', 'Feil e-post eller passord.')
     }
+    signIns.succeeded(body.email)
 
     // The app starts without asking, so somebody signing in to the account
     // they already have has usually been looking around on this phone first.

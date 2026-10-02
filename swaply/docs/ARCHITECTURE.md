@@ -412,6 +412,44 @@ process starts as well as every day, because an interval starts again from
 nothing on every deploy, and a job a day away is one a daily deploy never lets
 run.
 
+## A wrong password makes the next one wait
+
+`POST /auth/login` used to check a password as fast as one could be sent. Since
+02.10.2026 a run of wrong passwords for one address makes the next attempt wait
+before its password is looked at: three are free, then 2 s, 4 s, 8 s and on,
+doubling up to a quarter of an hour. The right password ends the run, and a day
+without a wrong one forgets it. A refusal is 429, `too_many_attempts`, with
+`Retry-After` and the wait in words — «For mange forsøk med feil passord. Prøv
+igjen om 30 sekunder.», in minutes from one minute on and rounded up — which 16c
+and 10c show as they show any refusal. `backend/src/auth/backoff.ts` has the
+rule and `sign-in-backoff.test.ts` walks it.
+
+**Keyed by the address, never by where the request came from.** Fastify trusts
+no forwarded header here (there is no `trustProxy`), so behind Caddy and
+Cloudflare `request.ip` is the proxy for everybody: keyed on it, one person's
+typos would be everybody's wait. A forwarded header is a key only once nothing
+but the proxies can reach the API, and that is not arranged. The address is
+compared without regard to case, as everywhere. The price is that somebody who
+knows an address can make its owner wait — never longer than the cap between
+two tries.
+
+**An address with no account waits the same way**, and the wait is decided
+before the account is looked up, so a 429 says nothing about who has one. An
+attempt let through counts as wrong until its password says otherwise, so a
+burst sent at once is not all checked before the first of it has failed; a
+refused attempt counts for nothing, or anybody could keep an address waiting
+for ever.
+
+**In memory**, because there is one API process, as the migrations run on boot
+already assume; a restart forgets every run. It remembers ten thousand
+addresses, and when it is full the shortest run goes first, so a flood of
+made-up addresses tried once cannot push out one somebody is working through.
+
+The wait stands in front of folding a device into an account too, since that is
+the same request. `DELETE /me` checks a password as well, and has no wait: it is
+asked only of somebody already holding the account's session, and a right
+answer erases the account rather than opening it.
+
 ## Data protection
 
 Norway is in the EEA, so the GDPR applies in full. This is our reading and not a

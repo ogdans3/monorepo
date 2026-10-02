@@ -3,6 +3,7 @@ import cors from '@fastify/cors'
 import multipart from '@fastify/multipart'
 import { ZodError } from 'zod'
 
+import { SignInBackoff, type SignInBackoffOptions } from './auth/backoff.js'
 import type { Database } from './db/index.js'
 import { env } from './env.js'
 import { ApiError, notFound, uniqueViolation } from './lib/errors.js'
@@ -26,8 +27,9 @@ import tradeRoutes from './routes/trades.js'
 export async function buildApp(
   db: Database,
   // The tests run both sides of the invite wall, and the environment is parsed
-  // once at import, so this is an argument rather than a variable read.
-  opts: { inviteOnly?: boolean } = {},
+  // once at import, so this is an argument rather than a variable read. The
+  // wait after wrong passwords is one too, so that a test can turn its clock.
+  opts: { inviteOnly?: boolean; signIns?: Partial<SignInBackoffOptions> } = {},
 ): Promise<FastifyInstance> {
   // Before any schema is built, so that nothing the API refuses is refused in
   // English. See lib/validation.ts.
@@ -146,7 +148,8 @@ export async function buildApp(
 
   app.get('/health', async () => ({ ok: true }))
 
-  await app.register(authRoutes)
+  // One per app: a test's wrong passwords are its own.
+  await app.register(authRoutes, { signIns: new SignInBackoff(opts.signIns) })
   await app.register(profileRoutes)
   await app.register(itemRoutes)
   await app.register(inviteRoutes)
