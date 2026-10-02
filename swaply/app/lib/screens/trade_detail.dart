@@ -1660,7 +1660,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       body: 'Dere har begge godtatt, og $other kan allerede ha sendt tingen sin. '
           'Vi spør $other om det er greit at du trekker deg.',
       bullets: [
-        'Har $other ikke sendt noe, avbrytes byttet når han sier ja',
+        // The export's «når han sier ja» was written for Ola. Said of whoever
+        // is on the other side, a pronoun is a guess, and a wrong one for
+        // half of them; the answer is what the sentence is about anyway.
+        'Har $other ikke sendt noe, avbrytes byttet når svaret er ja',
         'Har $other allerede sendt, kan du ikke trekke deg',
       ],
       confirm: 'Spør om å trekke meg',
