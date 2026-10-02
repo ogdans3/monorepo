@@ -1,0 +1,316 @@
+/*
+ * Podium's two grounds. The room, where the display and the phones are, is
+ * ink; the desk, where the presenter builds, is a cool paper. Hairlines do
+ * the work cards would do elsewhere, every count is a tabular figure, and the
+ * one amber is kept for change: a count that has just moved, and the live
+ * state. Nothing else is coloured but what the presenter puts on a slide.
+ */
+
+@property --u {
+	/* One percent of the stage's height, in pixels, computed where the stage
+	   is and inherited by everything on it, however deep. */
+	syntax: '<length>';
+	inherits: true;
+	initial-value: 0px;
+}
+
+:root {
+	--font: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+
+	--room: oklch(0.155 0.012 250);
+	--room-raised: oklch(0.205 0.013 250);
+	--room-rule: oklch(0.34 0.012 250);
+	--room-text: oklch(0.965 0.004 250);
+	--room-quiet: oklch(0.75 0.01 250);
+
+	--desk: oklch(0.972 0.004 250);
+	--desk-sunk: oklch(0.938 0.006 250);
+	--desk-raised: oklch(0.995 0.002 250);
+	--desk-rule: oklch(0.875 0.006 250);
+	--desk-rule-strong: oklch(0.76 0.009 250);
+	--desk-text: oklch(0.22 0.016 250);
+	--desk-quiet: oklch(0.47 0.014 250);
+
+	--amber: oklch(0.81 0.155 74);
+	--amber-ink: oklch(0.27 0.05 60);
+	--amber-deep: oklch(0.58 0.14 60);
+
+	--alarm: oklch(0.53 0.18 27);
+	--alarm-room: oklch(0.74 0.14 27);
+
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--radius: 3px;
+
+	font-family: var(--font);
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+}
+
+body {
+	background: var(--desk);
+	color: var(--desk-text);
+	line-height: 1.45;
+}
+
+h1,
+h2,
+h3,
+p {
+	margin: 0;
+}
+
+h1,
+h2,
+h3 {
+	text-wrap: balance;
+}
+
+img,
+video,
+svg {
+	display: block;
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+	color: inherit;
+}
+
+button {
+	cursor: pointer;
+}
+
+button:disabled {
+	cursor: default;
+}
+
+a {
+	color: inherit;
+	text-underline-offset: 0.2em;
+	text-decoration-thickness: 1px;
+}
+
+/* The desk. */
+
+.desk {
+	--text: var(--desk-text);
+	--quiet: var(--desk-quiet);
+	--rule: var(--desk-rule);
+	--rule-strong: var(--desk-rule-strong);
+	--ground: var(--desk);
+	--sunk: var(--desk-sunk);
+	--raised: var(--desk-raised);
+	--focus: var(--desk-text);
+	background: var(--desk);
+	color: var(--desk-text);
+	font-size: 0.9375rem;
+	caret-color: var(--desk-text);
+	accent-color: var(--desk-text);
+	color-scheme: light;
+}
+
+.desk ::selection {
+	background: oklch(0.84 0.06 250);
+	color: var(--desk-text);
+}
+
+/* The room. */
+
+.room {
+	--text: var(--room-text);
+	--quiet: var(--room-quiet);
+	--rule: var(--room-rule);
+	--rule-strong: oklch(0.5 0.012 250);
+	--ground: var(--room);
+	--sunk: oklch(0.12 0.01 250);
+	--raised: var(--room-raised);
+	--focus: var(--room-text);
+	background: var(--room);
+	color: var(--room-text);
+	caret-color: var(--amber);
+	accent-color: var(--amber);
+	color-scheme: dark;
+}
+
+.room ::selection {
+	background: oklch(0.42 0.06 250);
+	color: var(--room-text);
+}
+
+:focus-visible {
+	outline: 2px solid var(--focus, currentColor);
+	outline-offset: 2px;
+}
+
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--rule-strong, #888) transparent;
+}
+
+/* Controls on the desk: quiet until used, ink when they are the one to press. */
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	height: 2rem;
+	padding: 0 0.75rem;
+	border: 1px solid var(--rule-strong);
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--text);
+	font-size: 0.875rem;
+	font-weight: 520;
+	white-space: nowrap;
+	text-decoration: none;
+	transition:
+		background-color 120ms,
+		border-color 120ms,
+		color 120ms;
+}
+
+.btn:hover:not(:disabled) {
+	background: var(--sunk);
+}
+
+.btn:active:not(:disabled) {
+	transform: translateY(0.5px);
+}
+
+.btn:disabled {
+	opacity: 0.45;
+}
+
+.btn.primary {
+	background: var(--text);
+	border-color: var(--text);
+	color: var(--ground);
+}
+
+.btn.primary:hover:not(:disabled) {
+	background: color-mix(in oklab, var(--text) 86%, var(--ground));
+}
+
+.btn.quiet {
+	border-color: transparent;
+}
+
+.btn.danger {
+	color: var(--alarm);
+}
+
+.btn.icon {
+	width: 2rem;
+	padding: 0;
+}
+
+.btn.small {
+	height: 1.75rem;
+	padding: 0 0.6rem;
+	font-size: 0.8125rem;
+}
+
+.btn.icon.small {
+	width: 1.75rem;
+	padding: 0;
+}
+
+.btn svg {
+	flex: none;
+}
+
+.field {
+	display: grid;
+	gap: 0.3rem;
+}
+
+.field > span {
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	color: var(--quiet);
+}
+
+.input {
+	width: 100%;
+	min-height: 2rem;
+	padding: 0.3rem 0.55rem;
+	border: 1px solid var(--rule-strong);
+	border-radius: var(--radius);
+	background: var(--raised);
+	color: var(--text);
+	font-size: 0.875rem;
+	line-height: 1.35;
+}
+
+.input:hover {
+	border-color: color-mix(in oklab, var(--rule-strong) 60%, var(--text));
+}
+
+.input:focus-visible {
+	outline-offset: 0;
+	border-color: var(--text);
+}
+
+.input::placeholder {
+	color: color-mix(in oklab, var(--quiet) 85%, var(--ground));
+}
+
+textarea.input {
+	resize: vertical;
+}
+
+.tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+/* The counting figure: condensed, heavy and tabular, so a column of counts
+   lines up and a changing count does not shift what is around it. */
+.figure {
+	font-stretch: 72%;
+	font-weight: 780;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.005em;
+	line-height: 1;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 1ms !important;
+		animation-duration: 1ms !important;
+		animation-iteration-count: 1 !important;
+	}
+}

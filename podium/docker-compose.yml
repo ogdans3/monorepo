@@ -1,0 +1,48 @@
+# One file for both jobs. `docker compose up -d db` is the development
+# database; `docker compose up -d --build` is a deployment: the database, and
+# the app with the built Svelte inside it.
+name: podium
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: podium
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-podium}
+      POSTGRES_DB: podium
+    ports:
+      # Loopback only: published on 0.0.0.0 this is a database on the
+      # internet with one password in front of it.
+      - '127.0.0.1:${POSTGRES_PORT:-5452}:5432'
+    volumes:
+      - podium-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U podium -d podium']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # The container's own view of the database: `db`, not localhost.
+      DATABASE_URL: postgres://podium:${POSTGRES_PASSWORD:-podium}@db:5432/podium
+      # The app refuses to start without one, and says so.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      MEDIA_DIR: /data/media
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-500}
+    ports:
+      - '${APP_BIND:-127.0.0.1}:${APP_PORT:-4120}:8080'
+    volumes:
+      # The pictures and videos. A container is replaced on every deploy and
+      # these are not; `docker compose down -v` is the one thing that takes them.
+      - podium-media:/data/media
+
+volumes:
+  podium-db:
+  podium-media:

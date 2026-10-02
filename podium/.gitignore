@@ -1,0 +1,11 @@
+.env
+node_modules/
+web/.svelte-kit/
+web/build/
+web/test-results/
+web/playwright-report/
+# The built app is copied in by the Dockerfile; only the placeholder that
+# keeps the embed compiling lives in git.
+backend/webdist/dist/*
+!backend/webdist/dist/.keep
+media/
