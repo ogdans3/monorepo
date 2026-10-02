@@ -43,14 +43,17 @@ export default async function profileRoutes(app: FastifyInstance) {
             and (tp.last_read_message_id is null
                  or m.created_at > (select created_at from messages where id = tp.last_read_message_id))`,
     )
-    // The badge on Bytter. The same rule as «Din tur» on screen 11, and it has
-    // to be the same number: a trade you have not answered, on an offer that
-    // has something from everybody. See `tradeList` in trades/view.ts.
+    // The badge on Bytter: the trades waiting on you. A deal you have not
+    // answered, on an offer that has something from everybody — the rule of
+    // «Din tur» on screen 11 (`tradeList` in trades/view.ts). And a question
+    // to withdraw that somebody else asked, which pauses an agreed trade for
+    // 72 hours on an answer that may be yours and used to wait with no badge
+    // at all; 08b is where it is answered, and it has no «Din tur» of its own.
     const yourTurn = await one(
       app.db,
       sql`select count(*) as n from trades t
           join trade_participants p on p.trade_id = t.id and p.user_id = ${userId}
-          where t.state in ('pending', 'countered')
+          where (t.state in ('pending', 'countered')
             and not exists (
               select 1 from trade_acceptances a
               join trade_offers o on o.id = a.offer_id
@@ -64,7 +67,12 @@ export default async function profileRoutes(app: FastifyInstance) {
                   join trade_offers o on o.id = oi.offer_id
                   where o.trade_id = t.id
                     and o.seq = (select max(seq) from trade_offers where trade_id = t.id)
-                    and oi.giver_position = empty.position))`,
+                    and oi.giver_position = empty.position)))
+            or (t.state = 'paused'
+              and exists (
+                select 1 from trade_withdrawals w
+                where w.trade_id = t.id and w.state = 'waiting'
+                  and w.requested_by <> ${userId}))`,
     )
 
     // Who minted this session, when the account switcher did. A fact about the
