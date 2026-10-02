@@ -15,7 +15,8 @@ import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
-import { close, db, reset } from '../helpers.js'
+import { issueSession } from '../../src/auth/sessions.js'
+import { close, db, makeItem, reset } from '../helpers.js'
 
 let app: FastifyInstance
 
@@ -114,6 +115,34 @@ describe('searching the collage', () => {
       'Terrengsykkel 26"',
     ])
     expect(titles(await call('GET', '/discover?q=terengsykkel', { token: ola }))).toEqual([
+      'Terrengsykkel 26"',
+    ])
+  })
+
+  test('4b. a slip in a short word finds it too, when nothing matches better', async () => {
+    // pg_trgm's own threshold is 0.6, and one letter wrong in a short word
+    // scores under it: «drll» and «boch» against «Bosch drill 18V» are 0.4,
+    // «sykel» against «Sykkelhjelm» 0.5. With nothing found at all, the
+    // title is asked again at 0.4 rather than answering «Ingen treff».
+    expect(titles(await call('GET', '/discover?q=drll', { token: kari }))).toEqual([
+      'Bosch drill 18V',
+    ])
+    expect(titles(await call('GET', '/discover?q=boch', { token: kari }))).toEqual([
+      'Bosch drill 18V',
+    ])
+    expect(titles(await call('GET', '/discover?q=sykel', { token: ola }))).toEqual([
+      'Sykkelhjelm',
+    ])
+    // The count is the looser answer's too, or the page would say «0 treff»
+    // over what it shows.
+    expect((await call('GET', '/discover?q=drll', { token: kari })).body!['total']).toBe(1)
+  })
+
+  test('4c. but it is the same search otherwise, and your own drill is still not in it', async () => {
+    expect(titles(await call('GET', '/discover?q=drll', { token: ola }))).toEqual([])
+    // And a search that finds something is not padded out with near misses.
+    expect(titles(await call('GET', '/discover?q=sykkel', { token: ola }))).toEqual([
+      'Sykkelhjelm',
       'Terrengsykkel 26"',
     ])
   })
@@ -231,5 +260,48 @@ describe('searching the collage', () => {
       }
       expect(seen.sort(), sort).toEqual([...toys].sort())
     }
+  })
+
+  test('15. the looser search hides what the search hides: a block, a kind, a test account', async () => {
+    // Per's kayak is found by «kjakk» (0.5), and only by the looser search.
+    const per = await call('POST', '/auth/login', {
+      body: { email: 'per@epost.no', password: 'byttehandel1' },
+    })
+    const perToken = per.body!['token']
+    const kayak = (await call('POST', '/items', {
+      token: perToken,
+      body: { title: 'Kajakk', category: 'bat', condition: 'good', estimatedValueNok: 3000 },
+    })).body!['id']
+    expect(titles(await call('GET', '/discover?q=kjakk', { token: ola }))).toEqual(['Kajakk'])
+
+    // Ola asks not to be shown it, and then to be shown everything again.
+    await call('POST', '/me/hidden', { token: ola, body: { itemId: kayak } })
+    expect(titles(await call('GET', '/discover?q=kjakk', { token: ola }))).toEqual([])
+    await call('DELETE', '/me/hidden', { token: ola })
+
+    // Per blocks Ola, and then lets him back.
+    const olaId = (await call('GET', '/me', { token: ola })).body!['id']
+    await call('POST', `/blocks/${olaId}`, { token: perToken })
+    expect(titles(await call('GET', '/discover?q=kjakk', { token: ola }))).toEqual([])
+    await call('DELETE', `/blocks/${olaId}`, { token: perToken })
+    expect(titles(await call('GET', '/discover?q=kjakk', { token: ola }))).toEqual(['Kajakk'])
+
+    // A lamp of a test account's: «lmpe» (0.4) finds it for its admin, and
+    // for nobody outside the ring.
+    const [admin] = await db.execute<{ id: string }>(
+      sql`insert into users (display_name, email) values ('Gabriel', 'gabriel@epost.no') returning id`,
+    )
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local swaply.admin_grant = 'on'`)
+      await tx.execute(sql`update users set is_admin = true where id = ${admin!.id}`)
+    })
+    const [tester] = await db.execute<{ id: string }>(
+      sql`insert into users (display_name, email, test_account_of)
+          values ('Tor Test', 'tor@swaply.test', ${admin!.id}) returning id`,
+    )
+    await makeItem(tester!.id, 'Lampe')
+    const gabriel = await issueSession(db, admin!.id)
+    expect(titles(await call('GET', '/discover?q=lmpe', { token: gabriel }))).toEqual(['Lampe'])
+    expect(titles(await call('GET', '/discover?q=lmpe', { token: ola }))).toEqual([])
   })
 })

@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
@@ -37,10 +37,26 @@ export default async function discoveryRoutes(app: FastifyInstance) {
     const scope = sql`(select case when x.is_admin then x.id else x.test_account_of end
                        from users x where x.id = ${viewer ?? null})`
 
+    // What was searched for, asked two ways. The first is the search DESIGN
+    // describes: the Norwegian stems of the title and the description, and
+    // the title's trigrams at pg_trgm's own threshold (0.6), which is what
+    // finds «terrengsykel». A slip in a short word scores below that —
+    // «drll» and «boch» against «Bosch drill 18V» are 0.4, «sykel» against
+    // «Sykkelhjelm» 0.5 — and the answer was «Ingen treff» about a drill
+    // that was right there. So when the first finds nothing at all, the
+    // title is asked again at 0.4. Only then: a search that finds something
+    // is not padded out with near misses.
+    const q = args.q ?? null
+    const exact = sql`(${q}::text is null
+             or i.search @@ plainto_tsquery('norwegian', ${q})
+             or ${q} <% i.title)`
+    const near = sql`word_similarity(${q}, i.title) >= 0.4`
+
     // Your own things never appear, and neither does anything held by a trade,
     // anything already traded, anything from someone either of you blocked, or
-    // anything of a kind you asked not to be shown.
-    const base = sql`
+    // anything of a kind you asked not to be shown — whichever way the words
+    // were matched, because only the match is different.
+    const base = (match: SQL) => sql`
       from items i
       join users u on u.id = i.owner_id
       where i.deleted_at is null
@@ -54,9 +70,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
              or (b.blocker = i.owner_id and b.blocked = ${viewer ?? null})
         )
         and ${notHiddenFrom(viewer ?? null, 'i')}
-        and (${args.q ?? null}::text is null
-             or i.search @@ plainto_tsquery('norwegian', ${args.q ?? null})
-             or ${args.q ?? null} <% i.title)
+        and ${match}
         and (${args.category ?? null}::category is null or i.category = ${args.category ?? null}::category)
         and (${args.subcategory ?? null}::text is null or i.subcategory = ${args.subcategory ?? null})
         and (${args.minValue ?? null}::int is null or i.estimated_value_nok >= ${args.minValue ?? null})
@@ -95,8 +109,14 @@ export default async function discoveryRoutes(app: FastifyInstance) {
         ? sql`order by i.estimated_value_nok asc nulls last, i.id`
         : sql`order by ${personal} i.created_at desc, i.id`
 
-    const counted = await one<{ n: string }>(app.db, sql`select count(*) as n ${base}`)
-    const n = counted?.['n'] ?? '0'
+    const count = async (from: SQL) =>
+      Number((await one<{ n: string }>(app.db, sql`select count(*) as n ${from}`))?.['n'] ?? 0)
+    let from = base(exact)
+    let n = await count(from)
+    if (q && n === 0) {
+      from = base(near)
+      n = await count(from)
+    }
 
     const rows = await many(
       app.db,
@@ -104,7 +124,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
         ? sql`select i.*, ${coverSql('i')} as cover,
                      exists (select 1 from likes l where l.target_item = i.id
                              and l.from_user = ${viewer ?? null}) as liked_by_me
-              ${base}
+              ${from}
               order by (lower(coalesce(nullif(i.town, ''), nullif(u.town, ''))) =
                         (select lower(nullif(v.town, '')) from users v
                          where v.id = ${viewer ?? null})) is true desc,
@@ -113,10 +133,10 @@ export default async function discoveryRoutes(app: FastifyInstance) {
         : sql`select i.*, ${coverSql('i')} as cover,
                      exists (select 1 from likes l where l.target_item = i.id
                              and l.from_user = ${viewer ?? null}) as liked_by_me
-              ${base} ${order} limit ${args.limit} offset ${args.offset}`,
+              ${from} ${order} limit ${args.limit} offset ${args.offset}`,
     )
 
-    return { total: Number(n), items: rows.map(publicItem) }
+    return { total: n, items: rows.map(publicItem) }
   })
 
   // The rows shown before anyone has searched: one per interest, in the order
