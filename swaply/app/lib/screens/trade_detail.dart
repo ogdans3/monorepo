@@ -1296,7 +1296,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                     // over this screen and under the bar.
                     final accepted = await Navigator.of(context).push<bool>(
                         MaterialPageRoute(builder: (_) => AgreementScreen(trade: trade)));
-                    if (accepted == true) await _load();
+                    // Asked again however 06c was left, «Avbryt» and the
+                    // phone's back included: a swipe that heard no answer
+                    // may still have reached the server, and only the
+                    // server can say. Quietly then, as there is no news.
+                    if (mounted) await _load(quiet: accepted != true);
                     await session.refresh();
                   }),
             ),

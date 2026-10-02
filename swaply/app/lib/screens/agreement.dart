@@ -27,11 +27,14 @@ class _AgreementScreenState extends State<AgreementScreen> {
 
   static const termsVersion = '2026-09-06';
 
-  Future<void> _accept() async {
+  /// The swipe, and a screen reader's tap on it. True once the server has
+  /// the acceptance; false hands the swipe back for another try, since a
+  /// refusal or no answer accepted nothing here.
+  Future<bool> _accept() async {
     setState(() => _busy = true);
     try {
       await context.read<SwaplyApi>().accept(widget.trade.id, termsVersion: termsVersion);
-      if (!mounted) return;
+      if (!mounted) return true;
       // «BankID bekreftes ved ditt første bytte», which 10c promises and this
       // is the moment of. After the swipe, not before: the agreement is what
       // the screen is for, and a verification dialog in front of it would be
@@ -40,11 +43,13 @@ class _AgreementScreenState extends State<AgreementScreen> {
           because: 'Dette er ditt første bytte, og et bytte er to personer som '
               'stoler på hverandre. ');
       if (mounted) Navigator.of(context).pop(true);
+      return true;
     } on ApiException catch (e) {
       if (mounted) {
         showError(context, e);
         setState(() => _busy = false);
       }
+      return false;
     }
   }
 
@@ -301,6 +306,10 @@ class _AgreementScreenState extends State<AgreementScreen> {
 /// The swipe at the bottom of the agreement. Deliberately not a button: it is
 /// the last thing between a person and a commitment, and it should take a
 /// deliberate gesture. Disabled until the checkbox above it is ticked.
+///
+/// A gesture is not something VoiceOver or TalkBack can make, though, so to
+/// a screen reader the knob is a button with the swipe's words on it, and
+/// activating it confirms. A finger still has to swipe.
 class SwipeToConfirm extends StatefulWidget {
   const SwipeToConfirm({
     super.key,
@@ -310,7 +319,10 @@ class SwipeToConfirm extends StatefulWidget {
   });
 
   final String label;
-  final VoidCallback onConfirmed;
+
+  /// True when what the swipe confirmed went through. False puts the knob
+  /// back at the start, to be swiped again.
+  final Future<bool> Function() onConfirmed;
   final bool enabled;
 
   @override
@@ -321,10 +333,28 @@ class _SwipeToConfirmState extends State<SwipeToConfirm> {
   double _progress = 0;
   bool _done = false;
 
+  Future<void> _confirm() async {
+    setState(() {
+      _progress = 1;
+      _done = true;
+    });
+    final went = await widget.onConfirmed();
+    // A refusal, or no answer, accepted nothing. The knob used to stay at
+    // the end with a tick and «Godtatt» on the track, and could not be
+    // dragged again: a trade that looked accepted and was not.
+    if (!went && mounted) {
+      setState(() {
+        _progress = 0;
+        _done = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const height = 60.0;
     const knob = 50.0;
+    final live = widget.enabled && !_done;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -342,63 +372,77 @@ class _SwipeToConfirmState extends State<SwipeToConfirm> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 40),
-                  child: Text(
-                    _done ? 'Godtatt' : widget.label,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: SwaplyColors.greenText),
+                // Said once, by the knob, rather than twice.
+                ExcludeSemantics(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 40),
+                    child: Text(
+                      _done ? 'Godtatt' : widget.label,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: SwaplyColors.greenText),
+                    ),
                   ),
                 ),
                 const Positioned(
                   right: 41,
-                  child: Text('›››',
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -2,
-                          color: Color(0xFF9BC9B0))),
+                  child: ExcludeSemantics(
+                    child: Text('›››',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -2,
+                            color: Color(0xFF9BC9B0))),
+                  ),
                 ),
                 Positioned(
                   left: 5 + _progress * travel,
-                  child: GestureDetector(
-                    onHorizontalDragUpdate: widget.enabled && !_done
-                        ? (details) => setState(() {
-                              _progress =
-                                  (_progress + details.delta.dx / travel).clamp(0.0, 1.0);
-                            })
-                        : null,
-                    onHorizontalDragEnd: widget.enabled && !_done
-                        ? (_) {
-                            if (_progress > 0.9) {
-                              setState(() {
-                                _progress = 1;
-                                _done = true;
-                              });
-                              widget.onConfirmed();
-                            } else {
-                              setState(() => _progress = 0);
+                  // The knob is the one thing here that answers, so it is
+                  // the node: the track's words, a button, dimmed until the
+                  // box is ticked, and confirming when activated. Its own
+                  // drag is kept from the screen reader, which would offer
+                  // it as a scroll.
+                  child: Semantics(
+                    container: true,
+                    button: true,
+                    enabled: live,
+                    label: _done ? 'Godtatt' : widget.label,
+                    onTap: live ? _confirm : null,
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      onHorizontalDragUpdate: live
+                          ? (details) => setState(() {
+                                _progress =
+                                    (_progress + details.delta.dx / travel).clamp(0.0, 1.0);
+                              })
+                          : null,
+                      onHorizontalDragEnd: live
+                          ? (_) {
+                              if (_progress > 0.9) {
+                                _confirm();
+                              } else {
+                                setState(() => _progress = 0);
+                              }
                             }
-                          }
-                        : null,
-                    child: Container(
-                      height: knob,
-                      width: knob,
-                      decoration: const BoxDecoration(
-                        color: SwaplyColors.greenPressed,
-                        shape: BoxShape.circle,
+                          : null,
+                      child: Container(
+                        height: knob,
+                        width: knob,
+                        decoration: const BoxDecoration(
+                          color: SwaplyColors.greenPressed,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: _done
+                            ? const Icon(Icons.check, color: Colors.white, size: 26)
+                            : const Text('›',
+                                style: TextStyle(
+                                    fontSize: 24,
+                                    height: 1,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
                       ),
-                      alignment: Alignment.center,
-                      child: _done
-                          ? const Icon(Icons.check, color: Colors.white, size: 26)
-                          : const Text('›',
-                              style: TextStyle(
-                                  fontSize: 24,
-                                  height: 1,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white)),
                     ),
                   ),
                 ),
