@@ -33,7 +33,12 @@ class _AgreementScreenState extends State<AgreementScreen> {
   Future<bool> _accept() async {
     setState(() => _busy = true);
     try {
-      await context.read<SwaplyApi>().accept(widget.trade.id, termsVersion: termsVersion);
+      // The offer on this screen, which is the one being agreed to: a yes
+      // belongs to an offer version, and one proposed while this was read
+      // is not the one the person said yes to.
+      await context
+          .read<SwaplyApi>()
+          .accept(widget.trade.id, termsVersion: termsVersion, offerId: widget.trade.offerId);
       if (!mounted) return true;
       // «BankID bekreftes ved ditt første bytte», which 10c promises and this
       // is the moment of. After the swipe, not before: the agreement is what
@@ -48,6 +53,9 @@ class _AgreementScreenState extends State<AgreementScreen> {
       if (mounted) {
         showError(context, e);
         setState(() => _busy = false);
+        // What this screen says is no longer the deal. Back to the trade,
+        // which asks for it again, with the server's words over it.
+        if (e.code == ApiException.offerChanged) Navigator.of(context).pop(false);
       }
       return false;
     }

@@ -349,40 +349,57 @@ class TradeDetailScreen extends StatefulWidget {
   State<TradeDetailScreen> createState() => _TradeDetailScreenState();
 }
 
-class _TradeDetailScreenState extends State<TradeDetailScreen> {
+class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindingObserver {
   Trade? _trade;
   ApiException? _error;
   bool _busy = false;
   final _message = TextEditingController();
 
+  /// Which asking for the trade is the newest. The page asks from several
+  /// places now, and an answer to an older asking — or a trade an action
+  /// handed back after it — must not be overwritten by one that lands late.
+  int _asking = 0;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _message.dispose();
     super.dispose();
   }
 
+  /// Back from the background, the trade may have moved on without this
+  /// phone: a counter-offer, a yes taken back, a question asked. It is asked
+  /// for again quietly, as a tab coming back is.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _trade != null) _load(quiet: true);
+  }
+
   /// Asked for when the page opens, and again after a pull or anything done
-  /// on it. Only the first asking can fail into [LoadFailure]: after that the
+  /// on it, after the chat or 06c or 09a is left, and when the app comes
+  /// back. Only the first asking can fail into [LoadFailure]: after that the
   /// trade on screen stays and the failure is a toast over it. A pull with no
   /// connection used to replace the trade with «Fant ikke byttet». [quiet]
   /// says nothing even then, for an asking whose news is already up.
   Future<void> _load({bool quiet = false}) async {
+    final asking = ++_asking;
     try {
       final trade = await context.read<SwaplyApi>().trade(widget.tradeId);
-      if (mounted) {
+      if (mounted && asking == _asking) {
         setState(() {
           _trade = trade;
           _error = null;
         });
       }
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || asking != _asking) return;
       if (_trade == null) {
         setState(() => _error = e);
       } else if (!quiet) {
@@ -411,6 +428,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     try {
       final trade = await action(context.read<SwaplyApi>());
       if (!mounted) return;
+      // Newer than any asking still on its way.
+      _asking++;
       setState(() => _trade = trade);
       await context.read<Session>().refresh();
     } on ApiException catch (e) {
@@ -1164,8 +1183,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
                       color: SwaplyColors.greyLight)),
               if (trade.threadId != null)
                 TapArea(
-                  onTap: () =>
-                      pushOverBar<void>(context, ThreadScreen(threadId: trade.threadId!)),
+                  onTap: () async {
+                    await pushOverBar<void>(context, ThreadScreen(threadId: trade.threadId!));
+                    // A proposal from the chips, or the other side's answer
+                    // read there, is the trade's now.
+                    if (mounted) await _load(quiet: true);
+                  },
                   child: const Text('Åpne ›',
                       style: TextStyle(
                           fontSize: 12,
@@ -1376,7 +1399,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     // 09a and 09b are drawn with the bar: in the tab, like 06c.
     final changed = await Navigator.of(context)
         .push<bool>(MaterialPageRoute(builder: (_) => CounterOfferScreen(trade: trade)));
-    if (changed == true) await _load();
+    // However it was left: a counter-offer refused because another had
+    // landed first comes back with nothing sent, and that other one is
+    // what the page has to show now.
+    if (mounted) await _load(quiet: changed != true);
   }
 
   /// Undoing your own acceptance, which is not the same as ending the trade:
@@ -1443,6 +1469,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     try {
       final result = await api.requestWithdrawal(trade.id);
       if (!mounted) return;
+      _asking++;
       setState(() => _trade = result.trade);
       if (result.blocked) {
         await _confirm(

@@ -13,6 +13,9 @@ import '../widgets/common.dart';
 /// the other side sees a card they can answer rather than a silent change.
 enum ProposalKind { offerMine, askTheirs, cash }
 
+/// True when the trade is not what it was when the sheet opened — a proposal
+/// went, or the server said another had gone first — and the conversation
+/// under it should ask again.
 Future<bool> showProposalSheet(
   BuildContext context, {
   required Trade trade,
@@ -124,15 +127,28 @@ class _ProposalSheetState extends State<_ProposalSheet> {
               };
     }
 
+    var proposed = false;
     try {
-      await widget.api.counter(trade.id, items, cash);
+      // On the offer this sheet was opened over, like a counter-offer from
+      // 09a: one proposed meanwhile is refused rather than written over.
+      await widget.api.counter(trade.id, items, cash, baseOfferId: trade.offerId);
+      proposed = true;
       if (trade.threadId != null) {
         await widget.api.sendMessage(trade.threadId!, _messageLine());
       }
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
-      if (mounted) {
-        showError(context, e);
+      if (!mounted) return;
+      showError(context, e);
+      // A proposal that went is on the table even when its line in the
+      // conversation did not get there: pressed again, it would be proposed
+      // a second time over the offer it had itself replaced. An offer that
+      // changed under the sheet is the same news the other way round. Either
+      // way the sheet has nothing left to send, and the conversation asks
+      // for the trade again.
+      if (proposed || e.code == ApiException.offerChanged) {
+        Navigator.of(context).pop(true);
+      } else {
         setState(() => _busy = false);
       }
     }

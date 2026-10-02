@@ -44,6 +44,10 @@ class ApiException implements Exception {
   /// A postcode that belongs to no town, from wherever one is typed.
   static const unknownPostalCode = 'unknown_postal_code';
 
+  /// An accept or a counter-offer made on an offer that is no longer the
+  /// newest: somebody proposed something else while it was being read.
+  static const offerChanged = 'offer_changed';
+
   final int statusCode;
   final String code, message;
 
@@ -442,8 +446,15 @@ class SwaplyApi {
   Future<ItemConversation> messageAboutItem(String itemId, String body) async =>
       ItemConversation.fromJson(await _post('/items/$itemId/message', {'body': body}));
 
-  Future<Trade> accept(String tradeId, {String termsVersion = '2026-09-06'}) async {
-    final json = await _post('/trades/$tradeId/accept', {'termsVersion': termsVersion});
+  /// The swipe on 06c. [offerId] is the offer 06c showed, so a yes is never
+  /// given to an offer the person did not read: if another has been
+  /// proposed since, the server refuses with [ApiException.offerChanged]. A
+  /// server from before the field leaves it out unread, as zod does with any
+  /// key it does not know, and takes the newest offer as it always has.
+  Future<Trade> accept(String tradeId,
+      {String termsVersion = '2026-09-06', String? offerId}) async {
+    final json = await _post(
+        '/trades/$tradeId/accept', {'termsVersion': termsVersion, 'offerId': ?offerId});
     return Trade.fromJson(json['trade'] as Map<String, dynamic>);
   }
 
@@ -454,12 +465,17 @@ class SwaplyApi {
       Trade.fromJson((await _send('DELETE', '/trades/$tradeId/accept'))
           as Map<String, dynamic>);
 
+  /// A new version of the deal. [baseOfferId] is the offer it was composed
+  /// on, refused as [ApiException.offerChanged] when that is no longer the
+  /// newest — the same rule, and the same old server, as [accept].
   Future<Trade> counter(
     String tradeId,
     List<Map<String, dynamic>> items,
-    Map<String, dynamic>? cash,
-  ) async =>
-      Trade.fromJson(await _post('/trades/$tradeId/counter', {'items': items, 'cash': cash}));
+    Map<String, dynamic>? cash, {
+    String? baseOfferId,
+  }) async =>
+      Trade.fromJson(await _post('/trades/$tradeId/counter',
+          {'items': items, 'cash': cash, 'baseOfferId': ?baseOfferId}));
 
   Future<Trade> decline(String tradeId) async =>
       Trade.fromJson(await _post('/trades/$tradeId/decline'));

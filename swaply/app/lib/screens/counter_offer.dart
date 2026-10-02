@@ -92,12 +92,18 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                 'payeePosition': _iPay ? _theirPosition : widget.trade.youPosition,
                 'amountNok': _cash,
               },
+        // What this was composed on. Another proposal landing while it was
+        // composed is refused rather than silently written over.
+        baseOfferId: widget.trade.offerId,
       );
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (mounted) {
         showError(context, e);
         setState(() => _busy = false);
+        // The other side moved first, and this was built on what they
+        // replaced. Back to the trade, asked for again, to answer that.
+        if (e.code == ApiException.offerChanged) Navigator.of(context).pop(false);
       }
     }
   }
