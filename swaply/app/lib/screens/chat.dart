@@ -509,7 +509,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
     ];
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      // 10 under the header, as drawn, and 8 over the banner under it.
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, Insets.sm),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -859,7 +860,8 @@ Future<UserRef?> choosePerson(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(
                       children: [
-                        Avatar(person.displayName, size: 40),
+                        // The initial says nothing the name does not.
+                        ExcludeSemantics(child: Avatar(person.displayName, size: 40)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(

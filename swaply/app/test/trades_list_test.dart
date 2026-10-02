@@ -38,7 +38,10 @@ Future<void> mount(WidgetTester tester) async {
 }
 
 /// The list, with [waiting] and [active] in their tabs.
-void list({List<Map<String, Object?>> waiting = const [], List<Map<String, Object?>> active = const []}) =>
+void list({
+  List<Map<String, Object?>> waiting = const [],
+  List<Map<String, Object?>> active = const [],
+}) =>
     server.overrides['GET /trades'] = {
       'waiting': waiting,
       'active': active,

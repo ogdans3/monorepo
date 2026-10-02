@@ -264,53 +264,51 @@ class _MatchScreenState extends State<MatchScreen> {
   Widget _cards(Trade trade, String other) {
     final give = trade.youGive;
     final get = trade.youGet;
-    return SizedBox(
-      height: _tableHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (give.length > 1)
-            Positioned(
-              left: 24,
-              top: 14,
-              child: Transform.rotate(angle: 8 * math.pi / 180, child: _card(give[1])),
-            ),
-          if (give.isNotEmpty)
-            Positioned(
-              left: 16,
-              top: 2,
-              child: Transform.rotate(angle: -4 * math.pi / 180, child: _card(give.first)),
-            ),
-          if (get.isNotEmpty)
-            Positioned(
-              left: 148,
-              top: 0,
-              child: Transform.rotate(angle: 3 * math.pi / 180, child: _card(get.first)),
-            ),
-          const Positioned(
-            left: 149,
-            top: 88,
-            child: Text('⇄',
-                style: TextStyle(
-                    fontSize: 38,
-                    height: 1,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF9BD9BE))),
-          ),
+    // Laid out 330 by 251, in the box [_table] gives it.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        if (give.length > 1)
           Positioned(
-            left: 0,
-            top: 217,
-            width: 196,
-            child: Center(child: _who('Du', give.length, mine: true)),
+            left: 24,
+            top: 14,
+            child: Transform.rotate(angle: 8 * math.pi / 180, child: _card(give[1])),
           ),
+        if (give.isNotEmpty)
           Positioned(
-            left: 126,
-            top: 217,
-            width: 204,
-            child: Center(child: _who(other, get.length)),
+            left: 16,
+            top: 2,
+            child: Transform.rotate(angle: -4 * math.pi / 180, child: _card(give.first)),
           ),
-        ],
-      ),
+        if (get.isNotEmpty)
+          Positioned(
+            left: 148,
+            top: 0,
+            child: Transform.rotate(angle: 3 * math.pi / 180, child: _card(get.first)),
+          ),
+        const Positioned(
+          left: 149,
+          top: 88,
+          child: Text('⇄',
+              style: TextStyle(
+                  fontSize: 38,
+                  height: 1,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF9BD9BE))),
+        ),
+        Positioned(
+          left: 0,
+          top: 217,
+          width: 196,
+          child: Center(child: _who('Du', give.length, mine: true)),
+        ),
+        Positioned(
+          left: 126,
+          top: 217,
+          width: 204,
+          child: Center(child: _who(other, get.length)),
+        ),
+      ],
     );
   }
 

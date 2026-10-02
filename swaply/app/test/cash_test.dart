@@ -62,7 +62,12 @@ void trade(String state,
       'payeePhone': phone,
     },
     'participants': [
-      {...FakeServer.me, 'position': 0, 'gives': [FakeServer.drill], 'paidAt': mine ? paidAt : null},
+      {
+        ...FakeServer.me,
+        'position': 0,
+        'gives': [FakeServer.drill],
+        'paidAt': mine ? paidAt : null,
+      },
       {
         ...FakeServer.kari,
         'position': 1,
