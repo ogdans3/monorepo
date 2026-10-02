@@ -28,6 +28,13 @@ test('a question goes up, a phone votes, and the screen counts it', async ({ bro
 		await editor.getByLabel('Svaret', { exact: true }).fill('Absolutt');
 		await expect(editor.getByText('Lagret', { exact: true })).toBeVisible();
 
+		// «Svar» pressed twice is two more answers, each of its own.
+		await editor.getByRole('button', { name: 'Svar', exact: true }).click();
+		await editor.getByRole('button', { name: 'Svar', exact: true }).click();
+		await expect(editor.locator('.canvas [data-type="option"]')).toHaveCount(4);
+		await expect(editor.locator('.hit[aria-label="Svar: Svar 4"]')).toHaveCount(1);
+		await expect(editor.getByText('Lagret', { exact: true })).toBeVisible();
+
 		// Start opens the display on the first slide: the title and the code, big.
 		const [display] = await Promise.all([
 			editor.waitForEvent('popup'),
@@ -52,7 +59,9 @@ test('a question goes up, a phone votes, and the screen counts it', async ({ bro
 		await expect(absolutt).toBeVisible();
 		expect(Date.now() - shown).toBeLessThan(3000);
 		const answers = display.locator('[data-type="option"]');
-		await expect(answers).toHaveCount(2);
+		await expect(answers).toHaveCount(4);
+		await expect(ballot.locator('.tile')).toHaveCount(4);
+		await expect(ballot.getByRole('button', { name: 'D: Svar 4' })).toBeVisible();
 		await expect(answers.first()).toContainText('Absolutt');
 
 		// The phone votes once, and the screen counts it where the answer is.

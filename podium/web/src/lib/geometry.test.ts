@@ -80,6 +80,20 @@ describe('placing answers', () => {
 		}
 	});
 
+	it('gives back a place and a size, and never the answer it was given', () => {
+		// The bug of 02.10.2026: the box carried the last answer's id along,
+		// and the «new» answer was the old one again.
+		const answers = [
+			{ id: 'a', label: 'Ja', color: '#D0273A', count: 3, x: 6.25, y: 38.889, w: 20, h: 20 },
+			{ id: 'b', label: 'Nei', color: '#2A68CF', count: 1, x: 30, y: 38.889, w: 20, h: 20 }
+		];
+		for (const box of [nextAnswer(answers), nextAnswer([answers[0]]), moveBox(answers[1], 1, 1)]) {
+			expect(Object.keys(box).sort()).toEqual(['h', 'w', 'x', 'y']);
+		}
+		const crowded = [{ id: 'c', label: 'Full', color: '#1D8452', count: 0, x: 60, y: 70, w: 38, h: 28 }];
+		expect(Object.keys(nextAnswer(crowded)).sort()).toEqual(['h', 'w', 'x', 'y']);
+	});
+
 	it('puts a new answer beside the last, then on a new row', () => {
 		const first = { x: 6, y: 42, w: 32, h: 44 };
 		expect(nextAnswer([first])).toMatchObject({ x: 40.5, y: 42, w: 32 });

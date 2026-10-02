@@ -222,12 +222,15 @@ export class Editor {
 			this.notice = 'Et spørsmål kan ha høyst 40 svar.';
 			return;
 		}
-		const box = nextAnswer(s.options);
+		const { x, y, w, h } = nextAnswer(s.options);
 		const option: Option = {
 			id: uid('new-'),
 			label: `Svar ${s.options.length + 1}`,
 			color: nextColour(s.options.map((o) => o.color)),
-			...box,
+			x,
+			y,
+			w,
+			h,
 			count: 0
 		};
 		this.edit((s) => {

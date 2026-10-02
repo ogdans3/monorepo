@@ -21,6 +21,14 @@ export const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+/**
+ * The place and size of anything placed, and nothing else. What these
+ * functions are given is often a whole answer or element, and what they give
+ * back is spread into new ones: an id carried along with the box is a second
+ * answer with the first one's id.
+ */
+const only = (b: Box): Box => ({ x: b.x, y: b.y, w: b.w, h: b.h });
+
 /** Three decimals is far below a pixel on any screen, and keeps the JSON short. */
 export const tidy = (v: number) => Math.round(v * 1000) / 1000;
 
@@ -48,9 +56,10 @@ export function moveBox(start: Box, dx: number, dy: number, free = false): Box {
 		y += snapShift(y, start.h, STEP_Y);
 	}
 	return {
-		...start,
 		x: tidy(clamp(x, 0, 100 - start.w)),
-		y: tidy(clamp(y, 0, 100 - start.h))
+		y: tidy(clamp(y, 0, 100 - start.h)),
+		w: start.w,
+		h: start.h
 	};
 }
 
@@ -130,7 +139,7 @@ export function arrange(n: number, area: Box = ANSWER_AREA, gapX = 2.5, gapY = 4
  */
 export function nextAnswer(existing: Box[]): Box {
 	if (existing.length === 0) return arrange(1)[0];
-	const last = existing[existing.length - 1];
+	const last = only(existing[existing.length - 1]);
 	const gap = 2.5;
 	const beside = { ...last, x: tidy(last.x + last.w + gap) };
 	if (beside.x + beside.w <= 100 - 2) return beside;
