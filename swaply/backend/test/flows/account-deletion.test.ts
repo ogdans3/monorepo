@@ -26,6 +26,7 @@ import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
+import { openTradeFromCycle } from '../../src/trades/trades.js'
 import { close, db, reset } from '../helpers.js'
 
 let app: FastifyInstance
@@ -323,8 +324,16 @@ describe('deleting your own account', () => {
         .body!['token'] as string
       const theirs = (await call('GET', '/me', { token: as })).body!['items'][0]['id'] as string
       const saw = await list(kari, 'Sag')
-      await heart(kari, theirs)
-      expect(await heart(as, saw)).not.toBeNull()
+      // Hearts between Kari and a test account are refused now
+      // (test-ring.test.ts). A trade the two hearts opened before that rule
+      // existed is somebody's history all the same, opened here as they did.
+      const refused = await call('POST', `/items/${theirs}/like`, { token: kari })
+      expect(refused.body!['code']).toBe('test_ring')
+      const kariId = (await call('GET', '/me', { token: kari })).body!['id'] as string
+      await openTradeFromCycle(db, [
+        { userId: made.body!['id'], givesItemId: theirs },
+        { userId: kariId, givesItemId: saw },
+      ])
 
       const res = await call('DELETE', '/me', { token: as })
 

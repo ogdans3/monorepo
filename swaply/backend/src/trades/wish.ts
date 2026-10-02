@@ -6,6 +6,7 @@ import { LIKES_BEFORE_LISTING_PROMPT, LISTING_PROMPT_EVERY } from '../lib/consta
 import { badRequest, notFound } from '../lib/errors.js'
 import { one } from '../lib/rows.js'
 import { findCyclesThrough, type Cycle } from './cycles.js'
+import { ringsApart, testRing } from './ring.js'
 import { openTradeFromCycle } from './trades.js'
 
 export type Wish = {
@@ -53,6 +54,10 @@ export async function expressWish(
   if (!item) throw notFound('Fant ikke gjenstanden.')
   if (item['owner_id'] === userId) throw badRequest('own_item', 'Du kan ikke like din egen ting.')
   if (await blockedBetween(db, userId, item['owner_id'])) throw blocked()
+  // A test account wants nothing outside its ring, and nothing outside wants
+  // it (`ring.ts`): the like is the edge a trade would close on, and the
+  // owner is told about it either way.
+  if (await ringsApart(db, userId, item['owner_id'])) throw testRing()
 
   const heart = await db.transaction(async (tx) => {
     // One heart at a time per person, from the like to the count. Two cards

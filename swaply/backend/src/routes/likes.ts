@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
+import { sameRing } from '../trades/ring.js'
 import { expressWish } from '../trades/wish.js'
 import { coverSql, many } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
@@ -47,10 +48,16 @@ export default async function likeRoutes(app: FastifyInstance) {
   app.get('/me/liked-by', async (request) => {
     const userId = app.requireUser(request)
 
+    // Who is shown liking your things, and so counted beside them: a test
+    // account is not shown to anybody outside its ring, nor anybody outside
+    // to it (`trades/ring.ts`). A like across the ring is one the heart
+    // refuses now, but likes from before that are still in the table.
+    const shown = sql`${sameRing(sql`${userId}::uuid`, sql`l.from_user`)}`
+
     const items = await many(
       app.db,
       sql`select i.*, ${coverSql('i')} as cover,
-                 (select count(*) from likes l where l.target_item = i.id) as like_count
+                 (select count(*) from likes l where l.target_item = i.id and ${shown}) as like_count
           from items i where i.owner_id = ${userId} and i.deleted_at is null
           order by like_count desc, i.created_at desc`,
     )
@@ -63,7 +70,7 @@ export default async function likeRoutes(app: FastifyInstance) {
                          where i2.owner_id = u.id and i2.deleted_at is null
                            and i2.status = 'available') as item_count
             from likes l join users u on u.id = l.from_user
-            where l.target_item = ${item['id']}
+            where l.target_item = ${item['id']} and ${shown}
             order by l.created_at desc`,
       )
       out.push({ item: publicItem(item), likers: likers.map(publicUser) })

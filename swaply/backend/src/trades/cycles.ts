@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
+import { ringsApart, sameRing } from './ring.js'
 
 /** One hop of a cycle: this participant gives this listing to the next one. */
 export type Hop = { userId: string; givesItemId: string }
@@ -46,6 +47,11 @@ export async function findCyclesThrough(
 
   const owner = wanted['owner_id']!
   if (owner === liker) return []
+  // A cycle with a test account in it may hold only that account's ring
+  // (`ring.ts`), and in a ring of three everybody is next to everybody — so
+  // every pair is asked. These two are in every cycle below; the third is
+  // asked in the query.
+  if (await ringsApart(db, liker, owner)) return []
 
   const twoWay = await db.execute<Row>(sql`
     select ours.id as gives_item
@@ -80,6 +86,8 @@ export async function findCyclesThrough(
       and ${notBlocked(sql`${liker}`, sql`${owner}`)}
       and ${notBlocked(sql`${liker}`, sql`third.owner_id`)}
       and ${notBlocked(sql`${owner}`, sql`third.owner_id`)}
+      and ${sameRing(sql`${liker}::uuid`, sql`third.owner_id`)}
+      and ${sameRing(sql`${owner}::uuid`, sql`third.owner_id`)}
   `)
 
   for (const row of threeWay) {

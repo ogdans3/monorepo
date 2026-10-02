@@ -16,6 +16,7 @@ import {
 } from '../trades/actions.js'
 import { acceptTrade } from '../trades/accept.js'
 import { conversationAbout, lastMessageIn, postMessage } from '../trades/conversation.js'
+import { ringsApart, testRing } from '../trades/ring.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import {
   completeTrade,
@@ -83,6 +84,10 @@ export default async function tradeRoutes(app: FastifyInstance) {
     if (item['status'] === 'withdrawn') {
       throw conflict('item_unavailable', 'Denne er ikke lagt ut lenger.')
     }
+    // Nor between a test account and anybody outside its ring (`ring.ts`):
+    // the first message puts two people in one trade, and a test listing is
+    // still reachable by a link somebody was handed.
+    if (await ringsApart(app.db, userId, item['owner_id'])) throw testRing()
     const opened = await startTalking(app.db, userId, id, body.body)
     await app.db.execute(sql`
       insert into notifications (user_id, type, payload)

@@ -6,7 +6,7 @@ import type { Database } from '../db/index.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { many, one, uuidArray, type Row } from '../lib/rows.js'
 import { anonymiseUser } from '../trades/erasure.js'
-import { lockItems } from '../trades/locks.js'
+import { removeListings } from '../trades/removal.js'
 import { cancelTrade } from '../trades/trades.js'
 import { CATALOGUE, INTERESTS, PEOPLE } from './fixtures.js'
 
@@ -218,22 +218,49 @@ export async function resetAccount(
   }
 
   if (parts.includes('items')) {
-    const items = await db.transaction(async (tx) => {
-      // Listings lowest id first, the way everything that writes them takes
-      // them (`trades/index.ts`). A bare multi-row UPDATE locks in whatever
-      // order it scans, and an acceptance by the same account in that moment
-      // takes its own in sorted order.
-      const free = sql`i.owner_id = ${userId} and i.deleted_at is null and i.active_trade_id is null`
-      const locked = await lockItems(tx, free)
-      if (locked.length === 0) return []
-      return tx.execute(
-        sql`update items set deleted_at = now(), status = 'withdrawn'
-            where id = any(${uuidArray(locked.map((row) => row['id'] as string))})
-              and deleted_at is null and active_trade_id is null
-            returning id`,
+    const listed = await many(
+      db,
+      sql`select id from items
+          where owner_id = ${userId} and deleted_at is null and active_trade_id is null`,
+    )
+    // A listing a real person is negotiating about — on the table, in the
+    // newest version, of a trade still going on — is left where it is and
+    // said out loud, as «→ bytter» leaves their trades: removing it would end
+    // their negotiation for them. It used to be withdrawn regardless.
+    const onTheTable = await many(
+      db,
+      sql`select distinct o.trade_id, oi.item_id from trade_offers o
+          join trade_offer_items oi on oi.offer_id = o.id
+          join trades t on t.id = o.trade_id
+          where oi.item_id = any(${uuidArray(listed.map((row) => row['id'] as string))})
+            and t.state not in ('completed', 'cancelled')
+            and o.seq = (select max(seq) from trade_offers where trade_id = o.trade_id)`,
+    )
+    const kept = new Set<string>()
+    const strangers = new Set<string>()
+    for (const row of onTheTable) {
+      const stranger = await strangerIn(db, adminId, row['trade_id'])
+      if (!stranger) continue
+      kept.add(row['item_id'])
+      strangers.add(stranger)
+    }
+
+    // The rest the way the owner's own «Fjern annonsen» removes them: a
+    // listing something holds stays, and the negotiations inside the ring
+    // that had one on the table end, with their things back on the market.
+    const removal = await removeListings(
+      db,
+      userId,
+      listed.map((row) => row['id'] as string).filter((id) => !kept.has(id)),
+    )
+    freed.push(...removal.freed)
+    done.push(`${removal.removed.length} gjenstander trukket`)
+    if (kept.size > 0) {
+      done.push(
+        `${kept.size} gjenstand${kept.size === 1 ? '' : 'er'} som ` +
+          `${[...strangers].join(', ')} forhandler om ble ikke rørt`,
       )
-    })
-    done.push(`${items.length} gjenstander trukket`)
+    }
   }
 
   if (parts.includes('likes')) {

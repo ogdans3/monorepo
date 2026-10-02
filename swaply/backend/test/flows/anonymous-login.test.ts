@@ -367,7 +367,10 @@ describe('signing in on a phone that has been looking around', () => {
       testDeviceId = made.body!['id']
       switched = (await call('POST', `/admin/accounts/${testDeviceId}/session`, { token: gabriel }))
         .body!['token']
-      await call('POST', `/items/${kayak}/like`, { token: switched })
+      // A test account's wish for a real person's kayak. The heart refuses
+      // one now (test-ring.test.ts); the wishes made before it did are still
+      // in the table, and are what must not be carried out of the ring.
+      await db.execute(sql`insert into likes (from_user, target_item) values (${testDeviceId}, ${kayak})`)
     })
 
     test('15. a switched session carries nothing out of the ring', async () => {
@@ -393,7 +396,8 @@ describe('signing in on a phone that has been looking around', () => {
         body: { deviceId: row!['device_id'] },
       })
       expect(ordinary.body!['user']['id']).toBe(id)
-      await call('POST', `/items/${kayak}/like`, { token: ordinary.body!['token'] })
+      // From before the heart kept a test account to its ring, as in 15.
+      await db.execute(sql`insert into likes (from_user, target_item) values (${id}, ${kayak})`)
 
       const res = await signIn('per@epost.no', ordinary.body!['token'])
 
@@ -488,9 +492,18 @@ describe('signing in on a phone that has been looking around', () => {
       body: { deviceId: 'device-owners-phone-0123456789' },
     })
     const phone = stranger.body!['token'] as string
-    for (const item of [lamp, ringItem!['id'], canoe]) {
+    for (const item of [lamp, canoe]) {
       expect((await call('POST', `/items/${item}/like`, { token: phone })).status, item).toBe(200)
     }
+    // A phone nobody has signed in on is a stranger to the ring, and its heart
+    // on a test account's listing is refused now (test-ring.test.ts). One it
+    // pressed before that rule is still there to be folded in.
+    const refused = await call('POST', `/items/${ringItem!['id']}/like`, { token: phone })
+    expect(refused.body!['code']).toBe('test_ring')
+    await db.execute(
+      sql`insert into likes (from_user, target_item)
+          values (${stranger.body!['user']['id']}, ${ringItem!['id']})`,
+    )
 
     const res = await signIn('eier@epost.no', phone)
 

@@ -19,6 +19,7 @@ import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
+import { startTalking } from '../../src/trades/trades.js'
 import { close, db, reset } from '../helpers.js'
 
 let app: FastifyInstance
@@ -439,12 +440,17 @@ describe('building a trade in a named state', () => {
   test('14h. and a test account in one cannot be deleted out from under them',
     async () => {
       const kariItems = await call('GET', `/users/${kariId}`, { token: gabriel })
-      // The stranger writes to a test account — reachable by id, which is
-      // deliberate: a link somebody was handed still opens.
-      const opened = await call('POST', `/items/${kariItems.body!['items'][0]['id']}/message`, {
+      const theirs = kariItems.body!['items'][0]['id'] as string
+      // A test account's listing is reachable by id, which is deliberate: a
+      // link somebody was handed still opens. Writing to it no longer opens a
+      // trade (test-ring.test.ts) — but one opened before that rule existed
+      // is somebody's history all the same, written here the way the first
+      // message wrote it then.
+      const refused = await call('POST', `/items/${theirs}/message`, {
         token: stranger, body: { body: 'Hei!' },
       })
-      expect(opened.status).toBe(201)
+      expect(refused.body!['code']).toBe('test_ring')
+      await startTalking(db, strangerId, theirs, 'Hei!')
 
       const res = await call('DELETE', `/admin/accounts/${kariId}`, { token: gabriel })
       expect(res.status).toBe(409)
