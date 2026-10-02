@@ -378,4 +378,69 @@ void main() {
       expect(asked.last, containsPair('category', 'klaer'));
     });
   });
+
+  group('10a fits the phone it is on', () {
+    /// 10a over a screen of [size], the way a heart puts it up.
+    Future<void> prompt(WidgetTester tester, Size size) async {
+      server.overrides['GET /me/likes'] = {
+        'items': [
+          for (var i = 0; i < 3; i++) {...FakeServer.console, 'id': 'liked-$i', 'cover': null},
+        ],
+      };
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => TextButton(
+              onPressed: () => showListingPrompt(context, 5), child: const Text('Vis')),
+        ),
+      );
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Vis'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('1. on a 375×667, «Senere» is on screen and answers', (tester) async {
+      // Held to nine sixteenths of the screen, a sheet of about four hundred
+      // points put «Senere» under the edge of a 667, where nothing reached it.
+      await prompt(tester, const Size(375, 667));
+
+      final later = find.widgetWithText(TextButton, 'Senere');
+      expect(tester.getRect(later).bottom, lessThanOrEqualTo(667));
+      expect(later.hitTestable(), findsOneWidget);
+      expect(find.text('Legg ut en gjenstand').hitTestable(), findsOneWidget);
+
+      await tester.tap(later);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+    });
+
+    testWidgets('2. on a 320, the pictures shrink to fit, and the sheet scrolls to «Senere»',
+        (tester) async {
+      // Three 88s and their gaps are wider than a 320 leaves, and ran past
+      // its edge.
+      await prompt(tester, const Size(320, 568));
+
+      expect(tester.takeException(), isNull);
+      final thumb = tester.getSize(find.byType(ItemThumb).first);
+      expect(thumb.width, lessThan(88));
+      expect(thumb.width, thumb.height);
+      expect(tester.getRect(find.byType(ItemThumb).last).right, lessThanOrEqualTo(320 - 24));
+
+      final later = find.widgetWithText(TextButton, 'Senere');
+      await tester.ensureVisible(later);
+      await tester.pumpAndSettle();
+      expect(later.hitTestable(), findsOneWidget);
+      // Never under the status bar, however much there is to scroll.
+      expect(tester.getRect(find.byType(BottomSheet)).top, greaterThanOrEqualTo(0));
+    });
+
+    testWidgets('3. on the export\'s 390, the pictures are its 88s', (tester) async {
+      await prompt(tester, const Size(390, 844));
+
+      expect(tester.getSize(find.byType(ItemThumb).first), const Size(88, 88));
+      expect(find.byType(ItemThumb), findsNWidgets(3));
+    });
+  });
 }
+

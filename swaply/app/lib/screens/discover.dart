@@ -1455,18 +1455,33 @@ Future<void> showListingPrompt(BuildContext context, int likedCount) async {
   await showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
+    // As tall as what is in it. A sheet is held to nine sixteenths of the
+    // screen otherwise, and this one is about four hundred points: on a 667
+    // phone «Senere» was below the edge, with no way to it. On a phone too
+    // short for all of it, it scrolls, and stays out from under the status
+    // bar.
+    isScrollControlled: true,
+    useSafeArea: true,
     // The export's sheet is the screen's own off-white, rounded 28 at the top.
     backgroundColor: SwaplyColors.bg,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-    builder: (sheet) => _ListingPrompt(
-      likedCount: likedCount,
-      liked: liked,
-      onList: () {
-        Navigator.of(sheet).pop();
-        openListingForm(context);
-      },
-      onLater: () => Navigator.of(sheet).pop(),
+    builder: (sheet) => SafeArea(
+      top: false,
+      // The export's 20 under «Senere», or the home indicator's room where
+      // that is more: the export's 390 has one, which the 20 stands for.
+      minimum: const EdgeInsets.only(bottom: 20),
+      child: SingleChildScrollView(
+        child: _ListingPrompt(
+          likedCount: likedCount,
+          liked: liked,
+          onList: () {
+            Navigator.of(sheet).pop();
+            openListingForm(context);
+          },
+          onLater: () => Navigator.of(sheet).pop(),
+        ),
+      ),
     ),
   );
 }
@@ -1492,8 +1507,9 @@ class _ListingPrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         // 34 under «Senere» in the export, 12 of which are its own tap target
-        // and 2 more its room.
-        padding: const EdgeInsets.fromLTRB(24, 10, 24, 20),
+        // and 2 more its room. The 20 left is under this; see
+        // [showListingPrompt].
+        padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1525,33 +1541,40 @@ class _ListingPrompt extends StatelessWidget {
                 // be taken down since — and the row is not drawn at all:
                 // three empty tiles would read as pictures that failed.
                 if (items != null && items.isEmpty) return const SizedBox.shrink();
+                // Three 88s and the 48 the words have beside them at 390,
+                // shrinking together on a narrower phone: three fixed 88s ran
+                // past the edge of a 320.
                 return Padding(
                   padding: const EdgeInsets.only(top: 18),
-                  child: SizedBox(
-                    height: 88,
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < (items?.length ?? 3); i++) ...[
-                          if (items == null)
-                            Container(
-                              width: 88,
-                              height: 88,
-                              decoration: BoxDecoration(
-                                color: _waiting[i],
-                                borderRadius: BorderRadius.circular(Radii.card),
-                              ),
-                            )
-                          else
-                            ItemThumb(items[i], size: 88, radius: Radii.card),
-                          const SizedBox(width: 10),
-                        ],
-                        const Expanded(
-                          child: Text('ting du\nhar likt',
-                              style: TextStyle(
-                                  fontSize: 11, height: 1.4, color: SwaplyColors.greyLight)),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < (items?.length ?? 3); i++) ...[
+                        Flexible(
+                          flex: 88,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 88),
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: items == null
+                                  ? Container(
+                                      decoration: BoxDecoration(
+                                        color: _waiting[i],
+                                        borderRadius: BorderRadius.circular(Radii.card),
+                                      ),
+                                    )
+                                  : ItemThumb(items[i], size: 88, radius: Radii.card),
+                            ),
+                          ),
                         ),
+                        const SizedBox(width: 10),
                       ],
-                    ),
+                      const Expanded(
+                        flex: 48,
+                        child: Text('ting du\nhar likt',
+                            style: TextStyle(
+                                fontSize: 11, height: 1.4, color: SwaplyColors.greyLight)),
+                      ),
+                    ],
                   ),
                 );
               },
