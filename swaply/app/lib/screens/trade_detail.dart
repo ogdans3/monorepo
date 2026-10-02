@@ -86,9 +86,6 @@ class _MatchScreenState extends State<MatchScreen> {
     }
 
     final chain = trade.isChain;
-    final other = trade.receivingFrom.displayName.split(' ').first;
-    final theyGive = trade.youGet.map((i) => i.title).join(' og ');
-    final youGive = trade.youGive.map((i) => i.title).join(' og ');
 
     // The one screen the export drenches: deep green, white type, the two
     // things tilted like photographs somebody put on a table. «The moment is
@@ -106,60 +103,21 @@ class _MatchScreenState extends State<MatchScreen> {
             SafeArea(
               child: Column(
                 children: [
+                  // Drawn for 390×844, from the top down: 153 over the
+                  // title and the table under it, about 550 for a pair. That
+                  // ran under «Se byttet» on a 375×667 phone and a hundred
+                  // points under it on a 360×640 one. The 153 is room the
+                  // phone can spare, so it gives way first, down to nothing;
+                  // past that the words and the table scroll above the
+                  // buttons rather than under them.
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 30),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 153),
-                          Text(
-                            chain ? 'Dere kan gjøre en treveis-swap!' : 'Dere kan swappe!',
-                            style: const TextStyle(
-                                fontSize: 36,
-                                height: 1.14,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.8,
-                                color: Colors.white),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            chain
-                                ? 'Vi fant et bytte med tre personer.'
-                                : '$other vil ha $youGive, du vil ha $theyGive.',
-                            style: const TextStyle(
-                                fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 51),
-                          if (chain) _chainList(trade) else _table(trade, other),
-                          if (chain) ...[
-                            const SizedBox(height: 24),
-                            Container(
-                              padding: const EdgeInsets.all(Insets.md),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(Radii.card),
-                              ),
-                              child: const Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(Icons.info_outline, size: 18, color: Colors.white70),
-                                  SizedBox(width: Insets.sm),
-                                  Expanded(
-                                    child: Text(
-                                      'Dette byttet kan ikke Swaply fasilitere, men vi kan '
-                                      'starte en chat så dere avtaler det selv.',
-                                      style: TextStyle(
-                                          fontSize: 13, height: 1.4, color: Colors.white70),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
+                    child: LayoutBuilder(
+                      builder: (context, box) => SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 30),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: box.maxHeight),
+                          child: IntrinsicHeight(child: _moment(trade, width: box.maxWidth - 60)),
+                        ),
                       ),
                     ),
                   ),
@@ -212,14 +170,102 @@ class _MatchScreenState extends State<MatchScreen> {
     );
   }
 
+  /// The words and the table, [width] across, over the buttons.
+  Widget _moment(Trade trade, {required double width}) {
+    final chain = trade.isChain;
+    final other = trade.receivingFrom.displayName.split(' ').first;
+    final theyGive = trade.youGet.map((i) => i.title).join(' og ');
+    final youGive = trade.youGive.map((i) => i.title).join(' og ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Up to 153 as laid out, and nothing as an intrinsic height, so
+        // it gives way before anything has to scroll.
+        Flexible(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 153),
+            child: const SizedBox.expand(),
+          ),
+        ),
+        Text(
+          chain ? 'Dere kan gjøre en treveis-swap!' : 'Dere kan swappe!',
+          style: const TextStyle(
+              fontSize: 36,
+              height: 1.14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.8,
+              color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 10),
+        Text(
+          chain
+              ? 'Vi fant et bytte med tre personer.'
+              : '$other vil ha $youGive, du vil ha $theyGive.',
+          style: const TextStyle(fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 51),
+        if (chain) _chainList(trade) else _table(trade, other, width: width),
+        if (chain) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(Insets.md),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(Radii.card),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, size: 18, color: Colors.white70),
+                SizedBox(width: Insets.sm),
+                Expanded(
+                  child: Text(
+                    'Dette byttet kan ikke Swaply fasilitere, men vi kan '
+                    'starte en chat så dere avtaler det selv.',
+                    style: TextStyle(fontSize: 13, height: 1.4, color: Colors.white70),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// The table is drawn 330 across, the export's 390 less its margins.
+  static const _tableWidth = 330.0, _tableHeight = 251.0;
+
   /// Your things on the left, tilted a little to the left; theirs on the
   /// right, tilted a little to the right; the swap sign where they overlap.
   /// The second thing you give peeks out from behind the first.
-  Widget _table(Trade trade, String other) {
+  ///
+  /// Placed for [_tableWidth], and shrunk as a whole where [width] is less:
+  /// at 320 across the right card ran off the screen. Its height shrinks
+  /// with it, so the page knows how much room it takes.
+  Widget _table(Trade trade, String other, {required double width}) {
+    final scale = math.min(1.0, width / _tableWidth);
+    return SizedBox(
+      height: _tableHeight * scale,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox(
+          width: _tableWidth,
+          height: _tableHeight,
+          child: _cards(trade, other),
+        ),
+      ),
+    );
+  }
+
+  Widget _cards(Trade trade, String other) {
     final give = trade.youGive;
     final get = trade.youGet;
     return SizedBox(
-      height: 251,
+      height: _tableHeight,
       child: Stack(
         clipBehavior: Clip.none,
         children: [

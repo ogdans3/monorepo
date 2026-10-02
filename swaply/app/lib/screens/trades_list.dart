@@ -343,9 +343,14 @@ class _Segments extends StatelessWidget {
   final TabController controller;
   final List<String> labels;
 
-  /// The TabBar's own sizes: a 33-tall tab over its 2-point indicator line,
-  /// and 16 either side of the label.
+  /// The TabBar's own sizes: a 33-tall tab over its 2-point indicator line.
   static const _tab = 33.0, _line = 2.0;
+
+  /// What a label keeps clear of its pill's edges. The TabBar's 16 a side
+  /// left «Fullført · 3» 58 points on a 320-wide phone, where it faded out
+  /// before its count; the label is centred either way, so where it fits
+  /// nothing moves.
+  static const _labelPadding = EdgeInsets.symmetric(horizontal: 6);
 
   @override
   Widget build(BuildContext context) {
@@ -415,7 +420,7 @@ class _Segments extends StatelessWidget {
             child: Center(
               heightFactor: 1,
               child: Padding(
-                padding: kTabLabelPadding,
+                padding: _labelPadding,
                 child: DefaultTextStyle.merge(
                   style: TextStyle.lerp(on, off, 1 - chosen)!.copyWith(
                       color: Color.lerp(SwaplyColors.greySoft, SwaplyColors.ink, chosen)),
@@ -423,7 +428,13 @@ class _Segments extends StatelessWidget {
                     height: _tab,
                     child: Center(
                       widthFactor: 1,
-                      child: Text(label, softWrap: false, overflow: TextOverflow.fade),
+                      // Narrower still — a larger text size, a count in the
+                      // hundreds — it gets smaller rather than losing the
+                      // count, which is the point of it.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(label, softWrap: false),
+                      ),
                     ),
                   ),
                 ),
