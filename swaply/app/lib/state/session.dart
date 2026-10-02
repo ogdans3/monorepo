@@ -814,7 +814,12 @@ class Session extends ChangeNotifier {
       try {
         return (await api.login(email, password)).me;
       } on ApiException catch (again) {
-        if (again.isNoContact) _claimUnheard = words;
+        // Told to wait, the sign-in has not looked at the password either, so
+        // the profile may still be the one the first press made: the next
+        // press asks again, rather than calling the address taken.
+        if (again.isNoContact || again.code == ApiException.tooManyAttempts) {
+          _claimUnheard = words;
+        }
         if (again.code == 'wrong_credentials') throw e;
         rethrow;
       }

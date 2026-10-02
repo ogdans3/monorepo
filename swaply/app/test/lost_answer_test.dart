@@ -140,6 +140,36 @@ void main() {
     expect(server.requests, isNot(contains('POST /items')));
   });
 
+  testWidgets('2b. a sign-in told to wait says how long, and the press after the wait gets in',
+      (tester) async {
+    await onTenC(tester);
+    await fill(tester);
+    await press(tester);
+    expect(find.text(noContact), findsOneWidget);
+
+    // Wrong passwords were tried for the address before it had an account,
+    // so the sign-in this press falls back on is told to wait.
+    var waited = false;
+    server.overrides['POST /auth/login'] = (http.Request _) => waited
+        ? {'token': 'tok', 'user': FakeServer.profileOnly(claimed)}
+        : Refusal.tooManyAttempts;
+    await press(tester);
+
+    expect(find.text(Refusal.tooManyAttempts.message), findsOneWidget);
+    expect(find.text(emailTaken.message), findsNothing);
+    expect(session.anonymous, isTrue);
+
+    // The password was never looked at, so the next press asks again rather
+    // than calling the address taken.
+    waited = true;
+    await press(tester);
+
+    expect(session.anonymous, isFalse);
+    expect(find.text(emailTaken.message), findsNothing);
+    expect(find.byType(CreateProfileScreen), findsNothing);
+    expect(server.requests, contains('POST /items'));
+  });
+
   testWidgets('3. a taken address with no unanswered try before it is only refused',
       (tester) async {
     await session.lookAround();

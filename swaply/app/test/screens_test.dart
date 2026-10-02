@@ -159,6 +159,35 @@ void main() {
       expect(find.text('Du må logge inn.'), findsNothing);
     });
 
+    // Too soon after a run of wrong passwords for the address: the server has
+    // not looked at the password, and says how long to wait. Its words are
+    // the whole of it — not «Feil e-post eller passord», which it did not
+    // say, and not «Vi får ikke kontakt», since it answered.
+    for (final (name, screen) in [
+      ('16c', const LoginScreen() as Widget),
+      ('«Logg inn» on 10c', const CreateProfileScreen(continuingToListing: true)),
+    ]) {
+      testWidgets('$name says how long to wait after too many wrong passwords', (tester) async {
+        server.overrides['POST /auth/login'] = Refusal.tooManyAttempts;
+        await mount(tester, screen, signedIn: false);
+        if (screen is CreateProfileScreen) {
+          await tester.tap(find.text('Logg inn'));
+          await tester.pumpAndSettle();
+        }
+
+        await tester.enterText(find.byType(TextField).first, 'ola@epost.no');
+        await tester.enterText(find.byType(TextField).last, 'feil');
+        await tester.tap(find.widgetWithText(PrimaryButton, 'Logg inn'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(LoginScreen), findsOneWidget);
+        expect(find.text(Refusal.tooManyAttempts.message), findsOneWidget);
+        expect(find.text(noContact), findsNothing);
+        expect(find.text('Feil e-post eller passord.'), findsNothing);
+        expect(session.signedIn, isFalse);
+      });
+    }
+
     testWidgets('16c a sign-in answers with the profile, and the rest comes from GET /me',
         (tester) async {
       // The fake answers as `publicMe` does — no things, no unread counts —

@@ -146,7 +146,16 @@ with nothing to tap.
   did; pressed again it went as a new account on a dead session and was
   refused as `email_taken` by the profile the first press made. Pressed again
   with the same address and password it now signs in with them, and the
-  listing it was made for goes out. `test/lost_answer_test.dart` holds both.
+  listing it was made for goes out. If that sign-in is told to wait, the next
+  press asks again rather than calling the address taken: the password was
+  never looked at. `test/lost_answer_test.dart` holds all of it.
+- **Too many wrong passwords** for one address and the server holds the next
+  sign-in back, two seconds and doubling up to a quarter of an hour
+  (`../docs/ARCHITECTURE.md`). 16c, opened on its own or from 10c, says the
+  server's sentence over the button as it says any refusal — «For mange
+  forsøk med feil passord. Prøv igjen om 30 sekunder.» — and not «Feil e-post
+  eller passord», which the server did not say, nor «Vi får ikke kontakt»,
+  since it answered. `test/screens_test.dart` holds both ways in.
 - **Opening the app reaches the server.** A device that only looked around is
   deleted after twelve months in which its own token asked the server
   nothing, and opening the app counts. A cold start asks `GET /me` as it

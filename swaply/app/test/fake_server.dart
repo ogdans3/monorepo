@@ -609,6 +609,12 @@ class Refusal {
   static const wrongCredentials =
       Refusal(401, 'wrong_credentials', 'Feil e-post eller passord.');
 
+  /// `POST /auth/login` too soon after a run of wrong passwords for the
+  /// address: the password was not looked at, and the words say how long to
+  /// wait. The same for an address with no account.
+  static const tooManyAttempts = Refusal(429, 'too_many_attempts',
+      'For mange forsøk med feil passord. Prøv igjen om 30 sekunder.');
+
   /// `/auth/anonymous` on a server that lets nobody in without a key.
   static const inviteRequired = Refusal(403, 'invite_required',
       'Swaply er invitasjonsbasert. Du trenger en invitasjon fra noen som allerede er med.');
