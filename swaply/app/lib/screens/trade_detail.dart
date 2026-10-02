@@ -1335,15 +1335,19 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // one tap was offering to give a thing away for nothing — so the whole
       // action is «Foreslå motbytte» until both sides have something in it.
       final halfFilled = trade.youGive.isEmpty || trade.youGet.isEmpty;
+      // On every negotiation you have not said yes to. It was only beside
+      // «Godta byttet», so a conversation, or an offer with a side still
+      // empty, could not be closed from here at all; the server declines a
+      // trade in any of the three states.
+      final decline = SizedBox(
+        width: 113,
+        child: SecondaryButton('Avslå',
+            destructive: true, onPressed: _busy ? null : () => _confirmDecline(trade)),
+      );
       if (!trade.youAccepted && !halfFilled) {
         children.add(Row(
           children: [
-            SizedBox(
-              width: 113,
-              child: SecondaryButton('Avslå',
-                  destructive: true,
-                  onPressed: _busy ? null : () => _confirmDecline(trade)),
-            ),
+            decline,
             const SizedBox(width: 10),
             Expanded(
               child: PrimaryButton('Godta byttet',
@@ -1367,7 +1371,20 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ));
         children.add(const SizedBox(height: 6));
       }
-      if (!trade.isChain) {
+      if (!trade.isChain && halfFilled && !trade.youAccepted) {
+        // Nothing to accept yet: «Avslå» where it stands beside «Godta
+        // byttet», and the way to fill the offer in where that would be.
+        children.add(Row(
+          children: [
+            decline,
+            const SizedBox(width: 10),
+            Expanded(
+              child: SecondaryButton('Sett sammen byttet',
+                  accent: true, onPressed: _busy ? null : () => _openCounterOffer(trade)),
+            ),
+          ],
+        ));
+      } else if (!trade.isChain) {
         // 42 tall, and the 2 under it — the foot of the bar, or of the gap
         // to «Angre» — answer too.
         children.add(TapArea(
@@ -1379,6 +1396,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
               onPressed: _busy ? null : () => _openCounterOffer(trade)),
         ));
         footRoom = trade.youAccepted ? 0 : 2;
+      } else if (halfFilled && !trade.youAccepted) {
+        // A ring is put together in its chat, so there is only the way out.
+        children.add(SecondaryButton('Avslå',
+            destructive: true, onPressed: _busy ? null : () => _confirmDecline(trade)));
       }
       if (trade.youAccepted) {
         // De-accept: the lifecycle goes backwards as well as forwards, and your
@@ -1459,10 +1480,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   }
 
   Future<void> _confirmDecline(Trade trade) async {
+    final other = trade.receivingFrom.displayName.split(' ').first;
     final yes = await _confirm(
       title: 'Avslå byttet?',
-      body: 'Tingene deres blir tilgjengelige for andre igjen, og '
-          '${trade.receivingFrom.displayName.split(' ').first} får beskjed.',
+      // With a side still empty nobody can have said yes, so nothing was
+      // ever held, and nothing becomes free.
+      body: trade.youGive.isEmpty || trade.youGet.isEmpty
+          ? 'Byttet avsluttes, og $other får beskjed.'
+          : 'Tingene deres blir tilgjengelige for andre igjen, og $other får beskjed.',
       confirm: 'Avslå byttet',
     );
     if (yes == true) await _run((api) => api.decline(trade.id));
