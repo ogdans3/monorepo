@@ -411,6 +411,9 @@ export default async function itemRoutes(app: FastifyInstance) {
     // listing.
     const { removed, freed } = await removeListings(app.db, userId, [id])
     if (removed.length === 0) {
+      // Either a yes holds it, or a second press removed it a moment ago.
+      const now = await one(app.db, sql`select deleted_at from items where id = ${id}`)
+      if (now?.['deleted_at']) return reply.code(204).send()
       throw conflict('item_reserved', 'Gjenstanden er reservert i et bytte.')
     }
     // The trades it ended let go of what they held, and that is back on the

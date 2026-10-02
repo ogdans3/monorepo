@@ -19,6 +19,7 @@ import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
+import { connect } from '../../src/db/index.js'
 import { sweepForCycles } from '../../src/trades/sweep.js'
 import { close, db, itemRow, reset, tradeState } from '../helpers.js'
 
@@ -183,6 +184,36 @@ describe('removing a listing that is on the table', () => {
 
   test('10. removing it a second time changes nothing', async () => {
     expect((await call('DELETE', `/items/${drill}`, { token: ola.token })).status).toBe(204)
+  })
+
+  test('10b. nor does a second press landing while the first is removing it', async () => {
+    const chair = await list(ola, 'Stol')
+    const other = connect()
+    try {
+      let pressed: ReturnType<typeof call> | undefined
+      await other.db.transaction(async (tx) => {
+        // The first press, holding the listing while it removes it.
+        await tx.execute(
+          sql`update items set deleted_at = now(), status = 'withdrawn' where id = ${chair}`,
+        )
+        pressed = call('DELETE', `/items/${chair}`, { token: ola.token })
+        for (let tries = 0; ; tries++) {
+          await tx.execute(sql`select pg_stat_clear_snapshot()`)
+          const [waiting] = await tx.execute<{ n: number }>(
+            sql`select count(*)::int as n from pg_stat_activity
+                where datname = current_database() and wait_event_type = 'Lock'`,
+          )
+          if (waiting!.n > 0) break
+          if (tries > 500) throw new Error('the second press never came to the listing')
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+      })
+
+      // Said as what it is: removed, and not «reservert i et bytte».
+      expect((await pressed!).status).toBe(204)
+    } finally {
+      await other.client.end()
+    }
   })
 })
 
