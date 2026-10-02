@@ -5,7 +5,7 @@ import { ZodError } from 'zod'
 
 import type { Database } from './db/index.js'
 import { env } from './env.js'
-import { ApiError, uniqueViolation } from './lib/errors.js'
+import { ApiError, notFound, uniqueViolation } from './lib/errors.js'
 import { speakNorwegian } from './lib/validation.js'
 import authPlugin from './plugins/auth.js'
 import adminRoutes from './routes/admin.js'
@@ -133,6 +133,15 @@ export async function buildApp(
 
     request.log.error(error)
     return reply.code(500).send({ code: 'server_error', message: 'Noe gikk galt hos oss.' })
+  })
+
+  // A route nobody wrote. Fastify's own answer is English — «Route GET:/x
+  // not found» — and the app shows a refusal's message as it comes. Said the
+  // way every other «not found» is, which is also what the admin section
+  // answers somebody it is not for.
+  app.setNotFoundHandler((_request, reply) => {
+    const missing = notFound()
+    return reply.code(404).send({ code: missing.code, message: missing.message })
   })
 
   app.get('/health', async () => ({ ok: true }))

@@ -253,6 +253,40 @@ describe('sharing a listing with someone who is not here yet', () => {
     expect((await call(app, 'GET', '/invites/aaaaaaaaaaaaaaaaaaaaaa')).status).toBe(404)
   })
 
+  test('12b. a link cut short is an invitation we do not know, and the way in stays open', async () => {
+    // A chat app that cuts a link short leaves a few characters after /i/.
+    // Refused as a typo — «Skriv minst 16 tegn.» — the invitation screen was
+    // a dead end: the app lets go of a key it is told is unknown and starts
+    // without it, and it was told something else.
+    for (const token of ['aB3x', 'ikke-en-gyldig-n%C3%B8kkel', 'a'.repeat(80)]) {
+      const page = await call(app, 'GET', `/invites/${token}`)
+      expect(page.status, token).toBe(404)
+      expect(page.body).toEqual({
+        code: 'invite_unknown',
+        message: 'Vi kjenner ikke igjen denne invitasjonen.',
+      })
+    }
+
+    const device = 'device-cut-short-0123456789abcdef'
+    const start = await call(app, 'POST', '/auth/anonymous', {
+      body: { deviceId: device, invite: 'aB3x' },
+    })
+    expect(start.status).toBe(404)
+    expect(start.body!['code']).toBe('invite_unknown')
+    // Nothing was made on the way to the refusal, and the same phone asking
+    // again without the key — what the app does next — is let in.
+    expect(await db.execute(sql`select 1 from users where device_id = ${device}`)).toHaveLength(0)
+    const again = await call(app, 'POST', '/auth/anonymous', { body: { deviceId: device } })
+    expect(again.status).toBe(201)
+
+    // 10c says the same about it.
+    const signup = await call(app, 'POST', '/auth/register', {
+      body: { displayName: 'Siri', email: 'siri@epost.no', password: 'snomaking1', invite: 'aB3x' },
+    })
+    expect(signup.status).toBe(404)
+    expect(signup.body!['code']).toBe('invite_unknown')
+  })
+
   test('13. a listing retired after the link went out leaves the page standing', async () => {
     const listing = await call(app, 'POST', '/items', {
       token: ola,

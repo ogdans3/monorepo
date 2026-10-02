@@ -82,6 +82,16 @@ describe('the whole journey over HTTP', () => {
     ola = again.body!['token']
   })
 
+  test('a route that does not exist is answered in Norwegian, like every refusal', async () => {
+    // Fastify's own answer is «Route GET:/finnes-ikke not found», and the app
+    // shows a refusal's message as it comes.
+    for (const [method, url] of [['GET', '/finnes-ikke'], ['POST', '/items/abc/noe']] as const) {
+      const res = await call(method, url, { token: ola })
+      expect(res.status, url).toBe(404)
+      expect(res.body).toEqual({ code: 'not_found', message: 'Fant ikke det du ba om.' })
+    }
+  })
+
   test('16c — the same address and password logs you back in, a wrong one does not', async () => {
     expect((await call('POST', '/auth/login', { body: { email: 'ola@epost.no', password: 'drillbits123' } })).status).toBe(200)
 

@@ -2,15 +2,22 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { createInvite, findInvite, inviteUrl } from '../lib/invites.js'
+import {
+  createInvite,
+  findInvite,
+  inviteUrl,
+  looksLikeInvite,
+  unknownInvite,
+} from '../lib/invites.js'
 import { notFound } from '../lib/errors.js'
 import { many, one } from '../lib/rows.js'
 import { inviteText, shareText } from '../lib/text.js'
 import { knownTown, sharedItem } from './serialize.js'
 
-// base64url, sixteen bytes. Checked here so a typo comes back as a 400 with a
-// sentence in it rather than a 404 that looks like the invitation is gone.
-const tokenParam = z.object({ token: z.string().min(16).max(64).regex(/^[A-Za-z0-9_-]+$/) })
+// Whatever came after /i/. A token that cannot be one is not a typo to point
+// out — nobody types these, and the commonest is a link a chat app cut short
+// — but an invitation we do not know, and it is answered as one.
+const tokenParam = z.object({ token: z.string() })
 
 export default async function inviteRoutes(app: FastifyInstance) {
   /**
@@ -65,9 +72,10 @@ export default async function inviteRoutes(app: FastifyInstance) {
    */
   app.get('/invites/:token', async (request) => {
     const { token } = tokenParam.parse(request.params)
+    if (!looksLikeInvite(token)) throw unknownInvite()
 
     const invite = await findInvite(app.db, token)
-    if (!invite) throw notFound('Vi kjenner ikke igjen denne invitasjonen.')
+    if (!invite) throw unknownInvite()
 
     // An anonymised inviter is nobody, not «Slettet bruker». There is no person
     // left to name, and naming a tombstone on a public page would be worse than

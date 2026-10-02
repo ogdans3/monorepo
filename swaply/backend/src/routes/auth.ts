@@ -30,8 +30,9 @@ const registerBody = z.object({
     .nullish()
     .transform((v) => (v === '' ? null : v)),
   // The link that let you in. Spent here unless it was already spent when this
-  // device started looking around.
-  invite: z.string().min(16).max(64).nullish(),
+  // device started looking around. Any string: one that cannot be a token is
+  // answered as one nobody made (`redeemInvite`), not as a typo in a box.
+  invite: z.string().nullish(),
 })
 
 export default async function authRoutes(app: FastifyInstance) {
@@ -49,7 +50,7 @@ export default async function authRoutes(app: FastifyInstance) {
    */
   app.post('/auth/anonymous', async (request, reply) => {
     const body = z
-      .object({ deviceId: z.string().min(16).max(200), invite: z.string().min(16).max(64).nullish() })
+      .object({ deviceId: z.string().min(16).max(200), invite: registerBody.shape.invite })
       .parse(request.body)
 
     // An erased account has no device id left, so a device whose account was

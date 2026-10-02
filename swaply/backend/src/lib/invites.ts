@@ -27,6 +27,24 @@ const mint = () => randomBytes(16).toString('base64url')
 /** The link that gets pasted into a chat. One shape for both kinds of invite. */
 export const inviteUrl = (token: string) => `${env.WEB_ORIGIN}/i/${token}`
 
+/** Every token `mint` makes looks like this: base64url, and not short. */
+const TOKEN = /^[A-Za-z0-9_-]{16,64}$/
+
+/**
+ * «Vi kjenner ikke igjen denne invitasjonen.» — for a token nobody made, and
+ * for one that cannot be a token at all, which is the same thing to the
+ * person holding it. A link a chat app cut short is the likeliest way to hold
+ * one, and answered as a typo («Skriv minst 16 tegn.») it was a dead end on
+ * the invitation screen: the app lets go of a key it is told is unknown and
+ * asks without it, and it was told something else. 404, as the page behind
+ * the link answers.
+ */
+export const unknownInvite = () =>
+  new ApiError(404, 'invite_unknown', 'Vi kjenner ikke igjen denne invitasjonen.')
+
+/** Whether [token] could be one `mint` made, before anything is looked up. */
+export const looksLikeInvite = (token: string) => TOKEN.test(token)
+
 /**
  * A new invitation, optionally carrying the item it was shared from.
  *
@@ -63,6 +81,7 @@ export async function findInvite(db: Executor, token: string): Promise<Row | nul
  * keeps working for all of them, because looking is not joining.
  */
 export async function redeemInvite(db: Executor, token: string, userId: string): Promise<Row> {
+  if (!looksLikeInvite(token)) throw unknownInvite()
   const rows = await db.execute<Row>(
     sql`update invites set used_by = ${userId}, used_at = now()
         where token_hash = ${hash(token)} and used_by is null
@@ -78,7 +97,7 @@ export async function redeemInvite(db: Executor, token: string, userId: string):
       'Denne invitasjonen er allerede brukt. Be den som sendte den om en ny.',
     )
   }
-  throw badRequest('invite_unknown', 'Vi kjenner ikke igjen denne invitasjonen.')
+  throw unknownInvite()
 }
 
 /**
