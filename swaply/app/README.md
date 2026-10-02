@@ -373,6 +373,11 @@ is come back to. From «Rapporter et problem» on a finished trade the trade is
 asked for again. Each waits for the server's answer, and a report that did not
 block asks for nothing. The thanks say the block — «Takk. Vi ser på
 rapporten. Kari er blokkert.» — since the screen changes in the same moment.
+16a itself stays up until the server has the report, saying «Sender rapporten
+…»: it used to close as «Send rapport» was pressed, and a report that did not
+get through took the reason, the words and the tick with it. One that does not
+get through is said in the sheet, over the button, and pressed again sends the
+same; one pulled down on its way still decides what the screen does.
 
 04 comes back `true` when a block took it away, and whatever opened it asks
 again. That was the grid and 13b's own list of things, and nothing else: 04

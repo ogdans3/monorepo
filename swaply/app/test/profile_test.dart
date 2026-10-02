@@ -347,5 +347,119 @@ void main() {
       expect(server.asked('POST /auth/logout'), 2);
     });
   });
+
+  group('16a stays up until the report has got through', () {
+    /// A button that opens 16a about Kari, and what it came back with.
+    Future<List<bool>> reportKari(WidgetTester tester) async {
+      final outcomes = <bool>[];
+      await mount(
+        tester,
+        Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async => outcomes
+                  .add(await showReportSheet(context, userId: 'kari-1', personName: 'Kari N.')),
+              child: const Text('Rapporter Kari'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Rapporter Kari'));
+      await tester.pumpAndSettle();
+      return outcomes;
+    }
+
+    final sheet = find.byType(BottomSheet);
+
+    testWidgets('1. no answer keeps the reason, the words and the tick, and says why in it',
+        (tester) async {
+      // It closed as «Send rapport» was pressed, and a report that did not
+      // get through took everything in it along.
+      var reach = false;
+      server.overrides['POST /reports'] =
+          (http.Request _) => reach ? {'ok': true, 'blocked': true} : unreachable;
+      final outcomes = await reportKari(tester);
+
+      await tester.tap(find.text('Svindel'));
+      await tester.enterText(find.byType(TextField), 'Ville ha betalt på forhånd.');
+      await tester.tap(find.text('Blokkér Kari N.'));
+      await tester.pump();
+      await tester.tap(find.text('Send rapport'));
+      await tester.pumpAndSettle();
+
+      expect(sheet, findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text(noContact)), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'Ville ha betalt på forhånd.');
+      expect(tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value, isTrue);
+      expect(outcomes, isEmpty);
+
+      reach = true;
+      await tester.tap(find.text('Send rapport'));
+      await tester.pumpAndSettle();
+
+      expect(sheet, findsNothing);
+      expect(server.bodies['POST /reports'], {
+        'targetUser': 'kari-1',
+        'reason': 'fraud',
+        'detail': 'Ville ha betalt på forhånd.',
+        'block': true,
+      });
+      expect(find.text('Takk. Vi ser på rapporten. Kari er blokkert.'), findsOneWidget);
+      expect(outcomes, [true]);
+    });
+
+    testWidgets('2. it says it is on its way, and takes no second press meanwhile', (tester) async {
+      final answer = Completer<Object?>();
+      server.overrides['POST /reports'] = (http.Request _) => answer.future;
+      await reportKari(tester);
+
+      await tester.tap(find.text('Send rapport'));
+      await tester.pump();
+      expect(find.text('Sender rapporten …'), findsOneWidget);
+      await tester.tap(find.text('Sender rapporten …'));
+      await tester.pump();
+      expect(server.asked('POST /reports'), 1);
+
+      answer.complete({'ok': true, 'blocked': false});
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(find.text('Takk. Vi ser på rapporten.'), findsOneWidget);
+    });
+
+    testWidgets('3. pulled down while it is on its way, its answer still decides', (tester) async {
+      final answer = Completer<Object?>();
+      server.overrides['POST /reports'] = (http.Request _) => answer.future;
+      final outcomes = await reportKari(tester);
+
+      await tester.tap(find.text('Blokkér Kari N.'));
+      await tester.pump();
+      await tester.tap(find.text('Send rapport'));
+      await tester.pump();
+      await tester.tapAt(const Offset(215, 20));
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(outcomes, isEmpty);
+
+      answer.complete({'ok': true, 'blocked': true});
+      await tester.pumpAndSettle();
+      expect(outcomes, [true]);
+      expect(find.text('Takk. Vi ser på rapporten. Kari er blokkert.'), findsOneWidget);
+    });
+
+    testWidgets('4. closed after one that did not get through, nothing was reported',
+        (tester) async {
+      server.overrides['POST /reports'] = unreachable;
+      final outcomes = await reportKari(tester);
+
+      await tester.tap(find.text('Send rapport'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Avbryt'));
+      await tester.pumpAndSettle();
+
+      expect(sheet, findsNothing);
+      expect(outcomes, [false]);
+    });
+  });
 }
 

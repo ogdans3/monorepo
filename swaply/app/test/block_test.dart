@@ -161,7 +161,11 @@ void main() {
       await report(tester, block: true);
 
       expect(find.byType(ItemDetailScreen), findsOneWidget);
-      expect(toast(tester), noContact);
+      // Said in the sheet, which stays up with the block still ticked, so
+      // «Send rapport» again sends the same; see `test/profile_test.dart`.
+      expect(find.descendant(of: find.byType(BottomSheet), matching: find.text(noContact)),
+          findsOneWidget);
+      expect(tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value, isTrue);
     });
 
     testWidgets('4. blocked from its owner\'s profile, the listing goes when it is come back to',

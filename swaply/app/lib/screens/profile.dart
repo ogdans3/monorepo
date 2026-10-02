@@ -1503,10 +1503,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 /// 16a Rapporter. Reporting and blocking are one gesture here, as in the export.
 ///
 /// Whether a block went with a report the server has taken — true only once
-/// it has answered. The sheet closes as «Send rapport» is pressed, before the
-/// report is sent, and a caller that asked for its things again as soon as
-/// the sheet had closed was asking before the block was written: the owner's
+/// it has answered: a caller that asked for its things again as soon as the
+/// sheet had closed was asking before the block was written, and the owner's
 /// listings stayed in the grid it meant to take them out of.
+///
+/// The sheet stays up until the server has answered. It used to close as
+/// «Send rapport» was pressed, and a report that did not get through took
+/// the reason, the words and the tick with it.
 Future<bool> showReportSheet(
   BuildContext context, {
   String? itemId,
@@ -1515,7 +1518,8 @@ Future<bool> showReportSheet(
   bool alreadyBlocked = false,
 }) async {
   final landed = Completer<bool>();
-  final sent = await showModalBottomSheet<bool>(
+  var sending = false;
+  await showModalBottomSheet<void>(
     context: context,
     // Over the bar, not inside the tab under it; see `pushOverBar`.
     useRootNavigator: true,
@@ -1531,10 +1535,13 @@ Future<bool> showReportSheet(
       api: context.read<SwaplyApi>(),
       messenger: ScaffoldMessenger.of(context),
       landed: landed,
+      onSending: (on) => sending = on,
     ),
   );
-  // Pulled down, or closed some other way: nothing was sent.
-  if (sent != true) return false;
+  // Closed with nothing sent, or after a send that did not get through:
+  // nothing was reported. Pulled down while one was on its way, it goes on,
+  // and its answer still decides.
+  if (!sending && !landed.isCompleted) return false;
   return landed.future;
 }
 
@@ -1550,6 +1557,7 @@ class _ReportSheet extends StatefulWidget {
     this.personName,
     this.alreadyBlocked = false,
     required this.landed,
+    required this.onSending,
   });
 
   final SwaplyApi api;
@@ -1557,8 +1565,13 @@ class _ReportSheet extends StatefulWidget {
   final String? itemId, userId, personName;
   final bool alreadyBlocked;
 
-  /// Completed once the server has answered: whether a block went with it.
+  /// Completed once the server has taken the report: whether a block went
+  /// with it. With false when one on its way after the sheet went did not
+  /// get through, since there is no sheet left to try again from.
   final Completer<bool> landed;
+
+  /// Told when a report goes, and when one did not get through.
+  final ValueChanged<bool> onSending;
 
   @override
   State<_ReportSheet> createState() => _ReportSheetState();
@@ -1569,6 +1582,7 @@ class _ReportSheetState extends State<_ReportSheet> {
   String _reason = 'spam';
   bool _block = false;
   bool _busy = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -1577,9 +1591,12 @@ class _ReportSheetState extends State<_ReportSheet> {
   }
 
   Future<void> _send() async {
-    setState(() => _busy = true);
-    // Popped with «sent», so [showReportSheet] waits for the answer.
-    Navigator.of(context).pop(true);
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    widget.onSending(true);
     final block = _block;
     try {
       await widget.api.report(
@@ -1589,19 +1606,33 @@ class _ReportSheetState extends State<_ReportSheet> {
         detail: _detail.text.trim().isEmpty ? null : _detail.text.trim(),
         block: block,
       );
-      // The block is said with the thanks: the screen it was made on goes,
-      // or loses their things, in the same moment, and this is the one
-      // sentence that says why.
-      showDoneOn(
-          widget.messenger,
-          block
-              ? 'Takk. Vi ser på rapporten. ${widget.personName!.split(' ').first} er blokkert.'
-              : 'Takk. Vi ser på rapporten.');
-      widget.landed.complete(block);
     } on ApiException catch (e) {
-      showErrorOn(widget.messenger, e);
-      widget.landed.complete(false);
+      if (mounted) {
+        // Up, with everything in it, and said over the button that was
+        // pressed: «Send rapport» again sends the same.
+        setState(() {
+          _busy = false;
+          _error = e.message;
+        });
+        widget.onSending(false);
+      } else {
+        // Pulled down while it was on its way: there is no sheet to say it
+        // in, or to send it again from.
+        showErrorOn(widget.messenger, e);
+        widget.landed.complete(false);
+      }
+      return;
     }
+    // The block is said with the thanks: the screen it was made on goes, or
+    // loses their things, in the same moment, and this is the one sentence
+    // that says why.
+    showDoneOn(
+        widget.messenger,
+        block
+            ? 'Takk. Vi ser på rapporten. ${widget.personName!.split(' ').first} er blokkert.'
+            : 'Takk. Vi ser på rapporten.');
+    widget.landed.complete(block);
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -1666,6 +1697,12 @@ class _ReportSheetState extends State<_ReportSheet> {
               ),
             ],
             const SizedBox(height: Insets.md),
+            if (_error != null) ...[
+              // Coral, the «no» colour: the report and block red is for the
+              // button, not for what went wrong with it.
+              Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+              const SizedBox(height: Insets.sm),
+            ],
             SizedBox(
               height: 54,
               child: FilledButton(
@@ -1675,12 +1712,13 @@ class _ReportSheetState extends State<_ReportSheet> {
                       RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
                 ),
                 onPressed: _busy ? null : _send,
-                child: const Text('Send rapport',
-                    style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700)),
+                child: Text(_busy ? 'Sender rapporten …' : 'Send rapport',
+                    style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700)),
               ),
             ),
             const SizedBox(height: Insets.sm),
-            SecondaryButton('Avbryt', onPressed: () => Navigator.of(context).pop()),
+            SecondaryButton('Avbryt',
+                onPressed: _busy ? null : () => Navigator.of(context).pop()),
           ],
         ),
       ),
