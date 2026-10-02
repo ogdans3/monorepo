@@ -87,6 +87,47 @@ describe('building a trade in a named state', () => {
     expect(mine.body!['items'].length).toBeGreaterThan(0)
   })
 
+  test('1b. and a test account is shown its own ring, and nobody outside it', async () => {
+    // The other way round. A heart from a test account on a real person's
+    // listing is refused (`test_ring`), so a real listing on its Oppdag is a
+    // card whose one button says no. What it sees is its admin's things and
+    // the ring's — on the page, in its rows and in 05b alike.
+    const theirs = await call('POST', '/items', {
+      token: stranger,
+      body: { title: 'Fremmed sykkel', category: 'sykling', subcategory: 'Racere', condition: 'good' },
+    })
+    const his = await call('POST', '/items', {
+      token: gabriel,
+      body: { title: 'Gabriels sykkel', category: 'sykling', subcategory: 'Bysykler', condition: 'good' },
+    })
+    const kari = (await call('POST', `/admin/accounts/${kariId}/session`, { token: gabriel }))
+      .body!['token']
+    const owners = (res: { body: Json | null }) =>
+      [...new Set((res.body!['items'] as Json[]).map((i) => i['ownerId'] as string))].sort()
+
+    expect(owners(await call('GET', '/discover', { token: kari }))).toEqual(
+      [gabrielId, perId].sort(),
+    )
+    const rows = (await call('GET', '/discover/rows', { token: kari })).body!['rows'] as Json[]
+    const cycling = (rows.find((r) => r['category'] === 'sykling')!['items'] as Json[]).map(
+      (i) => i['id'],
+    )
+    expect(cycling).toContain(his.body!['id'])
+    expect(cycling).not.toContain(theirs.body!['id'])
+    const kinds = await call('GET', '/discover/subcategories?category=sykling', { token: kari })
+    expect(kinds.body!['subcategories']).toContain('Bysykler')
+    expect(kinds.body!['subcategories']).not.toContain('Racere')
+
+    // The admin's own Oppdag is everybody's and the ring's, as it was.
+    expect(owners(await call('GET', '/discover', { token: gabriel }))).toEqual(
+      [strangerId, kariId, perId].sort(),
+    )
+
+    // Taken down again, so the scenarios below start from what they did.
+    await call('DELETE', `/items/${theirs.body!['id']}`, { token: stranger })
+    await call('DELETE', `/items/${his.body!['id']}`, { token: gabriel })
+  })
+
   test('2. «talking» is the half-filled offer, and reserves nothing', async () => {
     const res = await scenario('talking')
     expect(res.status).toBe(200)

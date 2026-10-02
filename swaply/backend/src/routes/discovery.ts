@@ -44,15 +44,25 @@ const query = z.object({
  * from that moment neither reset nor delete may touch it — it is somebody's
  * history. Written here and nowhere else: `/items/:id` and `/users/:id` are
  * reached by a link or an id somebody already has.
+ *
+ * And the other way round: a test account is shown its own ring and nothing
+ * else — its admin's listings and the admin's other test accounts'. A heart
+ * from one on a real person's listing is refused (`test_ring`), so a real
+ * listing on its Oppdag is a card whose one button says no. The admin's own
+ * Oppdag is everybody's plus their ring, as before.
  */
 function shownTo(viewer: string | null): SQL {
-  const scope = sql`(select case when x.is_admin then x.id else x.test_account_of end
-                     from users x where x.id = ${viewer})`
+  // The admin a test account was born to, or null for everybody else.
+  const ring = sql`(select x.test_account_of from users x where x.id = ${viewer})`
+  // The viewer, if they hold the key, whose own ring they may see.
+  const admin = sql`(select x.id from users x where x.id = ${viewer} and x.is_admin)`
   return sql`i.deleted_at is null
     and i.status = 'available'
     and i.active_trade_id is null
     and (${viewer}::uuid is null or i.owner_id <> ${viewer})
-    and (u.test_account_of is null or u.test_account_of = ${scope})
+    and (case when ${ring} is not null
+              then (u.id = ${ring} or u.test_account_of = ${ring})
+              else (u.test_account_of is null or u.test_account_of = ${admin}) end)
     and not exists (
       select 1 from blocks b
       where (b.blocker = ${viewer} and b.blocked = i.owner_id)
