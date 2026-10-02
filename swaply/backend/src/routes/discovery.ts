@@ -2,21 +2,31 @@ import { sql, type SQL } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { CATEGORIES, CONDITIONS } from '../lib/constants.js'
+import { CATEGORIES, CONDITIONS, MAX_VALUE_NOK } from '../lib/constants.js'
 import { notHiddenFrom } from '../lib/hidden.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import { publicItem } from './serialize.js'
+
+// Typed into 05b's two boxes. Past what any listing can be worth a filter
+// can only find nothing, and past what an `int` holds it was a 500.
+const valueFilter = z.coerce
+  .number()
+  .int()
+  .min(0)
+  .max(MAX_VALUE_NOK, 'Verdien kan være høyst 10 000 000 kr.')
+  .optional()
 
 const query = z.object({
   q: z.string().max(120).optional(),
   category: z.enum(CATEGORIES).optional(),
   subcategory: z.string().max(60).optional(),
-  minValue: z.coerce.number().int().min(0).optional(),
-  maxValue: z.coerce.number().int().min(0).optional(),
+  minValue: valueFilter,
+  maxValue: valueFilter,
   condition: z.enum(CONDITIONS).optional(),
   sort: z.enum(['newest', 'nearest', 'value']).default('newest'),
   limit: z.coerce.number().int().min(1).max(100).default(30),
-  offset: z.coerce.number().int().min(0).default(0),
+  // Bounded for the same reason: an offset past a bigint was a 500 too.
+  offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
 })
 
 /**

@@ -166,6 +166,28 @@ describe('searching the collage', () => {
     ])
   })
 
+  test('5b. a value no listing can have is refused in words, not with a 500', async () => {
+    // 05b's boxes take any digits. Past what a Postgres `int` holds, the
+    // filter used to break the query and the answer was «Noe gikk galt hos
+    // oss». A listing is worth at most 10 000 000 kr, so that is the most
+    // a filter can ask about.
+    for (const [filter, field] of [
+      ['maxValue=99999999999', 'maxValue'],
+      ['minValue=3000000000', 'minValue'],
+      ['maxValue=10000001', 'maxValue'],
+    ]) {
+      const res = await call('GET', `/discover?${filter}`, { token: ola })
+      expect(res.status, filter).toBe(400)
+      expect(res.body!['message']).toBe('Verdien kan være høyst 10 000 000 kr.')
+      expect(res.body!['field']).toBe(field)
+    }
+    // The most a listing can be worth is still a filter.
+    expect((await call('GET', '/discover?maxValue=10000000', { token: ola })).status).toBe(200)
+    // An offset past what Postgres counts in was the same 500.
+    expect((await call('GET', '/discover?offset=100000000000000000000', { token: ola })).status)
+      .toBe(400)
+  })
+
   test('6. the subcategories offered are the ones that exist', async () => {
     const res = await call('GET', '/discover/subcategories?category=sykling', { token: ola })
 

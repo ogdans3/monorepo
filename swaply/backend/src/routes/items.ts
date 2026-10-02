@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import type { Database } from '../db/index.js'
 import { blockedBetween } from '../lib/blocks.js'
-import { CATEGORIES, CONDITIONS, LISTING_KEY_HOURS } from '../lib/constants.js'
+import { CATEGORIES, CONDITIONS, LISTING_KEY_HOURS, MAX_VALUE_NOK } from '../lib/constants.js'
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js'
 import { storedExists, toStoredPath } from '../lib/media.js'
 import { townFor, townOf } from '../lib/postcodes.js'
@@ -34,7 +34,7 @@ const itemBody = z.object({
   category: z.enum(CATEGORIES),
   subcategory: optionalText(60),
   condition: z.enum(CONDITIONS).nullish(),
-  estimatedValueNok: z.number().int().min(0).max(10_000_000).nullish(),
+  estimatedValueNok: z.number().int().min(0).max(MAX_VALUE_NOK).nullish(),
   // Looked up, never stored: see `townOf` in lib/postcodes.ts.
   postalCode: z.string().regex(/^\d{4}$/, 'Et postnummer har fire sifre.').nullish(),
   town: optionalText(60),

@@ -18,6 +18,13 @@ export const CATEGORIES = [
 export const CONDITIONS = ['new', 'good', 'worn'] as const
 
 /**
+ * The most a listing may say it is worth, which is also the most a value
+ * filter on Oppdag can usefully ask about. Ten million kroner is a house,
+ * not a swap, and it keeps every value well inside a Postgres `int`.
+ */
+export const MAX_VALUE_NOK = 10_000_000
+
+/**
  * Screen 10a: while someone has listed nothing, the heart that brings their
  * likes to 5 offers it, and then every 10th after that — 15, 25, 35.
  *
