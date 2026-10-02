@@ -71,3 +71,73 @@ export function osloISO(value: string): string {
     throw new Error('Tidspunktet finnes ikke ved overgang til sommertid. Velg et annet tidspunkt.');
   return instant.toISOString();
 }
+
+export async function uploadFile(
+  product: string,
+  file: File,
+  fields: Row = {},
+  progress: (value: number) => void = () => {},
+) {
+  const marker = [
+    'studio-upload',
+    product,
+    fields.item_id || '',
+    file.name,
+    file.size,
+    file.lastModified,
+  ].join(':');
+  let session: Row | null = null;
+  const previous = localStorage.getItem(marker);
+  if (previous) {
+    try {
+      session = await api('/upload-sessions/' + previous);
+    } catch {
+      localStorage.removeItem(marker);
+    }
+  }
+  if (!session) {
+    session = await api('/upload-sessions', 'POST', {
+      product_id: product,
+      file_name: file.name,
+      size: file.size,
+      title: fields.title || file.name,
+      body: fields.body || '',
+      rights: fields.rights || 'unknown',
+      item_id: fields.item_id || '',
+      expected_version_id: fields.expected_version_id || '',
+    });
+    localStorage.setItem(marker, session!.id);
+  }
+  if (session!.completed_at) {
+    localStorage.removeItem(marker);
+    return session!.result;
+  }
+  let offset = Number(session!.offset_bytes);
+  while (offset < file.size) {
+    const end = Math.min(offset + 8 * 1024 * 1024, file.size);
+    const response = await fetch('/api/upload-sessions/' + session!.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/octet-stream', 'Upload-Offset': String(offset) },
+      body: file.slice(offset, end),
+    });
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(
+        (data.error || 'Opplastingen ble avbrutt') + '. Velg samme fil for å fortsette.',
+      );
+    offset = Number(data.offset_bytes);
+    progress(Math.round((offset / file.size) * 100));
+  }
+  const result = await api('/upload-sessions/' + session!.id + '/complete', 'POST', {});
+  localStorage.removeItem(marker);
+  return result;
+}
+export function seconds(value: number) {
+  return (
+    Math.floor(value / 60) +
+    ':' +
+    Math.floor(value % 60)
+      .toString()
+      .padStart(2, '0')
+  );
+}

@@ -7,7 +7,7 @@ import (
 )
 
 func (a *App) tasks(w http.ResponseWriter, r *http.Request) {
-	a.list(w, r, "SELECT * FROM tasks WHERE ($1='' OR product_id::text=$1) ORDER BY created_at DESC", r.URL.Query().Get("product"))
+	a.list(w, r, "SELECT * FROM tasks WHERE product_id::text=ANY($1) ORDER BY created_at DESC", a.productIDs(r.Context(), r.URL.Query().Get("product")))
 }
 
 type taskInput struct {
@@ -68,9 +68,9 @@ func (a *App) updateTask(w http.ResponseWriter, r *http.Request) {
 }
 func (a *App) publications(w http.ResponseWriter, r *http.Request) {
 	a.list(w, r, `SELECT p.*,i.title AS item_title,i.status AS item_status,i.current_version_id,v.mime,v.file_name,
- (p.version_id IS NOT NULL AND p.version_id=i.current_version_id AND i.status='approved') AS content_ready
+ (p.version_id IS NOT NULL AND p.version_id=i.current_version_id AND i.status='approved' AND i.deleted_at IS NULL AND i.rights IN('owned','licensed') AND (coalesce(i.rights_details->>'expires_at','')='' OR (i.rights_details->>'expires_at')::date>=current_date)) AS content_ready
  FROM publications p LEFT JOIN items i ON i.id=p.item_id LEFT JOIN versions v ON v.id=p.version_id
- WHERE ($1='' OR p.product_id::text=$1) ORDER BY scheduled_at`, r.URL.Query().Get("product"))
+ WHERE p.product_id::text=ANY($1) ORDER BY scheduled_at`, a.productIDs(r.Context(), r.URL.Query().Get("product")))
 }
 
 type publicationInput struct {
@@ -82,6 +82,9 @@ type publicationInput struct {
 	Item      *string   `json:"item_id"`
 	Task      *string   `json:"task_id"`
 	Assignee  string    `json:"assignee"`
+	Campaign  string    `json:"campaign_id"`
+	Landing   string    `json:"landing_url"`
+	Reminder  int       `json:"reminder_minutes"`
 }
 
 func (a *App) createPublication(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +95,17 @@ func (a *App) createPublication(w http.ResponseWriter, r *http.Request) {
 	if v.Title == "" || len(v.Title) > 300 || v.Channel == "" || v.Scheduled.IsZero() || validateProduct(r.Context(), a, v.Product) != nil {
 		fail(w, 400, "Oppgi tittel, produkt, kanal og tidspunkt")
 		return
+	}
+	if v.Reminder < 0 || v.Reminder > 10080 {
+		fail(w, 400, "Ugyldig påminnelse")
+		return
+	}
+	if v.Campaign != "" {
+		var p string
+		if a.db.QueryRow(r.Context(), "SELECT product_id::text FROM campaigns WHERE id::text=$1", v.Campaign).Scan(&p) != nil || p != v.Product {
+			fail(w, 400, "Ukjent kampanje")
+			return
+		}
 	}
 	var version *string
 	if v.Item != nil {
@@ -112,10 +126,16 @@ func (a *App) createPublication(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var id string
-	e := a.db.QueryRow(r.Context(), "INSERT INTO publications(product_id,title,channel,scheduled_at,caption,item_id,version_id,task_id,assignee) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id::text", v.Product, v.Title, v.Channel, v.Scheduled, v.Caption, v.Item, version, v.Task, v.Assignee).Scan(&id)
+	e := a.db.QueryRow(r.Context(), "INSERT INTO publications(product_id,title,channel,scheduled_at,caption,item_id,version_id,task_id,assignee,campaign_id,reminder_minutes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,nullif($10,'')::uuid,$11) RETURNING id::text", v.Product, v.Title, v.Channel, v.Scheduled, v.Caption, v.Item, version, v.Task, v.Assignee, v.Campaign, v.Reminder).Scan(&id)
 	if e != nil {
 		fail(w, 400, "Kunne ikke planlegge publiseringen")
 		return
+	}
+	if v.Landing != "" {
+		tracking, e := trackingURL(v.Landing, v.Channel, v.Campaign, id)
+		if e == nil {
+			a.db.Exec(r.Context(), "UPDATE publications SET tracking_url=$1 WHERE id=$2", tracking, id)
+		}
 	}
 	write(w, 201, map[string]string{"id": id})
 }
@@ -125,6 +145,14 @@ func (a *App) updatePublication(w http.ResponseWriter, r *http.Request) {
 		URL       string     `json:"url"`
 		Scheduled *time.Time `json:"scheduled_at"`
 		Item      *string    `json:"item_id"`
+		Title     *string    `json:"title"`
+		Caption   *string    `json:"caption"`
+		Channel   *string    `json:"channel"`
+		Assignee  *string    `json:"assignee"`
+		Campaign  *string    `json:"campaign_id"`
+		Task      *string    `json:"task_id"`
+		Landing   *string    `json:"landing_url"`
+		Reminder  *int       `json:"reminder_minutes"`
 	}
 	if !decode(w, r, &v) {
 		return
@@ -145,6 +173,44 @@ func (a *App) updatePublication(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "Publiseringen finnes ikke")
 		return
 	}
+	if v.Reminder != nil && (*v.Reminder < 0 || *v.Reminder > 10080) {
+		fail(w, 400, "Ugyldig påminnelse")
+		return
+	}
+	if v.Title != nil && (strings.TrimSpace(*v.Title) == "" || len(*v.Title) > 300) {
+		fail(w, 400, "Oppgi tittel")
+		return
+	}
+	for table, id := range map[string]*string{"campaigns": v.Campaign, "tasks": v.Task} {
+		if id != nil && *id != "" {
+			var p string
+			if tx.QueryRow(r.Context(), "SELECT product_id::text FROM "+table+" WHERE id::text=$1", *id).Scan(&p) != nil || p != product {
+				fail(w, 400, "Koblingen må være i samme produkt")
+				return
+			}
+		}
+	}
+	tracking := ""
+	if v.Landing != nil && *v.Landing != "" {
+		var channel, campaign string
+		tx.QueryRow(r.Context(), "SELECT channel,coalesce(campaign_id::text,'') FROM publications WHERE id::text=$1", r.PathValue("id")).Scan(&channel, &campaign)
+		if v.Channel != nil {
+			channel = *v.Channel
+		}
+		if v.Campaign != nil {
+			campaign = *v.Campaign
+		}
+		tracking, e = trackingURL(*v.Landing, channel, campaign, r.PathValue("id"))
+		if e != nil {
+			fail(w, 400, e.Error())
+			return
+		}
+	}
+	_, e = tx.Exec(r.Context(), "UPDATE publications SET title=coalesce($1,title),caption=coalesce($2,caption),channel=coalesce($3,channel),assignee=coalesce($4,assignee),campaign_id=CASE WHEN $5::text IS NULL THEN campaign_id ELSE nullif($5,'')::uuid END,task_id=CASE WHEN $6::text IS NULL THEN task_id ELSE nullif($6,'')::uuid END,reminder_minutes=coalesce($7,reminder_minutes),tracking_url=CASE WHEN $8='' THEN tracking_url ELSE $8 END WHERE id::text=$9", v.Title, v.Caption, v.Channel, v.Assignee, v.Campaign, v.Task, v.Reminder, tracking, r.PathValue("id"))
+	if e != nil {
+		fail(w, 400, "Kunne ikke lagre pakken")
+		return
+	}
 	if v.Item != nil {
 		var vid string
 		e = tx.QueryRow(r.Context(), "SELECT current_version_id::text FROM items WHERE id::text=$1 AND product_id::text=$2", *v.Item, product).Scan(&vid)
@@ -160,9 +226,9 @@ func (a *App) updatePublication(w http.ResponseWriter, r *http.Request) {
 	}
 	if v.Status == "ready" || v.Status == "published" {
 		var ready bool
-		e = tx.QueryRow(r.Context(), "SELECT EXISTS(SELECT 1 FROM publications p JOIN items i ON i.id=p.item_id WHERE p.id::text=$1 AND i.status='approved' AND i.current_version_id=p.version_id)", r.PathValue("id")).Scan(&ready)
+		e = tx.QueryRow(r.Context(), "SELECT EXISTS(SELECT 1 FROM publications p JOIN items i ON i.id=p.item_id WHERE p.id::text=$1 AND i.status='approved' AND i.current_version_id=p.version_id AND i.deleted_at IS NULL AND i.rights IN('owned','licensed') AND (coalesce(i.rights_details->>'expires_at','')='' OR (i.rights_details->>'expires_at')::date>=current_date))", r.PathValue("id")).Scan(&ready)
 		if e != nil || !ready {
-			fail(w, 409, "Koble til og godkjenn gjeldende innholdsversjon først")
+			fail(w, 409, "Koble til og godkjenn gjeldende versjon, og avklar gyldige bruksrettigheter først")
 			return
 		}
 	}

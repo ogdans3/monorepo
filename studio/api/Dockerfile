@@ -5,7 +5,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -o /studio ./cmd/server
 FROM alpine:3.21
-RUN apk add --no-cache ca-certificates && adduser -D -u 10001 studio && mkdir -p /data/files && chown studio /data/files
+RUN apk add --no-cache ca-certificates ffmpeg tesseract-ocr tesseract-ocr-data-nor tesseract-ocr-data-eng && adduser -D -u 10001 studio && mkdir -p /data/files && chown studio /data/files
 COPY --from=build /studio /usr/local/bin/studio
 USER studio
 EXPOSE 8088

@@ -1,102 +1,62 @@
-# Studio — avtalt retning og leveransestatus
+# Studio — lokal lanseringsversjon
 
-Studio er et internt arbeidsrom for markedsinnhold, med Teorimester først.
-Mennesker og agenter jobber mot samme bibliotek, oppgaver og godkjenningsregler.
-Det skal bli mulig å følge referanse → brief → variant → publisering → resultat
-→ neste forsøk. Egen chat, kalender, videoproduksjon via agenter, visuelle maler,
-kraftig søk og valg av modell per oppgave er krav til lanseringsversjonen.
+Studio samler referanse → brief → produksjon → godkjenning → publisering → resultat.
+Go og PostgreSQL håndterer data og jobber, SvelteKit gir et lett grensesnitt for
+mobil og desktop. Lokal mediebehandling kjører i en egen CPU-container.
 
-## Føringer fra brukeren
+## Implementert
 
-- Selvstendig tjeneste i monorepoet. Arbeidsnavn Studio.
-- PostgreSQL, SvelteKit/TypeScript og Go.
-- Alt settes opp lokalt først. Serverdrift tas senere.
-- Invitasjonsbasert tilgang; ingen eksisterende innloggingsleverandør.
-- Mobiloptimalisert først. Lett, minimalt og rolig design.
-- Både eksterne agenter via MCP og intern kjøring gjennom OpenRouter.
-- Studio eier agentlogikken og stopper løkker. Provider-nøkler kan også ha kostnadstak.
-- Mulighet for spesialmodeller, særlig TypeSafe Jev for vurdering/rangering.
-- Enkel oppgavetavle; kalenderen gjelder publisering, tavlen gjelder produksjon.
-- Ingen automatisk publisering eller pengebruk på annonser uten menneskelig godkjenning.
-
-## Kjører i første lokale leveranse
-
-| Område | Implementert |
+| Område | Funksjoner |
 | --- | --- |
-| Tilgang | Første administrator, engangsinvitasjoner, passord, sesjoner og tre roller |
-| Produkt | Teorimester, beskrivelse, merkevaretekst, målgruppe |
-| Bibliotek | Tekst- og medietyper, private filer, metadata, rettighetsstatus og kildelenke |
-| Versjoner | Immutable versjoner, samtidighetskontroll, notater og eksplisitt godkjenning |
-| Søk | Norsk fulltekst og tittel-likhet på innhold, notater, egne chatter, oppgaver og kalender |
-| Oppgaver | Idé, klar, pågår, gjennomgang, ferdig; menneske/ekstern agent |
-| Kalender | Uke/liste, tidspunkt i Oslo, innhold og produksjonsoppgave, posttekst og ansvarlig |
-| Manuell publisering | Kopier tekst, last ned versjonsfil, åpne plattform, registrer publisert lenke |
-| Chat | Persistente private samtaler, OpenRouter, produktkontekst, søk og utkastverktøy |
-| Modellkontroll | Modellvalg per rolle, per-chat overstyring, snapshots av grenser og jobblogg |
-| MCP | Produktnøkler, kontekst, søk, lesing, filtilgang, atomisk claim og levering med lease |
-| Lokalt | Egne Docker-tjenester og data, separate integrasjons-/nettleserdatabaser |
+| Tilgang | Invitasjoner, tre arbeidsromsroller, produktmedlemmer/roller, begrensede produkter, engangslenker for passordbytte og tilbakekalling |
+| Produkt | Flere produkter, versjonert merkevare-/produktgrunnlag, kildebelagte påstander og kontekstpakker |
+| Bibliotek | Medier, manus, hooks, referanser, samlinger, favoritter, etiketter, innboks, CSV, massehandlinger, relasjoner, papirkurv og eksport |
+| Versjoner | Uforanderlige tekst-/filversjoner, samtidig redigeringsvern, tekstsammenligning, medier side ved side og godkjenning av en bestemt versjon |
+| Opplasting | Gjenopptakbare 8 MB-deler, opptil 2 GB per fil, SHA-256-duplikatsjekk, private filer og rettighetsdokumentasjon med utløp |
+| Medier | FFmpeg-miniatyrer, mobilproxy, rammeuttrekk, norsk/engelsk OCR, lokal Whisper-transkribering og tidsfestede segmenter |
+| Søk | Norsk fulltekst, tittel-likhet, flerspråklig semantikk, visuell tekst-/bildelikhet, tidskoder, filtre, lagrede søk og massevalg |
+| Chat | Private samtaler, vedlegg/faste versjoner/kampanjer, strømmede svar, søk, utkast og produksjonsidéer; stopp og kjøringslogg |
+| Modeller | Rolle-/produktprofiler, modelloverstyring, kontrollert reservemodell, bounded manus/analyse og separat TypeSafe Jev-adapter |
+| Produksjon | Versjonerte maler, redigerbare felt/låste merkevarefelt, brief/kilder/formater/sjekklister, hooks × hoveddeler × CTA, revisjoner og leveransepakker |
+| Agenter | Produktavgrenset MCP, CLI, atomisk reservasjon, fremdrift, avgrenset fornyelse, kildefiler, vurderinger, kontekst og hendelser |
+| Planlegging | Oppgavetavle, uke/liste/måned, full redigering av postpakken, ansvarlig, UTM, påminnelser og manuell publiseringslenke |
+| Samarbeid | Tidsfestede kommentarer, omtaler av folk/agenter, innboksvarsler, løste kommentarer og menneskelige vurderinger |
+| Resultater | Kampanjer, eksperimenter, hypoteser/konklusjoner, måleimport, organisk/betalt, måletidspunkt, postalder og valuta |
+| Konverteringer | Egen produktnøkkel, idempotente kjøp/refusjoner, validering av beløp og attribusjon til publisering |
+| Kunnskap | Påstander, funn, kundesitater, kilder, sikkerhet, omfang og eksplisitt motstridende kunnskap |
+| Drift | Versjonerte/checksum-kontrollerte migreringer, lagringsgrense, daglig AI-budsjett, jobbgrenser, status, delingslenker, eksport og backup/restore-verktøy |
 
-## Gjenstår før full lanseringsversjon
+## Aktivivering og praktiske grenser
 
-### Bibliotek og innsamling
+- **Betalte modeller er avslått lokalt.** OpenRouter og TypeSafe trenger egne nøkler
+  og eksplisitt modellvalg. Adapterne testes uten betaling mot kontrollerte svar.
+  Faktiske provider-kall er ikke kjørt uten brukerens nøkler.
+- **Video/design utføres av en tilkoblet ekstern agent.** Studio leverer brief,
+  låste malfelt, referanser, ønskede klipp/lyd/undertekster/logo/mockup, formater og
+  sjekkliste. Agenten må ha produksjonsverktøy og eget kostnadstak. Ingen automatisk
+  videoprodusent eller ferdige videoer simuleres i Studio. Se [agentoppsettet](../agent/README.md).
+- **Jev vurderer tekstgrunnlag.** Tale, skjermtekst og eventuelle agentbeskrevne
+  scener må finnes før en video vurderes. Poeng er kriteriebasert kvalitet, ikke
+  en salgsprognose. Modell, grunnlag, kriterier og usikkerhet lagres.
+- Automatisk bildeanalyse bruker CLIP-likhet og OCR. Beskrivelse av handlinger/scener
+  krever analyse fra en ekstern visuell agent. Tekstmodellen får ikke råvideo.
+- Mobilproxy dekker inntil 10 minutter (maks 256 MB); visuelle rammer hentes hvert
+  tiende sekund til 4 minutter. Originalen beholdes. Lokal talegjenkjenning bruker
+  Whisper base, med avgrenset jobbvarighet og maks 2000 segmenter.
+- Søkeindeksen fylles i bakgrunnen. Norsk tekstsøk virker umiddelbart; semantiske
+  treff og bildeindeks blir tilgjengelige etter behandling. Modellene lastes ned
+  ved første bruk. Ingen innholdsdata sendes til modellverten for lokal behandling.
+- Varsler er inne i Studio. Invitasjoner og passordlenker deles manuelt. Automatisk
+  e-post, push og publisering hos sosiale plattformer er ikke aktivert.
+- Koblinger til Teorimester mottar hendelser via API; Studio endrer ikke andre
+  monorepo-prosjekter. Avsenderen må koble seg til mottaket.
+- Delingslenker gjelder én fast versjon, har utløp og kan tilbakekalles.
+- Kun lokal loopback-drift er satt opp. Sikkerhetskopier må kjøres og flyttes til
+  ønsket backupmål av driftsansvarlig. Ingen ekstern tjeneste eller server er satt opp.
 
-- Flere produkter via grensesnittet og mer detaljert tilgang per produkt.
-- Samlinger, favoritter, etikettredigering, lagrede søk og bulk-handlinger.
-- Import/eksport av hooks som CSV, lenkemetadata og innboks for usortert innhold.
-- Opplastinger i gjenopptakbare deler, duplikatsjekk, miniatyrbilder og mobilproxyer.
-- Automatisk transkript, OCR og tidsfestede videosekvenser.
-- Visuell tekst-diff, side-ved-side-visning og filbytte som ny versjon.
-- Synlige relasjoner mellom hook, brief, mal, referanse, variant og kampanje.
-- Versjonert produktgrunnlag og strukturerte, kildebelagte produktpåstander.
-
-### Søk
-
-- Semantisk søk i tillegg til fulltekst; visuell likhet og bildesøk.
-- Søk i tale, skjermtekst og handlinger i video når analysene er tilgjengelige.
-- Treff med riktig tidskode/slide, forklaring, versjon og kilde.
-- Kombiner innholds- og resultatfiltre, rettigheter, opphavsperson og kampanje.
-- Samme søkeevne i chat/MCP; lagrede søk, oppdatert indeks og bulkvalg av treff.
-
-### Chat, modeller og agenter
-
-- Vedlegg og eksplisitt valg av bibliotekelementer/kampanjer i samtalen.
-- Modellvalg per produkt og egendefinerte oppgaveprofiler med kapabilitetssjekk.
-- Bestilling og endring av eksterne produksjonsoppgaver gjennom chatverktøy.
-- Kjøringer for manus, videoanalyse og Jev, med definerte vurderingskriterier.
-- Kontekstpakker med versjoner/kilder, kostnadsoversikt og kontrollert reservemodell.
-- Strømming av chatsvar og tydelig fremdrift for hver produksjonsfase.
-- Hendelser/omtaler som foreslår oppgaver; ingen ukontrollert automatisk rekursjon.
-
-### Produksjon
-
-- Strukturerte maler med redigerbare felt, låste merkevareelementer og eksempelbilder.
-- Videoagent: klipp, lyd, undertekster, logo, appopptak/telefonmockup og formatvarianter.
-- Visuell agent: bilder, karuseller og malbaserte videoer.
-- Hooks × hoveddeler × CTA-er, navngitt og sporbart til komponentversjoner.
-- Revisjoner fra chat, kildeprosjekter der mulig, eksportpakker og avhengigheter.
-- AI-sjekk mot brief/merkevare, vurderinger med sporbarhet og menneskelig godkjenning.
-
-### Planlegging, samarbeid og læring
-
-- Redigering av hele publiseringspakken, månedskalender og påminnelser.
-- Tidsfestede notater, @omtaler, vurderinger og løste kommentarer.
-- Kampanjer og eksperimenter med hypotese, varianter og konklusjon.
-- Resultatimport, måletidspunkt, betalt/organisk skille og sammenlignbar post-alder.
-- UTM-er, konverteringsmottak fra Teorimester, deduplisering og refusjoner.
-- Kunnskapsbase med kilder, usikkerhet, kundesitater og motstridende funn.
-
-### Deling og drift
-
-- Tidsbegrensede delingslenker, detaljert rettighetsdokumentasjon og utløp.
-- Papirkurv, samlet dataeksport, backup og verifisert gjenoppretting.
-- Passordgjenoppretting og invitasjonsadministrasjon utover opprettelse/listing.
-- Ordentlige migreringer, lagrings-/arbeidsromsbudsjetter og driftsvarsler.
-- Faktiske provider-kall testes først når brukeren har lagt inn nøkler og modellvalg.
-
-## Senere
+## Senere, utenfor avtalt lokal lanseringsversjon
 
 Direkte plattformpublisering og annonsekjøp, konkurrent-/trendovervåking,
 influensersystem, avansert Elo/prediksjoner, agent-/modellrangering basert på
-produksjonsresultater, egen mobilapp og stemmechat. Plattformtilgang må bekreftes
-før integrasjoner loves. TikToks Direct Post-regler utelukker rene interne
-opplastingsverktøy; manuell publisering og eksport er en fullverdig arbeidsflyt.
+produksjonsresultater, egen mobilapp og stemmechat. Tilgang og vilkår må avklares
+før eksterne plattformintegrasjoner bygges.

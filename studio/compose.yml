@@ -17,6 +17,9 @@ services:
       retries: 20
   api:
     build: ./api
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 128
     environment:
       DATABASE_URL: postgres://studio:${POSTGRES_PASSWORD:-studio-local-only}@db:5432/studio?sslmode=disable
       LISTEN_ADDR: ':8088'
@@ -26,6 +29,8 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
       AI_ENABLED: ${AI_ENABLED:-false}
+      TYPESAFE_PRICE_PER_MTOK: ${TYPESAFE_PRICE_PER_MTOK:-0.042}
+      INTELLIGENCE_URL: http://intelligence:8090
     ports:
       - '127.0.0.1:8088:8088'
     volumes:
@@ -33,6 +38,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  intelligence:
+    build: ./intelligence
+    volumes:
+      - models:/models
+      - files:/data/files:ro
+    mem_limit: 4g
+    cpus: 2
   web:
     build: ./web
     environment:
@@ -47,3 +59,4 @@ services:
 volumes:
   database:
   files:
+  models:

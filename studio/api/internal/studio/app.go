@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
-	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -23,9 +22,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
-
-//go:embed schema.sql
-var schema string
 
 type App struct {
 	db                         *pgxpool.Pool
@@ -73,18 +69,7 @@ func New(ctx context.Context) (*App, error) {
 		db.Close()
 		return nil, e
 	}
-	conn, e := db.Acquire(ctx)
-	if e != nil {
-		db.Close()
-		return nil, e
-	}
-	defer conn.Release()
-	if _, e = conn.Exec(ctx, "SELECT pg_advisory_lock(8147201)"); e != nil {
-		return nil, e
-	}
-	_, e = conn.Exec(ctx, schema)
-	conn.Exec(ctx, "SELECT pg_advisory_unlock(8147201)")
-	if e != nil {
+	if e = migrate(ctx, db); e != nil {
 		db.Close()
 		return nil, e
 	}
@@ -195,7 +180,17 @@ func (a *App) protected(h http.HandlerFunc, writeAccess, admin bool) http.Handle
 			fail(w, 403, "Du har ikke tilgang til dette")
 			return
 		}
-		h(w, r.WithContext(context.WithValue(r.Context(), actorKey{}, u)))
+		ctx := context.WithValue(r.Context(), actorKey{}, u)
+		ctx = context.WithValue(ctx, writeKey{}, writeAccess)
+		if !a.resourceAccess(ctx, r.URL.Path, r.PathValue("id"), writeAccess) {
+			fail(w, 403, "Ingen tilgang til produktet")
+			return
+		}
+		if p := r.URL.Query().Get("product"); p != "" && !a.productAccess(ctx, p, writeAccess) {
+			fail(w, 403, "Ingen tilgang til produktet")
+			return
+		}
+		h(w, r.WithContext(ctx))
 	}
 }
 func (a *App) Handler() http.Handler {
@@ -231,6 +226,7 @@ func (a *App) Handler() http.Handler {
 	for _, route := range routes {
 		m.HandleFunc(route.pattern, a.protected(route.handler, route.write, route.admin))
 	}
+	a.extendedRoutes(m)
 	m.HandleFunc("POST /mcp", a.mcp)
 	m.HandleFunc("POST /api/agent/uploads", a.protected(a.upload, true, false))
 	m.HandleFunc("GET /api/agent/files/{id}", a.protected(a.file, false, false))
@@ -381,7 +377,7 @@ func (a *App) invite(w http.ResponseWriter, r *http.Request) {
 	write(w, 201, map[string]string{"url": a.origin + "/#invite=" + t, "email": c.Email})
 }
 func (a *App) invites(w http.ResponseWriter, r *http.Request) {
-	a.list(w, r, "SELECT id,email,role,expires_at,used_at,created_at FROM invites ORDER BY created_at DESC LIMIT 100")
+	a.list(w, r, "SELECT id,email,role,expires_at,used_at,revoked_at,created_at FROM invites ORDER BY created_at DESC LIMIT 100")
 }
 func (a *App) acceptInvite(w http.ResponseWriter, r *http.Request) {
 	var c credentials
@@ -400,7 +396,7 @@ func (a *App) acceptInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 	var role, id string
-	e = tx.QueryRow(r.Context(), "UPDATE invites SET used_at=now() WHERE token_hash=$1 AND email=lower($2) AND used_at IS NULL AND expires_at>now() RETURNING role", hash(c.Token), c.Email).Scan(&role)
+	e = tx.QueryRow(r.Context(), "UPDATE invites SET used_at=now() WHERE token_hash=$1 AND email=lower($2) AND used_at IS NULL AND revoked_at IS NULL AND expires_at>now() RETURNING role", hash(c.Token), c.Email).Scan(&role)
 	if e != nil {
 		fail(w, 400, "Invitasjonen er brukt, utløpt eller tilhører en annen e-post")
 		return
@@ -431,6 +427,10 @@ func validateProduct(ctx context.Context, a *App, id string) error {
 	e := a.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM products WHERE id=$1)", id).Scan(&exists)
 	if e != nil || !exists {
 		return fmt.Errorf("ukjent produkt")
+	}
+	write, _ := ctx.Value(writeKey{}).(bool)
+	if !a.productAccess(ctx, id, write) {
+		return fmt.Errorf("ingen tilgang til produktet")
 	}
 	return nil
 }

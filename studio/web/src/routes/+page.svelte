@@ -34,8 +34,57 @@
     SlidersHorizontal,
     MoreHorizontal,
   } from '@lucide/svelte';
-  import { api, kinds, states, formatDate, localInput, osloISO, type Row } from '$lib/api';
+  import {
+    api,
+    uploadFile,
+    seconds,
+    kinds,
+    states,
+    formatDate,
+    localInput,
+    osloISO,
+    type Row,
+  } from '$lib/api';
   import '$lib/style.css';
+  import LibraryTools from '$lib/components/LibraryTools.svelte';
+  import ItemTools from '$lib/components/ItemTools.svelte';
+  import Workbench from '$lib/components/Workbench.svelte';
+  import TaskPanel from '$lib/components/TaskPanel.svelte';
+  let workArea = 'production',
+    productionSeed = '',
+    libraryFilterIDs: string[] | null = null,
+    uploadPercent = 0;
+  let campaigns: Row[] = [],
+    people: Row[] = [],
+    profiles: Row[] = [],
+    savedSearches: Row[] = [];
+  let searchScope = 'product',
+    searchMode = 'all',
+    searchKind = '',
+    searchStatus = '',
+    searchTag = '',
+    searchSelection: string[] = [],
+    searchBulkTag = '',
+    searchRights = '',
+    searchAuthor = '',
+    searchCampaign = '',
+    searchMinViews = 0,
+    savedName = '';
+  let noteAt: number | undefined = undefined,
+    noteMentions: string[] = [],
+    mediaElement: HTMLMediaElement,
+    safeZones = false;
+  let chatAttachments: string[] = [],
+    chatRole = 'chat',
+    chatCampaign = '',
+    runSource: EventSource | null = null;
+  let monthOffset = 0,
+    previewVersionID = '',
+    preferProxy = true;
+  $: previewVersion =
+    detail?.versions?.find((v: Row) => v.id === previewVersionID) || detail?.versions?.[0];
+  $: isCurrentVersion = !detail || previewVersion?.id === detail.item.current_version_id;
+  $: hasProxy = isCurrentVersion && detail?.extra?.artifacts?.some((a: Row) => a.kind === 'proxy');
 
   let loading = true,
     setup = false,
@@ -107,13 +156,16 @@
   };
   $: currentProduct = products.find((p) => p.id === product);
   $: visibleItems = items.filter(
-    (i) => (!filter || i.kind === filter) && (!statusFilter || i.status === statusFilter),
+    (i) =>
+      (!filter || i.kind === filter) &&
+      (!statusFilter || i.status === statusFilter) &&
+      (libraryFilterIDs === null || libraryFilterIDs.includes(i.id)),
   );
   $: upcoming = publications.filter((p) => p.status !== 'published').slice(0, 4);
   $: reviewTasks = tasks.filter((t) => t.status === 'review');
   $: activeRun = latestRun && ['queued', 'running'].includes(latestRun.status);
-  $: canEdit = user && user.role !== 'reader';
-  $: calendarDays = weekDays(calendarOffset);
+  $: canEdit = !!user && user.role !== 'reader' && currentProduct?.can_edit !== false;
+  $: calendarDays = calendarMode === 'month' ? monthDays(monthOffset) : weekDays(calendarOffset);
   $: weekPublications = publications.filter((p) =>
     calendarDays.includes(localInput(new Date(p.scheduled_at)).slice(0, 10)),
   );
@@ -134,6 +186,57 @@
           : kind === 'reference'
             ? Link
             : FileText;
+  }
+  function monthDays(offset: number) {
+    const d = new Date(localInput().slice(0, 7) + '-01T12:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() + offset);
+    const start = new Date(d);
+    start.setUTCDate(1 - ((start.getUTCDay() + 6) % 7));
+    return Array.from({ length: 42 }, (_, i) => {
+      const day = new Date(start);
+      day.setUTCDate(start.getUTCDate() + i);
+      return day.toISOString().slice(0, 10);
+    });
+  }
+  async function changeProduct(id: string) {
+    products = await api('/products');
+    product = id;
+    runSource?.close();
+    searchSelection = [];
+    libraryFilterIDs = null;
+    conversationID = '';
+    messages = [];
+    latestRun = null;
+    chatAttachments = [];
+    chatCampaign = '';
+    await refresh();
+  }
+  async function refreshDetail() {
+    if (detail) detail = await api('/items/' + detail.item.id);
+  }
+  function produce(version: string) {
+    closeModal();
+    productionSeed = version;
+    workArea = 'production';
+    navigate('work');
+  }
+  function seek(at: number) {
+    if (mediaElement) {
+      mediaElement.currentTime = at;
+      mediaElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+  function subscribeRun(id: string) {
+    runSource?.close();
+    runSource = new EventSource('/api/runs/' + id + '/stream');
+    runSource.onmessage = (e) => {
+      const run = JSON.parse(e.data);
+      latestRun = { ...latestRun, ...run };
+      if (!['queued', 'running'].includes(run.status)) {
+        runSource?.close();
+        loadConversation(conversationID).catch(() => {});
+      }
+    };
   }
   function weekDays(offset: number) {
     const now = new Date();
@@ -164,11 +267,14 @@
   }
   async function refresh() {
     const suffix = '?product=' + encodeURIComponent(product);
-    [items, tasks, publications, conversations] = await Promise.all([
+    [items, tasks, publications, conversations, campaigns, people, profiles] = await Promise.all([
       api('/items' + suffix),
       api('/tasks' + suffix),
       api('/publications' + suffix),
       api('/conversations' + suffix),
+      api('/campaigns' + suffix),
+      api('/products/' + product + '/people'),
+      api('/profiles' + suffix),
     ]);
   }
   async function load() {
@@ -191,6 +297,11 @@
       authToken = hash.get('invite') || '';
       history.replaceState(null, '', location.pathname);
     }
+    if (hash.has('reset')) {
+      authMode = 'reset';
+      authToken = hash.get('reset') || '';
+      history.replaceState(null, '', location.pathname);
+    }
     if (hash.has('setup')) {
       authToken = hash.get('setup') || '';
       history.replaceState(null, '', location.pathname);
@@ -203,6 +314,7 @@
         loadConversation(conversationID).catch((e) => (error = e.message));
     }, 1500);
     return () => {
+      runSource?.close();
       clearInterval(poll);
       clearTimeout(searchTimer);
       clearTimeout(clipboardTimer);
@@ -215,10 +327,23 @@
     try {
       await api(
         '/auth/' +
-          (authMode === 'setup' ? 'bootstrap' : authMode === 'invite' ? 'accept' : 'login'),
+          (authMode === 'setup'
+            ? 'bootstrap'
+            : authMode === 'invite'
+              ? 'accept'
+              : authMode === 'reset'
+                ? 'reset'
+                : 'login'),
         'POST',
         { email, password, name, token: authToken },
       );
+      if (authMode === 'reset') {
+        authMode = 'login';
+        authError = 'Passordet er endret. Logg inn.';
+        authToken = '';
+        password = '';
+        return;
+      }
       password = '';
       authToken = '';
       await load();
@@ -259,6 +384,9 @@
       caption: '',
       item_id: '',
       task_id: '',
+      campaign_id: '',
+      landing_url: '',
+      reminder_minutes: 60,
       email: '',
       role: 'editor',
       ...data,
@@ -273,10 +401,15 @@
     freshSecret = '';
     inviteLink = '';
   }
-  async function openItem(id: string) {
+  async function openItem(id: string, version = '') {
     await safely(async () => {
       detail = await api('/items/' + id);
+      previewVersionID = version || detail!.item.current_version_id;
+      preferProxy = true;
+      editVersion = false;
       note = '';
+      noteAt = undefined;
+      noteMentions = [];
       versionTitle = detail!.item.title;
       versionBody = detail!.item.body;
       openModal('detail');
@@ -289,13 +422,8 @@
         if (file) {
           uploadProgress = true;
           try {
-            const form = new FormData();
-            form.set('file', file);
-            form.set('product_id', product);
-            form.set('title', draft.title || file.name);
-            form.set('body', draft.body);
-            form.set('rights', draft.rights);
-            await api('/uploads', 'POST', form);
+            const result = await uploadFile(product, file, draft, (v) => (uploadPercent = v));
+            if (result.duplicate) toast('Filen finnes allerede i biblioteket');
           } finally {
             uploadProgress = false;
           }
@@ -329,6 +457,9 @@
           item_id: draft.item_id || null,
           task_id: draft.task_id || null,
           assignee: draft.assignee,
+          campaign_id: draft.campaign_id,
+          landing_url: draft.landing_url,
+          reminder_minutes: Number(draft.reminder_minutes),
         });
       else if (modal === 'invite') {
         const result = await api('/invites', 'POST', { email: draft.email, role: draft.role });
@@ -378,7 +509,12 @@
     e.preventDefault();
     if (!detail) return;
     await safely(async () => {
-      await api('/items/' + detail!.item.id + '/notes', 'POST', { body: note });
+      await api('/items/' + detail!.item.id + '/notes', 'POST', {
+        body: note,
+        version_id: previewVersion?.id,
+        at_seconds: noteAt,
+        mentions: noteMentions,
+      });
       note = '';
       detail = await api('/items/' + detail!.item.id);
     });
@@ -394,6 +530,14 @@
       await api('/publications/' + draft.id, 'PATCH', {
         item_id: draft.item_id || undefined,
         scheduled_at: osloISO(draft.scheduled_at),
+        title: draft.title,
+        caption: draft.caption,
+        channel: draft.channel,
+        assignee: draft.assignee,
+        task_id: draft.task_id || '',
+        campaign_id: draft.campaign_id || '',
+        landing_url: draft.landing_url || '',
+        reminder_minutes: Number(draft.reminder_minutes),
       });
       await refresh();
       closeModal();
@@ -418,6 +562,7 @@
   }
   function searchInput() {
     clearTimeout(searchTimer);
+    searchSelection = [];
     const generation = ++searchGeneration;
     if (!query.trim()) {
       results = [];
@@ -427,7 +572,19 @@
     searching = true;
     searchTimer = setTimeout(async () => {
       try {
-        const found = await api('/search?q=' + encodeURIComponent(query) + '&product=' + product);
+        const params = new URLSearchParams({
+          q: query,
+          product: searchScope === 'all' ? '' : product,
+          mode: searchMode,
+          kind: searchKind,
+          status: searchStatus,
+          tag: searchTag,
+          rights: searchRights,
+          author: searchAuthor,
+          campaign: searchCampaign,
+          min_views: String(searchMinViews),
+        });
+        const found = await api('/search?' + params);
         if (generation === searchGeneration) results = found;
       } catch (e) {
         if (generation === searchGeneration) error = (e as Error).message;
@@ -438,14 +595,20 @@
   }
   async function followResult(result: Row) {
     closeModal();
-    if (result.entity === 'item' || result.entity === 'note') await openItem(result.target_id);
-    else if (result.entity === 'message') {
+    if (result.product_id && result.product_id !== product) await changeProduct(result.product_id);
+    if (['item', 'note', 'segment', 'frame'].includes(result.entity)) {
+      await openItem(result.target_id, result.version_id || '');
+      if (result.start_seconds != null) setTimeout(() => seek(Number(result.start_seconds)), 100);
+    } else if (result.entity === 'message') {
       await navigate('chat');
       await loadConversation(result.target_id);
     } else if (result.entity === 'task') {
       await navigate('tasks');
     } else if (result.entity === 'publication') {
       await navigate('calendar');
+    } else if (['campaign', 'claim'].includes(result.entity)) {
+      workArea = result.entity === 'campaign' ? 'campaigns' : 'knowledge';
+      await navigate('work');
     } else await navigate('settings');
   }
   async function loadConversation(id: string) {
@@ -477,9 +640,13 @@
       await api('/conversations/' + conversationID + '/messages', 'POST', {
         body: composer,
         model: modelOverride,
+        role: chatRole,
+        campaign_id: chatCampaign,
+        attachments: chatAttachments,
       });
       composer = '';
       await loadConversation(conversationID);
+      if (latestRun) subscribeRun(latestRun.id);
       await refresh();
     });
   }
@@ -531,7 +698,9 @@
             ? 'Opprett arbeidsrommet'
             : authMode === 'invite'
               ? 'Bli med i Studio'
-              : 'Godt å se deg igjen'}
+              : authMode === 'reset'
+                ? 'Velg nytt passord'
+                : 'Godt å se deg igjen'}
         </h2>
         <p class="muted">
           {authMode === 'setup'
@@ -541,7 +710,7 @@
               : 'Logg inn for å fortsette der dere slapp.'}
         </p>
         <form onsubmit={authenticate}>
-          {#if authMode !== 'login'}<label
+          {#if authMode !== 'login' && authMode !== 'reset'}<label
               >Navnet ditt<input
                 bind:value={name}
                 autocomplete="name"
@@ -549,15 +718,15 @@
                 placeholder="Fornavn Etternavn"
               /></label
             >{/if}
-          <label
-            >E-post<input
-              type="email"
-              bind:value={email}
-              autocomplete="email"
-              required
-              placeholder="deg@firma.no"
-            /></label
-          >
+          {#if authMode !== 'reset'}<label
+              >E-post<input
+                type="email"
+                bind:value={email}
+                autocomplete="email"
+                required
+                placeholder="deg@firma.no"
+              /></label
+            >{/if}
           <label
             >Passord<input
               type="password"
@@ -606,13 +775,7 @@
         ><span class="product-dot">T</span><select
           aria-label="Velg produkt"
           bind:value={product}
-          onchange={() =>
-            safely(async () => {
-              conversationID = '';
-              messages = [];
-              latestRun = null;
-              await refresh();
-            })}
+          onchange={() => safely(() => changeProduct(product))}
           >{#each products as p}<option value={p.id}>{p.name}</option>{/each}</select
         ><ChevronDown size={14} /></label
       >
@@ -624,6 +787,14 @@
               >{/if}</button
           >{/each}
       </nav>
+      <button
+        class="work-nav secondary"
+        class:chosen={view === 'work'}
+        onclick={() => {
+          productionSeed = '';
+          navigate('work');
+        }}><Columns3 size={18} />Produksjon og innsikt</button
+      >
       <div class="sidebar-bottom">
         <button class:active={view === 'settings'} onclick={() => navigate('settings')}
           ><Settings size={18} />Innstillinger</button
@@ -656,16 +827,28 @@
           <span class="mobile-wordmark" onclick={() => navigate('home')} role="presentation"
             >studio.</span
           ><span>{currentProduct?.name}</span><span class="slash">/</span><strong
-            >{nav.find((n) => n.id === view)?.label || 'Innstillinger'}</strong
+            >{nav.find((n) => n.id === view)?.label ||
+              (view === 'work' ? 'Arbeidsrom' : 'Innstillinger')}</strong
           >
         </div>
         <div class="topbar-actions">
+          <button
+            class="icon-button"
+            aria-label="Produksjon og innsikt"
+            onclick={() => {
+              productionSeed = '';
+              navigate('work');
+            }}><Menu size={20} /></button
+          >
           <button
             class="search-trigger"
             onclick={() => {
               openModal('search');
               query = '';
               results = [];
+              api('/library?product=' + product)
+                .then((d) => (savedSearches = d.searches || []))
+                .catch(() => {});
             }}
             aria-label="Søk i Studio"><Search size={17} /><span>Søk i alt</span><kbd>⌕</kbd></button
           ><button
@@ -682,8 +865,30 @@
             onclick={() => (error = '')}><X size={16} /></button
           >
         </div>{/if}
+      <div class="mobile-product-switch">
+        <label
+          >Produkt<select
+            aria-label="Bytt produkt"
+            bind:value={product}
+            onchange={() => safely(() => changeProduct(product))}
+            >{#each products as p}<option value={p.id}>{p.name}</option>{/each}</select
+          ></label
+        >
+      </div>
       <main class:chat-main={view === 'chat'}>
-        {#if view === 'home'}
+        {#if view === 'work'}{#key product}<Workbench
+              {product}
+              {user}
+              {items}
+              {publications}
+              {canEdit}
+              bind:area={workArea}
+              seed={productionSeed}
+              onchange={refresh}
+              onproduct={changeProduct}
+              onopen={openItem}
+            />{/key}
+        {:else if view === 'home'}
           <section class="page-heading">
             <div>
               <p class="eyebrow">
@@ -824,6 +1029,13 @@
               ></select
             >
           </div>
+          {#key product}<LibraryTools
+              {product}
+              {items}
+              {canEdit}
+              bind:filterIDs={libraryFilterIDs}
+              onchange={refresh}
+            />{/key}
           {#if visibleItems.length}<div class="asset-grid">
               {#each visibleItems as item}{@const Icon = iconFor(item.kind)}<button
                   class="asset-card"
@@ -887,24 +1099,27 @@
                 class="icon-button"
                 aria-label="Forrige uke"
                 onclick={() => {
-                  calendarOffset--;
+                  if (calendarMode === 'month') monthOffset--;
+                  else calendarOffset--;
                   selectedDay = '';
                 }}><ChevronLeft size={19} /></button
               ><strong
                 >{formatDate(calendarDays[0] + 'T12:00:00Z')} – {formatDate(
-                  calendarDays[6] + 'T12:00:00Z',
+                  calendarDays[calendarDays.length - 1] + 'T12:00:00Z',
                 )}</strong
               ><button
                 class="icon-button"
                 aria-label="Neste uke"
                 onclick={() => {
-                  calendarOffset++;
+                  if (calendarMode === 'month') monthOffset++;
+                  else calendarOffset++;
                   selectedDay = '';
                 }}><ChevronRight size={19} /></button
               ><button
                 class="text-button"
                 onclick={() => {
                   calendarOffset = 0;
+                  monthOffset = 0;
                   selectedDay = '';
                 }}>I dag</button
               >
@@ -912,14 +1127,26 @@
             <div class="segmented">
               <button
                 class:selected={calendarMode === 'week'}
-                onclick={() => (calendarMode = 'week')}>Uke</button
+                onclick={() => {
+                  calendarMode = 'week';
+                  selectedDay = '';
+                }}>Uke</button
+              ><button
+                class:selected={calendarMode === 'month'}
+                onclick={() => {
+                  calendarMode = 'month';
+                  selectedDay = '';
+                }}>Måned</button
               ><button
                 class:selected={calendarMode === 'list'}
                 onclick={() => (calendarMode = 'list')}>Liste</button
               >
             </div>
           </div>
-          {#if calendarMode === 'week'}<div class="week-grid">
+          {#if calendarMode !== 'list'}<div
+              class="week-grid"
+              class:month-grid={calendarMode === 'month'}
+            >
               {#each calendarDays as day}{@const dayPosts = publications.filter((p) =>
                   localInput(new Date(p.scheduled_at)).startsWith(day),
                 )}<button
@@ -946,7 +1173,9 @@
                   })
                 : calendarMode === 'list'
                   ? 'Alle publiseringer'
-                  : 'Denne uken'}
+                  : calendarMode === 'month'
+                    ? 'Denne måneden'
+                    : 'Denne uken'}
             </h2>
             <span class="small muted">Europe/Oslo</span>
           </div>
@@ -979,7 +1208,7 @@
                       ? 'Publisert'
                       : p.content_ready
                         ? 'Klar til å postes'
-                        : 'Mangler godkjent innhold'}</span
+                        : 'Sjekk godkjenning og rettigheter'}</span
                   ><ArrowUpRight size={18} /></button
                 >{/each}
             </div>{:else}<div class="empty-large">
@@ -1029,7 +1258,12 @@
                     <span class="eyebrow"
                       >{t.executor === 'external' ? 'EKSTERN AGENT' : 'TEAM'}</span
                     >
-                    <h3>{t.title}</h3>
+                    <h3>
+                      <button
+                        class="task-title"
+                        onclick={() => openModal('task-detail', { id: t.id })}>{t.title}</button
+                      >
+                    </h3>
                     {#if t.brief}<p>{t.brief.slice(0, 160)}</p>{/if}
                     <div class="task-meta">
                       <span>{t.assignee || 'Ikke tildelt'}</span>{#if t.lease_until}<Clock3
@@ -1127,6 +1361,49 @@
                 </details>{/if}{/if}
           </div>
           <form class="composer" onsubmit={send}>
+            <details class="chat-context">
+              <summary>Velg kontekst og oppgave</summary>
+              <div class="form-grid">
+                <label
+                  >Oppgaveprofil<select bind:value={chatRole}
+                    ><option value="chat">Chat og planlegging</option
+                    >{#each profiles.filter((p) => p.provider === 'openrouter' && p.role !== 'chat') as p}<option
+                        value={p.role}>{p.name || p.role}</option
+                      >{/each}<option value="script">Manus</option></select
+                  ></label
+                ><label
+                  >Kampanje<select bind:value={chatCampaign}
+                    ><option value="">Ingen</option>{#each campaigns as c}<option value={c.id}
+                        >{c.name}</option
+                      >{/each}</select
+                  ></label
+                >
+              </div>
+              <div class="selection-list">
+                {#each items as i}<label class="check-row"
+                    ><input
+                      type="checkbox"
+                      bind:group={chatAttachments}
+                      value={i.current_version_id}
+                    />{i.title}</label
+                  >{/each}
+              </div>
+              <label
+                >Last opp vedlegg<input
+                  type="file"
+                  disabled={!canEdit || busy}
+                  onchange={(e) => {
+                    const f = e.currentTarget.files?.[0];
+                    if (f)
+                      safely(async () => {
+                        const out = await uploadFile(product, f, {}, (v) => (uploadPercent = v));
+                        await refresh();
+                        chatAttachments = [...chatAttachments, out.version_id];
+                      });
+                  }}
+                /></label
+              >
+            </details>
             <textarea
               aria-label="Melding til Studio"
               bind:value={composer}
@@ -1149,6 +1426,9 @@
               >
             </div>
           </form>
+          {#if latestRun?.partial}<p class="stream-answer body-text" aria-live="polite">
+              {latestRun.partial}
+            </p>{/if}
           <p class="composer-hint">
             {settings.ai_enabled && settings.openrouter_connected
               ? 'Studio kan søke og lagre utkast. Produksjonsagenter kobles til via MCP.'
@@ -1228,7 +1508,7 @@
                         ? 'Ekstern agent via MCP'
                         : model.role === 'chat'
                           ? 'Aktiv chatmotor'
-                          : 'Modellvalg lagres · kjøring kommer senere'}</small
+                          : 'Kan kjøres fra innholdets detaljvisning'}</small
                     >
                   </div>
                   <label
@@ -1239,7 +1519,7 @@
                         : 'leverandør/modell'}
                       disabled={user.role !== 'admin'}
                     /></label
-                  >{#if model.role === 'chat'}<div class="limits-grid">
+                  >{#if model.provider !== 'external'}<div class="limits-grid">
                       <label
                         >Maks steg<input
                           type="number"
@@ -1286,12 +1566,21 @@
               <p class="muted">Kopier en invitasjonslenke og del den selv. Gyldig i syv dager.</p>
               {#each invites as invite}<div class="settings-list-row">
                   <span>{invite.email}<small>{invite.role}</small></span><span class="status"
-                    >{invite.used_at
-                      ? 'Brukt'
-                      : new Date(invite.expires_at) < new Date()
-                        ? 'Utløpt'
-                        : 'Venter'}</span
-                  >
+                    >{invite.revoked_at
+                      ? 'Tilbakekalt'
+                      : invite.used_at
+                        ? 'Brukt'
+                        : new Date(invite.expires_at) < new Date()
+                          ? 'Utløpt'
+                          : 'Venter'}</span
+                  >{#if !invite.used_at && !invite.revoked_at}<button
+                      class="text-button"
+                      onclick={() =>
+                        safely(async () => {
+                          await api('/invites/' + invite.id, 'DELETE');
+                          invites = await api('/invites');
+                        })}>Tilbakekall</button
+                    >{/if}
                 </div>{/each}
             </section>
             <section class="settings-section">
@@ -1369,7 +1658,173 @@
         placeholder="Hva leter du etter?"
       />
     </div>
-    <p class="small muted">Søk i innhold, notater, samtaler, oppgaver og publiseringsplaner.</p>
+    <p class="small muted">
+      Søk i innhold, transkript, skjermtekst, samtaler, oppgaver og resultater.
+    </p>
+    <div class="form-grid search-filters">
+      <label
+        >Omfang<select bind:value={searchScope} onchange={searchInput}
+          ><option value="product">Dette produktet</option><option value="all"
+            >Alle tilgjengelige produkter</option
+          ></select
+        ></label
+      >
+      <label
+        >Søkemåte<select bind:value={searchMode} onchange={searchInput}
+          ><option value="all">Tekst og semantikk</option><option value="text">Kun tekst</option
+          ><option value="semantic">Semantisk</option><option value="visual"
+            >Visuelt med tekst</option
+          ></select
+        ></label
+      ><label
+        >Innholdstype<select bind:value={searchKind} onchange={searchInput}
+          ><option value="">Alle</option>{#each Object.entries(kinds) as [kind, label]}<option
+              value={kind}>{label}</option
+            >{/each}</select
+        ></label
+      ><label
+        >Rettigheter<select bind:value={searchRights} onchange={searchInput}
+          ><option value="">Alle</option><option value="owned">Eget materiale</option><option
+            value="licensed">Lisensiert</option
+          ><option value="reference_only">Referanse</option></select
+        ></label
+      ><label
+        >Status<select bind:value={searchStatus} onchange={searchInput}
+          ><option value="">Alle</option
+          >{#each ['draft', 'review', 'approved', 'archived'] as st}<option value={st}
+              >{states[st]}</option
+            >{/each}</select
+        ></label
+      ><label>Etikett<input bind:value={searchTag} oninput={searchInput} /></label><label
+        >Opphavsperson<input bind:value={searchAuthor} oninput={searchInput} /></label
+      ><label
+        >Kampanje<select bind:value={searchCampaign} onchange={searchInput}
+          ><option value="">Alle</option>{#each campaigns as c}<option value={c.id}>{c.name}</option
+            >{/each}</select
+        ></label
+      ><label
+        >Min. visninger<input
+          type="number"
+          min="0"
+          bind:value={searchMinViews}
+          oninput={searchInput}
+        /></label
+      >
+    </div>
+    <details class="tool-panel">
+      <summary>Bildesøk og lagrede søk</summary><label
+        >Søk med et bilde<input
+          type="file"
+          accept="image/*"
+          onchange={(e) => {
+            const f = e.currentTarget.files?.[0];
+            if (f)
+              safely(async () => {
+                if (f.size > 700000) throw new Error('Velg et bilde under 700 KB');
+                const b = await new Promise<string>((resolve, reject) => {
+                  const r = new FileReader();
+                  r.onload = () => resolve(String(r.result).split(',')[1]);
+                  r.onerror = reject;
+                  r.readAsDataURL(f);
+                });
+                results = await api('/search/image', 'POST', { product_id: product, base64: b });
+                query = 'Bildesøk';
+              });
+          }}
+        /></label
+      >
+      <div class="button-row">
+        <input
+          aria-label="Navn på lagret søk"
+          bind:value={savedName}
+          placeholder="Gi søket et navn"
+        /><button
+          class="secondary"
+          disabled={!savedName || !query}
+          onclick={() =>
+            safely(async () => {
+              await api('/saved-searches', 'POST', {
+                product_id: product,
+                name: savedName,
+                query: {
+                  scope: searchScope,
+                  q: query,
+                  mode: searchMode,
+                  kind: searchKind,
+                  status: searchStatus,
+                  tag: searchTag,
+                  rights: searchRights,
+                  author: searchAuthor,
+                  campaign: searchCampaign,
+                  min_views: String(searchMinViews),
+                },
+              });
+              savedName = '';
+              const d = await api('/library?product=' + product);
+              savedSearches = d.searches || [];
+            })}>Lagre søk</button
+        >
+      </div>
+      {#each savedSearches as saved}<div class="compact-row">
+          <button
+            class="text-button"
+            onclick={() => {
+              query = saved.query.q;
+              searchScope = saved.query.scope || 'product';
+              searchMode = saved.query.mode || 'all';
+              searchKind = saved.query.kind || '';
+              searchStatus = saved.query.status || '';
+              searchTag = saved.query.tag || '';
+              searchRights = saved.query.rights || '';
+              searchAuthor = saved.query.author || '';
+              searchCampaign = saved.query.campaign || '';
+              searchMinViews = Number(saved.query.min_views || 0);
+              searchInput();
+            }}>{saved.name}</button
+          ><button
+            class="text-button"
+            onclick={() =>
+              safely(async () => {
+                await api('/saved-searches/' + saved.id, 'DELETE');
+                savedSearches = savedSearches.filter((s) => s.id !== saved.id);
+              })}>Fjern</button
+          >
+        </div>{/each}
+    </details>
+    {#if searchSelection.length}<div class="tool-panel">
+        <p>{searchSelection.length} elementer valgt</p>
+        <div class="button-row wrap">
+          <a class="secondary" href={'/api/export/package?ids=' + searchSelection.join(',')}
+            >Last ned pakke</a
+          >{#if canEdit}<input
+              aria-label="Etikett for valgte treff"
+              placeholder="Etikett"
+              bind:value={searchBulkTag}
+            /><button
+              class="secondary"
+              disabled={!searchBulkTag || busy}
+              onclick={() =>
+                safely(async () => {
+                  await api('/items/bulk', 'POST', {
+                    ids: searchSelection,
+                    action: 'tag',
+                    value: searchBulkTag,
+                  });
+                  await refresh();
+                  toast('Etikett lagt til');
+                  searchInput();
+                })}>Legg til etikett</button
+            ><button
+              class="text-button"
+              onclick={() =>
+                safely(async () => {
+                  await api('/items/bulk', 'POST', { ids: searchSelection, action: 'trash' });
+                  await refresh();
+                  searchInput();
+                })}>Til papirkurv</button
+            >{/if}
+        </div>
+      </div>{/if}
     <div class="search-results">
       {#if searching}<p class="muted">Leter …</p>{:else if query && !results.length}<div
           class="empty-card"
@@ -1378,51 +1833,107 @@
           <p>Prøv et annet ord eller en kortere formulering.</p>
         </div>{:else if !query}<p class="search-help">
           Et ord fra et manus. En idé dere diskuterte.<br />Navnet på en publisering.
-        </p>{:else}{#each results as result}<button onclick={() => followResult(result)}
-            ><span class="eyebrow"
-              >{kinds[result.kind] ||
-                (
-                  {
-                    task: 'Oppgave',
-                    message: 'Samtale',
-                    publication: 'Publisering',
-                    note: 'Notat',
-                  } as Record<string, string>
-                )[result.entity] ||
-                result.entity}</span
+        </p>{:else}{#each results as result}<div class="search-result-row">
+            {#if ['item', 'note', 'segment', 'frame'].includes(result.entity)}<input
+                type="checkbox"
+                aria-label={'Velg ' + result.title}
+                checked={searchSelection.includes(result.target_id)}
+                onchange={(e) => {
+                  searchSelection = e.currentTarget.checked
+                    ? [...new Set([...searchSelection, result.target_id])]
+                    : searchSelection.filter((id) => id !== result.target_id);
+                }}
+              />{/if}<button onclick={() => followResult(result)}
+              ><span class="eyebrow"
+                >{kinds[result.kind] ||
+                  (
+                    {
+                      task: 'Oppgave',
+                      message: 'Samtale',
+                      publication: 'Publisering',
+                      note: 'Notat',
+                    } as Record<string, string>
+                  )[result.entity] ||
+                  result.entity}</span
+              >
+              <h3>{result.title}</h3>
+              <p>{result.excerpt}</p>
+              <small class="muted"
+                >{result.explanation}{#if result.start_seconds != null}
+                  · {seconds(result.start_seconds)}{/if}{#if result.version_id}
+                  · versjon {result.version_number || result.version_id.slice(0, 8)}{/if}</small
+              ></button
             >
-            <h3>{result.title}</h3>
-            <p>{result.excerpt}</p></button
-          >{/each}{/if}
+          </div>{/each}{/if}
     </div>
+  {:else if modal === 'task-detail'}<TaskPanel
+      id={draft.id}
+      {canEdit}
+      onopen={openItem}
+      onchange={refresh}
+    />
   {:else if modal === 'detail' && detail}
-    <h2>{detail.item.title}</h2>
+    <h2>{previewVersion?.title || detail.item.title}</h2>
     <div class="detail-meta">
       <span class="status" class:approved={detail.item.status === 'approved'}
         >{states[detail.item.status]}</span
       ><span>{detail.item.created_by}</span><span>{detail.versions?.length} versjoner</span>
     </div>
-    {#if detail.item.mime?.startsWith('video/')}<video
-        class="detail-media"
-        src={'/api/files/' + detail.item.current_version_id}
-        controls
-        playsinline><track kind="captions" /></video
-      >{:else if detail.item.mime?.startsWith('image/')}<img
-        class="detail-media"
-        src={'/api/files/' + detail.item.current_version_id}
-        alt={detail.item.title}
-      />{:else if detail.item.mime?.startsWith('audio/')}<audio
-        class="detail-media"
-        src={'/api/files/' + detail.item.current_version_id}
-        controls
-      ></audio>{/if}
+    <label
+      >Vis versjon<select bind:value={previewVersionID}
+        >{#each detail.versions as v}<option value={v.id}
+            >v{v.number} · {v.title}{v.id === detail.item.current_version_id
+              ? ' · gjeldende'
+              : ''}</option
+          >{/each}</select
+      ></label
+    >
+    <div
+      class="media-stage"
+      class:safe-zones={safeZones && previewVersion?.mime?.startsWith('video/')}
+    >
+      {#if previewVersion?.mime?.startsWith('video/')}<video
+          bind:this={mediaElement}
+          class="detail-media"
+          src={hasProxy && preferProxy
+            ? '/api/previews/' + previewVersion?.id + '?kind=proxy'
+            : '/api/files/' + previewVersion?.id}
+          controls
+          playsinline><track kind="captions" /></video
+        >{:else if previewVersion?.mime?.startsWith('image/')}<img
+          class="detail-media"
+          src={'/api/files/' + previewVersion?.id}
+          alt={previewVersion?.title || detail.item.title}
+        />{:else if previewVersion?.mime?.startsWith('audio/')}<audio
+          class="detail-media"
+          src={'/api/files/' + previewVersion?.id}
+          controls
+          bind:this={mediaElement}
+        ></audio>{/if}{#if safeZones && previewVersion?.mime?.startsWith('video/')}<div
+          class="safe-overlay"
+          aria-hidden="true"
+        >
+          <span>Profil / tittel</span><span>Handlinger</span><span>Posttekst / navigasjon</span>
+        </div>{/if}
+    </div>
+    {#if previewVersion?.mime?.startsWith('video/')}<label class="check-row"
+        ><input type="checkbox" bind:checked={safeZones} />Vis omtrentlige trygge soner for vertikal
+        video</label
+      >{/if}
+    {#if hasProxy}<label class="check-row"
+        ><input type="checkbox" bind:checked={preferProxy} />Bruk lett forhåndsvisning (inntil 10
+        minutter)</label
+      >{/if}
+    {#if !isCurrentVersion}<p class="small muted">
+        Du ser en tidligere versjon. Velg gjeldende versjon for redigering eller godkjenning.
+      </p>{/if}
     {#if editVersion}<label>Tittel<input bind:value={versionTitle} /></label><label
         >Innhold<textarea rows="8" bind:value={versionBody}></textarea></label
       >
       <div class="button-row">
         <button class="primary" onclick={saveVersion} disabled={busy}>Lagre ny versjon</button
         ><button class="secondary" onclick={() => (editVersion = false)}>Avbryt</button>
-      </div>{:else}<p class="body-text">{detail.item.body || 'Ingen beskrivelse ennå.'}</p>{/if}
+      </div>{:else}<p class="body-text">{previewVersion?.body || 'Ingen beskrivelse ennå.'}</p>{/if}
     <p class="small muted">
       Rettigheter: {(
         {
@@ -1440,15 +1951,16 @@
         rel="noreferrer">Åpne kilde<ArrowUpRight size={15} /></a
       >{/if}
     <div class="button-row">
-      {#if canEdit && !editVersion}<button class="secondary" onclick={() => (editVersion = true)}
-          >Ny versjon</button
+      {#if canEdit && !editVersion && isCurrentVersion}<button
+          class="secondary"
+          onclick={() => (editVersion = true)}>Ny versjon</button
         >{#if detail.item.status !== 'approved'}<button
             class="primary"
             onclick={approve}
             disabled={busy}><Check size={16} />Godkjenn</button
           >{/if}{/if}{#if detail.item.file_name}<a
           class="secondary"
-          href={'/api/files/' + detail.item.current_version_id + '?download=1'}
+          href={'/api/files/' + previewVersion?.id + '?download=1'}
           download><Download size={16} />Last ned</a
         >{/if}
     </div>
@@ -1467,21 +1979,96 @@
       <h3>Notater</h3>
       {#each detail.notes || [] as n}<article>
           <strong>{n.author}</strong>
+          {#if n.at_seconds != null}<button
+              class="text-button"
+              onclick={() => {
+                previewVersionID = n.version_id;
+                setTimeout(() => seek(Number(n.at_seconds)), 100);
+              }}>{seconds(Number(n.at_seconds))}</button
+            >{/if}
           <p>{n.body}</p>
-          <small>{formatDate(n.created_at)}</small>
+          <small
+            >v{detail.versions.find((v: Row) => v.id === n.version_id)?.number} · {formatDate(
+              n.created_at,
+            )}
+            {n.resolved_at ? '· Løst' : ''}</small
+          >{#if canEdit}<button
+              class="text-button"
+              onclick={() =>
+                safely(async () => {
+                  await api('/items/' + detail!.item.id + '/notes/' + n.id, 'PATCH', {
+                    resolved: !n.resolved_at,
+                  });
+                  await refreshDetail();
+                })}>{n.resolved_at ? 'Åpne igjen' : 'Marker løst'}</button
+            >{/if}
         </article>{/each}{#if canEdit}<form onsubmit={postNote}>
           <label class="sr-only" for="note">Nytt notat</label><textarea
             id="note"
             bind:value={note}
             rows="2"
             placeholder="En tanke eller tilbakemelding …"
-            required></textarea><button class="secondary" disabled={busy || !note.trim()}
-            >Legg til notat</button
-          >
+            required></textarea>
+          <div class="form-grid">
+            <label
+              >Tidspunkt i video · sekunder<input
+                type="number"
+                min="0"
+                step="0.1"
+                bind:value={noteAt}
+              /></label
+            ><label
+              >Nevn noen<select multiple bind:value={noteMentions}
+                >{#each people as p}<option value={p.id}>{p.name}</option>{/each}</select
+              ></label
+            >
+          </div>
+          <button class="secondary" disabled={busy || !note.trim()}>Legg til notat</button>
         </form>{/if}
     </section>
+    {#if isCurrentVersion}{#key detail.item.id}<ItemTools
+          {detail}
+          {items}
+          {canEdit}
+          onrefresh={refreshDetail}
+          onseek={seek}
+          onopen={openItem}
+          onproduce={produce}
+        />{/key}{/if}
   {:else if modal === 'publish-detail'}
     <h2>{draft.title}</h2>
+    <label>Tittel<input bind:value={draft.title} disabled={!canEdit} /></label><label
+      >Kanal<select bind:value={draft.channel} disabled={!canEdit}
+        >{#each ['Instagram', 'TikTok', 'Facebook', 'YouTube', 'Snapchat'] as ch}<option
+            >{ch}</option
+          >{/each}</select
+      ></label
+    ><label
+      >Posttekst<textarea bind:value={draft.caption} rows="4" disabled={!canEdit}></textarea></label
+    ><label>Ansvarlig<input bind:value={draft.assignee} disabled={!canEdit} /></label><label
+      >Kampanje<select bind:value={draft.campaign_id} disabled={!canEdit}
+        ><option value="">Ingen kampanje</option>{#each campaigns as c}<option value={c.id}
+            >{c.name}</option
+          >{/each}</select
+      ></label
+    ><label
+      >Landingsside med UTM-sporing<input
+        type="url"
+        bind:value={draft.landing_url}
+        placeholder="https://…"
+        disabled={!canEdit}
+      /></label
+    >{#if draft.tracking_url}<label
+        >Sporingslenke<input readonly value={draft.tracking_url} /></label
+      >{/if}<label
+      >Påminnelse · minutter før<input
+        type="number"
+        min="0"
+        max="10080"
+        bind:value={draft.reminder_minutes}
+        disabled={!canEdit}
+      /></label
+    >
     <p class="muted">
       {draft.channel} · {formatDate(osloISO(draft.scheduled_at), {
         weekday: 'long',
@@ -1492,7 +2079,9 @@
       })}
     </p>
     <span class="status" class:approved={draft.content_ready}
-      >{draft.content_ready ? 'Godkjent innhold er klart' : 'Mangler godkjent innhold'}</span
+      >{draft.content_ready
+        ? 'Godkjent innhold er klart'
+        : 'Sjekk godkjenning og rettigheter'}</span
     >
     <label
       >Publiseringstid · Europe/Oslo<input
@@ -1607,7 +2196,7 @@
         {#if modal === 'item'}<div class="upload-zone">
             <Upload size={23} strokeWidth={1.4} /><strong
               >{file ? file.name : 'Legg ved en fil'}</strong
-            ><span>Bilder, video og lyd · inntil 250 MB</span><input
+            ><span>Bilder, video og lyd · inntil 2 GB · fortsett avbrutte opplastinger</span><input
               type="file"
               aria-label="Last opp fil"
               onchange={(e) => {
@@ -1632,6 +2221,15 @@
                 bind:value={draft.source_url}
                 placeholder="https://…"
               /></label
+            ><button
+              type="button"
+              class="secondary"
+              onclick={() =>
+                safely(async () => {
+                  const m = await api('/references/metadata', 'POST', { url: draft.source_url });
+                  draft.title = m.title || draft.title;
+                  draft.body = m.description || draft.body;
+                })}>Hent tittel og beskrivelse</button
             >{/if}<label
             >Bruksrettigheter<select bind:value={draft.rights}
               ><option value="unknown">Ikke avklart</option><option value="owned"
@@ -1696,6 +2294,25 @@
                 >{/each}</select
             ></label
           ><label>Hvem skal poste?<input bind:value={draft.assignee} placeholder="Navn" /></label
+          ><label
+            >Kampanje<select bind:value={draft.campaign_id}
+              ><option value="">Ingen kampanje</option>{#each campaigns as c}<option value={c.id}
+                  >{c.name}</option
+                >{/each}</select
+            ></label
+          ><label
+            >Landingsside<input
+              type="url"
+              bind:value={draft.landing_url}
+              placeholder="https://…"
+            /></label
+          ><label
+            >Påminnelse · minutter før<input
+              type="number"
+              min="0"
+              max="10080"
+              bind:value={draft.reminder_minutes}
+            /></label
           >{/if}
         {#if modal === 'agent'}<p class="muted">
             Nøkkelen får tilgang til {currentProduct?.name}. Den kan hente og levere oppgaver, men
@@ -1706,7 +2323,7 @@
             class="primary"
             disabled={busy}
             >{uploadProgress
-              ? 'Laster opp …'
+              ? 'Laster opp ' + uploadPercent + ' %'
               : busy
                 ? 'Lagrer …'
                 : modal === 'invite'

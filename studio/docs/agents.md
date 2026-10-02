@@ -3,7 +3,7 @@
 ## Valg
 
 Studio eier oppgaver, tilgang, modellvalg, tilstand og stoppregler. OpenRouter
-leverer modellkall. Første utgave bruker en liten Go-løkke med en fast verktøyliste.
+leverer modellkall. Studio bruker en liten Go-løkke med en fast verktøyliste.
 Vi kan senere bytte utførelsen til en SDK eller en separat worker uten å flytte
 autorisasjon, godkjenning eller budsjettansvar ut av Studio.
 
@@ -13,7 +13,8 @@ mange lange oppgaver. Inntil videre er Postgres-køen tilstrekkelig og enklere �
 
 ## To utførere
 
-1. **Studio:** brukerstyrt chat, søk og utkast via OpenRouter. Ingen automatisk
+1. **Studio:** brukerstyrt chat, søk, utkast, manus og analyse via OpenRouter;
+   separat kriterievurdering hos TypeSafe. Ingen automatisk
    opprettelse av barnejobber. Kun én aktiv jobb per samtale.
 2. **Ekstern agent:** egen runtime og egne kostnadsgrenser. Henter en avgrenset
    oppgave gjennom MCP, får en tidsbegrenset reservasjon og leverer en bestemt
@@ -41,16 +42,45 @@ hindrer at denne prosessen leverer etter at oppgaven er overtatt av en annen age
 - In-flight leverandørarbeid kan fortsatt bli fakturert selv om klienten avbryter.
   Derfor er leverandørbudsjett et ekstra lag, ikke en erstatning for steg/tidsgrenser.
 
+## Produksjon, revisjoner og kontekst
+
+Maler lagrer redigerbare felt og låste merkevarefelt. Bestillingen fryser
+malversjon, kildeversjoner, produktgrunnlag, modellprofil og sjekkliste.
+Agenten må levere alle avtalte formater og eventuelle kildeprosjekter med gyldig
+reservasjon. Revisjoner øker revisjonsnummeret og gjør gamle reservasjoner ugyldige.
+Chat kan foreslå revisjoner på idéer eller leverte oppgaver, og legger dem tilbake
+som idéer for menneskelig aktivering. Pågående agentarbeid kan ikke endres fra chat.
+
+MCP gir samme fulltekst/semantiske/visuelle søkemotor og filtre som grensesnittet.
+`studio_search` og chatverktøyet `search_library` har query, mode, kind, status,
+rights, author, tag, campaign, min_views og image_item. Alle argumenter er strenger;
+image_item refererer til et allerede indeksert bilde i samme produkt. Agenter får
+aldri private menneskechatter i søk eller eksport. Omtaler gir produktavgrensede
+hendelser, ikke automatisk agentoppstart.
+
 ## Jev
 
-Jev er planlagt som en separat vurderingsadapter, ikke som chatmodell.
-Dagens API tar tekst og returnerer Choice, Score eller Noul. Video krever en
-egen analysefase først. Den analysen og vurderingskriteriene må versjoneres
-slik at en rangering kan spores tilbake til nøyaktig grunnlag.
+Jev-adapteren kaller `/v1/systemone` med versjonert tekstgrunnlag, kriteriebaserte
+Score-spørsmål og merkevaresamsvar som Noul. Modellnavn, kildeversjon, kildetekst,
+vurderingsspørsmål, usikkerhet, tokenbruk og kostnad lagres. Video vurderes ut fra
+transkript/OCR og eventuelle beskrevne scener; råvideo sendes ikke til Jev.
 
-Jev-kjøring er ikke aktivert i første utgave. Norsk innhold og deres egne vurderinger
-skal inngå i valideringen før vi bruker vurderingene til prioritering. Scores
-må ikke fremstilles som sannsynligheten for et salg.
+Kontrakten, ugyldige svar og budsjettstopp testes mot en kontrollert transport.
+Faktiske provider-kall er ikke testet uten brukerens nøkler. Betalt AI er fortsatt
+avslått lokalt. Norsk innhold må kalibreres mot deres egne vurderinger før poeng
+brukes til prioritering. Poengene er ikke sannsynligheten for et salg.
+
+## Lokal mediebehandling
+
+FFmpeg, Tesseract, MiniLM, CLIP og Whisper kjører i lokalt avgrensede containere.
+Originalfiler bevares og versjoneres. Modeller lastes ned til separat cache første
+gang. Jobber har tidsgrense og stoppknapp; prosessrestart gjenopptar ikke uferdige
+jobber automatisk. Bare lokale «opptatt»-svar prøves på nytt, i maksimalt 30 sekunder
+innenfor kallers tidsgrense. Betalte provider-kall gjentas ikke.
+
+Et arbeidsromsbudsjett reserveres i en PostgreSQL-transaksjon før hvert betalt
+kall. Bekreftet kostnad avregnes; ukjent kostnad beholder reservasjonen. Dette
+kommer i tillegg til jobbgrenser og leverandørens nøkkelbudsjett.
 
 ## Kilder kontrollert under implementeringen
 
@@ -59,3 +89,5 @@ må ikke fremstilles som sannsynligheten for et salg.
 - [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)
 - [TypeSafe input](https://docs.typesafe.ai/concepts/state)
 - [TypeSafe models](https://docs.typesafe.ai/models)
+- [TypeSafe API](https://docs.typesafe.ai/api)
+- [Faster-whisper/PyAV-kompatibilitet](https://github.com/SYSTRAN/faster-whisper/issues/1492)

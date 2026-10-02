@@ -1,131 +1,169 @@
 # Studio
 
-Privat arbeidsrom for innhold, produksjon og publisering. SvelteKit/TypeScript,
-Go og PostgreSQL. Mobil først. Prosjektet er selvstendig: denne mappen kan flyttes
-til et tomt repo uten endringer eller avhengigheter til andre monorepo-prosjekter.
+Privat arbeidsrom for innhold, produksjon og publisering. PostgreSQL, Go og
+SvelteKit/TypeScript, med lokal CPU-behandling av medier. Mobil først. Mappen er
+selvstendig og kan flyttes til et tomt repo uten avhengigheter til andre prosjekter.
 
 ## Start lokalt
 
-Krever Docker med Compose. Fra denne mappen:
+Krever Docker med Compose, minst 8 GB tilgjengelig minne og diskplass til medier
+og modellene. Fra denne mappen:
 
 ```sh
 sh scripts/setup.sh
 docker compose up --build -d
 ```
 
-Åpne <http://localhost:5178>. Opprett første administrator med oppsettkoden
-`BOOTSTRAP_TOKEN` fra den lokale `.env`-filen. Koden virker bare mens ingen brukere
-finnes. `.env` opprettes med tilgang kun for lokal bruker og skal aldri committes.
-
-Inviter andre fra Innstillinger. Lenken kopieres og deles manuelt; ingen e-post
-sendes automatisk. Invitasjoner er engangslenker, knyttet til e-post og utløper
-etter syv dager. Passord må være 12–72 tegn. Innlogging bruker hash-lagrede
-sesjonstokener og HttpOnly/SameSite-cookies. Bruk nøyaktig samme origin som
+Åpne <http://localhost:5178>. Opprett første administrator med `BOOTSTRAP_TOKEN`
+fra `.env`. Oppsettkoden virker bare før første bruker er opprettet. `.env` har
+filmodus 600, holdes utenfor Git og skal ikke deles. Bruk samme origin som
 `APP_ORIGIN`; localhost og 127.0.0.1 er ulike origins.
 
-Tjenester bindes bare til loopback: web 5178, API/MCP 8088, Postgres 5448.
-Filer og database ligger i egne Docker-volumer. `docker compose down` beholder
-data. Ikke bruk `down -v` med mindre du vil slette databasen og filene.
+Inviter kolleger fra Innstillinger. Engangslenkene gjelder syv dager og deles
+manuelt. Administrator kan opprette 30-minutters passordlenker fra Arbeidsrom;
+passordbytte avslutter eksisterende sesjoner. Arbeidsrom har administrator,
+redaktør og leser, og produkter kan begrenses til utvalgte medlemmer.
 
-## Hva den første lokale utgaven gjør
+Web (5178), API/MCP (8088) og Postgres (5448) er bundet til loopback. Mediemotoren
+har ingen publisert port. Database, originalfiler og modellcache ligger i separate
+Docker-volumer. `docker compose down` beholder data; `down -v` sletter dem.
 
-- Invitasjoner og rollene administrator, redaktør og leser i ett internt arbeidsrom.
-- Teorimester som første produkt, med redigerbar produkt- og merkevarekontekst.
-- Bibliotek for tekst, hooks, manus, referanser, maler og mediefiler.
-- Private opplastinger (maks 250 MB), forhåndsvisning og nedlasting.
-- Uforanderlige versjoner, notater og godkjenning av gjeldende versjon.
-- Norsk fulltekstsøk og toleranse for lignende titler, på tvers av innhold,
-  notater, egne samtaler, oppgaver og publiseringer.
-- Oppgavetavle for mennesker og eksterne agenter, med atomiske reservasjoner.
-- Kalender med uke-/listevisning, Oslo-tid, produksjonskobling og publiseringspakke.
-- Manuell publisering med posttekst, nedlasting og registrering av publiseringslenke.
-- Privat chat med OpenRouter, produktsammenheng, biblioteksøk og lagring av utkast.
-- Modellinnstillinger per rolle, jobbstatus, kostnadslogg og stoppknapp.
-- Autentisert MCP med tilgang begrenset til ett produkt per nøkkel.
+## Funksjoner
 
-Dette er en kjørbar første leveranse, ikke hele den avtalte lanseringsversjonen.
-Full status og gjenstående funksjoner finnes i [produktplanen](docs/product-plan.md).
-Semantisk/visuelt søk, transkribering, Jev-kjøring, intern medieproduksjon,
-resultatmåling, avansert deling og automatiske forhåndsvisninger er ikke implementert
-ennå. Modellvalgene for disse rollene lagres, men kjører ikke oppgaver.
+- Bibliotek med versjoner, filer, samlinger, favoritter, etiketter, innboks,
+  rettigheter, kommentarer, CSV, papirkurv, delingslenker og eksportpakker.
+- Gjenopptakbar opplasting opptil 2 GB, duplikatsjekk, miniatyrer, mobilvideo,
+  norsk/engelsk OCR og lokal Whisper-transkribering.
+- Fulltekst, semantisk søk, visuell likhet, bildesøk, tidskoder, filtre og lagrede søk.
+- Privat chat med vedlegg, strømmede svar, produkt-/rolleprofiler, oppgaveidéer,
+  manus, analyse og TypeSafe Jev-vurdering.
+- Produksjonstavle, versjonerte maler, variantkombinasjoner, agentbestillinger,
+  faste kilder, revisjoner, leveransemanifest og menneskelig godkjenning.
+- Publiseringskalender i Oslo-tid med uke/liste/måned, postpakke, påminnelser og UTM.
+- Kampanjer, eksperimenter, resultatimport, kjøp/refusjoner og kildebelagt kunnskap.
+- MCP/CLI, produktroller, lagringsgrenser, daglig AI-budsjett og driftsoversikt.
 
-## Aktivere chat
+[Produktplanen](docs/product-plan.md) beskriver detaljene og de praktiske grensene.
+Ingen server er eksponert eksternt. Publisering på plattformene gjøres manuelt.
 
-1. Lag en egen OpenRouter API-nøkkel med et lavt, endelig bruksbudsjett.
+## Lokale modeller og medier
+
+Første bruk laster ned flerspråklig MiniLM, CLIP med flerspråklig tekstmodell og
+Whisper base til modellvolumet. Nedlasting kan ta flere minutter; senere kjører
+behandlingen lokalt uten å sende innholdsdata til modellverten. Bilder indekseres
+etter opplasting. Tekstindeksen oppdateres i bakgrunnen i små grupper.
+
+Automatisk behandling lager proxy av inntil 10 minutter / 256 MB, og visuelle
+rammer hvert tiende sekund til fire minutter. Originalen beholdes. Talegjenkjenning
+og OCR er søkehjelp og kan inneholde feil. Handlinger i video må beskrives av en
+visuell agent; tekstmodellen får transkript/analyse, ikke råvideo. Feil og delvis
+behandling vises på elementet; de lokale jobbene kan kjøres på nytt derfra.
+
+PyAV er låst til 16.1.0 fordi 19 fjernet argumentet som faster-whisper 1.2.1 bruker.
+`intelligence/requirements.lock` låser hele det testede Python-miljøet.
+
+## Aktivere betalt AI
+
+1. Opprett en OpenRouter-nøkkel med et lavt, endelig leverandørbudsjett.
 2. Sett `OPENROUTER_API_KEY` og `AI_ENABLED=true` i `.env`.
-3. Kjør `docker compose up -d api` for å laste nye miljøvariabler.
-4. Velg en nøyaktig OpenRouter-modell-ID som støtter verktøykall i Innstillinger.
+3. Kjør `docker compose up -d api` og velg nøyaktige modell-ID-er i Innstillinger
+   eller produktprofiler under Arbeidsrom. Ingen betalt modell velges automatisk.
+4. For Jev: sett `TYPESAFE_API_KEY`, velg TypeSafe og en aktuell Jev-modell i
+   vurderingsprofilen. Bekreft prisen i `TYPESAFE_PRICE_PER_MTOK`.
 
-Ingen modell er valgt automatisk, og betalte kall er avslått som standard.
-Nøkler sendes aldri til nettleseren. Modellvalg kan overstyres per chatjobb.
-Chatten kan lese biblioteket og lage utkast, men kan ikke publisere, godkjenne,
-kjøre shell, starte barneagenter eller endre egne grenser.
+Standard chatgrense er seks modellsteg, 120 sekunder, 2048 output-tokens per steg
+og USD 0.10 per jobb. Modeller må støtte verktøykall der dette brukes. Ukjent pris,
+manglende kostnadsrapport, gjentatte verktøykall og overskredne grenser stopper
+kjøringen. Daglig AI-budsjett er USD 5 som standard, lagringsgrensen 20 GiB og
+jobbkøgrensen 20. Administrator kan endre disse. Betalte kall prøves ikke automatisk
+på nytt. Reservemodell brukes bare hvis hovedmodellen ikke kan valideres før kall.
 
-Hver jobb har en uforanderlig kopi av grensene ved oppstart. Standard er 6
-modellkall, 120 sekunder, 2048 output-tokens per kall og USD 0.10 per jobb.
-Det er maksimalt fire verktøykall per steg, og identiske normaliserte kall stoppes.
-Vi reserverer konservativ tokenkostnad før hvert kall og stopper ved ukjent pris
-eller manglende kostnadsrapport. OpenRouter-nøkkelens grense er en separat
-leverandørgrense; lokale estimater er ikke en garanti mot all faktureringsforsinkelse.
-Ingen modellkall prøves automatisk på nytt. Avbrutte jobber gjenstartes ikke
-automatisk etter prosessrestart. Første utgave kjører én worker, én jobb om gangen.
+Chat lager oppgaver/revisjoner som idéer; et menneske må aktivere dem. Ingen
+rekursjon, shell, automatiske barneagenter, godkjenning eller publisering er
+mulig fra modellverktøyene. [Agentarkitekturen](docs/agents.md) forklarer grensene.
 
-Les [agentarkitekturen](docs/agents.md) for begrensninger og utvidelser.
+## Video og design via eksterne agenter
 
-## Eksterne agenter via MCP
-
-Opprett en agentnøkkel i Innstillinger. Den vises én gang, gjelder ett produkt,
-utløper etter 90 dager og kan tilbakekalles. Koble en klient som støtter
-Streamable HTTP og eksplisitt bearer-header til:
+Opprett produktavgrenset agentnøkkel i Innstillinger. Nøkkelen vises én gang,
+utløper etter 90 dager og kan tilbakekalles. MCP-klienten må støtte Streamable
+HTTP med eksplisitt header:
 
 ```text
 URL: http://localhost:8088/mcp
 Authorization: Bearer <agentnøkkel>
 ```
 
-En klient kan lese produktkontekst, søke, hente elementer og hente/reservere/levere
-oppgaver. Reservasjoner varer 30 minutter; en utløpt eller erstattet reservasjon
-kan ikke levere. Levende reservasjoner hindrer andre agenter i å ta samme oppgave.
-Agenter kan laste opp filer til `POST /api/agent/uploads` (multipart: `file`, `title`,
-`body`, `rights`), og hente autoriserte versjoner via `GET /api/agent/files/{version_id}`.
-Alle disse kallene bruker samme bearer-nøkkel. `product_id` bestemmes av nøkkelen.
-Opplasting returnerer `id` og `version_id` til `studio_deliver_task`.
+Agenten trenger egne verktøy for video/design og eget kostnadstak. Studio leverer
+brief, mal, kilder, ønskede formater og sjekkliste. Leveranser valideres og legges
+til menneskelig gjennomgang. [CLI og arbeidsflyt](agent/README.md) viser oppsettet.
+En agents eksterne prosess stoppes ikke fysisk av en utløpt Studio-reservasjon;
+foreldede reservasjoner kan likevel ikke levere.
 
-MCP styrer agentens tilgang til Studio. En ekstern agents egne modellkall og
-kostnader må begrenses der agenten kjører. Studio kan avvise nye handlinger og
-tilbakekalle nøkkelen, men kan ikke stoppe beregninger utenfor Studio.
+## Resultater og konverteringer
+
+Opprett kampanjer/eksperimenter under Produksjon og innsikt. Resultater registreres
+manuelt eller med CSV (skjemaet viser kolonnene). Målinger skiller organisk/betalt,
+kanal, postens alder og valuta; de dokumenterer sammenheng, ikke sikker årsak.
+
+Opprett en egen konverteringsnøkkel under Arbeidsrom. Avsenderen poster til
+`POST /api/conversions` med `Authorization: Bearer <konverteringsnøkkel>` og JSON:
+
+```json
+{"event_id":"order-123-paid","kind":"purchase","occurred_at":"2026-10-02T12:00:00Z","order_id":"123","amount":199,"currency":"NOK","publication_id":"UUID-fra-utm_content"}
+```
+
+Bruk `refund` for refusjon, nytt unikt `event_id` og samme `order_id`/valuta.
+Identiske hendelser dedupliseres, endret payload med samme ID avvises, og refusjoner
+kan ikke overstige kjøpet. Avsenderen og det andre prosjektet må kobles opp separat.
+
+## Backup og gjenoppretting
+
+```sh
+sh scripts/backup.sh
+sh scripts/verify-backup.sh .data/backups/studio-<tidspunkt>
+```
+
+Backup pauser API/worker kort mens data kopieres, og gjenopptar automatisk etterpå.
+Den inneholder database og filer, har private filrettigheter og sjekksummer.
+Verifisering gjenoppretter i `studio_restore_test`, pakker ut i en midlertidig
+mappe og sjekker databasehenvisninger og filenes SHA-256. Arbeidsdata overskrives
+ikke. Flytt kopier til eget backupmål; ingen automatisk ekstern backup er aktivert.
+`.env` inngår ikke i kopien. Bevar den separat. Ved faktisk katastrofegjenoppretting
+stoppes skriving først, databasen gjenopprettes med `pg_restore`, og filarkivet til
+filvolumet. Ta kopi av eksisterende data før en slik overskriving.
+
+Nye skjemaendringer legges som neste nummererte SQL-fil i
+`api/internal/studio/migrations`. Allerede anvendte migreringer må aldri endres.
+Oppstart låser migreringene og kontrollerer sjekksummene.
 
 ## Utvikling og tester
 
-Go 1.22+ og Node 22.12+ anbefales for lokal utvikling. Installer med `go mod download`
-i `api` og `npm ci` i `web`. Docker-bygget inneholder sine egne runtimes.
-For utviklingsserver, start databasen med Compose, sett `DATABASE_URL` fra `.env`
-og kjør `go run ./cmd/server` i `api`, deretter `npm run dev` i `web`.
+Go 1.22+, Node 22.12+ og Python 3.12 for CLI/backupverifisering. Installer med `go mod download` i `api` og `npm ci` i `web`.
+Integrasjonstester bruker bare `studio_test`, nettlesere `studio_e2e`, medier
+`studio_media_test`. Opprett testdatabasene én gang:
 
 ```sh
 docker compose exec -T db createdb -U studio studio_test
 docker compose exec -T db createdb -U studio studio_e2e
+docker compose exec -T db createdb -U studio studio_media_test
 sh scripts/test.sh
 cd web
 npx playwright install chromium
 npm run test:e2e
 ```
 
-Go-integrasjonstester bruker bare `studio_test`; nettlesertestene bruker
-`studio_e2e`. De skal aldri peke på arbeidsdatabasen. Testene dekker blant annet
-engangsinvitasjoner, roller, origins, foreldede godkjenninger, samtidige
-agentreservasjoner, produktgrenser, tilbakekalling og stopp av modellsløyfer.
-Nettlesertestene dekker innhold → søk → oppgave → kalender → publisering på
-desktop og mobil. Ingen tester gjør betalte AI-kall.
+For faktisk lokal bilde-/lyd-/videobehandling, fra prosjektroten:
 
-`cookie` overstyres til den kompatible 0.7-serien for å unngå den kjente
-cookie-valideringsfeilen i SvelteKits transitive avhengighet. Fjern overstyringen
-når en oppgradert SvelteKit-versjon tar inn korrigeringen selv.
+```sh
+docker compose -f compose.yml -f compose.test.yml up -d api-test intelligence-test
+docker compose -f compose.yml -f compose.test.yml exec -T -u 0 api-test apk add --no-cache espeak
+python3 scripts/media-smoke.py --video
+sh scripts/backup.sh --test
+# Verifiser mappen scriptet returnerte med verify-backup.sh.
+docker compose -f compose.yml -f compose.test.yml stop api-test intelligence-test
+```
 
-## Før serverdrift
-
-Dette oppsettet er bare satt opp lokalt. Før ekstern drift må vi etablere HTTPS,
-backup med testet gjenoppretting, lagringsgrenser, passordgjenoppretting og
-versjonerte databasemigreringer. Første utgave bruker et idempotent opprettelsesskjema;
-fremtidige skjemaendringer skal legges i ordentlige migreringer. Private chat-samtaler
-er bare synlige for eieren. Andre produktdata deles mellom medlemmene i arbeidsrommet.
+Testene dekker tilgang, versjoner, deling, invitasjoner, gjenoppretting, samtidige
+reservasjoner, opplastinger, budsjetter, provider-kontrakter, konverteringer og
+brukerflyter på desktop/mobil. De gjør ingen betalte API-kall. Se
+[verifiseringsstatus](docs/implementation.md).

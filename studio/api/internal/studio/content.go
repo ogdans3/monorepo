@@ -12,7 +12,18 @@ import (
 )
 
 func (a *App) products(w http.ResponseWriter, r *http.Request) {
-	a.list(w, r, "SELECT * FROM products ORDER BY created_at")
+	rows, e := a.query(r.Context(), "SELECT * FROM products WHERE id::text=ANY($1) ORDER BY created_at", a.productIDs(r.Context(), ""))
+	if e != nil {
+		fail(w, 500, "Kunne ikke hente produkter")
+		return
+	}
+	for _, p := range rows {
+		p["can_edit"] = a.productAccess(r.Context(), p["id"].(string), true)
+	}
+	if rows == nil {
+		rows = []map[string]any{}
+	}
+	write(w, 200, rows)
 }
 func (a *App) updateProduct(w http.ResponseWriter, r *http.Request) {
 	var v struct {
@@ -23,11 +34,12 @@ func (a *App) updateProduct(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	tag, e := a.db.Exec(r.Context(), "UPDATE products SET brand=$1,audience=$2,description=$3 WHERE id::text=$4", v.Brand, v.Audience, v.Description, r.PathValue("id"))
+	tag, e := a.db.Exec(r.Context(), "UPDATE products SET brand=$1,audience=$2,description=$3,revision=revision+1 WHERE id::text=$4", v.Brand, v.Audience, v.Description, r.PathValue("id"))
 	if e != nil || tag.RowsAffected() == 0 {
 		fail(w, 404, "Produktet finnes ikke")
 		return
 	}
+	a.snapshotProduct(r.Context(), r.PathValue("id"), actor(r).Name)
 	write(w, 200, map[string]bool{"ok": true})
 }
 
@@ -102,18 +114,18 @@ func (a *App) createItem(w http.ResponseWriter, r *http.Request) {
 	write(w, 201, result)
 }
 
-const itemSelect = "SELECT i.id,i.product_id,i.title,i.kind,i.body,i.source_url,i.tags,i.rights,i.status,i.current_version_id,i.created_by,i.created_at,i.updated_at,v.mime,v.file_name FROM items i LEFT JOIN versions v ON v.id=i.current_version_id "
+const itemSelect = "SELECT i.id,i.product_id,i.title,i.kind,i.body,i.source_url,i.tags,i.rights,i.status,i.current_version_id,i.created_by,i.created_at,i.updated_at,i.inbox,i.metadata,i.rights_details,i.deleted_at,v.mime,v.file_name,v.checksum,v.bytes FROM items i LEFT JOIN versions v ON v.id=i.current_version_id "
 
 func (a *App) items(w http.ResponseWriter, r *http.Request) {
 	p := r.URL.Query().Get("product")
-	a.list(w, r, itemSelect+"WHERE ($1='' OR i.product_id::text=$1) ORDER BY i.updated_at DESC LIMIT 300", p)
+	a.list(w, r, itemSelect+"WHERE i.product_id::text=ANY($1) AND i.deleted_at IS NULL ORDER BY i.updated_at DESC LIMIT 1000", a.productIDs(r.Context(), p))
 }
 func (a *App) itemData(ctx context.Context, id, product string) (map[string]any, error) {
-	items, e := a.query(ctx, itemSelect+"WHERE i.id::text=$1 AND ($2='' OR i.product_id::text=$2)", id, product)
+	items, e := a.query(ctx, itemSelect+"WHERE i.id::text=$1 AND i.deleted_at IS NULL AND ($2='' OR i.product_id::text=$2)", id, product)
 	if e != nil || len(items) == 0 {
 		return nil, fmt.Errorf("innholdet finnes ikke")
 	}
-	versions, e := a.query(ctx, "SELECT id,number,title,body,file_name,mime,created_by,created_at FROM versions WHERE item_id::text=$1 ORDER BY number DESC", id)
+	versions, e := a.query(ctx, "SELECT id,number,title,body,file_name,mime,checksum,bytes,provenance,created_by,created_at FROM versions WHERE item_id::text=$1 ORDER BY number DESC", id)
 	if e != nil {
 		return nil, e
 	}
@@ -121,7 +133,7 @@ func (a *App) itemData(ctx context.Context, id, product string) (map[string]any,
 	if e != nil {
 		return nil, e
 	}
-	return map[string]any{"item": items[0], "versions": versions, "notes": notes}, nil
+	return map[string]any{"item": items[0], "versions": versions, "notes": notes, "extra": a.extraItemData(ctx, id)}, nil
 }
 func (a *App) item(w http.ResponseWriter, r *http.Request) {
 	v, e := a.itemData(r.Context(), r.PathValue("id"), "")
@@ -162,7 +174,7 @@ func (a *App) newVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var version string
-	e = tx.QueryRow(r.Context(), "INSERT INTO versions(item_id,number,title,body,file_key,file_name,mime,created_by) SELECT item_id,number+1,$1,$2,file_key,file_name,mime,$3 FROM versions WHERE id=$4 RETURNING id::text", v.Title, v.Body, actor(r).Name, current).Scan(&version)
+	e = tx.QueryRow(r.Context(), "INSERT INTO versions(item_id,number,title,body,file_key,file_name,mime,checksum,bytes,created_by) SELECT item_id,number+1,$1,$2,file_key,file_name,mime,checksum,bytes,$3 FROM versions WHERE id=$4 RETURNING id::text", v.Title, v.Body, actor(r).Name, current).Scan(&version)
 	if e != nil {
 		fail(w, 500, "Kunne ikke lagre versjon")
 		return
@@ -192,20 +204,34 @@ func (a *App) approve(w http.ResponseWriter, r *http.Request) {
 }
 func (a *App) addNote(w http.ResponseWriter, r *http.Request) {
 	var v struct {
-		Body string   `json:"body"`
-		At   *float64 `json:"at_seconds"`
+		Body     string   `json:"body"`
+		Mentions []string `json:"mentions"`
+		Version  string   `json:"version_id"`
+		At       *float64 `json:"at_seconds"`
 	}
 	if !decode(w, r, &v) {
 		return
 	}
-	if strings.TrimSpace(v.Body) == "" || v.At != nil && *v.At < 0 {
+	if strings.TrimSpace(v.Body) == "" || len(v.Mentions) > 20 || v.At != nil && *v.At < 0 {
 		fail(w, 400, "Skriv en kommentar")
 		return
 	}
-	tag, e := a.db.Exec(r.Context(), "INSERT INTO notes(item_id,version_id,body,at_seconds,author) SELECT id,current_version_id,$1,$2,$3 FROM items WHERE id::text=$4", v.Body, v.At, actor(r).Name, r.PathValue("id"))
+	tag, e := a.db.Exec(r.Context(), "INSERT INTO notes(item_id,version_id,body,at_seconds,author,mentions) SELECT i.id,coalesce(nullif($6,'')::uuid,i.current_version_id),$1,$2,$3,$5 FROM items i WHERE i.id::text=$4 AND ($6='' OR EXISTS(SELECT 1 FROM versions WHERE id::text=$6 AND item_id=i.id))", v.Body, v.At, actor(r).Name, r.PathValue("id"), emptyStrings(v.Mentions), v.Version)
 	if e != nil || tag.RowsAffected() == 0 {
 		fail(w, 404, "Innholdet finnes ikke")
 		return
+	}
+	var p string
+	a.db.QueryRow(r.Context(), "SELECT product_id::text FROM items WHERE id::text=$1", r.PathValue("id")).Scan(&p)
+	for _, mention := range v.Mentions {
+		var agentName string
+		if a.db.QueryRow(r.Context(), "SELECT name FROM agent_tokens WHERE id::text=$1 AND product_id::text=$2 AND revoked_at IS NULL AND expires_at>now()", mention, p).Scan(&agentName) == nil {
+			a.notify(r.Context(), p, "", "agent_mention", actor(r).Name+" nevnte "+agentName+": "+v.Body, r.PathValue("id"), "")
+			continue
+		}
+		if !badID(mention) && a.productAccess(context.WithValue(r.Context(), actorKey{}, Actor{ID: mention, Role: "editor"}), p, false) {
+			a.notify(r.Context(), p, mention, "mention", actor(r).Name+" nevnte deg: "+v.Body, r.PathValue("id"), "")
+		}
 	}
 	write(w, 201, map[string]bool{"ok": true})
 }
@@ -222,6 +248,20 @@ func (a *App) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close()
+	quotaTx, e := a.db.Begin(r.Context())
+	if e != nil {
+		fail(w, 500, "Databasefeil")
+		return
+	}
+	defer quotaTx.Rollback(r.Context())
+	if _, e = quotaTx.Exec(r.Context(), "SELECT singleton FROM workspace_limits FOR UPDATE"); e != nil {
+		fail(w, 500, "Databasefeil")
+		return
+	}
+	if e := a.storageAllowed(r.Context(), h.Size); e != nil {
+		fail(w, 409, e.Error())
+		return
+	}
 	head := make([]byte, 512)
 	n, _ := f.Read(head)
 	f.Seek(0, 0)
@@ -258,11 +298,17 @@ func (a *App) upload(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, e.Error())
 		return
 	}
+	a.recordFile(r.Context(), result["version_id"], key)
+	p := r.FormValue("product_id")
+	if actor(r).Agent {
+		p = actor(r).Product
+	}
+	a.queueMedia(r.Context(), p, result["version_id"], actor(r).ID)
 	write(w, 201, result)
 }
 func (a *App) file(w http.ResponseWriter, r *http.Request) {
 	var key, name, mt string
-	e := a.db.QueryRow(r.Context(), "SELECT v.file_key,v.file_name,v.mime FROM versions v JOIN items i ON i.id=v.item_id WHERE v.id::text=$1 AND ($2='' OR i.product_id::text=$2)", r.PathValue("id"), actor(r).Product).Scan(&key, &name, &mt)
+	e := a.db.QueryRow(r.Context(), "SELECT v.file_key,v.file_name,v.mime FROM versions v JOIN items i ON i.id=v.item_id WHERE v.id::text=$1 AND i.deleted_at IS NULL AND ($2='' OR i.product_id::text=$2)", r.PathValue("id"), actor(r).Product).Scan(&key, &name, &mt)
 	if e != nil || key == "" {
 		fail(w, 404, "Filen finnes ikke")
 		return
@@ -277,32 +323,18 @@ func (a *App) file(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join(a.storage, key))
 }
 func (a *App) searchData(ctx context.Context, q, product, user string) ([]map[string]any, error) {
-	if strings.TrimSpace(q) == "" {
-		return []map[string]any{}, nil
-	}
-	if len(q) > 300 {
-		return nil, fmt.Errorf("søket er for langt")
-	}
-	return a.query(ctx, `WITH docs AS (
- SELECT id::text,id::text AS target_id,product_id::text,'item' AS entity,kind,title,body,status FROM items
- UNION ALL SELECT n.id::text,n.item_id::text,i.product_id::text,'note','note',i.title,n.body,i.status FROM notes n JOIN items i ON i.id=n.item_id
- UNION ALL SELECT id::text,id::text,product_id::text,'task','task',title,brief,status FROM tasks
- UNION ALL SELECT id::text,id::text,product_id::text,'publication','publication',title,caption,status FROM publications
- UNION ALL SELECT m.id::text,c.id::text,c.product_id::text,'message','message',c.title,m.body,'chat' FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE c.created_by::text=$3
- UNION ALL SELECT id::text,id::text,id::text,'product','knowledge',name,description||' '||brand||' '||audience,'active' FROM products
- ), ranked AS (
- SELECT *, ts_rank_cd(to_tsvector('norwegian',title||' '||body),websearch_to_tsquery('norwegian',$1))+similarity(title,$1) AS rank
- FROM docs WHERE ($2='' OR product_id=$2) AND (to_tsvector('norwegian',title||' '||body) @@ websearch_to_tsquery('norwegian',$1) OR title ILIKE '%'||replace(replace(replace($1,'\','\\'),'%','\%'),'_','\_')||'%' OR similarity(title,$1)>0.18)
- ) SELECT id,target_id,product_id,entity,kind,title,left(body,260) AS excerpt,status,rank FROM ranked ORDER BY rank DESC,title LIMIT 60`, q, product, user)
+	return a.searchResults(ctx, q, product, user, searchFilter{Mode: "all"}, nil)
 }
 func (a *App) search(w http.ResponseWriter, r *http.Request) {
-	rows, e := a.searchData(r.Context(), r.URL.Query().Get("q"), r.URL.Query().Get("product"), actor(r).ID)
-	if e != nil {
-		fail(w, 400, "Kunne ikke søke")
-		return
+	q := r.URL.Query()
+	f := searchFilter{Kind: q.Get("kind"), Status: q.Get("status"), Rights: q.Get("rights"), Author: q.Get("author"), Campaign: q.Get("campaign"), Tag: q.Get("tag"), Mode: q.Get("mode"), MinViews: int(parseFloat(q.Get("min_views")))}
+	if f.Mode == "" {
+		f.Mode = "all"
 	}
-	if rows == nil {
-		rows = []map[string]any{}
+	rows, e := a.searchResults(r.Context(), q.Get("q"), q.Get("product"), actor(r).ID, f, nil)
+	if e != nil {
+		fail(w, 400, e.Error())
+		return
 	}
 	write(w, 200, rows)
 }

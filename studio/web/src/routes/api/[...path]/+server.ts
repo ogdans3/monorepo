@@ -7,7 +7,15 @@ const proxy: RequestHandler = async ({ request, params, url }) => {
     env.API_URL || 'http://127.0.0.1:8088',
   );
   const headers = new Headers();
-  for (const name of ['content-type', 'cookie', 'authorization', 'origin']) {
+  for (const name of [
+    'content-type',
+    'cookie',
+    'authorization',
+    'origin',
+    'upload-offset',
+    'range',
+    'if-range',
+  ]) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }

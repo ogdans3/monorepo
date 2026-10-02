@@ -1,0 +1,6 @@
+sentence-transformers==5.1.2
+transformers==4.57.6
+faster-whisper==1.2.1
+Pillow==11.3.0
+# PyAV 19 removed metadata_errors, still used by faster-whisper 1.2.1.
+av==16.1.0
