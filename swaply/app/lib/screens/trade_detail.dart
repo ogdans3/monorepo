@@ -598,7 +598,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
 
       const SizedBox(height: 7),
       _valueSummary(trade),
-      if (trade.cash != null) ...[
+      // Not on an ended trade: there is nothing left to pay, and «betales
+      // når begge har godtatt» was a promise about a trade that is over.
+      if (trade.cash != null && trade.state != 'cancelled') ...[
         const SizedBox(height: 7),
         _cashSection(trade),
       ],
@@ -1028,7 +1030,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   /// The cash difference. We show a number and a phone number; we never move it.
   Widget _cashSection(Trade trade) {
     final cash = trade.cash!;
-    final settled = trade.youPaidAt != null;
+    // Paid is the payer's mark. It read the viewer's own, which the payee
+    // never sets, so the one being paid never saw «✓ betalt».
+    final paidAt = trade.participants.where((p) => p.id == cash.payer.id).firstOrNull?.paidAt ??
+        (cash.youPay ? trade.youPaidAt : null);
+    final settled = paidAt != null;
+    final done = trade.state == 'completed';
+    final payer = cash.payer.displayName.split(' ').first;
+    final payee = cash.payee.displayName.split(' ').first;
+    final amount = kr(cash.amountNok);
 
     // The kicker lives inside the card, with the note to its right.
     return SectionCard(
@@ -1051,9 +1061,17 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                             color: SwaplyColors.greyLight)),
                     const SizedBox(height: 2),
                     Text(
-                      cash.youPay
-                          ? 'Du betaler ${kr(cash.amountNok)} til ${cash.payee.displayName.split(' ').first}'
-                          : '${cash.payer.displayName.split(' ').first} betaler deg ${kr(cash.amountNok)}',
+                      // 09i, once it is over: «Du betalte». Only when it was
+                      // marked paid, though; otherwise what was agreed,
+                      // without saying it happened.
+                      switch ((cash.youPay, done, settled)) {
+                        (true, true, true) => 'Du betalte $amount til $payee',
+                        (true, true, false) => 'Du skulle betale $amount til $payee',
+                        (true, false, _) => 'Du betaler $amount til $payee',
+                        (false, true, true) => '$payer betalte deg $amount',
+                        (false, true, false) => '$payer skulle betale deg $amount',
+                        (false, false, _) => '$payer betaler deg $amount',
+                      },
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
                     ),
@@ -1066,9 +1084,13 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                 child: Text(
                   settled
                       ? '✓ betalt via Vipps'
-                      : trade.state == 'accepted'
-                          ? 'betales direkte mellom dere, før noe sendes'
-                          : 'betales når begge har godtatt',
+                      : done
+                          ? 'ikke markert som betalt'
+                          // Paused is still accepted by everybody, while
+                          // a question about getting out is answered.
+                          : trade.state == 'accepted' || trade.state == 'paused'
+                              ? 'betales direkte mellom dere, før noe sendes'
+                              : 'betales når begge har godtatt',
                   style: const TextStyle(fontSize: 11.5, height: 1.4, color: SwaplyColors.grey),
                 ),
               ),
@@ -1079,8 +1101,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                 Row(
                   children: [
                     Expanded(
-                      child: Text('Vipps til ${cash.payee.displayName.split(' ').first}'
-                          '${cash.payeePhone == null ? '' : ' · ${cash.payeePhone}'}',
+                      // The server sends the number to the payer of an
+                      // accepted trade, and only where the payee gave one.
+                      child: Text(
+                          cash.payeePhone == null
+                              ? 'Vipps til $payee · spør etter nummeret i samtalen'
+                              : 'Vipps til $payee · ${cash.payeePhone}',
                           style: Type.body),
                     ),
                     if (cash.payeePhone != null)
