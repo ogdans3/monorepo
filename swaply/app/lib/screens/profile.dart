@@ -265,32 +265,37 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
             const SizedBox(height: 7),
             // «Rediger profil» is a line of words between the interests and
             // the grid, 11 from each: it answers across the 11 under it and
-            // up over the gap and the interests, which answer nothing.
+            // up over the gap, and up beside the interests, which keep off
+            // its side of the screen for it.
             TapRoom(
               room: const EdgeInsets.only(bottom: 11),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Wrap(
-                    spacing: 7,
-                    runSpacing: 7,
+                  // 02 again, as it is built, with what was chosen chosen.
+                  // It says «Du kan endre dette senere», and nothing could:
+                  // this is later. The chips stop short of «Rediger profil»'s
+                  // side, by its own width: a block of them over it took the
+                  // room it answers across, down to 33 points with one
+                  // interest. The export's three never reach it, so nothing
+                  // in its drawing moves.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ...me.interests.map((c) => Pill(categoryLabels[c] ?? c, small: true)),
-                      // While any of the twelve is left. Five was round 5's
-                      // ceiling, and there is none now.
-                      if (me.interests.length < categoryLabels.length)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(Radii.pill),
-                            border: Border.all(color: SwaplyColors.chevron),
-                          ),
-                          child: const Text('+ fylles ut mens du bruker appen',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: SwaplyColors.grey)),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _interests(context, me),
                         ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Visibility(
+                        visible: false,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: Text('Rediger profil', style: _editStyle),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 11),
@@ -303,11 +308,7 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                       ),
                       TapArea(
                         onTap: () => pushOverBar<void>(context, const EditProfileScreen()),
-                        child: const Text('Rediger profil',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: SwaplyColors.greenText)),
+                        child: const Text('Rediger profil', style: _editStyle),
                       ),
                     ],
                   ),
@@ -342,6 +343,37 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
       ),
     );
   }
+
+  static const _editStyle =
+      TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.greenText);
+
+  /// The interests as chips, and 02 behind them.
+  Widget _interests(BuildContext context, Me me) => TapArea(
+        onTap: () => pushOverBar<void>(context, const InterestsScreen(asStep: true)),
+        child: Semantics(
+          hint: 'Endre interessene',
+          child: Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              ...me.interests.map((c) => Pill(categoryLabels[c] ?? c, small: true)),
+              // While any of the twelve is left. Five was round 5's
+              // ceiling, and there is none now.
+              if (me.interests.length < categoryLabels.length)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(Radii.pill),
+                    border: Border.all(color: SwaplyColors.chevron),
+                  ),
+                  child: const Text('+ fylles ut mens du bruker appen',
+                      style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
+                ),
+            ],
+          ),
+        ),
+      );
 
   Widget _ownItem(Item item) {
     final (label, colour) = switch (item.status) {

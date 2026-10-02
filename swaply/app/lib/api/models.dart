@@ -6,7 +6,8 @@ DateTime? _date(dynamic v) => v == null ? null : DateTime.parse(v as String).toL
 
 class Me {
   Me.fromJson(Map<String, dynamic> j)
-      : id = j['id'] as String,
+      : _json = j,
+        id = j['id'] as String,
         displayName = j['displayName'] as String?,
         email = j['email'] as String?,
         phone = j['phone'] as String?,
@@ -63,6 +64,15 @@ class Me {
   final String? actingAsAdminId, actingAsAdminName;
 
   bool get actingAs => actingAsAdminId != null;
+
+  /// What this was read from, for [withInterests].
+  final Map<String, dynamic> _json;
+
+  /// This account with [interests] in place of its own, and the rest as it
+  /// was. For the answer to `PUT /me/interests`, which is the profile alone:
+  /// taken whole, it had none of the things, the counts or who is acting
+  /// that only `GET /me` lists.
+  Me withInterests(List<String> interests) => Me.fromJson({..._json, 'interests': interests});
 }
 
 /// An account the test tooling made, as the switcher lists it.

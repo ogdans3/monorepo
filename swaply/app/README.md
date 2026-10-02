@@ -673,6 +673,16 @@ second field to type it twice: seeing it is the check. The password on «Slett
 kontoen» has none, since it is typed to delete an account and not to make one.
 `test/onboarding_test.dart` holds it.
 
+**13's interests open 02.** 02 says «Du kan endre dette senere», and nothing
+could, so the chips on 13 are a way back to it, with what was chosen chosen.
+The chips stop short of «Rediger profil»'s side of the screen, by its own
+width, so that line keeps the room it answers across: a block of chips over
+it took that room, down to 33 points with one interest. The export's three
+never reach it, so its 13 is drawn as it was. The answer to `PUT
+/me/interests` is the profile alone, and only its interests are taken from it:
+taken whole, 13 lost its things and an admin acting as somebody lost the floor.
+`test/profile_test.dart` holds both.
+
 **«Vis alt på Oppdag igjen» on 16b**, under «Oppdag», with how much is hidden
 beside it — kinds, and listings hidden alone while they can still be shown —
 and only while any are, which is why the export's 16b, whose Ola has hidden

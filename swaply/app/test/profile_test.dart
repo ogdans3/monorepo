@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/screens/item_detail.dart';
+import 'package:swaply_app/screens/onboarding.dart';
 import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/common.dart';
@@ -218,6 +219,78 @@ void main() {
       await mount(tester, const OtherProfileScreen(userId: 'kari-1'), signedIn: false);
       expect(find.text('medlem siden februar'), findsOneWidget);
       expect(find.textContaining(' · medlem siden'), findsNothing);
+    });
+  });
+
+  group('the interests can be changed later, as 02 says', () {
+    testWidgets('1. 13\'s interests open 02 with them chosen, and what is chosen there is on 13 '
+        'after', (tester) async {
+      // 02 says «Du kan endre dette senere», and nothing could.
+      server.overrides['PUT /me/interests'] = (http.Request request) => FakeServer.profileOnly({
+            ...FakeServer.me,
+            'interests': (jsonDecode(request.body) as Map)['interests'],
+          });
+      await mount(tester, const ProfileScreen());
+      expect(find.text('Mine gjenstander · 1'), findsOneWidget);
+
+      await tester.tap(find.text('Verktøy'));
+      await tester.pumpAndSettle();
+      expect(find.byType(InterestsScreen), findsOneWidget);
+      expect(find.text('3 valgt'), findsOneWidget);
+
+      await tester.tap(find.text('Båt'));
+      await tester.pump();
+      await tester.tap(find.text('Fortsett'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['PUT /me/interests'], {
+        'interests': ['verktoy', 'gaming', 'sykling', 'bat'],
+      });
+      expect(find.byType(InterestsScreen), findsNothing);
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.text('Båt'), findsOneWidget);
+      // The answer to it is the profile alone; 13 keeps its things.
+      expect(find.text('Mine gjenstander · 1'), findsOneWidget);
+      expect(find.text('Bosch drill 18V'), findsOneWidget);
+    });
+
+    testWidgets('2. «Hopp over» there changes nothing', (tester) async {
+      await mount(tester, const ProfileScreen());
+      await tester.tap(find.text('Gaming'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Båt'));
+      await tester.pump();
+      await tester.tap(find.text('Hopp over'));
+      await tester.pumpAndSettle();
+
+      expect(server.requests, isNot(contains('PUT /me/interests')));
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.text('Båt'), findsNothing);
+      expect(session.me!.interests, ['verktoy', 'gaming', 'sykling']);
+    });
+
+    test('3. the answer to the choice is merged in: the things, the counts and who is acting stay',
+        () async {
+      // PUT /me/interests answers with the profile alone. Taken as the whole
+      // of who this is, 13 lost its things and an admin acting as somebody
+      // lost the floor under every screen until the next refresh.
+      final acting = {...FakeServer.actingAsTest, 'items': [FakeServer.drill]};
+      server.overrides['POST /auth/login'] = {'token': 'tok', 'user': acting};
+      server.overrides['GET /me'] = acting;
+      server.overrides['PUT /me/interests'] = FakeServer.profileOnly({
+        ...acting,
+        'interests': ['bat'],
+      });
+      await session.login('ola@epost.no', 'passord');
+      expect(session.actingAs, isTrue);
+
+      await session.setInterests(['bat']);
+
+      expect(session.me!.interests, ['bat']);
+      expect(session.me!.items.single.id, FakeServer.drill['id']);
+      expect(session.actingAs, isTrue);
+      expect(session.actingAsAdminName, 'Ola N.');
+      expect(session.interestsPending, isFalse);
     });
   });
 }

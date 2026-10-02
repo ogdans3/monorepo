@@ -1041,8 +1041,14 @@ class Session extends ChangeNotifier {
     await prefs.remove('$_listingPromptKey$accountId');
   }
 
+  /// 02's choice, written down. The answer is the profile alone, without
+  /// the things, the counts or who is acting, which only `GET /me` has; taken
+  /// as the whole of who this is, 13 lost its things until the next refresh
+  /// and an admin acting as somebody lost the floor under every screen. So
+  /// only the interests are taken from it.
   Future<void> setInterests(List<String> interests) async {
-    me = await api.setInterests(interests);
+    final answer = await api.setInterests(interests);
+    me = me?.withInterests(answer.interests) ?? answer;
     interestsPending = false;
     notifyListeners();
     await _keepPicker();
