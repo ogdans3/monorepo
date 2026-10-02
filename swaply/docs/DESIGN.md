@@ -145,6 +145,8 @@ A chain trade's thread holds all participants together — it only works if ever
 
 Invite-only limits abuse; on top of that, users can **report** a user or item and **block** a user (blocked users' items are hidden and can't match). Reports are reviewed manually for the MVP.
 
+**A block ends what the two were negotiating, and nothing crosses it after.** Making one ends every trade the two are both in that is still a negotiation — talking, pending or countered — with the close code `blocked`, and everybody else in it is told. From then on a message, a counter-offer or a yes from one of them in a trade with the other is refused. A trade everybody had already agreed is left standing: backing out of that is the withdrawal question on 08a, and whether a block should end an agreed trade too is still for the product owner to say. Built 02.10.2026, after an audit found a block had been only a row and the chat went on through it.
+
 Report and block use a stronger red, `#E5484D`. Coral `#FF6B5E` stays the app's "no" colour, and the two must not be the same value.
 
 ## Sharing

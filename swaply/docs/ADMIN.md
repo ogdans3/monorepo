@@ -110,11 +110,19 @@ Beyond the ring, three things:
    negotiated with. And «Få noen til å ville ha denne» only works on a listing
    inside the ring — pressed on a stranger's it is bound #2 arriving from the
    other direction.
-2. **A test account's listings are invisible on Oppdag to everybody outside its
-   own admin's ring.** They are real rows in the database a deployment serves —
-   without this a stranger hearts a test drill, a real trade opens, and from
-   that moment the account can neither be reset nor deleted, because it is
-   somebody's history.
+2. **A test account and a real person never meet.** A test account's listings
+   are invisible on Oppdag to everybody outside its own admin's ring, and a
+   test account's own Oppdag shows only its ring. They are real rows in the
+   database a deployment serves — without this a stranger hearts a test drill,
+   a real trade opens, and from that moment the account can neither be reset
+   nor deleted, because it is somebody's history. Hiding is not enough on its
+   own, because a link or a long-press reaches a listing too, so the product
+   refuses the meeting itself (`trades/ring.ts`, 403 `test_ring`): a heart or
+   a first message between a test account and somebody outside its ring, and
+   any ring the cycle search would close through both. «Likt» leaves the other
+   side's likers out, and «Nullstill → gjenstander» spares a listing a
+   stranger is negotiating about. The admin is a real person and trades with
+   real people as anybody does.
 3. **Every admin change and every write made while acting as somebody leaves a
    row in `admin_actions`**, written by the hook that authorises the request rather
    than by a route, so a route cannot forget it. A wrong tap is only survivable
