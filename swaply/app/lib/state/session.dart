@@ -586,6 +586,9 @@ class Session extends ChangeNotifier {
     // account rather than two.
     if (_shared) await prefs.reload();
     late String sent;
+    // Whether this phone's device id turned out to be a profile's now; see
+    // below, where the drafts are.
+    var claimed = false;
     Future<({String token, Me me})> start(String? invite) async =>
         api.startAnonymously(deviceId: sent = await _deviceId(prefs), invite: invite);
     final started = await _withInvite((invite) async {
@@ -593,6 +596,7 @@ class Session extends ChangeNotifier {
         return await start(invite);
       } on ApiException catch (e) {
         if (e.code != 'device_claimed') rethrow;
+        claimed = true;
         // This device's account has been given a name since and its token is
         // gone, so the device id is no longer a way into it: the password is,
         // and the account is still there to sign in to. A new id is a new
@@ -628,7 +632,12 @@ class Session extends ChangeNotifier {
     // behind a switch: that one is coming back. Not waited for — the store
     // takes one step at a time, so no draft of this stranger's can be kept
     // before it.
-    if (_adminToken == null) unawaited(drafts.forgetAllBut(me!.id));
+    //
+    // Nor when this phone's device id was refused as claimed. That account
+    // was not turned away: it has a profile now — a «Lag profil» whose
+    // answer never came back, a token lost since — and it is the person's,
+    // who signs in to it with the draft still theirs.
+    if (_adminToken == null && !claimed) unawaited(drafts.forgetAllBut(me!.id));
     letGoOfInvite();
     // An answer, if a late one: whatever the splash said about there being
     // none is no longer so.
@@ -734,16 +743,20 @@ class Session extends ChangeNotifier {
         // the switcher minted survives it on the server — the way back to the
         // admin with it. Any other profile is somebody, and not a test.
         final acting = claiming && actingAs;
-        final made = await _withInvite((invite) => api.register(
-              displayName: displayName,
-              email: email,
-              phone: phone,
-              password: password,
-              postalCode: postalCode,
-              town: town,
-              // Spent here unless this device already spent it looking around.
-              invite: invite,
-            ));
+        final made = await _claim(
+          (invite) => api.register(
+            displayName: displayName,
+            email: email,
+            phone: phone,
+            password: password,
+            postalCode: postalCode,
+            town: town,
+            // Spent here unless this device already spent it looking around.
+            invite: invite,
+          ),
+          email: email,
+          password: password,
+        );
         _decided++;
         me = made;
         letGoOfInvite();
@@ -771,6 +784,42 @@ class Session extends ChangeNotifier {
           // failing it over this told somebody with a profile they had none.
         }
       });
+
+  /// The address and the password of the last «Lag profil» that got no
+  /// answer; see [_claim].
+  ({String email, String password})? _claimUnheard;
+
+  /// A profile made with [register], and what to do when the answer to the
+  /// last one never came.
+  ///
+  /// It may have reached the server, which made the profile and retired the
+  /// device's session as it did — and then the answer was lost. Pressed
+  /// again, the same words went on the dead session, as a new account, and
+  /// were refused as `email_taken` by the profile the first press made: the
+  /// person was locked out of the account they had just made, and their
+  /// listing never went out. So `email_taken` right after an unanswered try
+  /// with the same address and password signs in with them instead, which
+  /// is that account, and the listing goes on as after any profile made.
+  /// Another password is somebody else's account, and is refused as it was.
+  Future<Me> _claim(Future<Me> Function(String? invite) make,
+      {required String email, required String password}) async {
+    final words = (email: email.trim().toLowerCase(), password: password);
+    final unheard = _claimUnheard;
+    _claimUnheard = null;
+    try {
+      return await _withInvite(make);
+    } on ApiException catch (e) {
+      if (e.isNoContact) _claimUnheard = words;
+      if (e.code != 'email_taken' || unheard != words) rethrow;
+      try {
+        return (await api.login(email, password)).me;
+      } on ApiException catch (again) {
+        if (again.isNoContact) _claimUnheard = words;
+        if (again.code == 'wrong_credentials') throw e;
+        rethrow;
+      }
+    }
+  }
 
   /// Signing in, from wherever. Comes back with how many things this device
   /// had liked that are now the account's — the server folds a device that

@@ -136,7 +136,13 @@ with nothing to tap.
   a new one there and then, and a token refused later starts over with it. An
   id an older app kept after a profile is refused; the app makes a new one and
   starts over, once, or takes the one another tab refused the same moment has
-  just kept.
+  just kept. The drafts on the phone are kept then: that account is the
+  person's, with a profile, and they sign in to it. A «Lag profil» whose answer
+  never came may have made the profile, and retired the device's session as it
+  did; pressed again it went as a new account on a dead session and was
+  refused as `email_taken` by the profile the first press made. Pressed again
+  with the same address and password it now signs in with them, and the
+  listing it was made for goes out. `test/lost_answer_test.dart` holds both.
 - **Opening the app reaches the server.** A device that only looked around is
   deleted after twelve months in which its own token asked the server
   nothing, and opening the app counts. A cold start asks `GET /me` as it
