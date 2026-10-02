@@ -699,6 +699,38 @@ never reach it, so its 13 is drawn as it was. The answer to `PUT
 taken whole, 13 lost its things and an admin acting as somebody lost the floor.
 `test/profile_test.dart` holds both.
 
+**No proposal chips in a ring's chat.** 07k draws «Foreslå ting», «Be om
+ekstra» and «Foreslå mellomlegg» under the field as 06g does, but a proposal is
+an offer between two people, and the server refuses one in a ring of three: the
+chips only ever ended in a refusal. A ring is arranged in words, and its trade
+page carries the rest. `test/ring_test.dart` holds it.
+
+**«Lest» without a time.** 06g draws «Lest 14:10» under the last message the
+other side has read. The server keeps how far each person has read, not when,
+so the app says «Lest» under that message and nothing it would have to make up.
+
+**«Byttet ble ikke noe av» on 07l opens a report.** The export's note has it
+free the things, asked a week into a ring's chat. The app reaches 07l only
+after all three have marked the ring done, and a completed trade cannot be
+undone, so the line asks which of the two it is about and opens 16a for them.
+07l also has the export's «Senere» and «Ja, send vurdering».
+
+**The people in a chat open their profile.** Nothing is drawn differently: the
+name and face in 06g's header, a ring's title on 07k (which asks which of the
+two), and the face and name on a trade's page open 13b, where «Rapporter» is,
+with «Blokkér» in it. Before, somebody who wrote unpleasant things and had nothing
+listed could be reported from nowhere. `test/profiles_test.dart` holds it.
+
+**The match screen scrolls on a small phone.** 06a and 07i are the export's at
+390 points; on a 375×667 or 360×640 phone the gap at the top gives way first,
+then the content scrolls above the buttons, and at 320 the table shrinks to
+fit. `test/small_phone_test.dart` measures it with real fonts.
+
+**A mellomlegg without a number to send it to.** The number is given only to
+the one paying, and only once everybody has agreed (it used to go to anybody
+who put a mellomlegg on the table). Before that the card says to ask for the
+number in the conversation, and offers nothing to copy.
+
 **«Vis alt på Oppdag igjen» on 16b**, under «Oppdag», with how much is hidden
 beside it — kinds, and listings hidden alone while they can still be shown —
 and only while any are, which is why the export's 16b, whose Ola has hidden
@@ -749,10 +781,13 @@ Everybody else in a trade the deletion ended is told on 12a — «Noen i byttet
 slettet kontoen sin.» — and the trade, ended, says the same thing in words that
 fit it: «Den andre i byttet …» in a pair, «En av de andre i byttet …» in a
 ring. Those are chosen by the trade's `closeCode`, `account_deleted`, not read
-from its `closeReason`, the server's sentence kept for history; and the line
-under every other ended trade, «Angret du? Du kan sende et nytt forslag fra
-samtalen.», is not drawn under this one, since there is nobody to send it to.
-`test/screens_test.dart` holds the words, under 09f.
+from its `closeReason`, the server's sentence kept for history. No ended trade
+says «Angret du? Du kan sende et nytt forslag fra samtalen.» any more: an ended
+trade takes no new offer, so the line promised something nothing does. After a
+deletion or a block, where nobody is left to answer, the chat field gives way
+to one line saying why; after any other ending the conversation stays open,
+since how long it lives is one of DESIGN.md's open questions.
+`test/screens_test.dart` and `test/ended_test.dart` hold the words.
 
 Taking your own listing down, from «⋯» on 04, asks the way «Slett kontoen»
 does: the row in «Logg ut»'s red and the app's destructive button, never
