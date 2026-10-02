@@ -186,18 +186,29 @@ class _TradesScreenState extends State<TradesScreen>
   }
 
   Widget _card(Trade trade) {
-    final yourTurn = !trade.youAccepted &&
-        ['pending', 'countered'].contains(trade.state);
+    // A deal you could say yes to and have not, by the rule the server
+    // counts «Din tur» by: both sides hold something. An offer with an
+    // empty side has no yes in it, and «Godta byttet» on one opened a
+    // trade with nothing to accept.
+    final canAccept = !trade.youAccepted &&
+        ['pending', 'countered'].contains(trade.state) &&
+        trade.youGive.isNotEmpty &&
+        trade.youGet.isNotEmpty;
+    // Somebody else has asked to be let out, and the answer is yours: the
+    // trade waits on it, as the badge counts it.
+    final w = trade.withdrawal;
+    final asked = trade.state == 'paused' && w != null && w.state == 'waiting' && !w.byYou;
+    final yourTurn = canAccept || asked;
     final other = trade.receivingFrom.displayName.split(' ').first;
 
     final (label, colour) = switch (trade.state) {
       'talking' => ('Samtale', SwaplyColors.greySoft),
-      'pending' => yourTurn
+      'pending' => canAccept
           ? ('Din tur', SwaplyColors.amberText)
           : ('Venter på $other', SwaplyColors.inkMuted),
       'countered' => ('Endret', SwaplyColors.amberText),
       'accepted' => ('Godtatt', SwaplyColors.greenText),
-      'paused' => ('Pauset', SwaplyColors.amberText),
+      'paused' => asked ? ('Svar', SwaplyColors.amberText) : ('Pauset', SwaplyColors.amberText),
       'completed' => ('Gjennomført', SwaplyColors.greenText),
       _ => ('Avsluttet', SwaplyColors.redText),
     };
@@ -282,7 +293,7 @@ class _TradesScreenState extends State<TradesScreen>
                     ),
                   ],
                 ),
-                if (yourTurn) ...[
+                if (canAccept) ...[
                   const SizedBox(height: Insets.md),
                   PrimaryButton('Godta byttet', onPressed: () => _openTrade(trade)),
                 ],
