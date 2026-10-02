@@ -137,9 +137,9 @@ describe('«Ikke vis meg slike»', () => {
 
   test('4. nor does 05b offer «Elsykler» under Sykling any more, in either spelling', async () => {
     expect(await subcategories(phone, 'sykling')).toEqual(['Racersykler'])
-    expect(await subcategories(per, 'sykling')).toEqual(
-      expect.arrayContaining(['Elsykler', 'elsykler', 'Racersykler']),
-    )
+    // Somebody else is still offered it, and once: it is one kind however it
+    // was typed, in the spelling most of its listings use.
+    expect(await subcategories(ola, 'sykling')).toEqual(['Elsykler', 'Racersykler'])
   })
 
   test('5. a lamp with no subcategory hides that lamp, and not every «Hjem»', async () => {

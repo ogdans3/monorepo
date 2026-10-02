@@ -19,6 +19,37 @@ const query = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 })
 
+/**
+ * What Oppdag may put in front of [viewer], as a predicate on a listing `i`
+ * and its owner `u`. One definition for the page, its rows and the
+ * subcategories 05b offers, so that none of them offers what another hides.
+ *
+ * Your own things never appear, and neither does anything held by a trade,
+ * anything already traded, anything from someone either of you blocked, or
+ * anything of a kind you asked not to be shown.
+ *
+ * Nor anything of the test tooling's accounts but your own admin's set. Test
+ * accounts are real rows in the same database a deployment serves, so without
+ * this a stranger hearts a test drill, a real trade opens between them, and
+ * from that moment neither reset nor delete may touch it — it is somebody's
+ * history. Written here and nowhere else: `/items/:id` and `/users/:id` are
+ * reached by a link or an id somebody already has.
+ */
+function shownTo(viewer: string | null): SQL {
+  const scope = sql`(select case when x.is_admin then x.id else x.test_account_of end
+                     from users x where x.id = ${viewer})`
+  return sql`i.deleted_at is null
+    and i.status = 'available'
+    and i.active_trade_id is null
+    and (${viewer}::uuid is null or i.owner_id <> ${viewer})
+    and (u.test_account_of is null or u.test_account_of = ${scope})
+    and not exists (
+      select 1 from blocks b
+      where (b.blocker = ${viewer} and b.blocked = i.owner_id)
+         or (b.blocker = i.owner_id and b.blocked = ${viewer}))
+    and ${notHiddenFrom(viewer, 'i')}`
+}
+
 export default async function discoveryRoutes(app: FastifyInstance) {
   // Screen 05. One page under Discover's name, with the search page's
   // behaviour: the field is always there, and before a search the rows come
@@ -26,16 +57,6 @@ export default async function discoveryRoutes(app: FastifyInstance) {
   app.get('/discover', async (request) => {
     const viewer = request.userId
     const args = query.parse(request.query)
-
-    // What an account may see of the test tooling's accounts: its own admin's
-    // set, or nothing. Test accounts are real rows in the same database a
-    // deployment serves, so without this a stranger hearts a test drill, a real
-    // trade opens between them, and from that moment neither reset nor delete
-    // may touch it — it is somebody's history. Written once here and once in
-    // the rows below, and nowhere else: `/items/:id` and `/users/:id` are
-    // reached by a link or an id somebody already has.
-    const scope = sql`(select case when x.is_admin then x.id else x.test_account_of end
-                       from users x where x.id = ${viewer ?? null})`
 
     // What was searched for, asked two ways. The first is the search DESIGN
     // describes: the Norwegian stems of the title and the description, and
@@ -52,27 +73,18 @@ export default async function discoveryRoutes(app: FastifyInstance) {
              or ${q} <% i.title)`
     const near = sql`word_similarity(${q}, i.title) >= 0.4`
 
-    // Your own things never appear, and neither does anything held by a trade,
-    // anything already traded, anything from someone either of you blocked, or
-    // anything of a kind you asked not to be shown — whichever way the words
-    // were matched, because only the match is different.
+    // What the page may show, whichever way the words were matched: only the
+    // match is different. A subcategory is whatever its lister typed, so it
+    // is compared the way 05b groups it and hiding compares it, without
+    // regard to case.
     const base = (match: SQL) => sql`
       from items i
       join users u on u.id = i.owner_id
-      where i.deleted_at is null
-        and (u.test_account_of is null or u.test_account_of = ${scope})
-        and i.status = 'available'
-        and i.active_trade_id is null
-        and (${viewer ?? null}::uuid is null or i.owner_id <> ${viewer ?? null})
-        and not exists (
-          select 1 from blocks b
-          where (b.blocker = ${viewer ?? null} and b.blocked = i.owner_id)
-             or (b.blocker = i.owner_id and b.blocked = ${viewer ?? null})
-        )
-        and ${notHiddenFrom(viewer ?? null, 'i')}
+      where ${shownTo(viewer ?? null)}
         and ${match}
         and (${args.category ?? null}::category is null or i.category = ${args.category ?? null}::category)
-        and (${args.subcategory ?? null}::text is null or i.subcategory = ${args.subcategory ?? null})
+        and (${args.subcategory ?? null}::text is null
+             or lower(i.subcategory) = lower(${args.subcategory ?? null}))
         and (${args.minValue ?? null}::int is null or i.estimated_value_nok >= ${args.minValue ?? null})
         and (${args.maxValue ?? null}::int is null or i.estimated_value_nok <= ${args.maxValue ?? null})
         and (${args.condition ?? null}::condition is null or i.condition = ${args.condition ?? null}::condition)
@@ -159,16 +171,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
                            and l.from_user = ${viewer}) as liked_by_me
             from items i
             join users u on u.id = i.owner_id
-            where i.deleted_at is null and i.status = 'available' and i.active_trade_id is null
-              and i.category = ${c}::category and i.owner_id <> ${viewer}
-              and (u.test_account_of is null
-                   or u.test_account_of = (select case when x.is_admin then x.id
-                                                       else x.test_account_of end
-                                           from users x where x.id = ${viewer}))
-              and not exists (select 1 from blocks b
-                where (b.blocker = ${viewer} and b.blocked = i.owner_id)
-                   or (b.blocker = i.owner_id and b.blocked = ${viewer}))
-              and ${notHiddenFrom(viewer, 'i')}
+            where ${shownTo(viewer)} and i.category = ${c}::category
             order by i.created_at desc, i.id limit 12`,
       )
       rows.push({ category: c, items: items.map(publicItem) })
@@ -177,18 +180,28 @@ export default async function discoveryRoutes(app: FastifyInstance) {
   })
 
   // Screen 05b lists the subcategories that actually exist under a category,
-  // rather than a hard-coded taxonomy nobody maintains. Less the kinds this
-  // viewer asked not to be shown: offered one, the search found nothing and
-  // said «Vis 0 treff» about a word that was right there in the list.
+  // rather than a hard-coded taxonomy nobody maintains — of the listings
+  // Oppdag would show this viewer, and only those. Offered one that only
+  // their own things, a reserved one, a blocked person's or a kind they hid
+  // carries, the search found nothing and said «Vis 0 treff» about a word
+  // that was right there in the list.
+  //
+  // One kind once, however it was typed: «Elsykler» and «elsykler» are the
+  // same thing listed by two people, in the spelling most of them used (and
+  // on a tie the one with the capital, which sorts first byte by byte). A
+  // subcategory emptied to '' by an edit is no subcategory.
   app.get('/discover/subcategories', async (request) => {
     const { category } = z.object({ category: z.enum(CATEGORIES) }).parse(request.query)
     const rows = await many<{ subcategory: string }>(
       app.db,
-      sql`select distinct i.subcategory from items i
-          where i.category = ${category}::category and i.subcategory is not null
-            and i.deleted_at is null
-            and ${notHiddenFrom(request.userId ?? null, 'i')}
-          order by i.subcategory`,
+      sql`select mode() within group (order by i.subcategory collate "C") as subcategory
+          from items i
+          join users u on u.id = i.owner_id
+          where ${shownTo(request.userId ?? null)}
+            and i.category = ${category}::category
+            and btrim(coalesce(i.subcategory, '')) <> ''
+          group by lower(i.subcategory)
+          order by lower(i.subcategory)`,
     )
     return { subcategories: rows.map((r) => r['subcategory']) }
   })

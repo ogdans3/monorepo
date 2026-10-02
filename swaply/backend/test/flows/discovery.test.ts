@@ -304,4 +304,65 @@ describe('searching the collage', () => {
     expect(titles(await call('GET', '/discover?q=lmpe', { token: gabriel }))).toEqual(['Lampe'])
     expect(titles(await call('GET', '/discover?q=lmpe', { token: ola }))).toEqual([])
   })
+
+  test('16. 05b offers each kind once, and only of what Oppdag would show', async () => {
+    // Offered a kind that only your own things, a reserved one or a blocked
+    // person's carry, the search found nothing and said «Vis 0 treff».
+    const offered = async (token: string, category: string) =>
+      (await call('GET', `/discover/subcategories?category=${category}`, { token })).body![
+        'subcategories'
+      ] as string[]
+    const per = (await call('POST', '/auth/login', {
+      body: { email: 'per@epost.no', password: 'byttehandel1' },
+    })).body!['token']
+    const list = async (token: string, title: string, subcategory: string) =>
+      (await call('POST', '/items', {
+        token,
+        body: { title, category: 'musikk', subcategory, condition: 'good' },
+      })).body!['id'] as string
+
+    // One kind, typed two ways by two people.
+    await list(kari, 'Gitar', 'Gitarer')
+    await list(per, 'El-gitar', 'gitarer')
+    await list(per, 'Fiolin', 'Strykere')
+    // Ola's own, a traded piano, drums taken down, and a flute whose
+    // subcategory an edit once emptied to ''.
+    await list(ola, 'Munnspill', 'Munnspill')
+    const piano = await list(kari, 'Piano', 'Tangenter')
+    await db.execute(sql`update items set status = 'traded' where id = ${piano}`)
+    const drums = await list(per, 'Trommer', 'Slagverk')
+    await call('DELETE', `/items/${drums}`, { token: per })
+    const flute = await list(kari, 'Fløyte', 'Blåsere')
+    await db.execute(sql`update items set subcategory = '' where id = ${flute}`)
+    // And a synth of the test account's from step 15.
+    await db.execute(
+      sql`insert into items (owner_id, kind, title, category, subcategory, condition)
+          select id, 'item', 'Synth', 'musikk', 'Synther', 'good' from users
+          where email = 'tor@swaply.test'`,
+    )
+
+    expect(await offered(ola, 'musikk')).toEqual(['Gitarer', 'Strykere'])
+    // The bike a trade holds since step 8 was the last «Sykler», and the
+    // helmet taken down in step 9 the last «Utstyr».
+    expect(await offered(ola, 'sykling')).toEqual([])
+
+    // The test account's kind is its admin's to be offered, and nobody else's.
+    const [admin] = await db.execute<{ id: string }>(
+      sql`select id from users where email = 'gabriel@epost.no'`,
+    )
+    expect(await offered(await issueSession(db, admin!.id), 'musikk')).toEqual([
+      'Gitarer', 'Munnspill', 'Strykere', 'Synther',
+    ])
+
+    // Picking it finds every spelling of it.
+    expect(
+      titles(await call('GET', '/discover?category=musikk&subcategory=GITARER', { token: ola })),
+    ).toEqual(['El-gitar', 'Gitar'])
+
+    // Per blocks Ola, and his violin's kind goes from Ola's list with it.
+    const olaId = (await call('GET', '/me', { token: ola })).body!['id']
+    await call('POST', `/blocks/${olaId}`, { token: per })
+    expect(await offered(ola, 'musikk')).toEqual(['Gitarer'])
+    await call('DELETE', `/blocks/${olaId}`, { token: per })
+  })
 })
