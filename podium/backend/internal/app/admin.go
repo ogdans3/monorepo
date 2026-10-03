@@ -454,6 +454,28 @@ func (s *Server) reorderSlides(w http.ResponseWriter, r *http.Request) {
 	s.writePresentation(w, ctx, id, http.StatusOK)
 }
 
+// resetAllVotes takes every vote off every question in a presentation, so
+// it can be run again from the start: after a rehearsal, say. The phones
+// are told, through the slide on screen, and can vote again at once.
+func (s *Server) resetAllVotes(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r, "id")
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	if _, err := presentationByID(ctx, s.db, id); err != nil {
+		s.notFoundOr500(w, err, "presentasjonen")
+		return
+	}
+	tag, err := s.db.Exec(ctx, `delete from votes where slide_id in (select id from slides where presentation_id = $1)`, id)
+	if err != nil {
+		s.oops(w, err)
+		return
+	}
+	s.publishIfLive(ctx, id)
+	writeJSON(w, http.StatusOK, map[string]int64{"removed": tag.RowsAffected()})
+}
+
 // resetVotes takes every vote off a question, so it can be asked again.
 func (s *Server) resetVotes(w http.ResponseWriter, r *http.Request) {
 	id, ok := idParam(w, r, "id")

@@ -329,6 +329,12 @@ A paper tile (QR Paper, QR Ink) at the size and position the presenter chose. It
 ### Corner caption
 See the No Chrome Rule. Flat, solid, no corners, no shadow, with an optional 16px icon.
 
+### Start dialog
+The one modal in the desk, and it exists because the owner asked for it. «Start» on a presentation that already has votes asks first: «Nullstille stemmene før du starter?», with the count, and three choices: «Nullstill og start» (primary), «Start med stemmene», «Avbryt» (quiet). With no votes it does not appear. It is a native `<dialog>` on Desk Paper: 1px Desk Rule border, 4px corners, a soft drop shadow, and a 42% ink backdrop. No button has the focus when it opens; the heading does. Enter alone must never take away the votes of a talk that is being started again halfway through.
+
+### Presentation votes
+Under «Presentasjonen» in the inspector, the total for every question together in the figure face, beside «Nullstill alle stemmer» (small button, disabled at zero, confirms first). It sits above the marks and the sound, because it is what a presenter needs between a rehearsal and the talk.
+
 ### Sound
 A synthesized bell sounds each vote. Simultaneous votes are spaced 60 ms apart and climb a major pentatonic from C6, so a room voting at once is heard as a rising arpeggio. A run that would lag more than 0.9 s drops notes, because the count is the record. A presentation may carry its own uploaded sound.
 

@@ -287,6 +287,13 @@
 		<section>
 			<h2>Presentasjonen</h2>
 			<div class="field">
+				<span>Stemmer i hele presentasjonen</span>
+				<div class="row">
+					<p class="figure big">{votes(ed.totalVotes)}</p>
+					<button class="btn small" disabled={ed.totalVotes === 0} onclick={() => ed.resetAllVotes()}>Nullstill alle stemmer</button>
+				</div>
+			</div>
+			<div class="field">
 				<span id="marks-label">Svarene merkes med</span>
 				<div class="segments" role="radiogroup" aria-labelledby="marks-label">
 					<button role="radio" aria-checked={ed.p.marks !== 'numbers'} onclick={() => ed.setMarks('letters')}>A B C</button>

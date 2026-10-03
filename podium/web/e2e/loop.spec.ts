@@ -80,6 +80,30 @@ test('a question goes up, a phone votes, and the screen counts it', async ({ bro
 		// Back to the question: the phone remembers it has answered.
 		await editor.getByRole('button', { name: 'Neste side' }).click();
 		await expect(ballot.getByText('Stemt')).toBeVisible();
+
+		// Started again with votes in it, the presentation asks first; starting
+		// at nothing lets the phone vote again, and the screen counts from zero.
+		await editor.getByRole('button', { name: 'Avslutt' }).click();
+		await expect(display.getByText('Presentasjonen er over. Takk!')).toBeVisible();
+		await editor.getByRole('button', { name: 'Start' }).click();
+		const dialog = editor.getByRole('dialog', { name: 'Nullstille stemmene før du starter?' });
+		await expect(dialog).toContainText('1 stemme');
+		await dialog.getByRole('button', { name: 'Nullstill og start' }).click();
+		await expect(dialog).toBeHidden();
+		await expect(display.getByText(title)).toBeVisible();
+		await editor.getByRole('button', { name: 'Neste side' }).click();
+		await expect(answers.first().locator('.visually-hidden')).toHaveText('0');
+		await expect(absolutt).toBeEnabled();
+		await expect(ballot.getByText('Stemt')).toBeHidden();
+
+		// And from the editor, any time: the button for every vote at once.
+		await absolutt.tap();
+		await expect(answers.first().locator('.visually-hidden')).toHaveText('1');
+		await editor.locator('.thumb').nth(1).click();
+		editor.once('dialog', (d) => d.accept());
+		await editor.getByRole('button', { name: 'Nullstill alle stemmer' }).click();
+		await expect(answers.first().locator('.visually-hidden')).toHaveText('0');
+		await expect(absolutt).toBeEnabled();
 		await phone.close();
 	} finally {
 		await editor.request.delete(`/api/admin/presentations/${id}`);

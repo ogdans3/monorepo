@@ -50,6 +50,7 @@ func NewServer(cfg Config, db *pgxpool.Pool, web fs.FS, log *slog.Logger) *Serve
 	m.HandleFunc("DELETE /api/admin/media/{id}", s.admin(s.deleteMedia))
 	m.HandleFunc("PUT /api/admin/presentations/{id}/live", s.admin(s.goLive))
 	m.HandleFunc("DELETE /api/admin/presentations/{id}/live", s.admin(s.stopLive))
+	m.HandleFunc("DELETE /api/admin/presentations/{id}/votes", s.admin(s.resetAllVotes))
 	m.HandleFunc("PUT /api/admin/slides/{id}", s.admin(s.saveSlide))
 	m.HandleFunc("DELETE /api/admin/slides/{id}", s.admin(s.deleteSlide))
 	m.HandleFunc("POST /api/admin/slides/{id}/duplicate", s.admin(s.duplicateSlide))

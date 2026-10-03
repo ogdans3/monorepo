@@ -75,6 +75,11 @@ export class Editor {
 		return sel.kind === 'element' ? s.elements.find((e) => e.id === sel.id) : s.options.find((o) => o.id === sel.id);
 	}
 
+	/** Every vote in the presentation, every question together. */
+	get totalVotes(): number {
+		return this.slides.reduce((n, s) => n + s.total, 0);
+	}
+
 	get liveIndex(): number {
 		return this.slides.findIndex((s) => s.id === this.p.liveSlideId);
 	}
@@ -505,6 +510,29 @@ export class Editor {
 			s.total = 0;
 		} catch (err) {
 			this.notice = message(err);
+		}
+	}
+
+	/**
+	 * Takes every vote off every question, so the presentation starts again
+	 * at nothing: after a rehearsal, say. [ask] asks first; the start dialog
+	 * has already asked. The phones can vote again at once.
+	 */
+	async resetAllVotes(ask = true): Promise<boolean> {
+		const total = this.totalVotes;
+		if (total === 0) return true;
+		if (ask && !confirm(`Nullstille alle ${total} stemmene i presentasjonen? Telefonene kan stemme på nytt på hvert spørsmål.`))
+			return false;
+		try {
+			await api('DELETE', `/api/admin/presentations/${this.p.id}/votes`);
+			for (const s of this.slides) {
+				for (const o of s.options) o.count = 0;
+				s.total = 0;
+			}
+			return true;
+		} catch (err) {
+			this.notice = message(err);
+			return false;
 		}
 	}
 

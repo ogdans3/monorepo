@@ -472,6 +472,54 @@ func TestOnePhoneOneVoteOnTheQuestionOnScreen(t *testing.T) {
 	}
 }
 
+func TestResettingEveryVoteLetsEveryPhoneVoteAgain(t *testing.T) {
+	e := setup(t)
+	p := e.newPresentation("Generalprøve")
+	q1 := e.addSlide(p.ID, "question")
+	q2 := e.addSlide(p.ID, "question")
+	other := e.newPresentation("Den andre")
+	oq := e.addSlide(other.ID, "question")
+	a, b := phone(), phone()
+	for _, step := range []struct {
+		p      Presentation
+		slide  Slide
+		phones []*http.Client
+		answer int
+	}{{p, q1, []*http.Client{a, b}, 0}, {p, q2, []*http.Client{a}, 1}, {other, oq, []*http.Client{a}, 0}} {
+		e.call(e.admin, "PUT", "/api/admin/presentations/"+step.p.ID+"/live", map[string]string{"slideId": step.slide.ID}, nil)
+		for _, c := range step.phones {
+			if st, _ := e.call(c, "POST", "/api/stem/"+step.p.Code, map[string]string{"optionId": step.slide.Options[step.answer].ID}, nil); st != 200 {
+				t.Fatalf("a vote in the rehearsal: %d", st)
+			}
+		}
+	}
+
+	if st, _ := e.call(a, "DELETE", "/api/admin/presentations/"+p.ID+"/votes", nil, nil); st != 401 {
+		t.Fatalf("not for phones: %d", st)
+	}
+	var out struct{ Removed int }
+	if st, body := e.call(e.admin, "DELETE", "/api/admin/presentations/"+p.ID+"/votes", nil, &out); st != 200 || out.Removed != 3 {
+		t.Fatalf("every vote in the presentation: %d %v", st, body)
+	}
+	for _, s := range e.get(p.ID).Slides {
+		if s.Total != 0 {
+			t.Fatalf("no votes left on %q: %+v", s.Title, s)
+		}
+	}
+	if got := e.get(other.ID).Slides[1]; got.Total != 1 {
+		t.Fatalf("another presentation keeps its votes: %+v", got)
+	}
+
+	// The same phone votes again on the same question.
+	e.call(e.admin, "PUT", "/api/admin/presentations/"+p.ID+"/live", map[string]string{"slideId": q2.ID}, nil)
+	if _, ballot := e.call(a, "GET", "/api/stem/"+p.Code, nil, nil); ballot["voted"] != nil {
+		t.Fatalf("the phone has not voted any more: %v", ballot)
+	}
+	if st, _ := e.call(a, "POST", "/api/stem/"+p.Code, map[string]string{"optionId": q2.Options[0].ID}, nil); st != 200 {
+		t.Fatalf("and can again: %d", st)
+	}
+}
+
 func TestSteppingThroughTheSlides(t *testing.T) {
 	e := setup(t)
 	p := e.newPresentation("Steg")

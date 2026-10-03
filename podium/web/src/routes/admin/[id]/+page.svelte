@@ -30,12 +30,14 @@
 	import SlideList from '$lib/admin/SlideList.svelte';
 	import { Editor } from '$lib/admin/editor.svelte';
 	import { api, message } from '$lib/api';
+	import { votes } from '$lib/format';
 	import { follow } from '$lib/live';
 	import type { Presentation } from '$lib/types';
 
 	let ed = $state<Editor | null>(null);
 	let failed = $state('');
 	let canvas: Canvas | undefined = $state();
+	let startDialog: HTMLDialogElement | undefined = $state();
 	let grid = $state(localStorage.getItem('podium.grid') !== 'off');
 	let noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -131,11 +133,20 @@
 		return window.open(`/vis/${ed?.p.code}`, `podium-vis-${ed?.p.code}`);
 	}
 
+	// Starting a presentation that has votes from before asks first whether
+	// to start them at nothing. One with none starts straight away.
 	function start() {
+		if (ed && ed.totalVotes > 0) startDialog?.showModal();
+		else begin(false);
+	}
+
+	async function begin(reset: boolean) {
+		startDialog?.close();
 		// The window first, while the click still counts as one: a window
 		// opened after waiting for the server is a pop-up to be blocked.
 		display();
-		ed?.start();
+		if (reset && !(await ed?.resetAllVotes(false))) return;
+		await ed?.start();
 	}
 
 	const STATUS = { saved: 'Lagret', saving: 'Lagrer …', unsaved: 'Ikke lagret ennå', error: 'Ikke lagret' };
@@ -241,6 +252,24 @@
 {:else}
 	<main class="desk" style="min-height: 100dvh" aria-busy="true"></main>
 {/if}
+
+<!-- No button has the focus when it opens: Enter alone must not take away
+     the votes of a talk being started again halfway through. -->
+<dialog class="desk start" bind:this={startDialog} aria-labelledby="start-title">
+	{#if ed}
+		<!-- svelte-ignore a11y_autofocus -->
+		<h2 id="start-title" tabindex="-1" autofocus>Nullstille stemmene før du starter?</h2>
+		<p>
+			Presentasjonen har {votes(ed.totalVotes)} fra før. Nullstiller du, starter hvert spørsmål på null og alle telefonene kan
+			stemme på nytt.
+		</p>
+		<div class="choices">
+			<button class="btn primary" onclick={() => begin(true)}>Nullstill og start</button>
+			<button class="btn" onclick={() => begin(false)}>Start med stemmene</button>
+			<button class="btn quiet" onclick={() => startDialog?.close()}>Avbryt</button>
+		</div>
+	{/if}
+</dialog>
 
 <style>
 	.editor {
@@ -438,6 +467,43 @@
 		color: var(--quiet);
 		font-size: 0.75rem;
 		text-align: center;
+	}
+
+	.start {
+		width: min(calc(100vw - 2rem), 30rem);
+		padding: 1.5rem 1.5rem 1.25rem;
+		border: 1px solid var(--rule);
+		border-radius: 4px;
+		box-shadow: 0 18px 48px -16px oklch(0.2 0.02 250 / 0.45);
+	}
+
+	.start::backdrop {
+		background: oklch(0.16 0.012 250 / 0.42);
+	}
+
+	.start h2 {
+		font-size: 1.125rem;
+		font-weight: 720;
+		letter-spacing: -0.01em;
+		outline: none;
+	}
+
+	.start p {
+		margin-top: 0.6rem;
+		color: var(--quiet);
+		font-size: 0.9375rem;
+		line-height: 1.5;
+	}
+
+	.choices {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 1.4rem;
+	}
+
+	.choices .btn {
+		height: 2.25rem;
 	}
 
 	.failed {

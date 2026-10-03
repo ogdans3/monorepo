@@ -633,6 +633,14 @@
       "description": "The display's only chrome: flat solid captions, bottom right.",
       "html": "<div class=\"ds-corner\"><p class=\"ds-cap ds-sound\">Trykk en tast eller klikk for lyd</p><p class=\"ds-cap\">→ neste · ← forrige · F fullskjerm · M lyd</p></div>",
       "css": ".ds-corner{display:inline-grid;justify-items:end;font-family:var(--font,'Archivo Variable',sans-serif)}.ds-cap{margin:0;padding:.4rem .8rem;background:oklch(0.155 0.012 250);color:oklch(0.75 0.01 250);font-size:.8125rem;font-weight:520}.ds-cap+.ds-cap{border-top:1px solid oklch(0.34 0.012 250)}.ds-sound{color:oklch(0.965 0.004 250)}"
+    },
+    {
+      "name": "Start Dialog",
+      "kind": "dialog",
+      "refersTo": "dialog",
+      "description": "The desk's one modal: «Start» on a presentation with votes asks whether to start them at nothing. No button is focused when it opens.",
+      "html": "<div class=\"ds-dialog\"><h2>Nullstille stemmene før du starter?</h2><p>Presentasjonen har 23 stemmer fra før.</p><div class=\"ds-choices\"><button class=\"ds-btn ds-primary\">Nullstill og start</button><button class=\"ds-btn\">Start med stemmene</button><button class=\"ds-btn ds-quiet\">Avbryt</button></div></div>",
+      "css": ".ds-dialog{width:30rem;padding:1.5rem 1.5rem 1.25rem;border:1px solid var(--desk-rule,oklch(0.875 0.006 250));border-radius:4px;background:var(--desk,oklch(0.972 0.004 250));color:var(--desk-text,oklch(0.22 0.016 250));box-shadow:0 18px 48px -16px oklch(0.2 0.02 250 / 0.45);font-family:var(--font,'Archivo Variable',sans-serif)}.ds-dialog h2{margin:0;font-size:1.125rem;font-weight:720;letter-spacing:-0.01em}.ds-dialog p{margin:.6rem 0 0;color:var(--desk-quiet,oklch(0.47 0.014 250));font-size:.9375rem;line-height:1.5}.ds-choices{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.4rem}.ds-btn{display:inline-flex;align-items:center;height:2.25rem;padding:0 .75rem;border:1px solid var(--desk-rule-strong,oklch(0.76 0.009 250));border-radius:3px;background:transparent;color:inherit;font:inherit;font-size:.875rem;font-weight:520}.ds-primary{background:var(--desk-text,oklch(0.22 0.016 250));border-color:var(--desk-text,oklch(0.22 0.016 250));color:var(--desk,oklch(0.972 0.004 250))}.ds-quiet{border-color:transparent}"
     }
   ],
   "narrative": {
