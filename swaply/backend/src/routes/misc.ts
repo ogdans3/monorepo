@@ -2,9 +2,9 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { badRequest, conflict, notFound } from '../lib/errors.js'
+import { ApiError, badRequest, conflict, notFound } from '../lib/errors.js'
 import { iso, many, one, textArray } from '../lib/rows.js'
-import { blockAndEnd, participantOf } from '../trades/actions.js'
+import { agreedTradeInTheWay, blockAndEnd, participantOf } from '../trades/actions.js'
 import { sweepForCycles } from '../trades/sweep.js'
 
 export default async function miscRoutes(app: FastifyInstance) {
@@ -151,17 +151,34 @@ export default async function miscRoutes(app: FastifyInstance) {
       blockTarget = item['owner_id']
     }
 
+    // The block first, because it can be refused — the two have a trade they
+    // have both agreed to (`agreedTradeInTheWay`) — and the sheet is one
+    // gesture: refused, nothing is written, and the sheet keeps what was typed
+    // for a second press without the tick. Written after a report, a refused
+    // block would leave the report in, and that second press would make two.
+    if (body.block && blockTarget && blockTarget !== userId) {
+      // The same block as `/blocks/:id`, and so the same end to what the two
+      // of them were negotiating.
+      let freed: string[]
+      try {
+        freed = await blockAndEnd(app.db, userId, blockTarget)
+      } catch (e) {
+        if (e instanceof ApiError && e.code === 'agreed_trade') {
+          throw agreedTradeInTheWay(
+            'Dere har et godtatt bytte på gang, så du kan ikke blokkere ennå. Fjern krysset ' +
+              'for å sende rapporten, og blokker når byttet er ferdig eller avsluttet.',
+          )
+        }
+        throw e
+      }
+      await sweepForCycles(app.db, freed)
+    }
+
     await app.db.execute(sql`
       insert into reports (reporter, target_user, target_item, reason)
       values (${userId}, ${body.targetUser ?? null}, ${body.targetItem ?? null},
               ${body.detail ? `${body.reason}: ${body.detail}` : body.reason})
     `)
-
-    if (body.block && blockTarget && blockTarget !== userId) {
-      // The same block as `/blocks/:id`, and so the same end to what the two
-      // of them were negotiating.
-      await sweepForCycles(app.db, await blockAndEnd(app.db, userId, blockTarget))
-    }
 
     reply.code(201)
     return { ok: true, blocked: body.block }

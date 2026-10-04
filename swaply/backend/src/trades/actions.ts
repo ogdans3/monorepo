@@ -46,48 +46,69 @@ export async function withdrawEarly(db: Database, tradeId: string, userId: strin
 }
 
 /**
- * Block somebody, and end every negotiation the two of you are both in.
+ * Why a block was refused: the two have a trade they have both agreed to.
+ *
+ * Decided by the product owner 04.10.2026. An agreed trade is two people who
+ * have promised each other something, and a block in the middle of it ended
+ * nothing and left both of them unable to say a word about the handover. So it
+ * is finished first — or left, through the withdrawal question on 08a — and
+ * then blocked. Reporting is never refused: a person is looking at reports.
+ */
+export const agreedTradeInTheWay = (message?: string) =>
+  conflict(
+    'agreed_trade',
+    message ??
+      'Dere har et godtatt bytte på gang, så du kan ikke blokkere ennå. Fullfør byttet eller ' +
+        'trekk deg fra det først. Du kan rapportere uansett.',
+  )
+
+/**
+ * Block somebody, and end every negotiation the two of you are both in —
+ * unless there is a trade between you that you have both agreed to, which
+ * refuses the block (`agreedTradeInTheWay`).
  *
  * Talking, pending and countered — a negotiation — end with `blocked`, which
- * tells the others in each trade and never says who blocked whom. An agreed
- * trade is left standing: `docs/DESIGN.md` says what a block hides and stops
- * matching, and nothing about undoing an agreement, which is what the
- * withdrawal question on 08a is for. What is left of it refuses the moves
- * across the block (`blocking.ts`).
+ * tells the others in each trade and never says who blocked whom. What is left
+ * between the two after that refuses the moves across the block
+ * (`blocking.ts`), which still matters for a block made before 04.10.2026,
+ * when an agreed trade could stand beside one.
  *
- * In one transaction with the block, so there is no moment in which the block
- * exists and a yes can still land in one of those trades. In the one order
- * (`index.ts`): the trades, then everything they hold in one batch, then each
- * ending, which takes nothing new.
+ * In one transaction, holding every open trade the two share from the first
+ * look to the last write: a yes landing in one of them while this decided
+ * would agree a trade across the block, or slip one past the refusal. In the
+ * one order (`index.ts`): the trades, then everything they hold in one batch,
+ * then each ending, which takes nothing new.
  *
  * Returns the listings those trades held, back on the market: the caller runs
  * the search over them once this has committed.
  */
 export async function blockAndEnd(db: Database, blocker: string, blocked: string) {
   return db.transaction(async (tx) => {
+    const shared = await lockTradesWhere(
+      tx,
+      sql`t.state in ('talking', 'pending', 'countered', 'accepted', 'paused')
+          and exists (select 1 from trade_participants p
+                      where p.trade_id = t.id and p.user_id = ${blocker})
+          and exists (select 1 from trade_participants p
+                      where p.trade_id = t.id and p.user_id = ${blocked})`,
+    )
+    if ([...shared.values()].some((state) => state === 'accepted' || state === 'paused')) {
+      throw agreedTradeInTheWay()
+    }
+
     await tx.execute(
       sql`insert into blocks (blocker, blocked) values (${blocker}, ${blocked})
           on conflict do nothing`,
     )
-    // Judged again on each row once it is held, so a trade agreed while this
-    // waited for it is left standing like any other agreed one.
-    const shared = [
-      ...(
-        await lockTradesWhere(
-          tx,
-          sql`t.state in ('talking', 'pending', 'countered')
-              and exists (select 1 from trade_participants p
-                          where p.trade_id = t.id and p.user_id = ${blocker})
-              and exists (select 1 from trade_participants p
-                          where p.trade_id = t.id and p.user_id = ${blocked})`,
-        )
-      ).keys(),
-    ]
-    if (shared.length === 0) return [] as string[]
-    await lockItems(tx, sql`i.active_trade_id = any(${uuidArray(shared)})`)
+    // Judged on each row as it is held: only a negotiation is ended.
+    const negotiations = [...shared]
+      .filter(([, state]) => ['talking', 'pending', 'countered'].includes(state))
+      .map(([id]) => id)
+    if (negotiations.length === 0) return [] as string[]
+    await lockItems(tx, sql`i.active_trade_id = any(${uuidArray(negotiations)})`)
 
     const freed: string[] = []
-    for (const tradeId of shared) {
+    for (const tradeId of negotiations) {
       freed.push(...(await endTrade(tx, tradeId, 'blocked', { actor: blocker })))
     }
     return freed

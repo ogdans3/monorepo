@@ -13,10 +13,14 @@
 // And a block reaches what is already going on, not only what has yet to
 // start. Every negotiation the two share ends when it is made, with the code
 // `blocked` and words that do not say who blocked whom, and the others in it
-// are told. An agreed trade stands, because nothing says a block undoes an
-// agreement — but across a block nobody writes, proposes or says yes, and no
-// notification crosses it. It used to be a row and nothing else: the chat,
-// the counter-offers and the yes all went on as before.
+// are told. It used to be a row and nothing else: the chat, the counter-offers
+// and the yes all went on as before.
+//
+// A trade the two have both agreed to refuses the block: it is finished, or
+// left through the withdrawal question, first — the product owner's rule of
+// 04.10.2026 — and reporting is never refused. A block from before that rule
+// can still stand beside an agreed trade, and across it nobody writes,
+// proposes or says yes, and no notification crosses it.
 import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
@@ -212,6 +216,16 @@ describe('a block made while the two are already negotiating', () => {
     bike = await list(una.token, 'Terrengsykkel')
   })
 
+  async function blocks(): Promise<number> {
+    const [row] = await db.execute<{ n: number }>(sql`select count(*)::int as n from blocks`)
+    return row!.n
+  }
+
+  async function reports(): Promise<number> {
+    const [row] = await db.execute<{ n: number }>(sql`select count(*)::int as n from reports`)
+    return row!.n
+  }
+
   test('11. Siri and Tor have agreed one swap, the tent for the kayak', async () => {
     await call('POST', `/items/${kayak}/like`, { token: siri.token })
     agreed = (await call('POST', `/items/${tent}/like`, { token: tor.token })).body!['tradeId']
@@ -236,14 +250,59 @@ describe('a block made while the two are already negotiating', () => {
     expect((await itemRow(bike))['active_trade_id']).toBe(ring)
   })
 
-  test('13. Siri blocks Tor, and both negotiations they share end', async () => {
+  test('13. Siri cannot block Tor while the swap they agreed stands, and nothing ends', async () => {
+    const res = await call('POST', `/blocks/${tor.id}`, { token: siri.token })
+
+    expect(res.status).toBe(409)
+    expect(res.body).toEqual({
+      code: 'agreed_trade',
+      message:
+        'Dere har et godtatt bytte på gang, så du kan ikke blokkere ennå. Fullfør byttet eller ' +
+        'trekk deg fra det først. Du kan rapportere uansett.',
+    })
+    expect(await blocks()).toBe(0)
+    expect(await tradeState(agreed)).toBe('accepted')
+    expect(await tradeState(talking)).toBe('talking')
+    expect(await tradeState(ring)).toBe('pending')
+  })
+
+  test('14. nor with «Blokkér» ticked on a report, which then sends nothing at all', async () => {
+    const before = await reports()
+    const res = await call('POST', '/reports', {
+      token: siri.token, body: { targetUser: tor.id, reason: 'inappropriate', block: true },
+    })
+
+    expect(res.status).toBe(409)
+    expect(res.body!['code']).toBe('agreed_trade')
+    expect(res.body!['message']).toContain('Fjern krysset for å sende rapporten')
+    // One gesture, one outcome: no report to be sent twice by the second press.
+    expect(await reports()).toBe(before)
+    expect(await blocks()).toBe(0)
+  })
+
+  test('15. but the report itself always goes through', async () => {
+    const before = await reports()
+    const res = await call('POST', '/reports', {
+      token: siri.token, body: { targetUser: tor.id, reason: 'inappropriate' },
+    })
+
+    expect(res.status).toBe(201)
+    expect(await reports()).toBe(before + 1)
+  })
+
+  test('16. once the swap is done, Siri blocks Tor, and both negotiations they share end', async () => {
+    for (const who of [siri, tor]) {
+      expect((await call('POST', `/trades/${agreed}/complete`, { token: who.token })).status).toBe(200)
+    }
+    expect(await tradeState(agreed)).toBe('completed')
+
     expect((await call('POST', `/blocks/${tor.id}`, { token: siri.token })).status).toBe(204)
 
     expect(await tradeState(talking)).toBe('cancelled')
     expect(await tradeState(ring)).toBe('cancelled')
   })
 
-  test('14. in words that are true for all of them, and say nothing of who blocked whom', async () => {
+  test('17. in words that are true for all of them, and say nothing of who blocked whom', async () => {
     for (const who of [siri, tor]) {
       const pair = (await call('GET', `/trades/${talking}`, { token: who.token })).body!
       expect(pair['closeCode']).toBe('blocked')
@@ -256,7 +315,7 @@ describe('a block made while the two are already negotiating', () => {
     }
   })
 
-  test('15. the others are told, and the one who blocked is not', async () => {
+  test('18. the others are told, and the one who blocked is not', async () => {
     expect(await told(tor, talking, 'trade_cancelled')).toEqual([{ tradeId: talking, reason: 'blocked' }])
     expect(await told(tor, ring, 'trade_cancelled')).toEqual([{ tradeId: ring, reason: 'blocked' }])
     expect(await told(una, ring, 'trade_cancelled')).toEqual([{ tradeId: ring, reason: 'blocked' }])
@@ -264,19 +323,13 @@ describe('a block made while the two are already negotiating', () => {
     expect(await told(siri, ring, 'trade_cancelled')).toEqual([])
   })
 
-  test('16. what the ring held is back on the market', async () => {
+  test('19. what the ring held is back on the market', async () => {
     expect(await itemRow(bike)).toMatchObject({ status: 'available', active_trade_id: null })
   })
 
-  test('17. the agreed swap stands, its things still held for it', async () => {
-    expect(await tradeState(agreed)).toBe('accepted')
-    expect((await itemRow(tent))['active_trade_id']).toBe(agreed)
-    expect((await itemRow(kayak))['active_trade_id']).toBe(agreed)
-  })
-
-  test('18. the conversations are kept, but neither of them writes in one across the block', async () => {
+  test('20. the conversations are kept, but neither of them writes in one across the block', async () => {
     const before = (await messagesTold(siri)) + (await messagesTold(tor))
-    for (const tradeId of [agreed, talking, ring]) {
+    for (const tradeId of [talking, ring]) {
       for (const who of [siri, tor]) {
         const thread = await threadOf(tradeId, who)
         expect((await call('GET', `/threads/${thread}`, { token: who.token })).status).toBe(200)
@@ -292,7 +345,7 @@ describe('a block made while the two are already negotiating', () => {
     expect((await messagesTold(siri)) + (await messagesTold(tor))).toBe(before)
   })
 
-  test('19. Una, who blocked nobody, still writes in the ring’s conversation, and both are told', async () => {
+  test('21. Una, who blocked nobody, still writes in the ring’s conversation, and both are told', async () => {
     const thread = await threadOf(ring, una)
     const before = [await messagesTold(siri), await messagesTold(tor)]
 
@@ -304,44 +357,9 @@ describe('a block made while the two are already negotiating', () => {
     expect([await messagesTold(siri), await messagesTold(tor)]).toEqual([before[0]! + 1, before[1]! + 1])
   })
 
-  test('20. a yes taken back is not given again across the block, nor is anything proposed', async () => {
-    expect((await call('DELETE', `/trades/${agreed}/accept`, { token: tor.token })).status).toBe(200)
-    expect(await tradeState(agreed)).toBe('pending')
-
-    const yes = await call('POST', `/trades/${agreed}/accept`, { token: tor.token })
-    expect(yes.status).toBe(403)
-    expect(yes.body!['code']).toBe('blocked')
-
-    const view = (await call('GET', `/trades/${agreed}`, { token: siri.token })).body!
-    const counter = await call('POST', `/trades/${agreed}/counter`, {
-      token: siri.token,
-      body: {
-        items: [
-          { itemId: tent, giverPosition: view['you']['position'] },
-          { itemId: kayak, giverPosition: view['receivingFrom']['position'] },
-        ],
-        cash: {
-          payerPosition: view['you']['position'],
-          payeePosition: view['receivingFrom']['position'],
-          amountNok: 100,
-        },
-      },
-    })
-    expect(counter.status).toBe(403)
-    expect(counter.body!['code']).toBe('blocked')
-    expect((await call('GET', `/trades/${agreed}`, { token: siri.token })).body!['offerSeq']).toBe(1)
-  })
-
-  test('21. but either of them can still walk away from it', async () => {
-    expect((await call('POST', `/trades/${agreed}/decline`, { token: siri.token })).status).toBe(200)
-
-    expect(await tradeState(agreed)).toBe('cancelled')
-    expect(await itemRow(kayak)).toMatchObject({ status: 'available', active_trade_id: null })
-  })
-
   test('22. reporting somebody with a block ends what you share the same way', async () => {
-    const opened = await call('POST', `/items/${kayak}/message`, {
-      token: una.token, body: { body: 'Er kajakken ledig nå?' },
+    const opened = await call('POST', `/items/${lamp}/message`, {
+      token: una.token, body: { body: 'Er lampen ledig?' },
     })
     expect(opened.status).toBe(201)
 
@@ -355,5 +373,80 @@ describe('a block made while the two are already negotiating', () => {
     expect(ended['closeCode']).toBe('blocked')
     expect(await told(una, opened.body!['tradeId'], 'trade_cancelled'))
       .toEqual([{ tradeId: opened.body!['tradeId'], reason: 'blocked' }])
+  })
+})
+
+describe('a block from before 04.10.2026, beside a trade the two had agreed', () => {
+  // The rule refuses a block across an agreed trade, but blocks made before it
+  // can stand beside one in a database that has been running since. What is
+  // left of such a trade still refuses every move across the block.
+  type Person = { token: string; id: string }
+  let vera: Person, ulf: Person
+  let sofa = '', lamp = '', agreed = ''
+
+  beforeAll(async () => {
+    vera = await register('Vera N.', 'vera@epost.no')
+    ulf = await register('Ulf N.', 'ulf@epost.no')
+    sofa = await list(vera.token, 'Sofa, tre seter')
+    lamp = await list(ulf.token, 'Stålampe')
+    await call('POST', `/items/${lamp}/like`, { token: vera.token })
+    agreed = (await call('POST', `/items/${sofa}/like`, { token: ulf.token })).body!['tradeId']
+    for (const who of [vera, ulf]) {
+      expect((await call('POST', `/trades/${agreed}/accept`, { token: who.token })).status).toBe(200)
+    }
+    // Written as it was written then: a row, and nothing else.
+    await db.execute(sql`insert into blocks (blocker, blocked) values (${vera.id}, ${ulf.id})`)
+  })
+
+  test('23. the agreed swap stands, its things still held for it', async () => {
+    expect(await tradeState(agreed)).toBe('accepted')
+    expect((await itemRow(sofa))['active_trade_id']).toBe(agreed)
+    expect((await itemRow(lamp))['active_trade_id']).toBe(agreed)
+  })
+
+  test('24. neither of them writes in its conversation', async () => {
+    const thread = (await call('GET', `/trades/${agreed}`, { token: vera.token })).body!['threadId']
+    for (const who of [vera, ulf]) {
+      const res = await call('POST', `/threads/${thread}/messages`, {
+        token: who.token, body: { body: 'Hallo?' },
+      })
+      expect(res.status).toBe(403)
+      expect(res.body!['code']).toBe('blocked')
+    }
+  })
+
+  test('25. a yes taken back is not given again across the block, nor is anything proposed', async () => {
+    expect((await call('DELETE', `/trades/${agreed}/accept`, { token: ulf.token })).status).toBe(200)
+    expect(await tradeState(agreed)).toBe('pending')
+
+    const yes = await call('POST', `/trades/${agreed}/accept`, { token: ulf.token })
+    expect(yes.status).toBe(403)
+    expect(yes.body!['code']).toBe('blocked')
+
+    const view = (await call('GET', `/trades/${agreed}`, { token: vera.token })).body!
+    const counter = await call('POST', `/trades/${agreed}/counter`, {
+      token: vera.token,
+      body: {
+        items: [
+          { itemId: sofa, giverPosition: view['you']['position'] },
+          { itemId: lamp, giverPosition: view['receivingFrom']['position'] },
+        ],
+        cash: {
+          payerPosition: view['you']['position'],
+          payeePosition: view['receivingFrom']['position'],
+          amountNok: 100,
+        },
+      },
+    })
+    expect(counter.status).toBe(403)
+    expect(counter.body!['code']).toBe('blocked')
+    expect((await call('GET', `/trades/${agreed}`, { token: vera.token })).body!['offerSeq']).toBe(1)
+  })
+
+  test('26. but either of them can still walk away from it', async () => {
+    expect((await call('POST', `/trades/${agreed}/decline`, { token: vera.token })).status).toBe(200)
+
+    expect(await tradeState(agreed)).toBe('cancelled')
+    expect(await itemRow(lamp)).toMatchObject({ status: 'available', active_trade_id: null })
   })
 })
