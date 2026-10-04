@@ -182,6 +182,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a tag typed and not yet added is added by Save', (
+    tester,
+  ) async {
+    final kettle = server.addItem('Kettle');
+    await startAtHome(tester);
+
+    await openRow(tester, 'Kettle');
+    await tester.enterText(field('Add a tag'), 'Kitchen');
+    await tester.pump();
+    // No Enter, no Add: Save is where the sheet is done, and it takes the
+    // name along.
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final kitchen = server.tagNamed('Kitchen')!;
+    expect(server.tagIdsOf(kettle['id'] as String), [kitchen['id']]);
+    expect(chipNamesOn(tester, 'Kettle'), ['Kitchen']);
+
+    // Once there are tags, the sheet says they save at a tap.
+    await openRow(tester, 'Kettle');
+    expect(
+      find.text('Tags save as you tap them, for everyone on the list.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a filter shows only its rows, done ones too, and new rows join '
       'it', (tester) async {
     final kitchen = server.addTag('Kitchen');

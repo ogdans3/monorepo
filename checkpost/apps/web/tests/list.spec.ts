@@ -663,6 +663,26 @@ test('a row tagged in its sheet and saved keeps its tag, and nothing goes wrong'
   await expect(row(page, 'Milk').locator('.chip')).toHaveText(['Cold', 'Dairy']);
 });
 
+test('a tag typed and not yet added is added by Save', async ({ page }) => {
+  await makeList(page);
+  await addItem(page, 'Kettle');
+
+  await page.getByRole('button', { name: 'Open Kettle' }).click();
+  const sheet = page.locator('dialog');
+  await sheet.getByLabel('Add a tag').fill('Kitchen');
+  // No Enter, no Add: Save is where the sheet is done, and it takes the name
+  // along.
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(row(page, 'Kettle').locator('.chip')).toHaveText(['Kitchen']);
+  await page.reload();
+  await expect(row(page, 'Kettle').locator('.chip')).toHaveText(['Kitchen']);
+
+  // Once there are tags, the sheet says they save at a tap.
+  await page.getByRole('button', { name: 'Open Kettle' }).click();
+  await expect(sheet.getByText('Tags save as you tap them, for everyone on the list.')).toBeVisible();
+});
+
 test('grouped by tag, untagged rows come last and nothing can be dragged', async ({ page }) => {
   await makeList(page);
   for (const text of ['Leeks', 'Bread', 'Milk']) await addItem(page, text);

@@ -68,6 +68,9 @@
   let confirming = $state(false);
 
   function save() {
+    // A tag typed and not yet added is added by Save too: whoever typed it
+    // meant it, and Save is where a sheet says it is done.
+    if (addable) onaddtag(newTag);
     const trimmed = text.trim();
     const patch = {
       ...(trimmed && trimmed !== item.text ? { text: trimmed } : {}),
@@ -110,6 +113,7 @@
           <TagToggle {tag} {on} disabled={!on && atLimit} onclick={() => ontoggletag(tag.id)} />
         {/each}
       </div>
+      <p class="hint">Tags save as you tap them, for everyone on the list.</p>
     {:else}
       <p class="hint">Tags group the list and filter it, for everyone on it.</p>
     {/if}

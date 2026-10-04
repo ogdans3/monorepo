@@ -78,16 +78,27 @@ class _ItemSheet extends StatefulWidget {
 class _ItemSheetState extends State<_ItemSheet> {
   late final _text = TextEditingController(text: widget.item.text);
   late final _note = TextEditingController(text: widget.item.note);
+
+  /// The name in the tag field, kept here rather than in the tags section so
+  /// that Save can add a tag typed and not yet added.
+  final _tagName = TextEditingController();
   late bool _checked = widget.item.checked;
 
   @override
   void dispose() {
     _text.dispose();
     _note.dispose();
+    _tagName.dispose();
     super.dispose();
   }
 
   void _save() {
+    // A tag typed and not yet added is added by Save too: whoever typed it
+    // meant it, and Save is where a sheet says it is done.
+    final row = widget.controller.itemById(widget.item.id) ?? widget.item;
+    if (canAddTagNamed(widget.controller, row, _tagName.text)) {
+      widget.controller.addTagToItem(row, _tagName.text);
+    }
     final text = _text.text.trim();
     final note = _note.text;
     Navigator.of(context).pop(
@@ -167,7 +178,11 @@ class _ItemSheetState extends State<_ItemSheet> {
               minLines: 3,
             ),
             const SizedBox(height: Space.lg),
-            _TagsSection(item: widget.item, controller: widget.controller),
+            _TagsSection(
+              item: widget.item,
+              controller: widget.controller,
+              name: _tagName,
+            ),
             if (widget.onMove != null) ...[
               const SizedBox(height: Space.lg),
               // The same job as the grip, without the drag. The handle is a
@@ -287,28 +302,34 @@ class _Field extends StatelessWidget {
 /// The row's tags: every tag on the list as a toggle that lands at a tap, and
 /// a field that makes a new one or finds the one the list already has.
 class _TagsSection extends StatefulWidget {
-  const _TagsSection({required this.item, required this.controller});
+  const _TagsSection({
+    required this.item,
+    required this.controller,
+    required this.name,
+  });
 
   final ChecklistItem item;
   final ListController controller;
+
+  /// The tag field's text, owned by the sheet, whose Save adds it too.
+  final TextEditingController name;
 
   @override
   State<_TagsSection> createState() => _TagsSectionState();
 }
 
 class _TagsSectionState extends State<_TagsSection> {
-  final _name = TextEditingController();
   final _focus = FocusNode();
 
   /// The list changing, or the name being typed. Made once, so the builder
   /// below is not handed a new listenable, and resubscribed, on every frame.
-  late final _changes = Listenable.merge([widget.controller, _name]);
+  late final _changes = Listenable.merge([widget.controller, widget.name]);
 
   ListController get _controller => widget.controller;
+  TextEditingController get _name => widget.name;
 
   @override
   void dispose() {
-    _name.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -316,20 +337,12 @@ class _TagsSectionState extends State<_TagsSection> {
   ChecklistItem get _row => _controller.itemById(widget.item.id) ?? widget.item;
 
   void _add() {
-    if (!_addable(_row)) return;
+    if (!canAddTagNamed(_controller, _row, _name.text)) return;
     _controller.addTagToItem(_row, _name.text);
     _name.clear();
     // Straight back to an empty field, like the composer, so three tags are
     // three names and three presses of Enter.
     _focus.requestFocus();
-  }
-
-  bool _addable(ChecklistItem row) {
-    if (normaliseTagName(_name.text).isEmpty) return false;
-    if (row.tagIds.length >= Limits.tagsPerItem) return false;
-    final known = _controller.tagNamed(_name.text);
-    if (known != null) return !row.tagIds.contains(known.id);
-    return _controller.tags.length < Limits.tagsPerList;
   }
 
   @override
@@ -376,6 +389,14 @@ class _TagsSectionState extends State<_TagsSection> {
                     ),
                 ],
               ),
+            if (tags.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Space.xs),
+                child: Text(
+                  'Tags save as you tap them, for everyone on the list.',
+                  style: text.bodySmall?.copyWith(color: colors.inkMuted),
+                ),
+              ),
             const SizedBox(height: Space.xs),
             Row(
               children: [
@@ -391,7 +412,9 @@ class _TagsSectionState extends State<_TagsSection> {
                 const SizedBox(width: Space.sm),
                 FieldButton(
                   label: 'Add',
-                  onPressed: _addable(row) ? _add : null,
+                  onPressed: canAddTagNamed(_controller, row, _name.text)
+                      ? _add
+                      : null,
                 ),
               ],
             ),
@@ -423,4 +446,15 @@ class _TagsSectionState extends State<_TagsSection> {
       },
     );
   }
+}
+
+/// Whether [name] can go on [row]: a name at all, room on the row, and either
+/// a tag the list already has that the row does not wear, or room on the list
+/// for a new one.
+bool canAddTagNamed(ListController controller, ChecklistItem row, String name) {
+  if (normaliseTagName(name).isEmpty) return false;
+  if (row.tagIds.length >= Limits.tagsPerItem) return false;
+  final known = controller.tagNamed(name);
+  if (known != null) return !row.tagIds.contains(known.id);
+  return controller.tags.length < Limits.tagsPerList;
 }
