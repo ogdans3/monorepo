@@ -304,6 +304,7 @@ pnpm dev && pnpm test:e2e  # the browser client, against the running stack
   POSTGRES_PORT=5436 POSTGRES_PASSWORD=localdev docker compose -p checkpost-e2e up -d db
   DATABASE_URL=postgres://checkpost:localdev@localhost:5436/checkpost \
     API_PORT=4011 API_HOST=127.0.0.1 CORS_ORIGINS=http://localhost:5180 \
+    PUBLIC_WEB_ORIGIN=http://localhost:5180 \
     RUN_REAPER=0 RATE_LIMIT_CREATE_MAX=1000 pnpm --filter @checkpost/api dev
   PUBLIC_API_ORIGIN=http://localhost:4011 pnpm --filter @checkpost/web build
   (cd apps/web && PORT=5180 ORIGIN=http://localhost:5180 node build/index.js)
@@ -326,6 +327,11 @@ pnpm dev && pnpm test:e2e  # the browser client, against the running stack
   can use the same throwaway Postgres, with `TEST_DATABASE_URL` and
   `TEST_ADMIN_DATABASE_URL` pointed at port 5436, which keeps its truncates
   off the cluster the real lists live in.
+
+  `PUBLIC_WEB_ORIGIN` is set because the API also reads the root `.env`, which
+  on the server is production's: without it every share link the API mints
+  points at the real site, and the read, write and copy link cases follow it
+  there and find nothing.
 
   `RATE_LIMIT_CREATE_MAX` is raised because the limit catches up with a local
   stack too, on the third run of the suite rather than the second pass against

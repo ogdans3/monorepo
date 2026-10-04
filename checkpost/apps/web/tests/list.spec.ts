@@ -628,6 +628,41 @@ test('a row takes a tag from its sheet, and the list filters by it', async ({ pa
   await expect(row(page, 'Leeks')).toBeVisible();
 });
 
+test('a row tagged in its sheet and saved keeps its tag, and nothing goes wrong', async ({
+  page,
+}) => {
+  await makeList(page);
+  await addItem(page, 'Milk');
+
+  // Tagged and then saved, with nothing else changed: the tag landed at its
+  // tap, so Save has nothing to send. It used to send an empty update, which
+  // the server refused, and the refusal put the row back without its tag.
+  await page.getByRole('button', { name: 'Open Milk' }).click();
+  const sheet = page.locator('dialog');
+  await sheet.getByLabel('Add a tag').fill('Dairy');
+  await sheet.getByLabel('Add a tag').press('Enter');
+  await expect(sheet.getByRole('button', { name: 'Dairy', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(row(page, 'Milk').locator('.chip')).toHaveText(['Dairy']);
+  await expect(page.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
+
+  // Tagged and given a note in the same sheet: both are kept, here and on the
+  // server.
+  await page.getByRole('button', { name: 'Open Milk' }).click();
+  await sheet.getByLabel('Add a tag').fill('Cold');
+  await sheet.getByLabel('Add a tag').press('Enter');
+  await sheet.getByLabel('Note').fill('Lactose free');
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(row(page, 'Milk').locator('.chip')).toHaveText(['Cold', 'Dairy']);
+  await expect(page.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
+  await page.reload();
+  await expect(row(page, 'Milk').locator('.chip')).toHaveText(['Cold', 'Dairy']);
+});
+
 test('grouped by tag, untagged rows come last and nothing can be dragged', async ({ page }) => {
   await makeList(page);
   for (const text of ['Leeks', 'Bread', 'Milk']) await addItem(page, text);

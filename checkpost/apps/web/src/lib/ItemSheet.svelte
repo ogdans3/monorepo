@@ -69,10 +69,13 @@
 
   function save() {
     const trimmed = text.trim();
-    onsave({
+    const patch = {
       ...(trimmed && trimmed !== item.text ? { text: trimmed } : {}),
       ...(note !== item.note ? { note } : {}),
-    });
+    };
+    // A sheet opened to tag a row has nothing left to save by the time Save
+    // is pressed: the tags landed at their taps.
+    if (Object.keys(patch).length > 0) onsave(patch);
     onclose();
   }
 </script>

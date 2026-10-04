@@ -213,6 +213,24 @@ void main() {
       },
     );
 
+    test('a sheet saved with nothing changed but its tags sends nothing more',
+        () async {
+      final a = server.addTag('A');
+      server.addItem('Row');
+      final controller = controllerFor(server);
+      await controller.load();
+      final stale = controller.items.single;
+
+      await controller.toggleItemTag(stale, controller.tagById(a['id'])!);
+      final tagged = writes().length;
+      // What the sheet hands over when only a tag was tapped: no text, no
+      // note. The server would refuse that as an empty update.
+      await controller.editItem(stale);
+
+      expect(writes(), hasLength(tagged));
+      expect(controller.items.single.tagIds, [a['id']]);
+    });
+
     test('the server only ever keeps ids of tags this list has', () async {
       server.addItem('Row');
       final controller = controllerFor(server);

@@ -503,6 +503,8 @@ class ListController extends ChangeNotifier {
   }) async {
     final trimmedText = text?.trim();
     if (trimmedText != null && trimmedText.isEmpty) return;
+    // Nothing to change is nothing to send: the server refuses an empty update.
+    if (trimmedText == null && note == null) return;
     final current = _itemById(item.id) ?? item;
     _replace(current.copyWith(text: trimmedText, note: note));
     _notify();

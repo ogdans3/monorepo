@@ -531,11 +531,22 @@ export class ListSession {
   async edit(item: Item, patch: { text?: string; note?: string }) {
     const text = patch.text?.trim();
     if (patch.text !== undefined && !text) return;
-    this.#replace({ ...item, ...(text ? { text } : {}), ...(patch.note !== undefined ? { note: patch.note } : {}) });
+    const change = { ...(text ? { text } : {}), ...(patch.note !== undefined ? { note: patch.note } : {}) };
+    // Nothing changed is nothing to send: the server refuses an empty update.
+    if (Object.keys(change).length === 0) return;
+    // Written over the row as it is now, not as the sheet saw it when it
+    // opened. A tag tapped on in the sheet has landed since, and writing the
+    // old row back would take it off again.
+    const before = this.items.find((candidate) => candidate.id === item.id) ?? item;
+    this.#replace({ ...before, ...change });
     await this.#write(
-      () => api.updateItem(this.#token, item.id, { ...(text ? { text } : {}), ...(patch.note !== undefined ? { note: patch.note } : {}) }),
+      () => api.updateItem(this.#token, item.id, change),
       (fresh) => this.#replace(fresh),
-      () => this.#replace(item),
+      () => {
+        // Only what this edit changed goes back.
+        const now = this.items.find((candidate) => candidate.id === item.id);
+        if (now) this.#replace({ ...now, text: before.text, note: before.note });
+      },
     );
   }
 
