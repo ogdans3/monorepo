@@ -1,0 +1,23 @@
+{
+  "id": "pixel-9-pro",
+  "name": "Google Pixel 9 Pro",
+  "modelPath": "/pixel-9-pro.glb",
+  "defaultPosition": {
+    "x": 0,
+    "y": 0,
+    "z": 2.783024
+  },
+  "defaultRotation": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "layers": [
+    {
+      "match": "screen",
+      "material": "video",
+      "uv": "planar"
+    }
+  ],
+  "caseColor": null
+}

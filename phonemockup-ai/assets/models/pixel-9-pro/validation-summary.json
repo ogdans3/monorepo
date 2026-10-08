@@ -1,0 +1,26 @@
+{
+  "device": "Google Pixel 9 Pro \u2014 Porcelain",
+  "glb_sha256": "363232a7c3fe97a54500fbbec90a0a173280fab8cce1cc4ae954e5979e81bb0b",
+  "glb_bytes": 1607544,
+  "studio_bytes": 998693,
+  "web_source_bytes": 635452,
+  "glb_checks": 32,
+  "glb_checks_passed": true,
+  "reference_checks": 25,
+  "reference_checks_passed": true,
+  "app": {
+    "screen_156000_pixels_unchanged_by_case_colour": true,
+    "screen_changed_pixels_with_msaa": 0,
+    "screen_unchanged_fraction_with_msaa": 1.0,
+    "portrait_4k_pixels": [
+      2160,
+      3840
+    ],
+    "screen_check_passed": true,
+    "glb_hash_matches": true,
+    "no_renderer_errors": true,
+    "render_count": 128,
+    "preset_count": 11,
+    "preset_frames": 109
+  }
+}

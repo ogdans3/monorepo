@@ -1,0 +1,341 @@
+{
+  "device": "MacBook Pro 14-inch M4 (2024), Silver, ANSI US",
+  "primary_sources": [
+    {
+      "url": "https://support.apple.com/en-us/121552",
+      "supports": [
+        "312.6 x 221.2 x 15.5 mm enclosure",
+        "3024 x 1964 pixels, 254 ppi",
+        "78-key ANSI layout",
+        "three Thunderbolt 4, HDMI, SDXC, MagSafe, headphone jack"
+      ]
+    },
+    {
+      "url": "https://www.apple.com/shop/product/fw2x3ll/a/",
+      "supports": [
+        "silver finish",
+        "closed lid silhouette",
+        "logo proportions",
+        "front and side appearance"
+      ]
+    },
+    {
+      "url": "https://support.apple.com/en-gb/120767",
+      "supports": [
+        "two display hinges",
+        "display/camera assembly",
+        "hinge attachment and display alignment"
+      ]
+    },
+    {
+      "url": "https://support.apple.com/en-gb/120759",
+      "supports": [
+        "four feet",
+        "eight bottom screws",
+        "side intakes"
+      ]
+    }
+  ],
+  "nominal_mm": {
+    "width": 312.6,
+    "depth": 221.2,
+    "closed_enclosure_height": 15.5,
+    "active_width": 302.4,
+    "active_height": 196.4
+  },
+  "factory_CAD_available": false,
+  "secondary_dimensions_are_estimates": true,
+  "port_calibration": {
+    "images": [
+      "references/ports-1.png",
+      "references/ports-2.png"
+    ],
+    "body_pixels": [
+      21,
+      977
+    ],
+    "scale_mm_per_pixel": 0.2313807531380753,
+    "coordinate_system": "Y=0 at chassis centre, positive toward hinge",
+    "centre_tolerance_mm": 0.65,
+    "measurements": [
+      {
+        "name": "magsafe",
+        "source_pixel_x": 141,
+        "side": "left",
+        "source_centre_y_mm": 82.83430962343095,
+        "model_centre_y_mm": 82.85,
+        "error_mm": 0.015690376569040154
+      },
+      {
+        "name": "thunderbolt_left_rear",
+        "source_pixel_x": 221,
+        "side": "left",
+        "source_centre_y_mm": 64.32384937238493,
+        "model_centre_y_mm": 64.3,
+        "error_mm": 0.023849372384930234
+      },
+      {
+        "name": "thunderbolt_left_front",
+        "source_pixel_x": 285,
+        "side": "left",
+        "source_centre_y_mm": 49.51548117154812,
+        "model_centre_y_mm": 49.5,
+        "error_mm": 0.015481171548117345
+      },
+      {
+        "name": "headphone_jack",
+        "source_pixel_x": 341,
+        "side": "left",
+        "source_centre_y_mm": 36.55815899581589,
+        "model_centre_y_mm": 36.5,
+        "error_mm": 0.05815899581588724
+      },
+      {
+        "name": "hdmi",
+        "source_pixel_x": 857,
+        "side": "right",
+        "source_centre_y_mm": 82.83430962343095,
+        "model_centre_y_mm": 82.8,
+        "error_mm": 0.034309623430957004
+      },
+      {
+        "name": "thunderbolt_right",
+        "source_pixel_x": 777,
+        "side": "right",
+        "source_centre_y_mm": 64.32384937238493,
+        "model_centre_y_mm": 64.3,
+        "error_mm": 0.023849372384930234
+      },
+      {
+        "name": "sdxc",
+        "source_pixel_x": 671,
+        "side": "right",
+        "source_centre_y_mm": 39.79748953974895,
+        "model_centre_y_mm": 39.8,
+        "error_mm": 0.002510460251045288
+      }
+    ]
+  },
+  "other_reference_estimates_mm": {
+    "outline_corner_radius": 8.8,
+    "trackpad": [
+      131,
+      81.7
+    ],
+    "keyboard_pitch": 18.85,
+    "camera_notch_width": 37,
+    "lid_shell_thickness": 3.72,
+    "feet_projection": 1.5,
+    "logo_width": 37.7,
+    "hinge_pivot": [
+      0,
+      107.8,
+      6.6
+    ],
+    "lower_roll_radius": 6.0,
+    "feet_upper_diameter": 19.9,
+    "feet_lower_diameter": 17.0
+  },
+  "logo_source": "Apple iPhone 16 Pro accessory dimensional drawing vector contour reused at MacBook reference size; https://developer.apple.com/download/files/accessories/dimensional-drawings/iphone-16-pro.pdf",
+  "working_hinge_range": {
+    "degrees": [
+      0,
+      130
+    ],
+    "default": 105,
+    "note": "Validated asset working range; not a manufacturer-certified maximum angle."
+  },
+  "accuracy_note": "Nominal dimensions exact to numerical precision. Secondary raster estimates are not a claim of 100% manufacturing accuracy. Hinge rig is rigid-body only.",
+  "silhouette_calibration": {
+    "source": "references/ports-1.png",
+    "source_url": "https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/charging-expansion-en-1.png",
+    "axis": "front edge in side elevation, compared with actual exported GLB cross sections",
+    "body_front_x": 21,
+    "body_back_x": 977,
+    "body_top_y": 106,
+    "body_bottom_y": 173,
+    "scale_mm_per_pixel": 0.2313807531380753,
+    "threshold_max_rgb": 185,
+    "tolerance_mm": 0.45,
+    "nominal_thickness_from_pixels_mm": 15.502510460251045,
+    "samples": [
+      {
+        "pixel_y": 150,
+        "edge_pixel_x": 21,
+        "height_above_base_mm": 5.321757322175732,
+        "inset_mm": 0.0
+      },
+      {
+        "pixel_y": 152,
+        "edge_pixel_x": 22,
+        "height_above_base_mm": 4.858995815899581,
+        "inset_mm": 0.2313807531380753
+      },
+      {
+        "pixel_y": 154,
+        "edge_pixel_x": 22,
+        "height_above_base_mm": 4.396234309623431,
+        "inset_mm": 0.2313807531380753
+      },
+      {
+        "pixel_y": 156,
+        "edge_pixel_x": 23,
+        "height_above_base_mm": 3.93347280334728,
+        "inset_mm": 0.4627615062761506
+      },
+      {
+        "pixel_y": 158,
+        "edge_pixel_x": 24,
+        "height_above_base_mm": 3.4707112970711296,
+        "inset_mm": 0.6941422594142259
+      },
+      {
+        "pixel_y": 160,
+        "edge_pixel_x": 24,
+        "height_above_base_mm": 3.007949790794979,
+        "inset_mm": 0.6941422594142259
+      },
+      {
+        "pixel_y": 162,
+        "edge_pixel_x": 26,
+        "height_above_base_mm": 2.545188284518828,
+        "inset_mm": 1.1569037656903765
+      },
+      {
+        "pixel_y": 164,
+        "edge_pixel_x": 27,
+        "height_above_base_mm": 2.0824267782426777,
+        "inset_mm": 1.3882845188284518
+      },
+      {
+        "pixel_y": 166,
+        "edge_pixel_x": 29,
+        "height_above_base_mm": 1.619665271966527,
+        "inset_mm": 1.8510460251046024
+      },
+      {
+        "pixel_y": 168,
+        "edge_pixel_x": 32,
+        "height_above_base_mm": 1.1569037656903765,
+        "inset_mm": 2.545188284518828
+      },
+      {
+        "pixel_y": 170,
+        "edge_pixel_x": 35,
+        "height_above_base_mm": 0.6941422594142259,
+        "inset_mm": 3.239330543933054
+      },
+      {
+        "pixel_y": 172,
+        "edge_pixel_x": 41,
+        "height_above_base_mm": 0.2313807531380753,
+        "inset_mm": 4.627615062761506
+      }
+    ]
+  },
+  "front_silhouette_calibration": {
+    "source": "references/product-3.jpg",
+    "source_url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502_AV3?wid=1144&hei=1144&fmt=jpeg&qlt=90",
+    "axis": "left edge in front elevation, compared with GLB X cross sections",
+    "body_left_x": 123,
+    "body_right_x": 1022,
+    "body_bottom_y": 592,
+    "scale_mm_per_pixel": 0.34771968854282537,
+    "threshold_max_rgb": 235,
+    "tolerance_mm": 0.7,
+    "note": "Two source pixels of tolerance account for antialiasing and the light silver edge.",
+    "samples": [
+      {
+        "pixel_y": 577,
+        "edge_pixel_x": 123,
+        "height_above_base_mm": 5.215795328142381,
+        "inset_mm": 0.0
+      },
+      {
+        "pixel_y": 579,
+        "edge_pixel_x": 124,
+        "height_above_base_mm": 4.52035595105673,
+        "inset_mm": 0.34771968854282537
+      },
+      {
+        "pixel_y": 581,
+        "edge_pixel_x": 124,
+        "height_above_base_mm": 3.824916573971079,
+        "inset_mm": 0.34771968854282537
+      },
+      {
+        "pixel_y": 583,
+        "edge_pixel_x": 125,
+        "height_above_base_mm": 3.1294771968854285,
+        "inset_mm": 0.6954393770856507
+      },
+      {
+        "pixel_y": 585,
+        "edge_pixel_x": 127,
+        "height_above_base_mm": 2.4340378197997774,
+        "inset_mm": 1.3908787541713015
+      },
+      {
+        "pixel_y": 587,
+        "edge_pixel_x": 128,
+        "height_above_base_mm": 1.7385984427141268,
+        "inset_mm": 1.7385984427141268
+      },
+      {
+        "pixel_y": 589,
+        "edge_pixel_x": 131,
+        "height_above_base_mm": 1.0431590656284762,
+        "inset_mm": 2.781757508342603
+      },
+      {
+        "pixel_y": 591,
+        "edge_pixel_x": 136,
+        "height_above_base_mm": 0.34771968854282537,
+        "inset_mm": 4.52035595105673
+      }
+    ]
+  },
+  "open_lid_calibration": {
+    "source": "references/product-1.jpg",
+    "source_url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502_AV1?wid=1144&hei=1144&fmt=jpeg&qlt=90",
+    "pose_degrees": 90,
+    "base_depth_pixels": 415,
+    "base_bottom_y": 781,
+    "lid_bottom_y": 774,
+    "lid_top_y": 358,
+    "scale_mm_per_pixel": 0.533012048192771,
+    "lower_edge_above_base_mm": 3.7310843373493974,
+    "upper_edge_above_base_mm": 225.46409638554215,
+    "tolerance_mm": 0.75,
+    "note": "Orthographic side product image; feet excluded from the base datum. Image edges have approximately one pixel uncertainty."
+  },
+  "foot_calibration": {
+    "front_source": "references/product-3.jpg",
+    "side_source": "references/ports-1.png",
+    "front_centres_x_pixels": [
+      202,
+      942.5
+    ],
+    "side_centres_x_pixels": [
+      139.5,
+      858
+    ],
+    "source_centres_x_mm": [
+      -128.8301446051168,
+      128.6562847608454
+    ],
+    "source_centres_y_mm": [
+      -83.18138075313807,
+      83.06569037656904
+    ],
+    "model_centres_x_mm": [
+      -129,
+      129
+    ],
+    "model_centres_y_mm": [
+      -83,
+      83
+    ],
+    "tolerance_mm": 0.65
+  }
+}

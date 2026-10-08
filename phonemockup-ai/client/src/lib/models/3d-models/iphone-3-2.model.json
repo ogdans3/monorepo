@@ -1,0 +1,22 @@
+{
+    "id": "iphone-test-phone-3-2",
+    "name": "Iphone test 3.2",
+    "modelPath": "/iphone-3.2.glb",
+    "defaultPosition": {
+        "x": 0,
+        "y": 0,
+        "z": -1
+    },
+    "defaultRotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+    },
+    "layers": [
+        {
+            "match": "screen",
+            "material": "video"
+        }
+    ],
+    "caseColor": null
+}

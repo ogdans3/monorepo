@@ -1,0 +1,97 @@
+:root {
+    --radius: 0.625rem;
+
+    /* Light (kept for future toggle) */
+    --background: oklch(0.995 0 0);
+    --foreground: oklch(0.14 0 0);
+
+    --card: oklch(1 0 0);
+    --card-foreground: var(--foreground);
+
+    --popover: oklch(1 0 0);
+    --popover-foreground: var(--foreground);
+
+    /* Accent: soft white */
+    --primary: oklch(0.97 0 0);
+    --primary-foreground: oklch(0.12 0 0);
+
+    --secondary: oklch(0.96 0 0);
+    --secondary-foreground: oklch(0.22 0 0);
+
+    --muted: oklch(0.96 0 0);
+    --muted-foreground: oklch(0.50 0 0);
+
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.12 0 0);
+
+    --destructive: oklch(0.66 0.19 25);
+    --destructive-foreground: oklch(0.98 0 0);
+
+    --border: oklch(0.90 0 0);
+    --input: oklch(0.90 0 0);
+    --ring: oklch(0.98 0 0);
+
+    --sidebar: oklch(0.99 0 0);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
+}
+
+.dark {
+    /* Slightly blacker background */
+    --background: oklch(0.20 0 0);
+    --foreground: oklch(0.98 0 0);
+
+    /* Surface steps above bg */
+    --card: oklch(0.24 0 0);        /* +0.04 */
+    --card-foreground: var(--foreground);
+
+    --popover: oklch(0.24 0 0);
+    --popover-foreground: var(--foreground);
+
+    /* Inputs/sections */
+    --secondary: oklch(0.28 0 0);   /* +0.08 from bg */
+    --secondary-foreground: var(--foreground);
+
+    --muted: oklch(0.26 0 0);
+    --muted-foreground: oklch(0.82 0 0);
+
+    /* Accent remains soft white */
+    --primary: oklch(0.97 0 0);
+    --primary-foreground: oklch(0.12 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.12 0 0);
+
+    /* Destructive */
+    --destructive: oklch(0.66 0.19 25);
+    --destructive-foreground: oklch(0.10 0 0);
+
+    /* Borders/inputs tuned for 0.20 bg */
+    --border: oklch(0.32 0 0);
+    --input: oklch(0.32 0 0);
+
+    /* Focus ring */
+    --ring: oklch(0.98 0 0);
+
+    /* Sidebar: darker than background for strong separation */
+    --sidebar: oklch(0.16 0 0);     /* darker than bg */
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: oklch(0.30 0 0); /* slightly lighter than sidebar for inner borders */
+    --sidebar-ring: var(--ring);
+}
+
+/* Soft shadows preserved */
+:root,
+.dark {
+    --shadow-sm: 0 1px 2px 0 color-mix(in oklab, black 23%, transparent);
+    --shadow-md: 0 10px 28px -12px color-mix(in oklab, black 34%, transparent);
+    --shadow-lg: 0 28px 56px -18px color-mix(in oklab, black 44%, transparent);
+}

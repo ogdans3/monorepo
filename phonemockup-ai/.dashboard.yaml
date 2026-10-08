@@ -1,0 +1,4 @@
+name: "PhoneMockup AI"
+description: "Free phone mockup generator — SvelteKit client (test build, no backend wired up)"
+
+http_port: 3000

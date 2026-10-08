@@ -1,0 +1,85 @@
+{
+    "id": "group-center-spin-zoom",
+    "name": "Center Spin Zoom",
+    "preview": "center-spin-zoom.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 4,
+    "categories": [
+        "Spin",
+        "Zoom"
+    ],
+    "animations": [
+        {
+            "id": "anim-half-spin-zoom-in",
+            "name": "Half Spin + Zoom In",
+            "start": 0,
+            "end": 0.9,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-start",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-mid",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 1
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 180,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-half-spin-zoom-out",
+            "name": "Half Spin + Zoom Out",
+            "start": 0.9,
+            "end": 1.8,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-mid-start",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 1
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 180,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-full-rot",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 360,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

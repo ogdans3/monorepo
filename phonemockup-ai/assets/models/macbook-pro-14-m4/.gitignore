@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.blend1
+references/*.html
+references/store-*.png
+previews/draft.png
+previews/animation/
+qa/app/models/
+qa/app/presets/
+qa/app/front-4k.png
+qa/app/report-in-progress.json

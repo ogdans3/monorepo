@@ -1,0 +1,260 @@
+{
+  "device": "pixel-9-pro",
+  "method": "Measure evaluated Blender vertices; compare to manufacturer nominal dimensions and separately annotated source pixels. Raster-derived tolerances are NOT factory manufacturing tolerances.",
+  "all_passed": true,
+  "checks": [
+    {
+      "object": "frame",
+      "measurement": "width",
+      "reference_mm": 72.0,
+      "tolerance_mm": 0.01,
+      "source": "Google hardware specs",
+      "actual_mm": 72.0,
+      "signed_error_mm": 0.0,
+      "passed": true
+    },
+    {
+      "object": "frame",
+      "measurement": "height",
+      "reference_mm": 152.8,
+      "tolerance_mm": 0.01,
+      "source": "Google hardware specs",
+      "actual_mm": 152.79998779296875,
+      "signed_error_mm": -1.2207031261368684e-05,
+      "passed": true
+    },
+    {
+      "object": [
+        "back_glass",
+        "screen"
+      ],
+      "measurement": "depth",
+      "reference_mm": 8.5,
+      "tolerance_mm": 0.01,
+      "source": "Manufacturer body thickness: glass back to display plane, excluding optical overlays/camera protrusions/buttons",
+      "actual_mm": 8.5,
+      "signed_error_mm": 0.0,
+      "passed": true
+    },
+    {
+      "object": "camera_bar",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 35.76996805111821,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body x 584..897 px",
+      "actual_mm": 36.0,
+      "signed_error_mm": 0.23003194888178768,
+      "passed": true
+    },
+    {
+      "object": "camera_bar",
+      "measurement": "top_to_center",
+      "reference_mm": 24.288358208955223,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body y 38..708 px",
+      "actual_mm": 24.299995803833013,
+      "signed_error_mm": 0.011637594877790036,
+      "passed": true
+    },
+    {
+      "object": "lens_ultrawide_mount",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 12.881789137380192,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body x 584..897 px",
+      "actual_mm": 13.269999504089355,
+      "signed_error_mm": 0.3882103667091634,
+      "passed": true
+    },
+    {
+      "object": "lens_ultrawide_mount",
+      "measurement": "top_to_center",
+      "reference_mm": 24.402388059701494,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body y 38..708 px",
+      "actual_mm": 24.399998092651373,
+      "signed_error_mm": -0.0023899670501208448,
+      "passed": true
+    },
+    {
+      "object": "lens_wide_mount",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 29.329073482428115,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body x 584..897 px",
+      "actual_mm": 29.549999475479126,
+      "signed_error_mm": 0.22092599305101146,
+      "passed": true
+    },
+    {
+      "object": "lens_wide_mount",
+      "measurement": "top_to_center",
+      "reference_mm": 24.402388059701494,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body y 38..708 px",
+      "actual_mm": 24.399998092651373,
+      "signed_error_mm": -0.0023899670501208448,
+      "passed": true
+    },
+    {
+      "object": "lens_telephoto_mount",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 42.09584664536741,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body x 584..897 px",
+      "actual_mm": 42.16000056266785,
+      "signed_error_mm": 0.06415391730043751,
+      "passed": true
+    },
+    {
+      "object": "lens_telephoto_mount",
+      "measurement": "top_to_center",
+      "reference_mm": 24.402388059701494,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body y 38..708 px",
+      "actual_mm": 24.399998092651373,
+      "signed_error_mm": -0.0023899670501208448,
+      "passed": true
+    },
+    {
+      "object": "flash",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 59.57827476038339,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body x 584..897 px",
+      "actual_mm": 59.29999923706055,
+      "signed_error_mm": -0.27827552332284,
+      "passed": true
+    },
+    {
+      "object": "flash",
+      "measurement": "top_to_center",
+      "reference_mm": 20.069253731343284,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body y 38..708 px",
+      "actual_mm": 19.94999732971192,
+      "signed_error_mm": -0.11925640163136464,
+      "passed": true
+    },
+    {
+      "object": "temperature_sensor",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 59.57827476038339,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body x 584..897 px",
+      "actual_mm": 59.30000019073486,
+      "signed_error_mm": -0.2782745696485236,
+      "passed": true
+    },
+    {
+      "object": "temperature_sensor",
+      "measurement": "top_to_center",
+      "reference_mm": 28.507462686567166,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: body y 38..708 px",
+      "actual_mm": 28.529997253417974,
+      "signed_error_mm": 0.022534566850808346,
+      "passed": true
+    },
+    {
+      "object": "camera_bar",
+      "measurement": "width",
+      "reference_mm": 65.5591054313099,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: bar x 597..882 px",
+      "actual_mm": 65.5,
+      "signed_error_mm": -0.0591054313099022,
+      "passed": true
+    },
+    {
+      "object": "camera_bar",
+      "measurement": "height",
+      "reference_mm": 21.20955223880597,
+      "tolerance_mm": 0.65,
+      "source": "Product rear view: bar y 98..191 px",
+      "actual_mm": 21.400005340576172,
+      "signed_error_mm": 0.1904531017702027,
+      "passed": true
+    },
+    {
+      "object": "camera_bar",
+      "measurement": "rear_projection",
+      "reference_mm": 3.445945945945946,
+      "tolerance_mm": 0.3,
+      "source": "Product side view: body 937..974, bar tip 989 px",
+      "actual_mm": 3.4000000953674316,
+      "signed_error_mm": -0.04594585057851441,
+      "passed": true
+    },
+    {
+      "object": "power_button",
+      "measurement": "top_to_center",
+      "reference_mm": 47.6644776119403,
+      "tolerance_mm": 0.65,
+      "source": "Product right side, y 38..708 px",
+      "actual_mm": 47.549997711181646,
+      "signed_error_mm": -0.11447990075865278,
+      "passed": true
+    },
+    {
+      "object": "power_button",
+      "measurement": "height",
+      "reference_mm": 12.315223880597015,
+      "tolerance_mm": 0.65,
+      "source": "Product right side button endpoints",
+      "actual_mm": 12.25,
+      "signed_error_mm": -0.06522388059701534,
+      "passed": true
+    },
+    {
+      "object": "volume_rocker",
+      "measurement": "top_to_center",
+      "reference_mm": 71.72477611940299,
+      "tolerance_mm": 0.65,
+      "source": "Product right side, y 38..708 px",
+      "actual_mm": 71.64999976158143,
+      "signed_error_mm": -0.07477635782156256,
+      "passed": true
+    },
+    {
+      "object": "volume_rocker",
+      "measurement": "height",
+      "reference_mm": 22.12179104477612,
+      "tolerance_mm": 0.65,
+      "source": "Product right side button endpoints",
+      "actual_mm": 21.999999523162842,
+      "signed_error_mm": -0.12179152161327877,
+      "passed": true
+    },
+    {
+      "object": "camera_cutout",
+      "measurement": "top_to_center",
+      "reference_mm": 8.185714285714287,
+      "tolerance_mm": 0.5,
+      "source": "Product front view, front lens centre y74",
+      "actual_mm": 8.119997406005865,
+      "signed_error_mm": -0.06571687970842177,
+      "passed": true
+    },
+    {
+      "object": "screen",
+      "measurement": "width",
+      "reference_mm": 66.05714285714286,
+      "tolerance_mm": 0.65,
+      "source": "Product front view: active width approximately 289px / 315px body",
+      "actual_mm": 65.80000305175781,
+      "signed_error_mm": -0.25713980538505155,
+      "passed": true
+    },
+    {
+      "object": "screen",
+      "measurement": "height",
+      "reference_mm": 146.88809523809525,
+      "tolerance_mm": 0.65,
+      "source": "Product front view: active height approximately 646px / 672px body",
+      "actual_mm": 146.81625366210938,
+      "signed_error_mm": -0.07184157598587149,
+      "passed": true
+    }
+  ]
+}

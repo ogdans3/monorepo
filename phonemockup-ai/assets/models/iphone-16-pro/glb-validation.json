@@ -1,0 +1,168 @@
+{
+  "all_passed": true,
+  "checks": {
+    "binary_gltf_2": {
+      "passed": true,
+      "details": null
+    },
+    "under_10_MB": {
+      "passed": true,
+      "details": 2039084
+    },
+    "unique_screen_nodes": {
+      "passed": true,
+      "details": [
+        "screen"
+      ]
+    },
+    "unique_screen_meshes": {
+      "passed": true,
+      "details": [
+        "screen"
+      ]
+    },
+    "unique_screen_materials": {
+      "passed": true,
+      "details": [
+        "screen"
+      ]
+    },
+    "no_cameras": {
+      "passed": true,
+      "details": null
+    },
+    "no_animations": {
+      "passed": true,
+      "details": null
+    },
+    "no_lights": {
+      "passed": true,
+      "details": null
+    },
+    "no_decoder_extensions": {
+      "passed": true,
+      "details": [
+        "KHR_materials_specular"
+      ]
+    },
+    "self_contained": {
+      "passed": true,
+      "details": null
+    },
+    "opaque_materials": {
+      "passed": true,
+      "details": null
+    },
+    "opaque_parts_backface_culled": {
+      "passed": true,
+      "details": null
+    },
+    "binary_metallic": {
+      "passed": true,
+      "details": null
+    },
+    "screen_placeholder": {
+      "passed": true,
+      "details": null
+    },
+    "phone_meshes_only": {
+      "passed": true,
+      "details": 73
+    },
+    "screen_matching_only": {
+      "passed": true,
+      "details": [
+        "screen"
+      ]
+    },
+    "lowercase_part_names": {
+      "passed": true,
+      "details": null
+    },
+    "applied_transforms": {
+      "passed": true,
+      "details": null
+    },
+    "native_screenshot_aspect": {
+      "passed": true,
+      "details": {
+        "width_mm": 66.56999886035919,
+        "height_mm": 144.7317898273468,
+        "ratio": 0.459954229404416,
+        "reference_ratio": 0.459954233409611
+      }
+    },
+    "screen_single_material": {
+      "passed": true,
+      "details": null
+    },
+    "screen_front_normal": {
+      "passed": true,
+      "details": [
+        1.0913570597909615e-15,
+        -1.0,
+        7.689360614904217e-08
+      ]
+    },
+    "every_screen_face_points_outward": {
+      "passed": true,
+      "details": null
+    },
+    "screen_flat": {
+      "passed": true,
+      "details": null
+    },
+    "display_depth_clearance": {
+      "passed": true,
+      "details": {
+        "mm": 0.04498939961194992,
+        "minimum_mm": 0.04
+      }
+    },
+    "logo_depth_clearance": {
+      "passed": true,
+      "details": {
+        "mm": 0.04499359056353569,
+        "minimum_mm": 0.04
+      }
+    },
+    "logo_faces_outward": {
+      "passed": true,
+      "details": null
+    },
+    "upright_uv_0_1": {
+      "passed": true,
+      "details": 3.243774278349765e-08
+    },
+    "centred": {
+      "passed": true,
+      "details": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "real_scale": {
+      "passed": true,
+      "details": [
+        72.35005950927734,
+        12.63800048828125,
+        149.6790008544922
+      ]
+    },
+    "triangle_limit": {
+      "passed": true,
+      "details": 94765
+    },
+    "preferred_triangle_budget": {
+      "passed": true,
+      "details": 94765
+    },
+    "camera_cutout_in_front": {
+      "passed": true,
+      "details": 0.09999889880418777
+    }
+  },
+  "triangles": 94765,
+  "bytes": 2039084
+}

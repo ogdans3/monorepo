@@ -1,0 +1,49 @@
+{
+    "id": "still",
+    "name": "Still",
+    "preview": "still.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 1,
+    "categories": [
+        "Slow"
+    ],
+    "animations": [
+        {
+            "id": "still",
+            "name": "Still",
+            "start": 0,
+            "end": 1,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-start",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-arc-1",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

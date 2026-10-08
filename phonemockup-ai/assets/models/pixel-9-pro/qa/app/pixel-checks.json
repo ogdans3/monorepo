@@ -1,0 +1,15 @@
+{
+  "screen_156000_pixels_unchanged_by_case_colour": true,
+  "screen_changed_pixels_with_msaa": 0,
+  "screen_unchanged_fraction_with_msaa": 1.0,
+  "portrait_4k_pixels": [
+    2160,
+    3840
+  ],
+  "screen_check_passed": true,
+  "glb_hash_matches": true,
+  "no_renderer_errors": true,
+  "render_count": 128,
+  "preset_count": 11,
+  "preset_frames": 109
+}

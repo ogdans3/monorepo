@@ -1,0 +1,119 @@
+{
+    "id": "group-ball-turn",
+    "name": "Ball Turn",
+    "preview": "ball-turn.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 1,
+    "categories": [
+        "Slow"
+    ],
+    "animations": [
+        {
+            "id": "anim-ball-turn-arc-1",
+            "name": "Arc 1",
+            "start": 0,
+            "end": 0.5,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-start",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-arc-1",
+                "position": {
+                    "x": 0.22,
+                    "y": 0.18,
+                    "z": -0.18
+                },
+                "rotation": {
+                    "x": 12,
+                    "y": 120,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-ball-turn-arc-2",
+            "name": "Arc 2",
+            "start": 0.5,
+            "end": 1.0,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-arc-1-state",
+                "position": {
+                    "x": 0.22,
+                    "y": 0.18,
+                    "z": -0.18
+                },
+                "rotation": {
+                    "x": 12,
+                    "y": 120,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-arc-2",
+                "position": {
+                    "x": -0.22,
+                    "y": -0.18,
+                    "z": -0.18
+                },
+                "rotation": {
+                    "x": -12,
+                    "y": 240,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-ball-turn-settle",
+            "name": "Settle to Center",
+            "start": 1.0,
+            "end": 1.6,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-arc-2-state",
+                "position": {
+                    "x": -0.22,
+                    "y": -0.18,
+                    "z": -0.18
+                },
+                "rotation": {
+                    "x": -12,
+                    "y": 240,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-end",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

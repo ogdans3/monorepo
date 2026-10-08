@@ -1,0 +1,35 @@
+{
+  "device": "macbook-pro-14-m4",
+  "closed_enclosure_mm": [
+    312.6,
+    221.2,
+    15.5
+  ],
+  "feet_projection_mm": 1.5,
+  "native_pixels": [
+    3024,
+    1964
+  ],
+  "screen_mm": [
+    302.4,
+    196.4
+  ],
+  "hinge_pivot_blender_mm": [
+    0,
+    107.8,
+    6.6
+  ],
+  "working_angle_degrees": [
+    0,
+    130
+  ],
+  "default_angle_degrees": 105,
+  "triangles": 97670,
+  "mesh_objects": 62,
+  "glb_bytes": 3137632,
+  "pose_bounds_mm": [
+    312.5999755859375,
+    283.4296569824219,
+    217.63433837890625
+  ]
+}

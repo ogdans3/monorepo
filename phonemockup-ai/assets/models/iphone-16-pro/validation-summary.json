@@ -1,0 +1,78 @@
+{
+  "model_id": "iphone-16-pro",
+  "date": "2026-10-01",
+  "glb_sha256": "443031b19a782d0272967ce5614050d4432519f65f32ea215b1a160ad19d3257",
+  "glb_bytes": 2039084,
+  "triangles": 94765,
+  "mesh_objects": 73,
+  "blender_contract_checks_passed": 32,
+  "versions": {
+    "three": "0.179.1",
+    "playwright": "1.62.1"
+  },
+  "blender": "5.2.1 LTS",
+  "binary_identical_rebuild_from_studio": true,
+  "client_check": {
+    "passed": true,
+    "errors": 0,
+    "existing_warnings": 8
+  },
+  "client_production_build": {
+    "passed": true,
+    "bundled_glb_matches": true
+  },
+  "mcp_build": {
+    "passed": true
+  },
+  "rendering": {
+    "engine": "shared SceneRenderer / MCP RenderSession / Chromium SwiftShader",
+    "total_renders": 127,
+    "catalogue_model_stills": 13,
+    "presets": 11,
+    "preset_frames": 109,
+    "preset_ids": [
+      "group-ball-turn",
+      "group-detail-turns",
+      "group-fly-in-from-top",
+      "group-horizontal-reveal",
+      "group-left-entry-in",
+      "group-six-side-glide-showcase",
+      "group-pop-out",
+      "group-roll-in",
+      "group-center-spin-zoom",
+      "still",
+      "group-zoom-top-then-pan-up-tilted"
+    ],
+    "portrait_4k": [
+      2160,
+      3840
+    ],
+    "landscape": [
+      1280,
+      720
+    ],
+    "glass_reflections_tested": true,
+    "screen_pixels_unchanged_by_case_colour": true
+  },
+  "video": {
+    "passed": true,
+    "frames": 24,
+    "fps": 12,
+    "duration_seconds": 2,
+    "size": [
+      432,
+      768
+    ],
+    "animation": "group-detail-turns",
+    "input": "First 2 seconds of client/static/iphone-recording.mp4",
+    "input_screen_content_changes": true,
+    "format": "MP4 / H.264"
+  },
+  "known_existing_catalogue_issues": [
+    "iphone-test-phone-3, iphone-test-phone-3-1 and iphone-test-phone-3-2 retain their existing rotated UV mapping; their entries and assets were not changed."
+  ],
+  "limitations": [
+    "Selected studio contours and nominal dimensions were audited against Apple PDF vectors; not physical certification.",
+    "Browser display ratio, underlay clearance, logo clearance, opaque optics and small parts differ from the studio source as documented."
+  ]
+}

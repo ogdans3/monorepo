@@ -1,0 +1,120 @@
+{
+    "id": "group-fly-in-from-top",
+    "name": "Fly in - From top",
+    "preview": "fly-in-from-top.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 0,
+    "categories": [
+        "In",
+        "Fast"
+    ],
+    "animations": [
+        {
+            "id": "anim-top-entry",
+            "name": "Top Entry",
+            "start": 0,
+            "end": 0.55,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-start-offscreen",
+                "position": {
+                    "x": 0,
+                    "y": 1.18,
+                    "z": 1.2
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": -300,
+                    "z": 0
+                },
+                "opacity": 0
+            },
+            "endKeyframe": {
+                "id": "kf-enter",
+                "position": {
+                    "x": 0,
+                    "y": 0.18,
+                    "z": 0.9
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": -60,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-settle-with-overshoot",
+            "name": "Settle with Overshoot",
+            "start": 0.55,
+            "end": 1.0,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-enter-start",
+                "position": {
+                    "x": 0,
+                    "y": 0.18,
+                    "z": 0.9
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": -60,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-settle-overshoot",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.5
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 8,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-center-hold",
+            "name": "Center Hold",
+            "start": 1.0,
+            "end": 1.6,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-settle-overshoot-start",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.5
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 8,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-center-hold",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

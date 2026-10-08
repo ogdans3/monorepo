@@ -1,0 +1,119 @@
+{
+    "id": "group-roll-in",
+    "name": "Roll in",
+    "preview": "roll-in.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 3,
+    "categories": [
+        "Zoom"
+    ],
+    "animations": [
+        {
+            "id": "anim-roll-in",
+            "name": "Roll In",
+            "start": 0,
+            "end": 0.5,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-off-left",
+                "position": {
+                    "x": -0.72,
+                    "y": 0,
+                    "z": 0.1
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -30
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-swing",
+                "position": {
+                    "x": -0.1,
+                    "y": 0,
+                    "z": -0.2
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 10
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-zoom-forward",
+            "name": "Zoom Forward",
+            "start": 0.5,
+            "end": 0.9,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-swing-start",
+                "position": {
+                    "x": -0.1,
+                    "y": 0,
+                    "z": -0.2
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 10
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-zoom",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.35
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-settle-center",
+            "name": "Settle Center",
+            "start": 0.9,
+            "end": 1.4,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-zoom-start",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.35
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-end",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

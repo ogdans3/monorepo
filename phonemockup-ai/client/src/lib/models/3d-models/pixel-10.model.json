@@ -1,0 +1,23 @@
+{
+    "id": "pixel-10",
+    "name": "Pixel 10",
+    "modelPath": "/pixel-10-model.glb",
+    "defaultPosition": {
+        "x": 0,
+        "y": 0,
+        "z": 2.8
+    },
+    "defaultRotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+    },
+    "layers": [
+        {
+            "match": "led",
+            "material": "video",
+            "uv": "planar"
+        }
+    ],
+    "caseColor": null
+}

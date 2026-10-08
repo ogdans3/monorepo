@@ -1,0 +1,253 @@
+{
+    "id": "track-iphone-cinematic",
+    "phoneName": "iPhone 15 Pro",
+    "animations": [
+        {
+            "id": "anim-orbit-intro",
+            "name": "Cinematic Orbit Intro",
+            "start": 0,
+            "end": 2.6,
+            "curve": "SineInOut",
+            "keyframes": [
+                {
+                    "id": "kf-o-0",
+                    "time": 0,
+                    "position": { "x": -1.2, "y": 0.0, "z": 2.8 },
+                    "rotation": { "x": 0, "y": -28, "z": 0 },
+                    "opacity": 0,
+                    "curve": "SineIn"
+                },
+                {
+                    "id": "kf-o-1",
+                    "time": 0.55,
+                    "position": { "x": -0.4, "y": 0.0, "z": 2.2 },
+                    "rotation": { "x": 0, "y": -10, "z": 0 },
+                    "opacity": 1,
+                    "curve": "SineOut"
+                },
+                {
+                    "id": "kf-o-2",
+                    "time": 1.6,
+                    "position": { "x": 0, "y": 0, "z": 2.0 },
+                    "rotation": { "x": 0, "y": 0, "z": 0 },
+                    "opacity": 1,
+                    "curve": "SineInOut"
+                },
+                {
+                    "id": "kf-o-3",
+                    "time": 2.6,
+                    "position": { "x": 0.36, "y": 0.02, "z": 2.15 },
+                    "rotation": { "x": 0, "y": 12, "z": 0 },
+                    "opacity": 1,
+                    "curve": "SineInOut"
+                }
+            ]
+        },
+        {
+            "id": "anim-edge-tilt",
+            "name": "Titanium Edge Tilt",
+            "start": 2.6,
+            "end": 4.4,
+            "curve": "CubicInOut",
+            "keyframes": [
+                {
+                    "id": "kf-t-0",
+                    "time": 0,
+                    "position": { "x": 0.36, "y": -0.06, "z": 2.15 },
+                    "rotation": { "x": -5, "y": 12, "z": 0 },
+                    "opacity": 1,
+                    "curve": "CubicIn"
+                },
+                {
+                    "id": "kf-t-1",
+                    "time": 0.9,
+                    "position": { "x": 0.12, "y": -0.12, "z": 1.92 },
+                    "rotation": { "x": 8, "y": -6, "z": 0 },
+                    "opacity": 1,
+                    "curve": "BackInOut"
+                },
+                {
+                    "id": "kf-t-2",
+                    "time": 1.8,
+                    "position": { "x": 0, "y": -0.08, "z": 1.85 },
+                    "rotation": { "x": 0, "y": 0, "z": 0 },
+                    "opacity": 1,
+                    "curve": "CubicOut"
+                }
+            ]
+        },
+        {
+            "id": "anim-camera-focus",
+            "name": "Camera Array Focus",
+            "start": 4.4,
+            "end": 5.9,
+            "curve": "BackInOut",
+            "keyframes": [
+                {
+                    "id": "kf-c-0",
+                    "time": 0,
+                    "position": { "x": 0, "y": -0.08, "z": 1.85 },
+                    "rotation": { "x": 0, "y": 0, "z": 0 },
+                    "opacity": 1,
+                    "curve": "Linear"
+                },
+                {
+                    "id": "kf-c-1",
+                    "time": 0.7,
+                    "position": { "x": 0.08, "y": 0.03, "z": 1.62 },
+                    "rotation": { "x": -2, "y": 14, "z": 0 },
+                    "opacity": 1,
+                    "curve": "BackOut"
+                },
+                {
+                    "id": "kf-c-2",
+                    "time": 1.5,
+                    "position": { "x": 0, "y": 0, "z": 1.7 },
+                    "rotation": { "x": 0, "y": 6, "z": 0 },
+                    "opacity": 1,
+                    "curve": "BackIn"
+                }
+            ]
+        },
+        {
+            "id": "anim-profile-spin",
+            "name": "Profile Spin Reveal",
+            "start": 5.9,
+            "end": 8.2,
+            "curve": "QuadInOut",
+            "keyframes": [
+                {
+                    "id": "kf-s-0",
+                    "time": 0,
+                    "position": { "x": 0, "y": 0, "z": 2.0 },
+                    "rotation": { "x": 0, "y": 0, "z": 0 },
+                    "opacity": 1,
+                    "curve": "QuadIn"
+                },
+                {
+                    "id": "kf-s-1",
+                    "time": 1.1,
+                    "position": { "x": 0, "y": 0, "z": 2.12 },
+                    "rotation": { "x": 0, "y": 90, "z": 0 },
+                    "opacity": 1,
+                    "curve": "SineInOut"
+                },
+                {
+                    "id": "kf-s-2",
+                    "time": 1.7,
+                    "position": { "x": 0, "y": 0, "z": 2.2 },
+                    "rotation": { "x": 0, "y": 180, "z": 0 },
+                    "opacity": 1,
+                    "curve": "SineInOut"
+                },
+                {
+                    "id": "kf-s-3",
+                    "time": 2.3,
+                    "position": { "x": 0, "y": 0, "z": 2.06 },
+                    "rotation": { "x": 0, "y": 220, "z": 0 },
+                    "opacity": 1,
+                    "curve": "QuadOut"
+                }
+            ]
+        },
+        {
+            "id": "anim-drop-bounce",
+            "name": "Drop and Micro-Bounce",
+            "start": 8.2,
+            "end": 9.5,
+            "curve": "BounceOut",
+            "keyframes": [
+                {
+                    "id": "kf-d-0",
+                    "time": 0,
+                    "position": { "x": 0, "y": 0.8, "z": 2.06 },
+                    "rotation": { "x": 10, "y": 220, "z": 0 },
+                    "opacity": 1,
+                    "curve": "ExpoIn"
+                },
+                {
+                    "id": "kf-d-1",
+                    "time": 0.6,
+                    "position": { "x": 0, "y": -0.02, "z": 2.0 },
+                    "rotation": { "x": 0, "y": 220, "z": 0 },
+                    "opacity": 1,
+                    "curve": "BounceOut"
+                },
+                {
+                    "id": "kf-d-2",
+                    "time": 1.3,
+                    "position": { "x": 0, "y": 0, "z": 2.0 },
+                    "rotation": { "x": 0, "y": 205, "z": 0 },
+                    "opacity": 1,
+                    "curve": "BounceOut"
+                }
+            ]
+        },
+        {
+            "id": "anim-screen-pop",
+            "name": "Screen Pop Forward",
+            "start": 9.5,
+            "end": 10.9,
+            "curve": "ElasticOut",
+            "keyframes": [
+                {
+                    "id": "kf-p-0",
+                    "time": 0,
+                    "position": { "x": 0, "y": 0, "z": 2.0 },
+                    "rotation": { "x": 0, "y": 205, "z": 0 },
+                    "opacity": 1,
+                    "curve": "QuadIn"
+                },
+                {
+                    "id": "kf-p-1",
+                    "time": 0.7,
+                    "position": { "x": 0, "y": 0, "z": 1.6 },
+                    "rotation": { "x": 0, "y": 180, "z": 0 },
+                    "opacity": 1,
+                    "curve": "ElasticOut"
+                },
+                {
+                    "id": "kf-p-2",
+                    "time": 1.4,
+                    "position": { "x": 0, "y": 0, "z": 1.66 },
+                    "rotation": { "x": 0, "y": 180, "z": 0 },
+                    "opacity": 1,
+                    "curve": "ElasticOut"
+                }
+            ]
+        },
+        {
+            "id": "anim-center-fade",
+            "name": "Center and Fade Out",
+            "start": 10.9,
+            "end": 12.6,
+            "curve": "SineInOut",
+            "keyframes": [
+                {
+                    "id": "kf-f-0",
+                    "time": 0,
+                    "position": { "x": 0, "y": 0, "z": 1.66 },
+                    "rotation": { "x": 0, "y": 180, "z": 0 },
+                    "opacity": 1,
+                    "curve": "SineInOut"
+                },
+                {
+                    "id": "kf-f-1",
+                    "time": 0.8,
+                    "position": { "x": 0, "y": 0, "z": 1.78 },
+                    "rotation": { "x": 0, "y": 180, "z": 0 },
+                    "opacity": 0.5,
+                    "curve": "SineInOut"
+                },
+                {
+                    "id": "kf-f-2",
+                    "time": 1.7,
+                    "position": { "x": 0, "y": 0, "z": 1.92 },
+                    "rotation": { "x": 0, "y": 180, "z": 0 },
+                    "opacity": 0,
+                    "curve": "SineIn"
+                }
+            ]
+        }
+    ]
+}

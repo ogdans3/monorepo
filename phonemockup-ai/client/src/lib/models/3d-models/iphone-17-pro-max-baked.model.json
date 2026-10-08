@@ -1,0 +1,23 @@
+{
+    "id": "iphone-17-pro-max-baked",
+    "name": "Iphone 17 Pro Max Baked",
+    "modelPath": "/Iphone-17-pro-max-baked-3.glb",
+    "defaultPosition": {
+        "x": 0,
+        "y": 0,
+        "z": -4.5
+    },
+    "defaultRotation": {
+        "x": 0,
+        "y": 180,
+        "z": 0
+    },
+    "layers": [
+        {
+            "match": "screen",
+            "material": "video",
+            "uv": "planar"
+        }
+    ],
+    "caseColor": null
+}

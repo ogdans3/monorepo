@@ -1,0 +1,1216 @@
+{
+  "modelId": "galaxy-s24-ultra",
+  "renderer": "shared SceneRenderer / MCP RenderSession / Chromium SwiftShader",
+  "renders": [
+    {
+      "file": "models/test-phone-1.png",
+      "bytes": 55536,
+      "modelId": "test-phone-1",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-1.png",
+      "bytes": 52909,
+      "modelId": "iphone-test-phone-1",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-3.png",
+      "bytes": 64336,
+      "modelId": "iphone-test-phone-3",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-3-1.png",
+      "bytes": 61499,
+      "modelId": "iphone-test-phone-3-1",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-3-2.png",
+      "bytes": 72307,
+      "modelId": "iphone-test-phone-3-2",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-16-pro.png",
+      "bytes": 69373,
+      "modelId": "iphone-16-pro",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-17-1.png",
+      "bytes": 56454,
+      "modelId": "iphone-test-phone-17-1",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-17-1-white.png",
+      "bytes": 58542,
+      "modelId": "iphone-test-phone-17-1-white",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-17-pro-max.png",
+      "bytes": 63232,
+      "modelId": "iphone-17-pro-max",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-17-pro-max-baked.png",
+      "bytes": 67466,
+      "modelId": "iphone-17-pro-max-baked",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-17-pro-max-baked-fiverr.png",
+      "bytes": 63336,
+      "modelId": "iphone-17-pro-max-baked-fiverr",
+      "kind": "still"
+    },
+    {
+      "file": "models/galaxy-s24-ultra.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "kind": "still"
+    },
+    {
+      "file": "models/pixel-9-pro.png",
+      "bytes": 57955,
+      "modelId": "pixel-9-pro",
+      "kind": "still"
+    },
+    {
+      "file": "models/pixel-10.png",
+      "bytes": 98057,
+      "modelId": "pixel-10",
+      "kind": "still"
+    },
+    {
+      "file": "models/pixel-10-baked.png",
+      "bytes": 70109,
+      "modelId": "pixel-10-baked",
+      "kind": "still"
+    },
+    {
+      "file": "presets/group-ball-turn/0.00000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.25000.png",
+      "bytes": 76817,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 0.25,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.40000.png",
+      "bytes": 39318,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 0.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.50000.png",
+      "bytes": 39648,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 0.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.75000.png",
+      "bytes": 40865,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 0.75,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.80000.png",
+      "bytes": 39173,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 0.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/1.00000.png",
+      "bytes": 50446,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/1.20000.png",
+      "bytes": 60501,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/1.30000.png",
+      "bytes": 41917,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 1.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/1.60000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-ball-turn",
+      "time": 1.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/0.00000.png",
+      "bytes": 80870,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-detail-turns",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/0.47500.png",
+      "bytes": 77967,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-detail-turns",
+      "time": 0.475,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/0.60000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-detail-turns",
+      "time": 0.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/0.95000.png",
+      "bytes": 78154,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-detail-turns",
+      "time": 0.95,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/1.20000.png",
+      "bytes": 77045,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-detail-turns",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/1.42500.png",
+      "bytes": 78272,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-detail-turns",
+      "time": 1.425,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/1.55000.png",
+      "bytes": 78021,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-detail-turns",
+      "time": 1.55,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/1.90000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-detail-turns",
+      "time": 1.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.00000.png",
+      "bytes": 9473,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.27500.png",
+      "bytes": 39131,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.275,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.40000.png",
+      "bytes": 41864,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.55000.png",
+      "bytes": 91625,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.55,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.77500.png",
+      "bytes": 99326,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.775,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.80000.png",
+      "bytes": 98203,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/1.00000.png",
+      "bytes": 92616,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/1.20000.png",
+      "bytes": 87213,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/1.30000.png",
+      "bytes": 81160,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 1.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/1.60000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-fly-in-from-top",
+      "time": 1.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/0.00000.png",
+      "bytes": 47390,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-horizontal-reveal",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/0.35000.png",
+      "bytes": 183320,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-horizontal-reveal",
+      "time": 0.35,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/0.70000.png",
+      "bytes": 47057,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-horizontal-reveal",
+      "time": 0.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/1.05000.png",
+      "bytes": 139905,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-horizontal-reveal",
+      "time": 1.05,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/1.40000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-horizontal-reveal",
+      "time": 1.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.00000.png",
+      "bytes": 29066,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.22500.png",
+      "bytes": 46382,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 0.225,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.32500.png",
+      "bytes": 57514,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 0.325,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.45000.png",
+      "bytes": 56017,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 0.45,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.65000.png",
+      "bytes": 55798,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 0.65,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.70000.png",
+      "bytes": 56489,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 0.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.95000.png",
+      "bytes": 55854,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 0.95,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.97500.png",
+      "bytes": 55743,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 0.975,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/1.12500.png",
+      "bytes": 55049,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 1.125,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/1.30000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-left-entry-in",
+      "time": 1.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/0.00000.png",
+      "bytes": 38574,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/0.45000.png",
+      "bytes": 78545,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 0.45,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/0.90000.png",
+      "bytes": 99147,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/1.30000.png",
+      "bytes": 79393,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 1.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/1.70000.png",
+      "bytes": 62462,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 1.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/2.00000.png",
+      "bytes": 103281,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/2.30000.png",
+      "bytes": 32135,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 2.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/2.35000.png",
+      "bytes": 32487,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 2.35,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/2.70000.png",
+      "bytes": 39365,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 2.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/3.10000.png",
+      "bytes": 46564,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 3.1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/3.40000.png",
+      "bytes": 48228,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 3.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/3.70000.png",
+      "bytes": 45904,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 3.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/4.10000.png",
+      "bytes": 51606,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 4.1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/4.50000.png",
+      "bytes": 53927,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 4.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/4.70000.png",
+      "bytes": 44232,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 4.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/4.80000.png",
+      "bytes": 58335,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 4.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/5.10000.png",
+      "bytes": 32146,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 5.1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/5.50000.png",
+      "bytes": 43260,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 5.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/5.90000.png",
+      "bytes": 54699,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 5.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/6.20000.png",
+      "bytes": 64586,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 6.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/6.50000.png",
+      "bytes": 57890,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 6.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/6.90000.png",
+      "bytes": 39025,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 6.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/7.05000.png",
+      "bytes": 48179,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 7.05,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/7.30000.png",
+      "bytes": 48854,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 7.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/7.60000.png",
+      "bytes": 100257,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 7.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/7.90000.png",
+      "bytes": 45101,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 7.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/8.30000.png",
+      "bytes": 28989,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 8.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/8.70000.png",
+      "bytes": 44402,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 8.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/9.05000.png",
+      "bytes": 105556,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 9.05,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/9.40000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 9.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.00000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.30000.png",
+      "bytes": 59013,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 0.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.40000.png",
+      "bytes": 51625,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 0.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.60000.png",
+      "bytes": 61341,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 0.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.80000.png",
+      "bytes": 59013,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 0.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.90000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/1.20000.png",
+      "bytes": 47788,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/1.40000.png",
+      "bytes": 51500,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 1.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/1.60000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-pop-out",
+      "time": 1.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.00000.png",
+      "bytes": 38971,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.25000.png",
+      "bytes": 84441,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 0.25,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.35000.png",
+      "bytes": 96253,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 0.35,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.50000.png",
+      "bytes": 115853,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 0.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.70000.png",
+      "bytes": 112849,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 0.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.90000.png",
+      "bytes": 48834,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/1.05000.png",
+      "bytes": 49735,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 1.05,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/1.15000.png",
+      "bytes": 51288,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 1.15,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/1.40000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-roll-in",
+      "time": 1.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/0.00000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-center-spin-zoom",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/0.45000.png",
+      "bytes": 32342,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-center-spin-zoom",
+      "time": 0.45,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/0.90000.png",
+      "bytes": 63869,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-center-spin-zoom",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/1.35000.png",
+      "bytes": 35193,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-center-spin-zoom",
+      "time": 1.35,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/1.80000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-center-spin-zoom",
+      "time": 1.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/0.00000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "still",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/0.25000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "still",
+      "time": 0.25,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/0.50000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "still",
+      "time": 0.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/0.75000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "still",
+      "time": 0.75,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/1.00000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "still",
+      "time": 1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/0.00000.png",
+      "bytes": 55483,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/0.45000.png",
+      "bytes": 94205,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 0.45,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/0.60000.png",
+      "bytes": 84095,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 0.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/0.90000.png",
+      "bytes": 73384,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/1.20000.png",
+      "bytes": 82910,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/1.65000.png",
+      "bytes": 135805,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 1.65,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/1.80000.png",
+      "bytes": 146766,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 1.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/2.40000.png",
+      "bytes": 115941,
+      "modelId": "galaxy-s24-ultra",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 2.4,
+      "kind": "preset"
+    },
+    {
+      "file": "front.png",
+      "bytes": 85604,
+      "modelId": "galaxy-s24-ultra",
+      "kind": "front",
+      "width": 600,
+      "height": 900
+    },
+    {
+      "file": "landscape.png",
+      "bytes": 79680,
+      "modelId": "galaxy-s24-ultra",
+      "kind": "landscape",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "file": "glass-reflections.png",
+      "bytes": 121657,
+      "modelId": "galaxy-s24-ultra",
+      "kind": "glass-reflections",
+      "width": 600,
+      "height": 900,
+      "glassReflections": true
+    },
+    {
+      "file": "recolour.png",
+      "bytes": 79588,
+      "modelId": "galaxy-s24-ultra",
+      "kind": "recolour",
+      "width": 600,
+      "height": 900,
+      "caseColor": "#2765df"
+    },
+    {
+      "file": "front-4k.png",
+      "bytes": 494162,
+      "modelId": "galaxy-s24-ultra",
+      "kind": "front-4k",
+      "width": 2160,
+      "height": 3840
+    }
+  ],
+  "errors": [],
+  "catalog": {
+    "models": [
+      {
+        "id": "test-phone-1",
+        "name": "Test phone",
+        "modelPath": "/iphone.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-1",
+        "name": "Iphone test 2",
+        "modelPath": "/iphone-2.1.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-3",
+        "name": "Iphone test 3",
+        "modelPath": "/iphone-3.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-3-1",
+        "name": "Iphone test 3.1",
+        "modelPath": "/iphone-3.1.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-3-2",
+        "name": "Iphone test 3.2",
+        "modelPath": "/iphone-3.2.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-16-pro",
+        "name": "iPhone 16 Pro",
+        "modelPath": "/iphone-16-pro.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-17-1",
+        "name": "Iphone 17.1",
+        "modelPath": "/iphone17.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-17-1-white",
+        "name": "Iphone 17.1 white",
+        "modelPath": "/iphone-17-white.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-17-pro-max",
+        "name": "Iphone 17 Pro Max",
+        "modelPath": "/Iphone-17-pro-max.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-17-pro-max-baked",
+        "name": "Iphone 17 Pro Max Baked",
+        "modelPath": "/Iphone-17-pro-max-baked-3.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-17-pro-max-baked-fiverr",
+        "name": "Iphone 17 Pro Max Baked Fiver",
+        "modelPath": "/Iphone-17-pro-max-baked-fiverr.glb",
+        "caseColor": null
+      },
+      {
+        "id": "galaxy-s24-ultra",
+        "name": "Samsung Galaxy S24 Ultra",
+        "modelPath": "/galaxy-s24-ultra.glb",
+        "caseColor": null
+      },
+      {
+        "id": "pixel-9-pro",
+        "name": "Google Pixel 9 Pro",
+        "modelPath": "/pixel-9-pro.glb",
+        "caseColor": null
+      },
+      {
+        "id": "pixel-10",
+        "name": "Pixel 10",
+        "modelPath": "/pixel-10-model.glb",
+        "caseColor": null
+      },
+      {
+        "id": "pixel-10-baked",
+        "name": "Pixel 10 Baked",
+        "modelPath": "/pixel-10-model-baked.glb",
+        "caseColor": null
+      }
+    ],
+    "animations": [
+      {
+        "id": "group-ball-turn",
+        "name": "Ball Turn",
+        "categories": [
+          "Slow"
+        ],
+        "priority": 1,
+        "duration": 1.6
+      },
+      {
+        "id": "group-detail-turns",
+        "name": "Detail Turns",
+        "categories": [
+          "Zoom",
+          "Slow"
+        ],
+        "priority": 1,
+        "duration": 1.9
+      },
+      {
+        "id": "group-fly-in-from-top",
+        "name": "Fly in - From top",
+        "categories": [
+          "In",
+          "Fast"
+        ],
+        "priority": 0,
+        "duration": 1.6
+      },
+      {
+        "id": "group-horizontal-reveal",
+        "name": "Horizontal Reveal",
+        "categories": [
+          "Spin",
+          "Fast",
+          "Fancy"
+        ],
+        "priority": 0,
+        "duration": 1.4
+      },
+      {
+        "id": "group-left-entry-in",
+        "name": "Left Entry In",
+        "categories": [
+          "In",
+          "Fast"
+        ],
+        "priority": 2,
+        "duration": 1.3
+      },
+      {
+        "id": "group-six-side-glide-showcase",
+        "name": "Six-Side Glide Showcase",
+        "categories": [
+          "Fancy",
+          "Spin",
+          "In"
+        ],
+        "priority": 2,
+        "duration": 9.4
+      },
+      {
+        "id": "group-pop-out",
+        "name": "Pop out",
+        "categories": [
+          "Slow"
+        ],
+        "priority": 3,
+        "duration": 1.6
+      },
+      {
+        "id": "group-roll-in",
+        "name": "Roll in",
+        "categories": [
+          "Zoom"
+        ],
+        "priority": 3,
+        "duration": 1.4
+      },
+      {
+        "id": "group-center-spin-zoom",
+        "name": "Center Spin Zoom",
+        "categories": [
+          "Spin",
+          "Zoom"
+        ],
+        "priority": 4,
+        "duration": 1.8
+      },
+      {
+        "id": "still",
+        "name": "Still",
+        "categories": [
+          "Slow"
+        ],
+        "priority": 1,
+        "duration": 1
+      },
+      {
+        "id": "group-zoom-top-then-pan-up-tilted",
+        "name": "Zoom Top, Then Pan down",
+        "categories": [
+          "Zoom",
+          "Fast"
+        ],
+        "priority": 4,
+        "duration": 2.4
+      }
+    ]
+  },
+  "glbSha256": "e281ee966cfb475ee022ebeed0832467edd1d57a4f7af4eca666cddd8fc77030"
+}

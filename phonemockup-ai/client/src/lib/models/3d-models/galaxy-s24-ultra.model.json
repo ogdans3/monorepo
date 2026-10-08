@@ -1,0 +1,23 @@
+{
+  "id": "galaxy-s24-ultra",
+  "name": "Samsung Galaxy S24 Ultra",
+  "modelPath": "/galaxy-s24-ultra.glb",
+  "defaultPosition": {
+    "x": 0,
+    "y": 0,
+    "z": 2.769534
+  },
+  "defaultRotation": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "layers": [
+    {
+      "match": "screen",
+      "material": "video",
+      "uv": "planar"
+    }
+  ],
+  "caseColor": null
+}

@@ -1,0 +1,51 @@
+{
+  "device": "iPhone 16 Pro",
+  "body_dimensions_mm": {
+    "width": 71.45,
+    "height": 149.61,
+    "depth": 8.25
+  },
+  "screenshot_pixels": [
+    1206,
+    2622
+  ],
+  "screen_web_mm": [
+    66.56999886035919,
+    144.7317898273468
+  ],
+  "full_bounds_mm": [
+    72.35005950927734,
+    12.63800048828125,
+    149.6790008544922
+  ],
+  "original_origin_shift_mm": [
+    -3.725290298461914e-06,
+    2.0860049724578857,
+    -0.028505921363830566
+  ],
+  "triangles": 94765,
+  "mesh_objects": 73,
+  "glb_bytes": 2039084,
+  "omitted_hidden_or_glass_parts": [
+    "SCREEN_GLASS__Reflection_Overlay",
+    "SCREEN_GLASS__Flat_Coating",
+    "CAM_01_UltraWide_Dark_Optical_Well",
+    "CAM_01_UltraWide_Optical_Baffle_0",
+    "CAM_01_UltraWide_Optical_Baffle_1",
+    "CAM_01_UltraWide_Optical_Baffle_2",
+    "CAM_01_UltraWide_Lens_Element",
+    "CAM_01_UltraWide_Aperture",
+    "CAM_02_Fusion_Dark_Optical_Well",
+    "CAM_02_Fusion_Optical_Baffle_0",
+    "CAM_02_Fusion_Optical_Baffle_1",
+    "CAM_02_Fusion_Optical_Baffle_2",
+    "CAM_02_Fusion_Lens_Element",
+    "CAM_02_Fusion_Aperture",
+    "CAM_03_Telephoto5x_Dark_Optical_Well",
+    "CAM_03_Telephoto5x_Optical_Baffle_0",
+    "CAM_03_Telephoto5x_Optical_Baffle_1",
+    "CAM_03_Telephoto5x_Optical_Baffle_2",
+    "CAM_03_Telephoto5x_Lens_Element",
+    "CAM_03_Telephoto5x_Aperture"
+  ]
+}

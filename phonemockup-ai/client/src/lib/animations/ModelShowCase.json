@@ -1,0 +1,471 @@
+{
+    "id": "group-six-side-glide-showcase",
+    "name": "Six-Side Glide Showcase",
+    "preview": "six-side-glide-showcase.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 2,
+    "categories": [
+        "Fancy",
+        "Spin",
+        "In"
+    ],
+    "animations": [
+        {
+            "id": "anim-intro-in",
+            "name": "Intro Ease In",
+            "start": 0.0,
+            "end": 0.9,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-intro-start",
+                "position": {
+                    "x": 0.63,
+                    "y": 0,
+                    "z": 0.8
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": -20,
+                    "z": 0
+                },
+                "opacity": 0
+            },
+            "endKeyframe": {
+                "id": "kf-intro-end",
+                "position": {
+                    "x": 0.12,
+                    "y": 0.02,
+                    "z": 0.2
+                },
+                "rotation": {
+                    "x": -2,
+                    "y": -10,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-front-glide",
+            "name": "Front Glide",
+            "start": 0.9,
+            "end": 1.7,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-front-start",
+                "position": {
+                    "x": 0.12,
+                    "y": 0.02,
+                    "z": 0.2
+                },
+                "rotation": {
+                    "x": -2,
+                    "y": -10,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-front-end",
+                "position": {
+                    "x": -0.12,
+                    "y": -0.02,
+                    "z": 0.08
+                },
+                "rotation": {
+                    "x": 2,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-front-to-right",
+            "name": "Transition to Right",
+            "start": 1.7,
+            "end": 2.3,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-fr2r-start",
+                "position": {
+                    "x": -0.12,
+                    "y": -0.02,
+                    "z": 0.08
+                },
+                "rotation": {
+                    "x": 2,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-fr2r-end",
+                "position": {
+                    "x": 0.04,
+                    "y": 0.04,
+                    "z": 0.16
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 90,
+                    "z": 2
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-right-glide",
+            "name": "Right Side Glide",
+            "start": 2.3,
+            "end": 3.1,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-right-start",
+                "position": {
+                    "x": 0.04,
+                    "y": 0.04,
+                    "z": 0.16
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 90,
+                    "z": 2
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-right-end",
+                "position": {
+                    "x": -0.04,
+                    "y": -0.04,
+                    "z": 0.1
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 100,
+                    "z": -2
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-right-to-back",
+            "name": "Transition to Back",
+            "start": 3.1,
+            "end": 3.7,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-r2b-start",
+                "position": {
+                    "x": -0.04,
+                    "y": -0.04,
+                    "z": 0.1
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 100,
+                    "z": -2
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-r2b-end",
+                "position": {
+                    "x": 0.06,
+                    "y": 0.02,
+                    "z": 0.18
+                },
+                "rotation": {
+                    "x": 2,
+                    "y": 180,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-back-glide",
+            "name": "Back Glide",
+            "start": 3.7,
+            "end": 4.5,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-back-start",
+                "position": {
+                    "x": 0.06,
+                    "y": 0.02,
+                    "z": 0.18
+                },
+                "rotation": {
+                    "x": 2,
+                    "y": 180,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-back-end",
+                "position": {
+                    "x": -0.06,
+                    "y": -0.02,
+                    "z": 0.1
+                },
+                "rotation": {
+                    "x": -2,
+                    "y": 190,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-back-to-left",
+            "name": "Transition to Left",
+            "start": 4.5,
+            "end": 5.1,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-b2l-start",
+                "position": {
+                    "x": -0.06,
+                    "y": -0.02,
+                    "z": 0.1
+                },
+                "rotation": {
+                    "x": -2,
+                    "y": 190,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-b2l-end",
+                "position": {
+                    "x": 0.04,
+                    "y": 0.04,
+                    "z": 0.16
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 270,
+                    "z": -2
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-left-glide",
+            "name": "Left Side Glide",
+            "start": 5.1,
+            "end": 5.9,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-left-start",
+                "position": {
+                    "x": 0.04,
+                    "y": 0.04,
+                    "z": 0.16
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 270,
+                    "z": -2
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-left-end",
+                "position": {
+                    "x": -0.04,
+                    "y": -0.04,
+                    "z": 0.1
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 260,
+                    "z": 2
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-left-to-top",
+            "name": "Transition to Top",
+            "start": 5.9,
+            "end": 6.5,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-l2t-start",
+                "position": {
+                    "x": -0.04,
+                    "y": -0.04,
+                    "z": 0.1
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 260,
+                    "z": 2
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-l2t-end",
+                "position": {
+                    "x": 0.02,
+                    "y": -0.08,
+                    "z": 0.14
+                },
+                "rotation": {
+                    "x": -90,
+                    "y": 10,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-top-glide",
+            "name": "Top Glide",
+            "start": 6.5,
+            "end": 7.3,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-top-start",
+                "position": {
+                    "x": 0.02,
+                    "y": -0.08,
+                    "z": 0.14
+                },
+                "rotation": {
+                    "x": -90,
+                    "y": 10,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-top-end",
+                "position": {
+                    "x": -0.02,
+                    "y": 0.08,
+                    "z": 0.08
+                },
+                "rotation": {
+                    "x": -100,
+                    "y": -10,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-top-to-bottom",
+            "name": "Transition to Bottom",
+            "start": 7.3,
+            "end": 7.9,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-t2b-start",
+                "position": {
+                    "x": -0.02,
+                    "y": 0.08,
+                    "z": 0.08
+                },
+                "rotation": {
+                    "x": -100,
+                    "y": -10,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-t2b-end",
+                "position": {
+                    "x": 0.02,
+                    "y": -0.08,
+                    "z": 0.14
+                },
+                "rotation": {
+                    "x": 90,
+                    "y": -10,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-bottom-glide",
+            "name": "Bottom Glide",
+            "start": 7.9,
+            "end": 8.7,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-bottom-start",
+                "position": {
+                    "x": 0.02,
+                    "y": -0.08,
+                    "z": 0.14
+                },
+                "rotation": {
+                    "x": 90,
+                    "y": -10,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-bottom-end",
+                "position": {
+                    "x": -0.02,
+                    "y": 0.08,
+                    "z": 0.08
+                },
+                "rotation": {
+                    "x": 100,
+                    "y": 10,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-finale-center",
+            "name": "Return to Center",
+            "start": 8.7,
+            "end": 9.4,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-final-start",
+                "position": {
+                    "x": -0.02,
+                    "y": 0.08,
+                    "z": 0.08
+                },
+                "rotation": {
+                    "x": 100,
+                    "y": 10,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-final-end",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

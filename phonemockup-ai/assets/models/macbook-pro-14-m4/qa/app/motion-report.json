@@ -1,0 +1,328 @@
+{
+  "glbSha256": "533322b023e25da4f03d4a78eaa2cc15b560aa17b031baaca03ba89b01181a0a",
+  "fps": 24,
+  "frames": [
+    {
+      "file": "previews/animation/frame_000.png",
+      "time": 0
+    },
+    {
+      "file": "previews/animation/frame_001.png",
+      "time": 0.041666666666666664
+    },
+    {
+      "file": "previews/animation/frame_002.png",
+      "time": 0.08333333333333333
+    },
+    {
+      "file": "previews/animation/frame_003.png",
+      "time": 0.125
+    },
+    {
+      "file": "previews/animation/frame_004.png",
+      "time": 0.16666666666666666
+    },
+    {
+      "file": "previews/animation/frame_005.png",
+      "time": 0.20833333333333334
+    },
+    {
+      "file": "previews/animation/frame_006.png",
+      "time": 0.25
+    },
+    {
+      "file": "previews/animation/frame_007.png",
+      "time": 0.2916666666666667
+    },
+    {
+      "file": "previews/animation/frame_008.png",
+      "time": 0.3333333333333333
+    },
+    {
+      "file": "previews/animation/frame_009.png",
+      "time": 0.375
+    },
+    {
+      "file": "previews/animation/frame_010.png",
+      "time": 0.4166666666666667
+    },
+    {
+      "file": "previews/animation/frame_011.png",
+      "time": 0.4583333333333333
+    },
+    {
+      "file": "previews/animation/frame_012.png",
+      "time": 0.5
+    },
+    {
+      "file": "previews/animation/frame_013.png",
+      "time": 0.5416666666666666
+    },
+    {
+      "file": "previews/animation/frame_014.png",
+      "time": 0.5833333333333334
+    },
+    {
+      "file": "previews/animation/frame_015.png",
+      "time": 0.625
+    },
+    {
+      "file": "previews/animation/frame_016.png",
+      "time": 0.6666666666666666
+    },
+    {
+      "file": "previews/animation/frame_017.png",
+      "time": 0.7083333333333334
+    },
+    {
+      "file": "previews/animation/frame_018.png",
+      "time": 0.75
+    },
+    {
+      "file": "previews/animation/frame_019.png",
+      "time": 0.7916666666666666
+    },
+    {
+      "file": "previews/animation/frame_020.png",
+      "time": 0.8333333333333334
+    },
+    {
+      "file": "previews/animation/frame_021.png",
+      "time": 0.875
+    },
+    {
+      "file": "previews/animation/frame_022.png",
+      "time": 0.9166666666666666
+    },
+    {
+      "file": "previews/animation/frame_023.png",
+      "time": 0.9583333333333334
+    },
+    {
+      "file": "previews/animation/frame_024.png",
+      "time": 1
+    },
+    {
+      "file": "previews/animation/frame_025.png",
+      "time": 1.0416666666666667
+    },
+    {
+      "file": "previews/animation/frame_026.png",
+      "time": 1.0833333333333333
+    },
+    {
+      "file": "previews/animation/frame_027.png",
+      "time": 1.125
+    },
+    {
+      "file": "previews/animation/frame_028.png",
+      "time": 1.1666666666666667
+    },
+    {
+      "file": "previews/animation/frame_029.png",
+      "time": 1.2083333333333333
+    },
+    {
+      "file": "previews/animation/frame_030.png",
+      "time": 1.25
+    },
+    {
+      "file": "previews/animation/frame_031.png",
+      "time": 1.2916666666666667
+    },
+    {
+      "file": "previews/animation/frame_032.png",
+      "time": 1.3333333333333333
+    },
+    {
+      "file": "previews/animation/frame_033.png",
+      "time": 1.375
+    },
+    {
+      "file": "previews/animation/frame_034.png",
+      "time": 1.4166666666666667
+    },
+    {
+      "file": "previews/animation/frame_035.png",
+      "time": 1.4583333333333333
+    },
+    {
+      "file": "previews/animation/frame_036.png",
+      "time": 1.5
+    },
+    {
+      "file": "previews/animation/frame_037.png",
+      "time": 1.5416666666666667
+    },
+    {
+      "file": "previews/animation/frame_038.png",
+      "time": 1.5833333333333333
+    },
+    {
+      "file": "previews/animation/frame_039.png",
+      "time": 1.625
+    },
+    {
+      "file": "previews/animation/frame_040.png",
+      "time": 1.6666666666666667
+    },
+    {
+      "file": "previews/animation/frame_041.png",
+      "time": 1.7083333333333333
+    },
+    {
+      "file": "previews/animation/frame_042.png",
+      "time": 1.75
+    },
+    {
+      "file": "previews/animation/frame_043.png",
+      "time": 1.7916666666666667
+    },
+    {
+      "file": "previews/animation/frame_044.png",
+      "time": 1.8333333333333333
+    },
+    {
+      "file": "previews/animation/frame_045.png",
+      "time": 1.875
+    },
+    {
+      "file": "previews/animation/frame_046.png",
+      "time": 1.9166666666666667
+    },
+    {
+      "file": "previews/animation/frame_047.png",
+      "time": 1.9583333333333333
+    },
+    {
+      "file": "previews/animation/frame_048.png",
+      "time": 2
+    },
+    {
+      "file": "previews/animation/frame_049.png",
+      "time": 2.0416666666666665
+    },
+    {
+      "file": "previews/animation/frame_050.png",
+      "time": 2.0833333333333335
+    },
+    {
+      "file": "previews/animation/frame_051.png",
+      "time": 2.125
+    },
+    {
+      "file": "previews/animation/frame_052.png",
+      "time": 2.1666666666666665
+    },
+    {
+      "file": "previews/animation/frame_053.png",
+      "time": 2.2083333333333335
+    },
+    {
+      "file": "previews/animation/frame_054.png",
+      "time": 2.25
+    },
+    {
+      "file": "previews/animation/frame_055.png",
+      "time": 2.2916666666666665
+    },
+    {
+      "file": "previews/animation/frame_056.png",
+      "time": 2.3333333333333335
+    },
+    {
+      "file": "previews/animation/frame_057.png",
+      "time": 2.375
+    },
+    {
+      "file": "previews/animation/frame_058.png",
+      "time": 2.4166666666666665
+    },
+    {
+      "file": "previews/animation/frame_059.png",
+      "time": 2.4583333333333335
+    },
+    {
+      "file": "previews/animation/frame_060.png",
+      "time": 2.5
+    },
+    {
+      "file": "previews/animation/frame_061.png",
+      "time": 2.5416666666666665
+    },
+    {
+      "file": "previews/animation/frame_062.png",
+      "time": 2.5833333333333335
+    },
+    {
+      "file": "previews/animation/frame_063.png",
+      "time": 2.625
+    },
+    {
+      "file": "previews/animation/frame_064.png",
+      "time": 2.6666666666666665
+    },
+    {
+      "file": "previews/animation/frame_065.png",
+      "time": 2.7083333333333335
+    },
+    {
+      "file": "previews/animation/frame_066.png",
+      "time": 2.75
+    },
+    {
+      "file": "previews/animation/frame_067.png",
+      "time": 2.7916666666666665
+    },
+    {
+      "file": "previews/animation/frame_068.png",
+      "time": 2.8333333333333335
+    },
+    {
+      "file": "previews/animation/frame_069.png",
+      "time": 2.875
+    },
+    {
+      "file": "previews/animation/frame_070.png",
+      "time": 2.9166666666666665
+    },
+    {
+      "file": "previews/animation/frame_071.png",
+      "time": 2.9583333333333335
+    }
+  ],
+  "angles": [
+    {
+      "file": "qa/app/lid-000.png",
+      "angle": 0
+    },
+    {
+      "file": "qa/app/lid-015.png",
+      "angle": 15
+    },
+    {
+      "file": "qa/app/lid-030.png",
+      "angle": 30
+    },
+    {
+      "file": "qa/app/lid-060.png",
+      "angle": 60
+    },
+    {
+      "file": "qa/app/lid-090.png",
+      "angle": 90
+    },
+    {
+      "file": "qa/app/lid-105.png",
+      "angle": 105
+    },
+    {
+      "file": "qa/app/lid-120.png",
+      "angle": 120
+    },
+    {
+      "file": "qa/app/lid-130.png",
+      "angle": 130
+    }
+  ]
+}

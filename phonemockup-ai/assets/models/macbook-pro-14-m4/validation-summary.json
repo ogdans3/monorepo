@@ -1,0 +1,133 @@
+{
+  "device": "MacBook Pro 14-inch M4 (2024), Silver, US ANSI",
+  "all_passed": true,
+  "files": [
+    {
+      "file": "client/static/macbook-pro-14-m4.glb",
+      "bytes": 3137632,
+      "sha256": "533322b023e25da4f03d4a78eaa2cc15b560aa17b031baaca03ba89b01181a0a"
+    },
+    {
+      "file": "assets/models/macbook-pro-14-m4/macbook-pro-14-m4-studio.blend",
+      "bytes": 1022471,
+      "sha256": "2c36d5898bd43a19f1dfbe60167ee96a0bd10132ba822b313970423afb62a380"
+    },
+    {
+      "file": "assets/models/macbook-pro-14-m4/macbook-pro-14-m4-web.blend",
+      "bytes": 1186810,
+      "sha256": "5dcd4c5c5abb83df0efe4813b9e3ae33aab416b7406feef47083a198ab6dbf55"
+    },
+    {
+      "file": "assets/models/macbook-pro-14-m4/macbook-pro-14-m4-animated.glb",
+      "bytes": 3141624,
+      "sha256": "ac704b059fecf7354a6bad3310fa0f1e8763e484f179d7df784edfa8a0a7ceb5"
+    }
+  ],
+  "geometry_checks_passed": 52,
+  "triangles": 97670,
+  "mesh_objects": 62,
+  "hinge_range_degrees": [
+    0,
+    130
+  ],
+  "collision_checked_angles": [
+    0,
+    5,
+    10,
+    15,
+    20,
+    25,
+    30,
+    35,
+    40,
+    45,
+    50,
+    55,
+    60,
+    65,
+    70,
+    75,
+    80,
+    85,
+    90,
+    95,
+    100,
+    105,
+    110,
+    115,
+    120,
+    125,
+    130
+  ],
+  "browser_tests": {
+    "passed": 3,
+    "failed": 0,
+    "interior_screen_samples": 1900
+  },
+  "app_render_checks": {
+    "total": 130,
+    "catalog_models": 16,
+    "presets": 11,
+    "errors": []
+  },
+  "opening_animation": {
+    "rendered_frames": 72,
+    "static_angles": [
+      0,
+      15,
+      30,
+      60,
+      90,
+      105,
+      120,
+      130
+    ],
+    "mp4_seconds": 6,
+    "mp4_fps": 24,
+    "gif_frames": 96
+  },
+  "builds": {
+    "client": "passed",
+    "mcp": "passed",
+    "production_glb_matches": true,
+    "svelte_check_errors": 0,
+    "svelte_check_preexisting_warnings": 8
+  },
+  "reference_verification": {
+    "main_angles": [
+      "front",
+      "back",
+      "left",
+      "right",
+      "top",
+      "bottom"
+    ],
+    "side_port_positions": "Apple source image calibration, tolerance 0.65 mm",
+    "physical_openings": "All seven actual chassis openings raycast in the exported GLB",
+    "limit": "Primary enclosure and panel dimensions follow Apple specifications. Secondary dimensions and hinge working range are reference-derived estimates, not certified factory CAD.",
+    "profile_max_errors_mm": {
+      "apple_lower_silhouette": 0.25987976108411726,
+      "apple_front_silhouette": 0.49534681036810646
+    },
+    "open_lid_heights_mm": {
+      "actual_mm": [
+        3.800004720687866,
+        225.00000149011612
+      ],
+      "reference_mm": [
+        3.7310843373493974,
+        225.46409638554215
+      ],
+      "tolerance_mm": 0.75
+    },
+    "foot_positions_match": true,
+    "rig_has_no_shear_or_nonuniform_scale": true,
+    "lid_centring_verified": true,
+    "minimum_table_clearance_mm": 0.3928765654563904,
+    "revision_report": "qa/profile-revision.json"
+  },
+  "camera_projection": {
+    "examples": "65 mm perspective",
+    "measurement_views": "orthographic"
+  }
+}

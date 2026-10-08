@@ -1,0 +1,33 @@
+{
+  "device": "Google Pixel 9 Pro \u2014 Porcelain",
+  "body_dimensions_mm": {
+    "width": 72.0,
+    "height": 152.8,
+    "depth": 8.5
+  },
+  "native_pixels": [
+    1280,
+    2856
+  ],
+  "screen_mm": [
+    65.8000037074089,
+    146.81625366210938
+  ],
+  "full_bounds_mm": [
+    72.33799743652344,
+    12.169499397277832,
+    152.9320068359375
+  ],
+  "origin_shift_mm": [
+    0.16100145876407623,
+    1.7247546911239624,
+    -0.01800060272216797
+  ],
+  "triangles": 79227,
+  "mesh_objects": 62,
+  "glb_bytes": 1607544,
+  "omitted_studio_coatings": [
+    "front_reflection_coating",
+    "rear_optical_reflection"
+  ]
+}

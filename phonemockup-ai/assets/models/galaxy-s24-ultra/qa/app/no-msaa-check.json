@@ -1,0 +1,15 @@
+{
+  "glb_sha256": "e281ee966cfb475ee022ebeed0832467edd1d57a4f7af4eca666cddd8fc77030",
+  "antialias": false,
+  "roi": [
+    150,
+    210,
+    450,
+    730
+  ],
+  "images": {
+    "front-no-msaa.png": "2ba4c6bc780e72f684f147f96fc71bf0e98fee04eed2978125c6d36cd5d54209",
+    "recolour-no-msaa.png": "bb3e4b9a57ff73462c9917bc4a7ba2a25ccd937d7e035e28e3cee15921406fa3"
+  },
+  "screen_exact": true
+}

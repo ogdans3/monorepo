@@ -1,0 +1,51 @@
+{
+    "id": "group-horizontal-reveal",
+    "name": "Horizontal Reveal",
+    "preview": "horizontal-reveal.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 0,
+    "categories": [
+        "Spin",
+        "Fast",
+        "Fancy"
+    ],
+    "animations": [
+        {
+            "id": "anim-horizontal-spin-reveal",
+            "name": "Horizontal Spin Reveal",
+            "start": 0,
+            "end": 1.4,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-base",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.6
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -90
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-end",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": -360,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

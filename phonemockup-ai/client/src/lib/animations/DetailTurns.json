@@ -1,0 +1,85 @@
+{
+    "id": "group-detail-turns",
+    "name": "Detail Turns",
+    "preview": "detail-turns.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 1,
+    "categories": [
+        "Zoom",
+        "Slow"
+    ],
+    "animations": [
+        {
+            "id": "anim-turn-to-edge",
+            "name": "Turn to Edge",
+            "start": 0,
+            "end": 1.2,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-front",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.08
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 24,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-edge",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.08
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": -24,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-settle-center",
+            "name": "Settle Center",
+            "start": 1.2,
+            "end": 1.9,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-edge-start",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.08
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": -24,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-end",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

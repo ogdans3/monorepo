@@ -1,0 +1,14 @@
+*.blend1
+previews/*_draft.png
+qa/app/models/
+qa/app/presets/
+qa/app/front-4k.png
+references/*.html
+references/review-image-links.json
+references/gigazine-*.jpg
+references/Pixel-*.jpg
+references/google-pixel-*.jpg
+references/google-design-camera.webp
+
+__pycache__/
+*.pyc

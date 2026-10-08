@@ -1,0 +1,29 @@
+{
+  "device": "Samsung Galaxy S24 Ultra \u2014 Titanium Gray",
+  "glb_sha256": "e281ee966cfb475ee022ebeed0832467edd1d57a4f7af4eca666cddd8fc77030",
+  "glb_bytes": 1743512,
+  "studio_bytes": 1085719,
+  "web_source_bytes": 618134,
+  "glb_checks": 32,
+  "glb_checks_passed": true,
+  "reference_checks": 27,
+  "reference_checks_passed": true,
+  "app": {
+    "screen_156000_pixels_unchanged_by_case_colour": false,
+    "screen_changed_pixels_with_msaa": 1,
+    "screen_unchanged_fraction_with_msaa": 0.9999935897435898,
+    "portrait_4k_pixels": [
+      2160,
+      3840
+    ],
+    "screen_check_passed": true,
+    "no_msaa_hash_matches": true,
+    "screen_without_msaa_exact": true,
+    "msaa_tolerance_note": "SwiftShader MSAA may show one isolated pixel of an occluded rear ring. Strict comparison without MSAA must be exact; MSAA permits at most 1/156000 differing pixels. This is reported, not silently treated as pixel equality.",
+    "glb_hash_matches": true,
+    "no_renderer_errors": true,
+    "render_count": 129,
+    "preset_count": 11,
+    "preset_frames": 109
+  }
+}

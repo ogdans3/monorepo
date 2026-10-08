@@ -1,0 +1,347 @@
+{
+  "specs": {
+    "page": "https://support.apple.com/en-us/121552",
+    "images": [
+      {
+        "url": "https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/mbp14-m4-2024.png",
+        "alt": "mbp14-m4-2024"
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/charging-expansion-en-2.png",
+        "alt": "charging-expansion-en-2"
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/charging-expansion-en-1.png",
+        "alt": "charging-expansion-en-1"
+      }
+    ]
+  },
+  "display": {
+    "page": "https://support.apple.com/en-gb/120767",
+    "images": [
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Locator.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Hang_Start.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Cowlings_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Flex_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Flex_Clips_Lift-1.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_120768_Display_Flex_Bumpers_Remove_Lift.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_LAS_Cowling_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_LAS_Flex_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Screws_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Lift.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Lower.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Lower_A.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/screws/923-11152.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Screws_Replace.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Align_Side.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Screws_Tighten.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Flex_Bumpers_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Flex_Bumpers.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Bumpers_Closeup.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Cable_Back.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Flex_Clips_Lift.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Flex_Replace.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/103928/923-06854.jpg",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_Cowlings_Replace.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_LAS_Flex_Replace.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/103928/923-06854.jpg",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120767/120767_Display_LAS_Cowling_Replace.png",
+        "alt": ""
+      }
+    ]
+  },
+  "keyboard": {
+    "page": "https://support.apple.com/en-gb/120779",
+    "images": [
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120779/120779_TopCase_Locator.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120779/120779_TopCase_Annotations.png",
+        "alt": ""
+      }
+    ]
+  },
+  "bottom": {
+    "page": "https://support.apple.com/en-gb/120759",
+    "images": [
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Locator.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Screws_Remove_Top.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Screws_Remove_Bottom.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Left_Down.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Left_Up.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Left_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Right_Down.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Right_Up.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Right_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Middle_Down.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Middle_Up.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Suction_Cup_Middle_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Locator.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Battery_Cover_Install.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Locator_Batt_Cover_On.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_Battery_Cover_Press.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_BMU_Flex_Connector_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BMU_Flex_Cable_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_TP_Cowling_Screws_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_TP_Flex_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_BMU_Flex_Cable_Lift.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_BMU_Screw_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/ssr/mbp-16-2021-j316/100570-screws/923-06849.jpg",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_BMU_Screw_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_TP_Flex_Replace.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/ssr/mbp-16-2021-j316/100570-screws/923-06851.jpg",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_TP_Cowling_Screws_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BMU_Flex_Cable_Replace.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_BMU_Flex_Connector_Replace.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Flex_Cables_Press.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Battery_Cover_Remove.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Ajar.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Reshoot_Install.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Internal_Clips_Bottom_Case.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Reshoot_Lift_For_Gap.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Press_Clips.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Press_Clips_B.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/screws/923-10122.jpg",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Screws_Replace_Top.png",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/screws/923-10123.jpg",
+        "alt": ""
+      },
+      {
+        "url": "https://cdsassets.apple.com/live/SZLF0YNV/service-documentation/macbook-pro/120759/120759_BC_Screws_Remove_Bottom.png",
+        "alt": ""
+      }
+    ]
+  },
+  "store": {
+    "page": "https://www.apple.com/shop/product/fw2x3ll/a/",
+    "images": [
+      {
+        "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502?wid=76&hei=76&fmt=jpeg&qlt=90&.v=WjJGMFJHUEgwNFoydzVmZ0IxN1AvTXExTVkrVjUvZnVYc2Z5Vld3SUljUzR6YmQ2a0c2T2tHUWFLanhWTUdqbEJkRlpCNVhYU3AwTldRQldlSnpRa0NiREJPY2VPL3kwREdZblNNU1piYU0",
+        "alt": "14-inch MacBook Pro laptop, strikingly thin profile, ports on left and right sides, silver colour"
+      },
+      {
+        "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502_AV1?wid=76&hei=76&fmt=jpeg&qlt=90&.v=WjJGMFJHUEgwNFoydzVmZ0IxN1AvQkdpNnl3ZkVod2xIVXNPRWZxTy9OcDQvUjVDcjJDb1VvbkIzUC9CR0Q3dDE1UUxLT2t0cW42N3FvQzVqaGhrVVNDczNaZkxYaGtNSzZWNTlWUDdKUkYrYWpGdS9XeFgvbS9ITnNYOEhYaG4",
+        "alt": "MacBook Pro ports. Left side has MagSafe 3 and two Thunderbolt ports, headphone jack. Right side has SDXC card slot, Thunderbolt port, HDMI port."
+      },
+      {
+        "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502_AV2?wid=76&hei=76&fmt=jpeg&qlt=90&.v=WjJGMFJHUEgwNFoydzVmZ0IxN1AvQkdpNnl3ZkVod2xIVXNPRWZxTy9Ob2FrSFU4SVVtcTR3VWdUcDRRalZIQTE1UUxLT2t0cW42N3FvQzVqaGhrVWFEZDMzNTMwb1FxbXB6OVpWQTFkdjErYWpGdS9XeFgvbS9ITnNYOEhYaG4",
+        "alt": "14-inch MacBook Pro laptops, side exteriors, silver colour, closed, right side ports: SDXC card slot, Thunderbolt 4, HDMI, left side ports: MagSafe 3, two Thunderbolt 4, headphone jack"
+      },
+      {
+        "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502_AV3?wid=76&hei=76&fmt=jpeg&qlt=90&.v=WjJGMFJHUEgwNFoydzVmZ0IxN1AvQkdpNnl3ZkVod2xIVXNPRWZxTy9OcGpEVjZsN09NMU9EZkxlekxXWldBWjE1UUxLT2t0cW42N3FvQzVqaGhrVVd1bFZ5ZkEzL0dMNWVoQUxxNEJzNjUrYWpGdS9XeFgvbS9ITnNYOEhYaG4",
+        "alt": "14-inch MacBook Pro, front, closed, notch for opening, silver colour"
+      },
+      {
+        "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502_AV4?wid=76&hei=76&fmt=jpeg&qlt=90&.v=WjJGMFJHUEgwNFoydzVmZ0IxN1AvQkdpNnl3ZkVod2xIVXNPRWZxTy9OcXBvK2JheG43Y3pTOHRmRkRINjRFcjE1UUxLT2t0cW42N3FvQzVqaGhrVVFTVGRRbkw5MzJCYUpJdkN2dGxZVUIrYWpGdS9XeFgvbS9ITnNYOEhYaG4",
+        "alt": "14-inch MacBook Pro, top, rounded edges, Apple logo in centre of lid, silver colour"
+      },
+      {
+        "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502_AV5?wid=76&hei=76&fmt=jpeg&qlt=90&.v=WjJGMFJHUEgwNFoydzVmZ0IxN1AvQkdpNnl3ZkVod2xIVXNPRWZxTy9OclIxTjdlcG1CdGFSOWNVb1M5T2hNQzE1UUxLT2t0cW42N3FvQzVqaGhrVVpVaGlneVh6ZjRoT0FrMmFGYXp2NnQrYWpGdS9XeFgvbS9ITnNYOEhYaG4",
+        "alt": "White shipping box, top exterior, text reads, MacBook Pro, Apple Certified Refurbished"
+      },
+      {
+        "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/refurb-mbp14-m4-silver-202502?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=WjJGMFJHUEgwNFoydzVmZ0IxN1AvTXExTVkrVjUvZnVYc2Z5Vld3SUljVGRxTENLaEJiU0o5a1FqaDFsUHhYNjE1UUxLT2t0cW42N3FvQzVqaGhrVVlxMHRBVkNrN2d0ZWpuU3Nvbi8rL1IrYWpGdS9XeFgvbS9ITnNYOEhYaG4",
+        "alt": "14-inch MacBook Pro laptop, strikingly thin profile, ports on left and right sides, silver colour"
+      }
+    ]
+  }
+}

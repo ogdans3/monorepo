@@ -1,0 +1,37 @@
+{
+  "device": "Samsung Galaxy S24 Ultra \u2014 Titanium Gray",
+  "body_dimensions_mm": {
+    "width": 79.0,
+    "height": 162.3,
+    "depth": 8.6
+  },
+  "native_pixels": [
+    1440,
+    3120
+  ],
+  "screen_mm": [
+    72.28753715753555,
+    156.6229909658432
+  ],
+  "full_bounds_mm": [
+    79.33699798583984,
+    10.772500038146973,
+    162.38450622558594
+  ],
+  "origin_shift_mm": [
+    0.16150064766407013,
+    0.9762556552886963,
+    -0.03525242209434509
+  ],
+  "triangles": 85094,
+  "mesh_objects": 70,
+  "glb_bytes": 1743512,
+  "omitted_studio_coatings": [
+    "front_reflection_coating",
+    "optical_reflection_ultrawide",
+    "optical_reflection_wide",
+    "optical_reflection_telephoto_5x",
+    "optical_reflection_telephoto_3x",
+    "optical_reflection_laser_af"
+  ]
+}

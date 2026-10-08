@@ -1,0 +1,120 @@
+{
+    "id": "group-left-entry-in",
+    "name": "Left Entry In",
+    "preview": "left-entry-in.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 2,
+    "categories": [
+        "In",
+        "Fast"
+    ],
+    "animations": [
+        {
+            "id": "anim-left-in",
+            "name": "Slide In From Left",
+            "start": 0,
+            "end": 0.45,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-off-left",
+                "position": {
+                    "x": -0.63,
+                    "y": 0,
+                    "z": 0.62
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-enter",
+                "position": {
+                    "x": -0.06,
+                    "y": 0,
+                    "z": 0.06
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-soft-overshoot",
+            "name": "Soft Overshoot Right",
+            "start": 0.45,
+            "end": 0.95,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-enter-start",
+                "position": {
+                    "x": -0.06,
+                    "y": 0,
+                    "z": 0.06
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-overshoot",
+                "position": {
+                    "x": 0.08,
+                    "y": 0,
+                    "z": 0.04
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-settle-center",
+            "name": "Settle Center",
+            "start": 0.95,
+            "end": 1.3,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-overshoot-start",
+                "position": {
+                    "x": 0.08,
+                    "y": 0,
+                    "z": 0.04
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-end",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

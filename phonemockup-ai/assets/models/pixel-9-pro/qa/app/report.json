@@ -1,0 +1,1204 @@
+{
+  "modelId": "pixel-9-pro",
+  "renderer": "shared SceneRenderer / MCP RenderSession / Chromium SwiftShader",
+  "renders": [
+    {
+      "file": "models/test-phone-1.png",
+      "bytes": 62798,
+      "modelId": "test-phone-1",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-1.png",
+      "bytes": 59300,
+      "modelId": "iphone-test-phone-1",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-3.png",
+      "bytes": 74229,
+      "modelId": "iphone-test-phone-3",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-3-1.png",
+      "bytes": 70771,
+      "modelId": "iphone-test-phone-3-1",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-3-2.png",
+      "bytes": 81495,
+      "modelId": "iphone-test-phone-3-2",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-16-pro.png",
+      "bytes": 76974,
+      "modelId": "iphone-16-pro",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-17-1.png",
+      "bytes": 63533,
+      "modelId": "iphone-test-phone-17-1",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-test-phone-17-1-white.png",
+      "bytes": 64752,
+      "modelId": "iphone-test-phone-17-1-white",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-17-pro-max.png",
+      "bytes": 70690,
+      "modelId": "iphone-17-pro-max",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-17-pro-max-baked.png",
+      "bytes": 74890,
+      "modelId": "iphone-17-pro-max-baked",
+      "kind": "still"
+    },
+    {
+      "file": "models/iphone-17-pro-max-baked-fiverr.png",
+      "bytes": 70710,
+      "modelId": "iphone-17-pro-max-baked-fiverr",
+      "kind": "still"
+    },
+    {
+      "file": "models/pixel-9-pro.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "kind": "still"
+    },
+    {
+      "file": "models/pixel-10.png",
+      "bytes": 103561,
+      "modelId": "pixel-10",
+      "kind": "still"
+    },
+    {
+      "file": "models/pixel-10-baked.png",
+      "bytes": 77303,
+      "modelId": "pixel-10-baked",
+      "kind": "still"
+    },
+    {
+      "file": "presets/group-ball-turn/0.00000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.25000.png",
+      "bytes": 79106,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 0.25,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.40000.png",
+      "bytes": 40782,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 0.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.50000.png",
+      "bytes": 39065,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 0.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.75000.png",
+      "bytes": 35901,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 0.75,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/0.80000.png",
+      "bytes": 40019,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 0.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/1.00000.png",
+      "bytes": 49055,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/1.20000.png",
+      "bytes": 50103,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/1.30000.png",
+      "bytes": 45233,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 1.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-ball-turn/1.60000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-ball-turn",
+      "time": 1.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/0.00000.png",
+      "bytes": 93957,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-detail-turns",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/0.47500.png",
+      "bytes": 89618,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-detail-turns",
+      "time": 0.475,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/0.60000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-detail-turns",
+      "time": 0.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/0.95000.png",
+      "bytes": 90562,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-detail-turns",
+      "time": 0.95,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/1.20000.png",
+      "bytes": 89260,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-detail-turns",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/1.42500.png",
+      "bytes": 90508,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-detail-turns",
+      "time": 1.425,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/1.55000.png",
+      "bytes": 88888,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-detail-turns",
+      "time": 1.55,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-detail-turns/1.90000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-detail-turns",
+      "time": 1.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.00000.png",
+      "bytes": 8302,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.27500.png",
+      "bytes": 27670,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.275,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.40000.png",
+      "bytes": 36145,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.55000.png",
+      "bytes": 95587,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.55,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.77500.png",
+      "bytes": 109633,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.775,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/0.80000.png",
+      "bytes": 108450,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 0.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/1.00000.png",
+      "bytes": 103040,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/1.20000.png",
+      "bytes": 99118,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/1.30000.png",
+      "bytes": 91345,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 1.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-fly-in-from-top/1.60000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-fly-in-from-top",
+      "time": 1.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/0.00000.png",
+      "bytes": 57656,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-horizontal-reveal",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/0.35000.png",
+      "bytes": 194679,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-horizontal-reveal",
+      "time": 0.35,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/0.70000.png",
+      "bytes": 43810,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-horizontal-reveal",
+      "time": 0.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/1.05000.png",
+      "bytes": 131947,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-horizontal-reveal",
+      "time": 1.05,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-horizontal-reveal/1.40000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-horizontal-reveal",
+      "time": 1.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.00000.png",
+      "bytes": 33136,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.22500.png",
+      "bytes": 58292,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 0.225,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.32500.png",
+      "bytes": 70569,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 0.325,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.45000.png",
+      "bytes": 67351,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 0.45,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.65000.png",
+      "bytes": 68330,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 0.65,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.70000.png",
+      "bytes": 68086,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 0.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.95000.png",
+      "bytes": 68726,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 0.95,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/0.97500.png",
+      "bytes": 69678,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 0.975,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/1.12500.png",
+      "bytes": 67367,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 1.125,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-left-entry-in/1.30000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-left-entry-in",
+      "time": 1.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/0.00000.png",
+      "bytes": 42042,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/0.45000.png",
+      "bytes": 86586,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 0.45,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/0.90000.png",
+      "bytes": 106828,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/1.30000.png",
+      "bytes": 89191,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 1.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/1.70000.png",
+      "bytes": 74226,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 1.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/2.00000.png",
+      "bytes": 108332,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/2.30000.png",
+      "bytes": 32051,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 2.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/2.35000.png",
+      "bytes": 32031,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 2.35,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/2.70000.png",
+      "bytes": 37594,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 2.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/3.10000.png",
+      "bytes": 43439,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 3.1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/3.40000.png",
+      "bytes": 52699,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 3.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/3.70000.png",
+      "bytes": 39697,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 3.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/4.10000.png",
+      "bytes": 48802,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 4.1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/4.50000.png",
+      "bytes": 49467,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 4.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/4.70000.png",
+      "bytes": 48668,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 4.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/4.80000.png",
+      "bytes": 56550,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 4.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/5.10000.png",
+      "bytes": 30713,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 5.1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/5.50000.png",
+      "bytes": 42797,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 5.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/5.90000.png",
+      "bytes": 48883,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 5.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/6.20000.png",
+      "bytes": 55448,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 6.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/6.50000.png",
+      "bytes": 61259,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 6.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/6.90000.png",
+      "bytes": 42225,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 6.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/7.05000.png",
+      "bytes": 48962,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 7.05,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/7.30000.png",
+      "bytes": 48585,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 7.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/7.60000.png",
+      "bytes": 107072,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 7.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/7.90000.png",
+      "bytes": 58042,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 7.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/8.30000.png",
+      "bytes": 33942,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 8.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/8.70000.png",
+      "bytes": 53594,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 8.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/9.05000.png",
+      "bytes": 110138,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 9.05,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-six-side-glide-showcase/9.40000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-six-side-glide-showcase",
+      "time": 9.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.00000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.30000.png",
+      "bytes": 71746,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 0.3,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.40000.png",
+      "bytes": 75009,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 0.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.60000.png",
+      "bytes": 76746,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 0.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.80000.png",
+      "bytes": 71746,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 0.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/0.90000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/1.20000.png",
+      "bytes": 59123,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/1.40000.png",
+      "bytes": 57834,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 1.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-pop-out/1.60000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-pop-out",
+      "time": 1.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.00000.png",
+      "bytes": 37981,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.25000.png",
+      "bytes": 90260,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 0.25,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.35000.png",
+      "bytes": 102562,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 0.35,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.50000.png",
+      "bytes": 124518,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 0.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.70000.png",
+      "bytes": 118089,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 0.7,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/0.90000.png",
+      "bytes": 60145,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/1.05000.png",
+      "bytes": 61630,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 1.05,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/1.15000.png",
+      "bytes": 64214,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 1.15,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-roll-in/1.40000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-roll-in",
+      "time": 1.4,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/0.00000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-center-spin-zoom",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/0.45000.png",
+      "bytes": 32480,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-center-spin-zoom",
+      "time": 0.45,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/0.90000.png",
+      "bytes": 54351,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-center-spin-zoom",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/1.35000.png",
+      "bytes": 33751,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-center-spin-zoom",
+      "time": 1.35,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-center-spin-zoom/1.80000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-center-spin-zoom",
+      "time": 1.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/0.00000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "still",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/0.25000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "still",
+      "time": 0.25,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/0.50000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "still",
+      "time": 0.5,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/0.75000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "still",
+      "time": 0.75,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/still/1.00000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "still",
+      "time": 1,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/0.00000.png",
+      "bytes": 65310,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 0,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/0.45000.png",
+      "bytes": 90658,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 0.45,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/0.60000.png",
+      "bytes": 91552,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 0.6,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/0.90000.png",
+      "bytes": 78963,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 0.9,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/1.20000.png",
+      "bytes": 91019,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 1.2,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/1.65000.png",
+      "bytes": 149887,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 1.65,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/1.80000.png",
+      "bytes": 156318,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 1.8,
+      "kind": "preset"
+    },
+    {
+      "file": "presets/group-zoom-top-then-pan-up-tilted/2.40000.png",
+      "bytes": 124483,
+      "modelId": "pixel-9-pro",
+      "animationId": "group-zoom-top-then-pan-up-tilted",
+      "time": 2.4,
+      "kind": "preset"
+    },
+    {
+      "file": "front.png",
+      "bytes": 91978,
+      "modelId": "pixel-9-pro",
+      "kind": "front",
+      "width": 600,
+      "height": 900
+    },
+    {
+      "file": "landscape.png",
+      "bytes": 93493,
+      "modelId": "pixel-9-pro",
+      "kind": "landscape",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "file": "glass-reflections.png",
+      "bytes": 124524,
+      "modelId": "pixel-9-pro",
+      "kind": "glass-reflections",
+      "width": 600,
+      "height": 900,
+      "glassReflections": true
+    },
+    {
+      "file": "recolour.png",
+      "bytes": 89427,
+      "modelId": "pixel-9-pro",
+      "kind": "recolour",
+      "width": 600,
+      "height": 900,
+      "caseColor": "#2765df"
+    },
+    {
+      "file": "front-4k.png",
+      "bytes": 592577,
+      "modelId": "pixel-9-pro",
+      "kind": "front-4k",
+      "width": 2160,
+      "height": 3840
+    }
+  ],
+  "errors": [],
+  "catalog": {
+    "models": [
+      {
+        "id": "test-phone-1",
+        "name": "Test phone",
+        "modelPath": "/iphone.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-1",
+        "name": "Iphone test 2",
+        "modelPath": "/iphone-2.1.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-3",
+        "name": "Iphone test 3",
+        "modelPath": "/iphone-3.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-3-1",
+        "name": "Iphone test 3.1",
+        "modelPath": "/iphone-3.1.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-3-2",
+        "name": "Iphone test 3.2",
+        "modelPath": "/iphone-3.2.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-16-pro",
+        "name": "iPhone 16 Pro",
+        "modelPath": "/iphone-16-pro.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-17-1",
+        "name": "Iphone 17.1",
+        "modelPath": "/iphone17.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-test-phone-17-1-white",
+        "name": "Iphone 17.1 white",
+        "modelPath": "/iphone-17-white.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-17-pro-max",
+        "name": "Iphone 17 Pro Max",
+        "modelPath": "/Iphone-17-pro-max.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-17-pro-max-baked",
+        "name": "Iphone 17 Pro Max Baked",
+        "modelPath": "/Iphone-17-pro-max-baked-3.glb",
+        "caseColor": null
+      },
+      {
+        "id": "iphone-17-pro-max-baked-fiverr",
+        "name": "Iphone 17 Pro Max Baked Fiver",
+        "modelPath": "/Iphone-17-pro-max-baked-fiverr.glb",
+        "caseColor": null
+      },
+      {
+        "id": "pixel-9-pro",
+        "name": "Google Pixel 9 Pro",
+        "modelPath": "/pixel-9-pro.glb",
+        "caseColor": null
+      },
+      {
+        "id": "pixel-10",
+        "name": "Pixel 10",
+        "modelPath": "/pixel-10-model.glb",
+        "caseColor": null
+      },
+      {
+        "id": "pixel-10-baked",
+        "name": "Pixel 10 Baked",
+        "modelPath": "/pixel-10-model-baked.glb",
+        "caseColor": null
+      }
+    ],
+    "animations": [
+      {
+        "id": "group-ball-turn",
+        "name": "Ball Turn",
+        "categories": [
+          "Slow"
+        ],
+        "priority": 1,
+        "duration": 1.6
+      },
+      {
+        "id": "group-detail-turns",
+        "name": "Detail Turns",
+        "categories": [
+          "Zoom",
+          "Slow"
+        ],
+        "priority": 1,
+        "duration": 1.9
+      },
+      {
+        "id": "group-fly-in-from-top",
+        "name": "Fly in - From top",
+        "categories": [
+          "In",
+          "Fast"
+        ],
+        "priority": 0,
+        "duration": 1.6
+      },
+      {
+        "id": "group-horizontal-reveal",
+        "name": "Horizontal Reveal",
+        "categories": [
+          "Spin",
+          "Fast",
+          "Fancy"
+        ],
+        "priority": 0,
+        "duration": 1.4
+      },
+      {
+        "id": "group-left-entry-in",
+        "name": "Left Entry In",
+        "categories": [
+          "In",
+          "Fast"
+        ],
+        "priority": 2,
+        "duration": 1.3
+      },
+      {
+        "id": "group-six-side-glide-showcase",
+        "name": "Six-Side Glide Showcase",
+        "categories": [
+          "Fancy",
+          "Spin",
+          "In"
+        ],
+        "priority": 2,
+        "duration": 9.4
+      },
+      {
+        "id": "group-pop-out",
+        "name": "Pop out",
+        "categories": [
+          "Slow"
+        ],
+        "priority": 3,
+        "duration": 1.6
+      },
+      {
+        "id": "group-roll-in",
+        "name": "Roll in",
+        "categories": [
+          "Zoom"
+        ],
+        "priority": 3,
+        "duration": 1.4
+      },
+      {
+        "id": "group-center-spin-zoom",
+        "name": "Center Spin Zoom",
+        "categories": [
+          "Spin",
+          "Zoom"
+        ],
+        "priority": 4,
+        "duration": 1.8
+      },
+      {
+        "id": "still",
+        "name": "Still",
+        "categories": [
+          "Slow"
+        ],
+        "priority": 1,
+        "duration": 1
+      },
+      {
+        "id": "group-zoom-top-then-pan-up-tilted",
+        "name": "Zoom Top, Then Pan down",
+        "categories": [
+          "Zoom",
+          "Fast"
+        ],
+        "priority": 4,
+        "duration": 2.4
+      }
+    ]
+  },
+  "glbSha256": "363232a7c3fe97a54500fbbec90a0a173280fab8cce1cc4ae954e5979e81bb0b"
+}

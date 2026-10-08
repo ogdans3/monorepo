@@ -1,0 +1,259 @@
+{
+  "device": "Samsung Galaxy S24 Ultra",
+  "variant": "SM-S928B/DS international/sub6",
+  "finish": "Titanium Gray",
+  "nominal_body_mm": [
+    79,
+    162.3,
+    8.6
+  ],
+  "native_pixels": [
+    1440,
+    3120
+  ],
+  "accessed": "2026-10-02",
+  "sources": [
+    {
+      "url": "https://www.samsung.com/es/business/smartphones/galaxy-s/galaxy-s24-ultra-sm-s928bztgeub/",
+      "role": "Samsung official SM-S928B/DS nominal dimensions 162.3 x 79.0 x 8.6 mm; native display 3120 x 1440 pixels."
+    },
+    {
+      "url": "https://www.samsung.com/hk_en/smartphones/galaxy-s24-ultra/",
+      "role": "Samsung design photographs, curved titanium side rails and flat display; side image used for calibrated secondary dimensions."
+    },
+    {
+      "url": "https://images.samsung.com/hk_en/smartphones/galaxy-s24-ultra/images/galaxy-s24-ultra-highlights-color-titanium-gray-side-mo.jpg",
+      "role": "Official side rendering, local samsung-elevation-3.jpg (1068 x 464); body depth y 177..255, top end x265."
+    },
+    {
+      "url": "https://images.samsung.com/is/image/samsung/assets/ph/smartphones/galaxy-s24-ultra/buy/S24Ultra-Color-Titanium_Grey_PC_0527_final.jpg?imbypass=true",
+      "role": "Samsung official front/back rendering. Front body approximately x513..849, y83..782; screen approximately x525..837, y96..770. Composited product art has slight scaling/perspective uncertainty."
+    },
+    {
+      "url": "https://macbro.uz/cdn/shop/files/gray6.png?v=1716200132",
+      "role": "Manufacturer rear product elevation reproduced by retailer, 1263 x 1417 PNG. Body x330..941, y92..1346. Large camera centres (446.5,200), (446.5,342), (446.5,484); small centres (575,200),(575,342); flash (575,272). Large rings radius58.8 px; small radius35 px."
+    },
+    {
+      "url": "https://org.downloadcenter.samsung.com/downloadfile/ContentsFile.aspx?CDSite=UNI_ES&OriginYN=N&ModelType=N&ModelName=SM-S928B%2FDS&CttFileID=10898248&CDCttType=UM&VPath=UM%2F202509%2F20250925155615881%2FSM-S93X_S92X_DS_UG_Open_16_Spa_Rev.1.0_250912.pdf",
+      "role": "Samsung official user guide pages12-13. Feature location diagrams including microphone, air vent, laser AF, S Pen, SIM and speaker. Not dimensioned mechanical CAD."
+    },
+    {
+      "url": "https://gigazine.net/gsc_news/en/20240302-samsung-galaxy-s24-ultra-exterior/",
+      "role": "Firsthand physical-device photographs P1051260(top), P1051267(right), P1051280(left), P1051317(bottom), P1051341/P1051362(S Pen), P1051150(cameras). Used for shapes/arrangement, not specs."
+    }
+  ],
+  "confidence": {
+    "nominal_dimensions": "Manufacturer dimensions. Exact nominal width/height/depth excluding camera rings/buttons.",
+    "secondary_dimensions": "Calibrated raster image measurements, usually \u00b10.65mm. No public dimensioned mechanical CAD found.",
+    "visual_estimates": [
+      "Body corner radius0.8mm and curved side cross-section",
+      "Optical elements and coating response; not optical engineering data",
+      "Antenna paths and bottom port small dimensions checked against manufacturer diagram and real photos",
+      "Flash and logo depth offset0.01\u20130.1mm to avoid depth fighting",
+      "International variant has no US mmWave antenna window",
+      "Only the visible stowed S Pen cap is modeled; no hidden full stylus or internal components"
+    ]
+  },
+  "geometry_checks": [
+    {
+      "object": "frame",
+      "measurement": "width",
+      "reference_mm": 79,
+      "tolerance_mm": 0.01,
+      "source": "Samsung nominal body specification"
+    },
+    {
+      "object": "frame",
+      "measurement": "height",
+      "reference_mm": 162.3,
+      "tolerance_mm": 0.01,
+      "source": "Samsung nominal body specification"
+    },
+    {
+      "object": [
+        "back_glass",
+        "screen"
+      ],
+      "measurement": "depth",
+      "reference_mm": 8.6,
+      "tolerance_mm": 0.01,
+      "source": "Manufacturer body thickness: glass back to display plane, excluding optical overlays/camera protrusions/buttons"
+    },
+    {
+      "object": "camera_ultrawide_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 15.063011456628479,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941"
+    },
+    {
+      "object": "camera_ultrawide_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 13.977990430622011,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346"
+    },
+    {
+      "object": "camera_ultrawide_ring",
+      "measurement": "width",
+      "reference_mm": 15.205237315875614,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter"
+    },
+    {
+      "object": "camera_wide_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 15.063011456628479,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941"
+    },
+    {
+      "object": "camera_wide_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 32.356459330143544,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346"
+    },
+    {
+      "object": "camera_wide_ring",
+      "measurement": "width",
+      "reference_mm": 15.205237315875614,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter"
+    },
+    {
+      "object": "camera_telephoto_5x_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 15.063011456628479,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941"
+    },
+    {
+      "object": "camera_telephoto_5x_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 50.73492822966508,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346"
+    },
+    {
+      "object": "camera_telephoto_5x_ring",
+      "measurement": "width",
+      "reference_mm": 15.205237315875614,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter"
+    },
+    {
+      "object": "camera_laser_af_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 31.67757774140753,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941"
+    },
+    {
+      "object": "camera_laser_af_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 13.977990430622011,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346"
+    },
+    {
+      "object": "camera_laser_af_ring",
+      "measurement": "width",
+      "reference_mm": 9.050736497545008,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter"
+    },
+    {
+      "object": "camera_telephoto_3x_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 31.67757774140753,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941"
+    },
+    {
+      "object": "camera_telephoto_3x_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 32.356459330143544,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346"
+    },
+    {
+      "object": "camera_telephoto_3x_ring",
+      "measurement": "width",
+      "reference_mm": 9.050736497545008,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter"
+    },
+    {
+      "object": "flash",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 31.67757774140753,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation"
+    },
+    {
+      "object": "flash",
+      "measurement": "top_to_center",
+      "reference_mm": 23.29665071770335,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation"
+    },
+    {
+      "object": "volume_rocker",
+      "measurement": "height",
+      "reference_mm": 21.16923076923077,
+      "tolerance_mm": 0.65,
+      "source": "Samsung side image y177..255 depth reference"
+    },
+    {
+      "object": "volume_rocker",
+      "measurement": "top_to_center",
+      "reference_mm": 41.12564102564102,
+      "tolerance_mm": 0.65,
+      "source": "Samsung side image body top x265"
+    },
+    {
+      "object": "power_button",
+      "measurement": "height",
+      "reference_mm": 11.135897435897435,
+      "tolerance_mm": 0.65,
+      "source": "Samsung side image y177..255 depth reference"
+    },
+    {
+      "object": "power_button",
+      "measurement": "top_to_center",
+      "reference_mm": 66.64999999999999,
+      "tolerance_mm": 0.65,
+      "source": "Samsung side image body top x265"
+    },
+    {
+      "object": "camera_ultrawide_ring",
+      "measurement": "rear_projection",
+      "reference_mm": 1.9846153846153844,
+      "tolerance_mm": 0.35,
+      "source": "Samsung side image ring rise18px over bodydepth78px"
+    },
+    {
+      "object": "screen",
+      "measurement": "width",
+      "reference_mm": 72.28753561215134,
+      "tolerance_mm": 0.01,
+      "source": "Samsung display diagonal 172.5mm, rectangular area, native aspect"
+    },
+    {
+      "object": "camera_cutout",
+      "measurement": "top_to_center",
+      "reference_mm": 6.036909871244635,
+      "tolerance_mm": 0.35,
+      "source": "Official front image, body y83..782, punch centre y109"
+    }
+  ],
+  "visual_cross_checks": {
+    "front": "Flat glass, nearly square corners, centred punch hole, top earpiece, display diagonal/aspect.",
+    "back": "Three large rings in left column; laser AF top right, flash in between, 3x camera below; wordmark lower centre.",
+    "right": "Volume above power; curved rail; corrected top antenna to align with primary camera height.",
+    "left": "Plain curved rail with antenna bands, no buttons or US mmWave window.",
+    "top": "One microphone, one air vent and one antenna break.",
+    "bottom": "From front-facing left: S Pen cap, speaker slot, USB-C, microphone, SIM tray and eject hole; two antenna breaks."
+  }
+}

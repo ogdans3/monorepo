@@ -1,0 +1,12 @@
+{
+  "glb_sha256": "533322b023e25da4f03d4a78eaa2cc15b560aa17b031baaca03ba89b01181a0a",
+  "passed": 3,
+  "failed": 0,
+  "checks": [
+    "Actual exported rig: fixed base, unchanged native UVs, hinge poses, timing, clamping and 1900 interior screen samples",
+    "Saved project restores lid angle and opening duration with the current catalogue asset path",
+    "Editor model selection, 0/130 degree slider and opening-duration controls"
+  ],
+  "runner": "Playwright / Chromium / SwiftShader",
+  "source": "client/tests/laptop-hinge.spec.ts"
+}

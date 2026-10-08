@@ -1,0 +1,22 @@
+{
+    "id": "pixel-10-baked",
+    "name": "Pixel 10 Baked",
+    "modelPath": "/pixel-10-model-baked.glb",
+    "defaultPosition": {
+        "x": 0,
+        "y": 0,
+        "z": 2.8
+    },
+    "defaultRotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+    },
+    "layers": [
+        {
+            "match": "led",
+            "material": "video"
+        }
+    ],
+    "caseColor": null
+}

@@ -1,0 +1,30 @@
+{
+  "id": "macbook-pro-14-m4",
+  "name": "MacBook Pro 14-inch M4",
+  "modelPath": "/macbook-pro-14-m4.glb",
+  "defaultPosition": {
+    "x": 0,
+    "y": 0,
+    "z": 2.1
+  },
+  "defaultRotation": {
+    "x": 16,
+    "y": -16,
+    "z": 0
+  },
+  "layers": [
+    {
+      "match": "screen",
+      "material": "video",
+      "uv": "upright"
+    }
+  ],
+  "caseColor": null,
+  "hinge": {
+    "node": "lid_hinge",
+    "minAngle": 0,
+    "maxAngle": 130,
+    "defaultAngle": 105
+  },
+  "lidAngle": 105
+}

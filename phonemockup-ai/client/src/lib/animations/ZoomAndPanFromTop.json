@@ -1,0 +1,85 @@
+{
+    "id": "group-zoom-top-then-pan-up-tilted",
+    "name": "Zoom Top, Then Pan down",
+    "preview": "zoom-top-then-pan-down.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 4,
+    "categories": [
+        "Zoom",
+        "Fast"
+    ],
+    "animations": [
+        {
+            "id": "anim-zoom-top",
+            "name": "Zoom Top",
+            "start": 0,
+            "end": 0.9,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-0-start-center",
+                "position": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-2-pan-up-hold-zoom",
+                "position": {
+                    "x": 0.0,
+                    "y": -0.57,
+                    "z": 2.0
+                },
+                "rotation": {
+                    "x": -4,
+                    "y": 12,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-pan-down",
+            "name": "Pan down",
+            "start": 0.9,
+            "end": 2.4,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-2-end-state",
+                "position": {
+                    "x": 0.0,
+                    "y": -0.57,
+                    "z": 2.0
+                },
+                "rotation": {
+                    "x": -4,
+                    "y": 12,
+                    "z": 0
+                },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-center-reset",
+                "position": {
+                    "x": 0,
+                    "y": 0.4,
+                    "z": 1.6
+                },
+                "rotation": {
+                    "x": -12,
+                    "y": 30,
+                    "z": 0
+                },
+                "opacity": 1
+            }
+        }
+    ]
+}

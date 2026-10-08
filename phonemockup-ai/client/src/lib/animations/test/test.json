@@ -1,0 +1,278 @@
+{
+    "id": "group-six-side-zoom-variety",
+    "name": "Six-Side Zoom Variety",
+    "preview": "six_side_zoom_variety.mp4",
+    "favorited": false,
+    "isOfficial": true,
+    "isCommunity": false,
+    "priority": 2,
+    "categories": ["Zoom", "Fancy", "Spin"],
+    "animations": [
+        {
+            "id": "anim-intro-dolly",
+            "name": "Intro Wide Dolly",
+            "start": 0.0,
+            "end": 0.6,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-intro-start",
+                "position": { "x": 0, "y": 0.1, "z": 0.9 },
+                "rotation": { "x": -6, "y": -10, "z": 0 },
+                "opacity": 0
+            },
+            "endKeyframe": {
+                "id": "kf-intro-end",
+                "position": { "x": 0, "y": 0, "z": 0.28 },
+                "rotation": { "x": 0, "y": 0, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-front-glide-push",
+            "name": "Front Glide Push",
+            "start": 0.6,
+            "end": 1.3,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-front-start",
+                "position": { "x": 0, "y": 0, "z": 0.28 },
+                "rotation": { "x": 0, "y": 0, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-front-end",
+                "position": { "x": 0.06, "y": -0.02, "z": 0.16 },
+                "rotation": { "x": -3, "y": 8, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-orbit-right-arc",
+            "name": "Orbit to Right Arc",
+            "start": 1.3,
+            "end": 1.7,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-orbit-right-start",
+                "position": { "x": 0.06, "y": -0.02, "z": 0.16 },
+                "rotation": { "x": -3, "y": 8, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-orbit-right-end",
+                "position": { "x": -0.02, "y": 0.03, "z": 0.32 },
+                "rotation": { "x": 0, "y": 92, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-right-macro-sweep",
+            "name": "Right Macro Sweep",
+            "start": 1.7,
+            "end": 2.5,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-right-start",
+                "position": { "x": -0.02, "y": 0.03, "z": 0.32 },
+                "rotation": { "x": 0, "y": 92, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-right-end",
+                "position": { "x": 0.08, "y": -0.02, "z": 0.12 },
+                "rotation": { "x": 2, "y": 108, "z": -2 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-parallax-to-back",
+            "name": "Parallax to Back",
+            "start": 2.5,
+            "end": 2.9,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-parallax-back-start",
+                "position": { "x": 0.08, "y": -0.02, "z": 0.12 },
+                "rotation": { "x": 2, "y": 108, "z": -2 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-parallax-back-end",
+                "position": { "x": -0.06, "y": 0.02, "z": 0.36 },
+                "rotation": { "x": 0, "y": 180, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-back-drift",
+            "name": "Back Drift",
+            "start": 2.9,
+            "end": 3.7,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-back-start",
+                "position": { "x": -0.06, "y": 0.02, "z": 0.36 },
+                "rotation": { "x": 0, "y": 180, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-back-end",
+                "position": { "x": 0.06, "y": -0.02, "z": 0.18 },
+                "rotation": { "x": -2, "y": 196, "z": 1 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-arc-to-left",
+            "name": "Arc to Left",
+            "start": 3.7,
+            "end": 4.1,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-arc-left-start",
+                "position": { "x": 0.06, "y": -0.02, "z": 0.18 },
+                "rotation": { "x": -2, "y": 196, "z": 1 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-arc-left-end",
+                "position": { "x": 0, "y": 0.04, "z": 0.3 },
+                "rotation": { "x": 0, "y": 270, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-left-edge-glide",
+            "name": "Left Edge Glide",
+            "start": 4.1,
+            "end": 4.9,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-left-start",
+                "position": { "x": 0, "y": 0.04, "z": 0.3 },
+                "rotation": { "x": 0, "y": 270, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-left-end",
+                "position": { "x": -0.08, "y": -0.03, "z": 0.12 },
+                "rotation": { "x": 3, "y": 252, "z": 2 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-lift-to-top",
+            "name": "Lift to Top",
+            "start": 4.9,
+            "end": 5.3,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-lift-top-start",
+                "position": { "x": -0.08, "y": -0.03, "z": 0.12 },
+                "rotation": { "x": 3, "y": 252, "z": 2 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-lift-top-end",
+                "position": { "x": 0.02, "y": -0.12, "z": 0.28 },
+                "rotation": { "x": -90, "y": 260, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-top-ribbon",
+            "name": "Top Ribbon",
+            "start": 5.3,
+            "end": 6.1,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-top-start",
+                "position": { "x": 0.02, "y": -0.12, "z": 0.28 },
+                "rotation": { "x": -90, "y": 260, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-top-end",
+                "position": { "x": -0.06, "y": 0.08, "z": 0.16 },
+                "rotation": { "x": -96, "y": 280, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-roll-to-bottom",
+            "name": "Roll to Bottom",
+            "start": 6.1,
+            "end": 6.5,
+            "curve": "SineInOut",
+            "startKeyframe": {
+                "id": "kf-roll-bottom-start",
+                "position": { "x": -0.06, "y": 0.08, "z": 0.16 },
+                "rotation": { "x": -96, "y": 280, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-roll-bottom-end",
+                "position": { "x": 0.04, "y": 0.12, "z": 0.32 },
+                "rotation": { "x": 90, "y": 260, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-bottom-sweep",
+            "name": "Bottom Sweep",
+            "start": 6.5,
+            "end": 7.3,
+            "curve": "QuadInOut",
+            "startKeyframe": {
+                "id": "kf-bottom-start",
+                "position": { "x": 0.04, "y": 0.12, "z": 0.32 },
+                "rotation": { "x": 90, "y": 260, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-bottom-end",
+                "position": { "x": 0, "y": -0.06, "z": 0.14 },
+                "rotation": { "x": 100, "y": 240, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-hero-return",
+            "name": "Hero Return",
+            "start": 7.3,
+            "end": 7.8,
+            "curve": "ExpoOut",
+            "startKeyframe": {
+                "id": "kf-hero-start",
+                "position": { "x": 0, "y": -0.06, "z": 0.14 },
+                "rotation": { "x": 100, "y": 240, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-hero-end",
+                "position": { "x": 0, "y": 0, "z": 0.04 },
+                "rotation": { "x": 0, "y": 0, "z": 0 },
+                "opacity": 1
+            }
+        },
+        {
+            "id": "anim-micro-settle",
+            "name": "Micro Settle",
+            "start": 7.8,
+            "end": 8.0,
+            "curve": "BackOut",
+            "startKeyframe": {
+                "id": "kf-settle-start",
+                "position": { "x": 0, "y": 0, "z": 0.04 },
+                "rotation": { "x": 0, "y": 0, "z": 0 },
+                "opacity": 1
+            },
+            "endKeyframe": {
+                "id": "kf-settle-end",
+                "position": { "x": 0, "y": 0, "z": 0 },
+                "rotation": { "x": 0, "y": 0, "z": 0 },
+                "opacity": 1
+            }
+        }
+    ]
+}

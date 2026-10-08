@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  phonemockup_client:
+    image: 127.0.0.1:5000/phonemockup_client:latest
+    build: ./../client/
+    networks:
+      - proxy-net
+      - traefik-private
+    restart: always
+    environment:
+      - PORT=80
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=proxy-net"
+        - "traefik.http.routers.phonemockup_client.rule=Host(`phonemockup.app`)"
+        - "traefik.http.routers.phonemockup_client.tls=true"
+        # Notice: NO certresolver label here! Traefik will automatically use the static 15-year cert.
+        - "traefik.http.services.phonemockup_client.loadbalancer.server.port=80"
+
+  posthog_proxy:
+    image: nginx:1.25-alpine
+    networks:
+      - proxy-net
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=proxy-net"
+        # Renamed to phonemockup_posthog to fix the Swarm collision error!
+        - "traefik.http.routers.phonemockup_posthog.rule=Host(`e.phonemockup.app`)"
+        - "traefik.http.routers.phonemockup_posthog.tls=true"
+        # Notice: NO certresolver label here! Traefik will automatically use the static 15-year cert.
+        - "traefik.http.services.phonemockup_posthog.loadbalancer.server.port=8080"
+
+networks:
+  proxy-net:
+    external: true
+  traefik-private:
+    driver: overlay

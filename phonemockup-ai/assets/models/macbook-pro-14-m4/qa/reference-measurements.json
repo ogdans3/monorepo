@@ -1,0 +1,64 @@
+{
+  "all_passed": true,
+  "reference": "Apple charging / expansion side elevations",
+  "scale_mm_per_pixel": 0.2313807531380753,
+  "tolerance_mm": 0.65,
+  "measurements": [
+    {
+      "name": "magsafe",
+      "source_pixel_x": 141,
+      "side": "left",
+      "source_centre_y_mm": 82.83430962343095,
+      "model_centre_y_mm": 82.85,
+      "error_mm": 0.015690376569040154
+    },
+    {
+      "name": "thunderbolt_left_rear",
+      "source_pixel_x": 221,
+      "side": "left",
+      "source_centre_y_mm": 64.32384937238493,
+      "model_centre_y_mm": 64.3,
+      "error_mm": 0.023849372384930234
+    },
+    {
+      "name": "thunderbolt_left_front",
+      "source_pixel_x": 285,
+      "side": "left",
+      "source_centre_y_mm": 49.51548117154812,
+      "model_centre_y_mm": 49.5,
+      "error_mm": 0.015481171548117345
+    },
+    {
+      "name": "headphone_jack",
+      "source_pixel_x": 341,
+      "side": "left",
+      "source_centre_y_mm": 36.55815899581589,
+      "model_centre_y_mm": 36.5,
+      "error_mm": 0.05815899581588724
+    },
+    {
+      "name": "hdmi",
+      "source_pixel_x": 857,
+      "side": "right",
+      "source_centre_y_mm": 82.83430962343095,
+      "model_centre_y_mm": 82.8,
+      "error_mm": 0.034309623430957004
+    },
+    {
+      "name": "thunderbolt_right",
+      "source_pixel_x": 777,
+      "side": "right",
+      "source_centre_y_mm": 64.32384937238493,
+      "model_centre_y_mm": 64.3,
+      "error_mm": 0.023849372384930234
+    },
+    {
+      "name": "sdxc",
+      "source_pixel_x": 671,
+      "side": "right",
+      "source_centre_y_mm": 39.79748953974895,
+      "model_centre_y_mm": 39.8,
+      "error_mm": 0.002510460251045288
+    }
+  ]
+}

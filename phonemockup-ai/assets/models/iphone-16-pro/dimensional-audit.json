@@ -1,0 +1,193 @@
+{
+  "tolerance_mm": 0.05,
+  "method": "Symmetric point-to-segment contour distances; contours sampled every 0.05 mm. Actual saved mesh vertices, not build constants. Source paths from Apple PDF sheet 1.",
+  "versions": {
+    "v1": {
+      "measurements": {
+        "body_outline": {
+          "max_mm": 3.009742444945286,
+          "p95_mm": 2.819597558502677,
+          "mean_mm": 0.47371929595641815,
+          "passed": false
+        },
+        "active_screen_outline": {
+          "max_mm": 3.122931725373985,
+          "p95_mm": 2.8554989481952133,
+          "mean_mm": 0.4439086976857248,
+          "passed": false
+        },
+        "camera_plateau_base_outline": {
+          "max_mm": 0.7174228837042693,
+          "p95_mm": 0.6950522508234174,
+          "mean_mm": 0.2570999017313607,
+          "passed": false
+        },
+        "camera_plateau_top_outline": {
+          "max_mm": 3.7557968617898725,
+          "p95_mm": 3.734998460858667,
+          "mean_mm": 3.271349020515281,
+          "passed": false
+        },
+        "camera_plateau_lower_ramp": {
+          "max_mm": 3.0302992684878407,
+          "p95_mm": 2.7434848684476307,
+          "mean_mm": 1.1582671756755885,
+          "passed": false
+        },
+        "camera_plateau_outside_source_body": {
+          "max_mm": 0.0,
+          "passed": true
+        },
+        "camera_plateau_outside_model_body": {
+          "max_mm": 2.0292250962762517,
+          "passed": false
+        },
+        "camera_plateau_height": {
+          "max_mm": 0.04999999999999982,
+          "measured_mm": 2.0,
+          "reference_mm": 2.05,
+          "passed": true
+        },
+        "usb_opening": {
+          "max_mm": 0.8700005722045905,
+          "measured_mm": [
+            8.84999942779541,
+            3.1399998664855957
+          ],
+          "reference_mm": [
+            9.72,
+            3.14
+          ],
+          "passed": false
+        },
+        "body_envelope": {
+          "max_mm": 4.577636715907829e-06,
+          "measured_mm": [
+            71.45000457763672,
+            149.61000061035156,
+            8.25
+          ],
+          "reference_mm": [
+            71.45,
+            149.61,
+            8.25
+          ],
+          "passed": true
+        },
+        "side_antenna_positions_and_width": {
+          "max_mm": 1.0349988555907998,
+          "passed": false
+        },
+        "bottom_screw_centres": {
+          "max_mm": 2.0600000517070285,
+          "passed": false
+        },
+        "camera_centres_and_radii": {
+          "max_mm": 1.1134147541724815e-06,
+          "passed": true
+        },
+        "button_centres_and_sizes": {
+          "max_mm": 3.0517578117894573e-06,
+          "passed": true
+        }
+      },
+      "all_passed": false
+    },
+    "v2": {
+      "measurements": {
+        "body_outline": {
+          "max_mm": 0.006460504039928177,
+          "p95_mm": 0.003415182475372475,
+          "mean_mm": 0.0006491678028202234,
+          "passed": true
+        },
+        "active_screen_outline": {
+          "max_mm": 0.03997586360897632,
+          "p95_mm": 0.03116591271392363,
+          "mean_mm": 0.010882908024607443,
+          "passed": true
+        },
+        "camera_plateau_base_outline": {
+          "max_mm": 0.007587908563033718,
+          "p95_mm": 0.0018695648885590137,
+          "mean_mm": 0.0004108125425913576,
+          "passed": true
+        },
+        "camera_plateau_top_outline": {
+          "max_mm": 0.006634398696251191,
+          "p95_mm": 0.002108217194197118,
+          "mean_mm": 0.00034024111606157693,
+          "passed": true
+        },
+        "camera_plateau_lower_ramp": {
+          "max_mm": 0.0005448177918618515,
+          "p95_mm": 0.0004750321891720478,
+          "mean_mm": 0.000265575484783296,
+          "passed": true
+        },
+        "camera_plateau_outside_source_body": {
+          "max_mm": 0.0,
+          "passed": true
+        },
+        "camera_plateau_outside_model_body": {
+          "max_mm": 0.0,
+          "passed": true
+        },
+        "camera_plateau_height": {
+          "max_mm": 1.9073486345888568e-07,
+          "measured_mm": 2.0500001907348633,
+          "reference_mm": 2.05,
+          "passed": true
+        },
+        "usb_opening": {
+          "max_mm": 7.438659661573865e-07,
+          "measured_mm": [
+            9.720000743865967,
+            3.1399998664855957
+          ],
+          "reference_mm": [
+            9.72,
+            3.14
+          ],
+          "passed": true
+        },
+        "body_envelope": {
+          "max_mm": 4.577636715907829e-06,
+          "measured_mm": [
+            71.45000457763672,
+            149.61000061035156,
+            8.25
+          ],
+          "reference_mm": [
+            71.45,
+            149.61,
+            8.25
+          ],
+          "passed": true
+        },
+        "side_antenna_positions_and_width": {
+          "max_mm": 3.814697265625e-06,
+          "passed": true
+        },
+        "bottom_screw_centres": {
+          "max_mm": 1.9833445463746102e-07,
+          "passed": true
+        },
+        "camera_centres_and_radii": {
+          "max_mm": 1.1134147541724815e-06,
+          "passed": true
+        },
+        "button_centres_and_sizes": {
+          "max_mm": 3.0517578117894573e-06,
+          "passed": true
+        }
+      },
+      "all_passed": true
+    }
+  },
+  "limitations": [
+    "Top has no separate orthographic drawing on sheets 1-4: it is checked against the body envelope and section B, not a nonexistent top elevation.",
+    "The 144.79 mm published active height differs from the raster/vector active outline by about 0.06 mm; the mesh uses the published height, giving about 0.03 mm per edge.",
+    "Surface reflectance, optical internals, LiDAR visible aperture and interpolation of the measured camera ramp around the corners are not fully specified by the drawings."
+  ]
+}

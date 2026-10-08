@@ -1,0 +1,280 @@
+{
+  "device": "galaxy-s24-ultra",
+  "method": "Measure evaluated Blender vertices; compare to manufacturer nominal dimensions and separately annotated source pixels. Raster-derived tolerances are NOT factory manufacturing tolerances.",
+  "all_passed": true,
+  "checks": [
+    {
+      "object": "frame",
+      "measurement": "width",
+      "reference_mm": 79,
+      "tolerance_mm": 0.01,
+      "source": "Samsung nominal body specification",
+      "actual_mm": 79.0,
+      "signed_error_mm": 0.0,
+      "passed": true
+    },
+    {
+      "object": "frame",
+      "measurement": "height",
+      "reference_mm": 162.3,
+      "tolerance_mm": 0.01,
+      "source": "Samsung nominal body specification",
+      "actual_mm": 162.3000030517578,
+      "signed_error_mm": 3.0517578011313162e-06,
+      "passed": true
+    },
+    {
+      "object": [
+        "back_glass",
+        "screen"
+      ],
+      "measurement": "depth",
+      "reference_mm": 8.6,
+      "tolerance_mm": 0.01,
+      "source": "Manufacturer body thickness: glass back to display plane, excluding optical overlays/camera protrusions/buttons",
+      "actual_mm": 8.600000858306885,
+      "signed_error_mm": 8.583068851208964e-07,
+      "passed": true
+    },
+    {
+      "object": "camera_ultrawide_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 15.063011456628479,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941",
+      "actual_mm": 15.0,
+      "signed_error_mm": -0.06301145662847851,
+      "passed": true
+    },
+    {
+      "object": "camera_ultrawide_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 13.977990430622011,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346",
+      "actual_mm": 13.999994659423834,
+      "signed_error_mm": 0.022004228801822734,
+      "passed": true
+    },
+    {
+      "object": "camera_ultrawide_ring",
+      "measurement": "width",
+      "reference_mm": 15.205237315875614,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter",
+      "actual_mm": 15.199996948242188,
+      "signed_error_mm": -0.0052403676334265015,
+      "passed": true
+    },
+    {
+      "object": "camera_wide_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 15.063011456628479,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941",
+      "actual_mm": 15.0,
+      "signed_error_mm": -0.06301145662847851,
+      "passed": true
+    },
+    {
+      "object": "camera_wide_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 32.356459330143544,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346",
+      "actual_mm": 32.34999694824219,
+      "signed_error_mm": -0.006462381901350511,
+      "passed": true
+    },
+    {
+      "object": "camera_wide_ring",
+      "measurement": "width",
+      "reference_mm": 15.205237315875614,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter",
+      "actual_mm": 15.199996948242188,
+      "signed_error_mm": -0.0052403676334265015,
+      "passed": true
+    },
+    {
+      "object": "camera_telephoto_5x_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 15.063011456628479,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941",
+      "actual_mm": 15.0,
+      "signed_error_mm": -0.06301145662847851,
+      "passed": true
+    },
+    {
+      "object": "camera_telephoto_5x_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 50.73492822966508,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346",
+      "actual_mm": 50.74999752044678,
+      "signed_error_mm": 0.01506929078170316,
+      "passed": true
+    },
+    {
+      "object": "camera_telephoto_5x_ring",
+      "measurement": "width",
+      "reference_mm": 15.205237315875614,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter",
+      "actual_mm": 15.199996948242188,
+      "signed_error_mm": -0.0052403676334265015,
+      "passed": true
+    },
+    {
+      "object": "camera_laser_af_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 31.67757774140753,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941",
+      "actual_mm": 31.699999570846558,
+      "signed_error_mm": 0.02242182943902904,
+      "passed": true
+    },
+    {
+      "object": "camera_laser_af_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 13.977990430622011,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346",
+      "actual_mm": 13.999996566772467,
+      "signed_error_mm": 0.022006136150455546,
+      "passed": true
+    },
+    {
+      "object": "camera_laser_af_ring",
+      "measurement": "width",
+      "reference_mm": 9.050736497545008,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter",
+      "actual_mm": 9.099999904632568,
+      "signed_error_mm": 0.04926340708755994,
+      "passed": true
+    },
+    {
+      "object": "camera_telephoto_3x_ring",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 31.67757774140753,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation x330..941",
+      "actual_mm": 31.699999570846558,
+      "signed_error_mm": 0.02242182943902904,
+      "passed": true
+    },
+    {
+      "object": "camera_telephoto_3x_ring",
+      "measurement": "top_to_center",
+      "reference_mm": 32.356459330143544,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation y92..1346",
+      "actual_mm": 32.34999694824219,
+      "signed_error_mm": -0.006462381901350511,
+      "passed": true
+    },
+    {
+      "object": "camera_telephoto_3x_ring",
+      "measurement": "width",
+      "reference_mm": 9.050736497545008,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation, ring diameter",
+      "actual_mm": 9.099999904632568,
+      "signed_error_mm": 0.04926340708755994,
+      "passed": true
+    },
+    {
+      "object": "flash",
+      "measurement": "rear_x_from_left",
+      "reference_mm": 31.67757774140753,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation",
+      "actual_mm": 31.6999990940094,
+      "signed_error_mm": 0.022421352601870836,
+      "passed": true
+    },
+    {
+      "object": "flash",
+      "measurement": "top_to_center",
+      "reference_mm": 23.29665071770335,
+      "tolerance_mm": 0.65,
+      "source": "Rear product elevation",
+      "actual_mm": 23.29999961853028,
+      "signed_error_mm": 0.0033489008269285137,
+      "passed": true
+    },
+    {
+      "object": "volume_rocker",
+      "measurement": "height",
+      "reference_mm": 21.16923076923077,
+      "tolerance_mm": 0.65,
+      "source": "Samsung side image y177..255 depth reference",
+      "actual_mm": 21.149999618530273,
+      "signed_error_mm": -0.019231150700495192,
+      "passed": true
+    },
+    {
+      "object": "volume_rocker",
+      "measurement": "top_to_center",
+      "reference_mm": 41.12564102564102,
+      "tolerance_mm": 0.65,
+      "source": "Samsung side image body top x265",
+      "actual_mm": 41.09999980926514,
+      "signed_error_mm": -0.025641216375881015,
+      "passed": true
+    },
+    {
+      "object": "power_button",
+      "measurement": "height",
+      "reference_mm": 11.135897435897435,
+      "tolerance_mm": 0.65,
+      "source": "Samsung side image y177..255 depth reference",
+      "actual_mm": 11.250000953674316,
+      "signed_error_mm": 0.11410351777688099,
+      "passed": true
+    },
+    {
+      "object": "power_button",
+      "measurement": "top_to_center",
+      "reference_mm": 66.64999999999999,
+      "tolerance_mm": 0.65,
+      "source": "Samsung side image body top x265",
+      "actual_mm": 66.59999933242798,
+      "signed_error_mm": -0.050000667572007274,
+      "passed": true
+    },
+    {
+      "object": "camera_ultrawide_ring",
+      "measurement": "rear_projection",
+      "reference_mm": 1.9846153846153844,
+      "tolerance_mm": 0.35,
+      "source": "Samsung side image ring rise18px over bodydepth78px",
+      "actual_mm": 1.9600002288818361,
+      "signed_error_mm": -0.024615155733548333,
+      "passed": true
+    },
+    {
+      "object": "screen",
+      "measurement": "width",
+      "reference_mm": 72.28753561215134,
+      "tolerance_mm": 0.01,
+      "source": "Samsung display diagonal 172.5mm, rectangular area, native aspect",
+      "actual_mm": 72.28753662109375,
+      "signed_error_mm": 1.008942405178459e-06,
+      "passed": true
+    },
+    {
+      "object": "camera_cutout",
+      "measurement": "top_to_center",
+      "reference_mm": 6.036909871244635,
+      "tolerance_mm": 0.35,
+      "source": "Official front image, body y83..782, punch centre y109",
+      "actual_mm": 6.029989624023443,
+      "signed_error_mm": -0.006920247221192,
+      "passed": true
+    }
+  ]
+}
