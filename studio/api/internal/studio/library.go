@@ -199,7 +199,7 @@ func (a *App) extraItemData(ctx context.Context, id string) map[string]any {
 	evaluations, _ := a.query(ctx, "SELECT e.* FROM evaluations e JOIN versions v ON v.id=e.version_id WHERE v.item_id::text=$1 ORDER BY e.created_at DESC", id)
 	jobs, _ := a.query(ctx, "SELECT j.id,j.kind,j.status,j.progress,j.version_id,j.created_at,j.result FROM jobs j JOIN versions v ON v.id=j.version_id WHERE v.item_id::text=$1 ORDER BY created_at DESC LIMIT 20", id)
 	shares, _ := a.query(ctx, "SELECT s.id,s.version_id,s.expires_at,s.revoked_at FROM shares s JOIN versions v ON v.id=s.version_id WHERE v.item_id::text=$1", id)
-	artifacts, _ := a.query(ctx, "SELECT m.version_id,m.kind,m.mime FROM media_artifacts m JOIN items i ON i.current_version_id=m.version_id WHERE i.id::text=$1", id)
+	artifacts, _ := a.query(ctx, "SELECT m.version_id,m.kind,m.mime FROM media_artifacts m JOIN versions v ON v.id=m.version_id WHERE v.item_id::text=$1", id)
 	return map[string]any{"favorite": favorite, "relations": relations, "ratings": ratings, "segments": segments, "evaluations": evaluations, "jobs": jobs, "shares": shares, "artifacts": artifacts}
 }
 func (a *App) relation(w http.ResponseWriter, r *http.Request) {
@@ -302,6 +302,7 @@ func (a *App) serveStored(w http.ResponseWriter, r *http.Request, key, name, mt 
 		disp = "inline"
 	}
 	w.Header().Set("Content-Disposition", mime.FormatMediaType(disp, map[string]string{"filename": name}))
+	mediaCache(w, r, key)
 	http.ServeFile(w, r, filepath.Join(a.storage, key))
 }
 func csvSafe(s string) string {

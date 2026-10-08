@@ -14,7 +14,7 @@ test('mobile-first content to publication workflow', async ({ page }, info) => {
   await page.getByLabel('E-post', { exact: true }).fill('browser@example.test');
   await page.getByLabel('Passord', { exact: true }).fill('studio-browser-test-password');
   await page.locator('.auth-form button[type=submit], .auth-form button.primary').click();
-  await expect(page.getByRole('heading', { name: 'Plass til neste idé.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Annonser', exact: true })).toBeVisible();
   await mkdir('../.data/screenshots', { recursive: true });
   await page.screenshot({
     path: `../.data/screenshots/${info.project.name}-home.png`,
@@ -35,14 +35,19 @@ test('mobile-first content to publication workflow', async ({ page }, info) => {
   await dialog.getByRole('button', { name: 'Lagre', exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await page.getByRole('button', { name: new RegExp('Vinterføre ' + suffix) }).click();
-  await dialog.getByRole('button', { name: 'Godkjenn', exact: true }).click();
-  await expect(dialog.locator('.status')).toHaveText('Godkjent');
-  await dialog
+  await page.locator('.review-page').getByRole('button', { name: 'Godkjenn', exact: true }).click();
+  await expect(
+    page.locator('.review-page').locator('.review-player-header .review-status'),
+  ).toHaveText('Godkjent');
+  await page
+    .locator('.review-page')
     .getByPlaceholder('En tanke eller tilbakemelding …')
     .fill('Bruk denne til ukens publisering.');
-  await dialog.getByRole('button', { name: 'Legg til notat' }).click();
-  await expect(dialog.getByText('Bruk denne til ukens publisering.')).toBeVisible();
-  await dialog.getByRole('button', { name: 'Lukk', exact: true }).click();
+  await page.locator('.review-page').getByRole('button', { name: 'Legg til notat' }).click();
+  await expect(
+    page.locator('.review-page').getByText('Bruk denne til ukens publisering.'),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Til biblioteket' }).click();
   await page.getByRole('button', { name: 'Søk i Studio', exact: true }).click();
   await dialog.getByLabel('Søk', { exact: true }).fill('bremselengde');
   await expect(dialog.getByRole('heading', { name: 'Vinterføre ' + suffix })).toBeVisible();

@@ -81,3 +81,33 @@ integreres mot Studio-mottaket. Disse forbindelsene, serverdrift og punktene und
   på webportens `/mcp` svarer 401 uten nøkkel. Deploy til `studio.freelunch.no`
   startes manuelt. Ekstern kontroll ble stoppet foran appen av Cloudflare 403/1010;
   vellykket MCP-tilkobling på det deployede domenet er foreløpig ikke verifisert.
+
+## Annonser, gjennomgang og ytelse — 8. oktober 2026
+
+- Ny startside for annonser med typer, brief, stabil produktavgrenset nøkkel og
+  nummererte filversjoner. Første faktiske opplasting blir v1. Konseptets tittel
+  bevares, og alle versjoner viser fullstendige filnavn.
+- Egne `/ads/{id}`- og `/library/{id}`-sider med tilbake/fremover, delbare lenker,
+  versjonsvalg i URL, videoavspilling, side-ved-side-sammenligning og tidskoder.
+  Kommentarer, omtaler, løste notater og valgfrie videoguider er beholdt.
+- Godkjenning/endringsønsker knyttes til eksakt versjon. Parallelle opplastinger
+  med gammel expected-version avvises. Eksisterende filer kan organiseres til en
+  annonse eller kopieres inn som neste versjon uten å slette originaloppføringen.
+- MCP-verktøyene `studio_list_ads`, `studio_create_ad`, `studio_get_ad` og
+  `studio_prepare_ad_upload`, samt CLI `upload --ad-id`, gir eksterne agenter samme
+  versjonsflyt. Agenten kan lese feedback, men aldri godkjenne eller publisere.
+- Kort bruker lazy-loadede miniatyrer i stedet for originale mediefiler. Thumbnail
+  og proxy har egne avgrensede workers; tidligere manglende previews repareres i
+  små batcher. OCR, talegjenkjenning og modellnedlasting blokkerer ikke preview-køen.
+- Private medier revaliderer tilgang ved cachetreff; proxy støtter ETag/304 og
+  byte ranges. Startsidene henter bare nødvendige datasett. Vanlig sesjonsstatus
+  følger lesebegrensningen; den strengere grensen på innloggingsforsøk er beholdt.
+- PostgreSQL-testsett med race-detektor bestått. Nye tester dekker samtidige
+  annonseopprettelser, eksakt versjon, idempotens, historiske vurderinger,
+  produkt-/agent-/lesertilgang, samling av filer, delte previews og autorisert cache.
+- Svelte/TypeScript uten feil/advarsler, produksjonsbygg og Docker-bygg bestått.
+  Alle 12 nettlesertester bestått på desktop og 390 px mobil: ekte FFmpeg-video/miniatyr/proxy,
+  MCP-opplastinger, nettleseropplasting, eksisterende innhold og de gamle flytene.
+- Lokale API/web-containere er oppdatert. Deploy av begge tjenester og migrering
+  005 til `studio.freelunch.no` gjøres manuelt. Produksjonens faktiske lastetider
+  er ikke målt; ytelsesendringene er kontrollert lokalt.

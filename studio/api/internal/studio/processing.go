@@ -79,7 +79,7 @@ func (a *App) startJob(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "Ingen tilgang til versjonen")
 		return
 	}
-	if v.Kind != "media" && v.Kind != "transcribe" && v.Kind != "analysis" && v.Kind != "ranking" && v.Kind != "script" {
+	if v.Kind != "thumbnail" && v.Kind != "proxy" && v.Kind != "media" && v.Kind != "transcribe" && v.Kind != "analysis" && v.Kind != "ranking" && v.Kind != "script" {
 		fail(w, 400, "Ukjent jobbtype")
 		return
 	}
@@ -87,7 +87,7 @@ func (a *App) startJob(w http.ResponseWriter, r *http.Request) {
 		v.Role = v.Kind
 	}
 	cfg, _ := a.profile(ctx, p, v.Role)
-	if v.Kind != "media" && v.Kind != "transcribe" {
+	if v.Kind != "thumbnail" && v.Kind != "proxy" && v.Kind != "media" && v.Kind != "transcribe" {
 		key := "OPENROUTER_API_KEY"
 		if v.Kind == "ranking" {
 			key = "TYPESAFE_API_KEY"
@@ -136,6 +136,8 @@ func (a *App) jobProgress(ctx context.Context, id, text string) {
 }
 func (a *App) ProcessingWorker(ctx context.Context) {
 	a.db.Exec(ctx, "UPDATE jobs SET status='failed',progress='Avbrutt ved omstart. Start på nytt manuelt.',finished_at=now() WHERE status='running'")
+	go a.artifactWorker(ctx, "thumbnail")
+	go a.artifactWorker(ctx, "proxy")
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -145,7 +147,7 @@ func (a *App) ProcessingWorker(ctx context.Context) {
 		case <-ticker.C:
 			var j jobRecord
 			var cfg, input []byte
-			e := a.db.QueryRow(ctx, `UPDATE jobs SET status='running',started_at=now() WHERE id=(SELECT id FROM jobs WHERE status='queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id::text,product_id::text,coalesce(version_id::text,''),coalesce(user_id::text,''),kind,config,input`).Scan(&j.ID, &j.Product, &j.Version, &j.User, &j.Kind, &cfg, &input)
+			e := a.db.QueryRow(ctx, `UPDATE jobs SET status='running',started_at=now() WHERE id=(SELECT j.id FROM jobs j WHERE j.status='queued' AND j.kind NOT IN('thumbnail','proxy') AND (j.kind<>'media' OR NOT EXISTS(SELECT 1 FROM jobs p WHERE p.version_id=j.version_id AND p.kind IN('thumbnail','proxy') AND p.status IN('queued','running'))) ORDER BY j.created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id::text,product_id::text,coalesce(version_id::text,''),coalesce(user_id::text,''),kind,config,input`).Scan(&j.ID, &j.Product, &j.Version, &j.User, &j.Kind, &cfg, &input)
 			if e != nil {
 				continue
 			}
@@ -159,6 +161,12 @@ func (a *App) executeJob(parent context.Context, j jobRecord) {
 	timeout := time.Duration(j.Config.Timeout) * time.Second
 	if j.Kind == "media" || j.Kind == "transcribe" {
 		timeout = 15 * time.Minute
+	}
+	if j.Kind == "thumbnail" {
+		timeout = 60 * time.Second
+	}
+	if j.Kind == "proxy" {
+		timeout = 5 * time.Minute
 	}
 	if timeout < 10*time.Second {
 		timeout = 120 * time.Second
@@ -184,6 +192,8 @@ func (a *App) executeJob(parent context.Context, j jobRecord) {
 	var result any
 	var err error
 	switch j.Kind {
+	case "thumbnail", "proxy":
+		result, err = a.buildArtifact(ctx, j)
 	case "media":
 		result, err = a.processMedia(ctx, j)
 	case "transcribe":
@@ -225,7 +235,7 @@ func runProgram(ctx context.Context, name string, args ...string) ([]byte, error
 }
 func (a *App) preview(w http.ResponseWriter, r *http.Request) {
 	var key, mt string
-	e := a.db.QueryRow(r.Context(), "SELECT file_key,mime FROM media_artifacts WHERE version_id::text=$1 AND kind=$2", r.PathValue("id"), r.URL.Query().Get("kind")).Scan(&key, &mt)
+	e := a.db.QueryRow(r.Context(), "SELECT m.file_key,m.mime FROM media_artifacts m JOIN versions v ON v.id=m.version_id JOIN items i ON i.id=v.item_id WHERE m.version_id::text=$1 AND m.kind=$2 AND i.deleted_at IS NULL", r.PathValue("id"), r.URL.Query().Get("kind")).Scan(&key, &mt)
 	if e != nil {
 		fail(w, 404, "Forhåndsvisningen er ikke klar")
 		return
@@ -248,14 +258,16 @@ func (a *App) processMedia(ctx context.Context, j jobRecord) (any, error) {
 		at  float64
 	}{}
 	if strings.HasPrefix(mt, "image/") || strings.HasPrefix(mt, "video/") {
-		thumb := token() + ".jpg"
-		args := []string{"-v", "error", "-nostdin", "-protocol_whitelist", "file,pipe", "-i", path, "-frames:v", "1", "-vf", "scale=640:640:force_original_aspect_ratio=decrease", "-y", filepath.Join(a.storage, thumb)}
-		if _, e = runProgram(ctx, "ffmpeg", args...); e != nil {
-			os.Remove(filepath.Join(a.storage, thumb))
-			return nil, fmt.Errorf("kunne ikke lage forhåndsvisning; kontroller filformatet")
-		}
-		if e = a.saveArtifact(ctx, j.Version, "thumbnail", thumb, "image/jpeg"); e != nil {
-			return nil, e
+		var thumb string
+		if a.db.QueryRow(ctx, "SELECT file_key FROM media_artifacts WHERE version_id=$1 AND kind='thumbnail'", j.Version).Scan(&thumb) != nil {
+			preview := j
+			preview.Kind = "thumbnail"
+			if _, e = a.buildArtifact(ctx, preview); e != nil {
+				return nil, e
+			}
+			if e = a.db.QueryRow(ctx, "SELECT file_key FROM media_artifacts WHERE version_id=$1 AND kind='thumbnail'", j.Version).Scan(&thumb); e != nil {
+				return nil, e
+			}
 		}
 		frames = append(frames, struct {
 			key string
@@ -263,16 +275,8 @@ func (a *App) processMedia(ctx context.Context, j jobRecord) (any, error) {
 		}{thumb, 0})
 	}
 	if strings.HasPrefix(mt, "video/") {
-		a.jobProgress(ctx, j.ID, "Lager mobilvideo og henter rammer")
-		proxy := token() + ".mp4"
-		_, e = runProgram(ctx, "ffmpeg", "-v", "error", "-nostdin", "-protocol_whitelist", "file,pipe", "-i", path, "-t", "600", "-vf", "scale=480:854:force_original_aspect_ratio=decrease:force_divisible_by=2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-fs", "268435456", "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", "-y", filepath.Join(a.storage, proxy))
-		if e != nil {
-			os.Remove(filepath.Join(a.storage, proxy))
-			return nil, fmt.Errorf("kunne ikke lage mobilvideo")
-		}
-		if e = a.saveArtifact(ctx, j.Version, "proxy", proxy, "video/mp4"); e != nil {
-			return nil, e
-		}
+		a.jobProgress(ctx, j.ID, "Henter rammer til søk")
+
 		for n := 1; n <= 24; n++ {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
@@ -567,7 +571,10 @@ func (a *App) saveArtifact(ctx context.Context, version, kind, key, mime string)
 		return err
 	}
 	if old != "" && old != key {
-		os.Remove(filepath.Join(a.storage, old))
+		var used bool
+		if a.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM media_artifacts WHERE file_key=$1 UNION ALL SELECT 1 FROM versions WHERE file_key=$1)", old).Scan(&used) == nil && !used {
+			os.Remove(filepath.Join(a.storage, old))
+		}
 	}
 	return nil
 }

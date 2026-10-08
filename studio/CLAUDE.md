@@ -14,3 +14,5 @@ Read README.md and docs/product-plan.md before changing this project.
 - Test access control, concurrency and budget/termination behavior when changing them.
 - Keep docs/product-plan.md honest about completed and remaining scope.
 - The user prefers short Norwegian progress updates and final answers.
+- Commit and push completed, verified Studio changes to the `studio` branch without
+  asking again. This is the user's standing preference. Production deployment is manual.

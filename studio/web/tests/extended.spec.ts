@@ -14,7 +14,7 @@ test('production, campaigns, library tools and sharing work on both screen sizes
   await page.getByLabel('E-post', { exact: true }).fill('browser@example.test');
   await page.getByLabel('Passord', { exact: true }).fill('studio-browser-test-password');
   await page.locator('.auth-form button.primary').click();
-  await expect(page.getByRole('heading', { name: 'Plass til neste idé.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Annonser', exact: true })).toBeVisible();
   const nav = page.getByRole('navigation', {
     name: info.project.name === 'mobile' ? 'Mobilmeny' : 'Hovedmeny',
     exact: true,
@@ -34,16 +34,25 @@ test('production, campaigns, library tools and sharing work on both screen sizes
     'Samling ' + suffix,
   );
   await page.getByRole('button', { name: new RegExp('Materiale ' + suffix) }).click();
-  await dialog.getByRole('button', { name: 'Lagre favoritt' }).click();
-  await dialog.getByText('Del med noen utenfor arbeidsrommet', { exact: true }).click();
-  await dialog.getByRole('button', { name: 'Lag delingslenke' }).click();
-  const share = await dialog.getByLabel('Delingslenke', { exact: true }).inputValue();
+  await page
+    .getByText('Flere verktøy · rettigheter, behandling og deling', { exact: true })
+    .click();
+  await page.locator('.review-page').getByRole('button', { name: 'Lagre favoritt' }).click();
+  await page
+    .locator('.review-page')
+    .getByText('Del med noen utenfor arbeidsrommet', { exact: true })
+    .click();
+  await page.locator('.review-page').getByRole('button', { name: 'Lag delingslenke' }).click();
+  const share = await page
+    .locator('.review-page')
+    .getByLabel('Delingslenke', { exact: true })
+    .inputValue();
   const visitor = await context.browser()!.newContext();
   const shared = await visitor.newPage();
   await shared.goto(share.replace('http://localhost:5178', 'http://localhost:15178'));
   await expect(shared.getByRole('heading', { name: 'Materiale ' + suffix })).toBeVisible();
   await visitor.close();
-  await dialog.getByRole('button', { name: 'Lukk', exact: true }).click();
+  await page.getByRole('link', { name: 'Til biblioteket' }).click();
   await page
     .locator('.topbar-actions')
     .getByRole('button', { name: 'Produksjon og innsikt', exact: true })

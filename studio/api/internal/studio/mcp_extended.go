@@ -15,7 +15,7 @@ func extraMCPTools() []map[string]any {
 		fields            []string
 	}{
 		{"studio_create_item", "Create a draft. payload is JSON with title, kind, body, source_url, rights and tags.", []string{"payload"}},
-		{"studio_create_version", "Create an immutable text version. payload JSON: item_id, expected_version_id, title, body, model, prompt.", []string{"payload"}},
+		{"studio_create_version", "Create an immutable text version of library content. For ad renders use studio_prepare_ad_upload instead. payload JSON: item_id, expected_version_id, title, body, model, prompt.", []string{"payload"}},
 		{"studio_get_task", "Read task specification, exact source versions, feedback and previous deliveries.", []string{"task_id"}},
 		{"studio_progress", "Update stage and renew a currently owned claim. payload JSON: task_id, lease_id, stage, percent. Cannot activate tasks.", []string{"payload"}},
 		{"studio_deliver", "Deliver all requested formats and source projects. payload JSON: task_id, lease_id, version_id, files, source_files, formats (format to version_id), checklist (requirement to boolean), notes.", []string{"payload"}},
@@ -154,8 +154,12 @@ func (a *App) callExtraMCP(ctx context.Context, u Actor, name string, args map[s
 		}
 		defer tx.Rollback(ctx)
 		var current string
-		if tx.QueryRow(ctx, "SELECT current_version_id::text FROM items WHERE id::text=$1 AND product_id=$2 AND deleted_at IS NULL FOR UPDATE", v.Item, u.Product).Scan(&current) != nil || current != v.Expected {
+		var isAd bool
+		if tx.QueryRow(ctx, "SELECT coalesce(current_version_id::text,''),EXISTS(SELECT 1 FROM ads WHERE item_id=items.id) FROM items WHERE id::text=$1 AND product_id=$2 AND deleted_at IS NULL FOR UPDATE", v.Item, u.Product).Scan(&current, &isAd) != nil || current != v.Expected {
 			return nil, fmt.Errorf("versjonen er endret eller utilgjengelig")
+		}
+		if isAd {
+			return nil, fmt.Errorf("use studio_prepare_ad_upload to create a new rendered ad version")
 		}
 		var id string
 		e = tx.QueryRow(ctx, "INSERT INTO versions(item_id,number,title,body,file_key,file_name,mime,checksum,bytes,created_by,provenance) SELECT item_id,number+1,$2,$3,file_key,file_name,mime,checksum,bytes,$4,$5 FROM versions WHERE id=$1 RETURNING id::text", current, v.Title, v.Body, u.Name, jsonBytes(map[string]string{"agent": u.ID, "model": v.Model, "prompt": v.Prompt})).Scan(&id)

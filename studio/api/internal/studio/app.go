@@ -245,7 +245,7 @@ func (a *App) Handler() http.Handler {
 		}
 		key, _, _ := net.SplitHostPort(r.RemoteAddr)
 		max := 120
-		if strings.HasPrefix(r.URL.Path, "/api/auth/") {
+		if strings.HasPrefix(r.URL.Path, "/api/auth/") && r.URL.Path != "/api/auth/status" {
 			max = 30
 		}
 		if !a.allowed(key+strings.Split(r.URL.Path, "?")[0], max) {

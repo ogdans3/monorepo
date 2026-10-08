@@ -17,27 +17,45 @@ import (
 // Count stored files once even when several immutable versions reference them.
 const storageUsedSQL = `(SELECT coalesce(sum(bytes),0) FROM (SELECT file_key,max(bytes) AS bytes FROM (SELECT file_key,bytes FROM versions WHERE file_key<>'' UNION ALL SELECT file_key,bytes FROM media_artifacts) files GROUP BY file_key) unique_files)+(SELECT coalesce(sum(size),0) FROM upload_sessions WHERE completed_at IS NULL AND expires_at>now())+(SELECT coalesce(sum(reserved_bytes),0) FROM media_imports)`
 
+type uploadInput struct {
+	Product  string `json:"product_id"`
+	Title    string `json:"title"`
+	Name     string `json:"file_name"`
+	Body     string `json:"body"`
+	Rights   string `json:"rights"`
+	Size     int64  `json:"size"`
+	Item     string `json:"item_id"`
+	Ad       string `json:"ad_id"`
+	Expected string `json:"expected_version_id"`
+}
+type uploadError struct {
+	status  int
+	message string
+}
+
+func (e uploadError) Error() string { return e.message }
 func (a *App) startUpload(w http.ResponseWriter, r *http.Request) {
-	var v struct {
-		Product  string `json:"product_id"`
-		Title    string `json:"title"`
-		Name     string `json:"file_name"`
-		Body     string `json:"body"`
-		Rights   string `json:"rights"`
-		Size     int64  `json:"size"`
-		Item     string `json:"item_id"`
-		Expected string `json:"expected_version_id"`
-	}
+	var v uploadInput
 	if !decode(w, r, &v) {
 		return
 	}
-	u := actor(r)
+	out, err := a.createUpload(r.Context(), actor(r), v)
+	if err != nil {
+		status := 400
+		if problem, ok := err.(uploadError); ok {
+			status = problem.status
+		}
+		fail(w, status, err.Error())
+		return
+	}
+	write(w, 201, out)
+}
+func (a *App) createUpload(ctx context.Context, u Actor, v uploadInput) (map[string]any, error) {
 	if u.Agent {
 		v.Product = u.Product
 	}
-	if validateProduct(r.Context(), a, v.Product) != nil || v.Size <= 0 || v.Size > 2<<30 || len(v.Title) > 300 || v.Name == "" {
-		fail(w, 400, "Velg produkt og en fil på maks 2 GB")
-		return
+	if validateProduct(ctx, a, v.Product) != nil || v.Size <= 0 || v.Size > 2<<30 || len(v.Title) > 300 || len(v.Body) > 20000 || v.Name == "" {
+		return nil, uploadError{400, "Velg produkt og en fil på maks 2 GB"}
 	}
 	if v.Title == "" {
 		v.Title = filepath.Base(v.Name)
@@ -45,37 +63,50 @@ func (a *App) startUpload(w http.ResponseWriter, r *http.Request) {
 	if v.Rights == "" {
 		v.Rights = "unknown"
 	}
+	if v.Ad != "" {
+		if v.Item != "" && v.Item != v.Ad {
+			return nil, uploadError{400, "Annonse og innhold må ha samme ID"}
+		}
+		var id string
+		if a.db.QueryRow(ctx, "SELECT item_id::text FROM ads WHERE item_id::text=$1 AND product_id::text=$2", v.Ad, v.Product).Scan(&id) != nil {
+			return nil, uploadError{404, "Annonsen finnes ikke i dette produktet"}
+		}
+		v.Item = v.Ad
+	}
 	if v.Item != "" {
 		var current string
-		if a.db.QueryRow(r.Context(), "SELECT current_version_id::text FROM items WHERE id::text=$1 AND product_id::text=$2 AND deleted_at IS NULL", v.Item, v.Product).Scan(&current) != nil || current != v.Expected {
-			fail(w, 409, "Innholdet er endret eller utilgjengelig")
-			return
+		if a.db.QueryRow(ctx, "SELECT coalesce(current_version_id::text,'') FROM items WHERE id::text=$1 AND product_id::text=$2 AND deleted_at IS NULL", v.Item, v.Product).Scan(&current) != nil || current != v.Expected {
+			return nil, uploadError{409, "Innholdet er endret eller utilgjengelig"}
 		}
 	}
-	ctx := r.Context()
-	tx, e := a.db.Begin(ctx)
-	if e != nil {
-		fail(w, 500, "Databasefeil")
-		return
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 	var limit, used int64
-	e = tx.QueryRow(ctx, "SELECT storage_bytes FROM workspace_limits WHERE singleton FOR UPDATE").Scan(&limit)
-	if e == nil {
-		e = tx.QueryRow(ctx, "SELECT "+storageUsedSQL).Scan(&used)
+	if err = tx.QueryRow(ctx, "SELECT storage_bytes FROM workspace_limits WHERE singleton FOR UPDATE").Scan(&limit); err != nil {
+		return nil, err
 	}
-	if e != nil || used+v.Size > limit {
-		fail(w, 409, "Lagringsgrensen er nådd")
-		return
+	if err = tx.QueryRow(ctx, "SELECT "+storageUsedSQL).Scan(&used); err != nil {
+		return nil, err
+	}
+	if used+v.Size > limit {
+		return nil, uploadError{409, "Lagringsgrensen er nådd"}
 	}
 	var id string
-	key := token()
-	e = tx.QueryRow(ctx, "INSERT INTO upload_sessions(product_id,actor_id,title,file_name,body,rights,size,file_key,item_id,expected_version_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,nullif($9,'')::uuid,nullif($10,'')::uuid) RETURNING id::text", v.Product, u.ID, v.Title, filepath.Base(v.Name), v.Body, v.Rights, v.Size, key, v.Item, v.Expected).Scan(&id)
-	if e != nil || tx.Commit(ctx) != nil {
-		fail(w, 400, "Kunne ikke starte opplasting")
-		return
+	err = tx.QueryRow(ctx, "INSERT INTO upload_sessions(product_id,actor_id,title,file_name,body,rights,size,file_key,item_id,expected_version_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,nullif($9,'')::uuid,nullif($10,'')::uuid) RETURNING id::text", v.Product, u.ID, v.Title, filepath.Base(v.Name), v.Body, v.Rights, v.Size, token(), v.Item, v.Expected).Scan(&id)
+	if err != nil {
+		return nil, err
 	}
-	write(w, 201, map[string]any{"id": id, "offset_bytes": 0, "chunk_size": 8 << 20})
+	if err = tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	prefix := "/api/upload-sessions/"
+	if u.Agent {
+		prefix = "/api/agent/upload-sessions/"
+	}
+	return map[string]any{"id": id, "item_id": v.Item, "offset_bytes": 0, "chunk_size": 8 << 20, "upload_path": prefix + id, "complete_path": prefix + id + "/complete"}, nil
 }
 func (a *App) uploadStatus(w http.ResponseWriter, r *http.Request) {
 	rows, e := a.query(r.Context(), "SELECT id,offset_bytes,size,completed_at,result,expires_at FROM upload_sessions WHERE id::text=$1 AND actor_id=$2 AND expires_at>now()", r.PathValue("id"), actor(r).ID)
@@ -144,7 +175,7 @@ func fileMetadata(path string) (string, string, int64, error) {
 	h := sha256.New()
 	head := make([]byte, 512)
 	n, _ := f.Read(head)
-	mt := http.DetectContentType(head[:n])
+	mt := probeContainer(path, head[:n], http.DetectContentType(head[:n]))
 	f.Seek(0, 0)
 	size, e := io.Copy(h, f)
 	return hex.EncodeToString(h.Sum(nil)), mt, size, e
@@ -209,15 +240,25 @@ func (a *App) completeUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		var current string
-		e = tx.QueryRow(ctx, "SELECT current_version_id::text FROM items WHERE id=$1 FOR UPDATE", item).Scan(&current)
+		e = tx.QueryRow(ctx, "SELECT coalesce(current_version_id::text,'') FROM items WHERE id=$1 AND product_id=$2 AND deleted_at IS NULL FOR UPDATE", item, product).Scan(&current)
 		if e != nil || current != expected {
 			fail(w, 409, "En ny versjon er allerede lagret")
 			return
 		}
-		e = tx.QueryRow(ctx, "INSERT INTO versions(item_id,number,title,body,file_key,file_name,mime,checksum,bytes,created_by) SELECT item_id,number+1,$2,$3,$4,$5,$6,$7,$8,$9 FROM versions WHERE id=$1 RETURNING id::text", current, title, body, key, name, mt, checksum, size, u.Name).Scan(&version)
+		var isAd bool
+		if e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM ads WHERE item_id=$1)", item).Scan(&isAd); e != nil {
+			fail(w, 500, "Databasefeil")
+			return
+		}
+		if isAd && !strings.HasPrefix(mt, "video/") && !strings.HasPrefix(mt, "image/") {
+			fail(w, 400, "En annonseversjon må være en video eller et bilde")
+			return
+		}
+		e = tx.QueryRow(ctx, `INSERT INTO versions(item_id,number,title,body,file_key,file_name,mime,checksum,bytes,created_by)
+  VALUES($1,(SELECT coalesce(max(number),0)+1 FROM versions WHERE item_id=$1),$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id::text`, item, title, body, key, name, mt, checksum, size, u.Name).Scan(&version)
 	}
 	if e == nil {
-		_, e = tx.Exec(ctx, "UPDATE items SET current_version_id=$1,title=$2,body=$3,kind=$4,status='draft',updated_at=now() WHERE id=$5", version, title, body, kindForMime(mt), item)
+		_, e = tx.Exec(ctx, "UPDATE items SET current_version_id=$1,title=CASE WHEN EXISTS(SELECT 1 FROM ads WHERE item_id=items.id) THEN items.title ELSE $2 END,body=$3,kind=$4,status=CASE WHEN EXISTS(SELECT 1 FROM ads WHERE item_id=items.id) THEN 'review' ELSE 'draft' END,updated_at=now() WHERE id=$5", version, title, body, kindForMime(mt), item)
 	}
 	out := map[string]string{"id": item, "version_id": version}
 	if e == nil {
@@ -243,6 +284,7 @@ func (a *App) queueMedia(ctx context.Context, product, version, user string) {
 	if !known {
 		user = ""
 	}
+	a.queuePreviews(ctx, product, version, user)
 	a.db.Exec(ctx, "INSERT INTO jobs(product_id,version_id,user_id,kind) VALUES($1,$2,nullif($3,'')::uuid,'media') ON CONFLICT DO NOTHING", product, version, user)
 }
 func (a *App) storageAllowed(ctx context.Context, size int64) error {

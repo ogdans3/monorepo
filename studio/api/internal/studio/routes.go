@@ -8,6 +8,7 @@ func (a *App) extendedRoutes(m *http.ServeMux) {
 		h            http.HandlerFunc
 		write, admin bool
 	}{
+		{"GET /api/ads", a.ads, false, false}, {"POST /api/ads", a.addAd, true, false}, {"GET /api/ads/{id}", a.ad, false, false}, {"PATCH /api/ads/{id}", a.editAd, true, false}, {"POST /api/ads/{id}/versions/from-item", a.attachAdVersion, true, false}, {"POST /api/ads/{id}/review", a.reviewAd, true, false},
 		{"PATCH /api/items/{id}/category", a.setCategory, true, false},
 		{"POST /api/imports", a.createImport, true, false}, {"GET /api/imports", a.imports, false, false}, {"POST /api/imports/{id}/cancel", a.cancelImport, true, false}, {"POST /api/imports/{id}/retry", a.retryImport, true, false},
 		{"POST /api/products", a.createProduct, true, true}, {"GET /api/products/{id}/people", a.people, false, false}, {"GET /api/products/{id}/history", a.productHistory, false, false}, {"GET /api/products/{id}/members", a.members, false, true}, {"PUT /api/products/{id}/members", a.updateMember, true, true}, {"GET /api/products/{id}/context", a.getContext, false, false},

@@ -49,7 +49,7 @@ func (a *App) resourceAccess(ctx context.Context, path, id string, write bool) b
 	}
 	table := ""
 	column := "product_id::text"
-	for prefix, t := range map[string]string{"/api/imports/": "media_imports", "/api/items/": "items", "/api/tasks/": "tasks", "/api/publications/": "publications", "/api/conversations/": "conversations", "/api/campaigns/": "campaigns", "/api/experiments/": "experiments", "/api/claims/": "claims", "/api/templates/": "templates", "/api/collections/": "collections", "/api/jobs/": "jobs", "/api/upload-sessions/": "upload_sessions", "/api/products/": "products"} {
+	for prefix, t := range map[string]string{"/api/ads/": "items", "/api/imports/": "media_imports", "/api/items/": "items", "/api/tasks/": "tasks", "/api/publications/": "publications", "/api/conversations/": "conversations", "/api/campaigns/": "campaigns", "/api/experiments/": "experiments", "/api/claims/": "claims", "/api/templates/": "templates", "/api/collections/": "collections", "/api/jobs/": "jobs", "/api/upload-sessions/": "upload_sessions", "/api/products/": "products"} {
 		if strings.HasPrefix(path, prefix) {
 			table = t
 			break

@@ -114,7 +114,10 @@ func (a *App) createItem(w http.ResponseWriter, r *http.Request) {
 	write(w, 201, result)
 }
 
-const itemSelect = "SELECT i.id,i.product_id,i.title,i.kind,i.body,i.source_url,i.tags,i.rights,i.status,i.current_version_id,i.created_by,i.created_at,i.updated_at,i.inbox,i.metadata,i.rights_details,i.deleted_at,v.mime,v.file_name,v.checksum,v.bytes FROM items i LEFT JOIN versions v ON v.id=i.current_version_id "
+const itemSelect = `SELECT i.id,i.product_id,i.title,i.kind,i.body,i.source_url,i.tags,i.rights,i.status,i.current_version_id,i.created_by,i.created_at,i.updated_at,i.inbox,i.metadata,i.rights_details,i.deleted_at,v.mime,v.file_name,v.checksum,v.bytes,
+ EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='thumbnail') AS has_thumbnail,
+ EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='proxy') AS has_proxy,
+ EXISTS(SELECT 1 FROM ads WHERE item_id=i.id) AS is_ad FROM items i LEFT JOIN versions v ON v.id=i.current_version_id `
 
 func (a *App) items(w http.ResponseWriter, r *http.Request) {
 	p := r.URL.Query().Get("product")
@@ -125,7 +128,11 @@ func (a *App) itemData(ctx context.Context, id, product string) (map[string]any,
 	if e != nil || len(items) == 0 {
 		return nil, fmt.Errorf("innholdet finnes ikke")
 	}
-	versions, e := a.query(ctx, "SELECT id,number,title,body,file_name,mime,checksum,bytes,provenance,created_by,created_at FROM versions WHERE item_id::text=$1 ORDER BY number DESC", id)
+	versions, e := a.query(ctx, `SELECT v.id,v.number,v.title,v.body,v.file_name,v.mime,v.checksum,v.bytes,v.provenance,v.created_by,v.created_at,
+ EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='thumbnail') AS has_thumbnail,
+ EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='proxy') AS has_proxy,
+ coalesce((SELECT status FROM ad_reviews WHERE version_id=v.id ORDER BY created_at DESC,id DESC LIMIT 1),'review') AS review_status
+ FROM versions v WHERE v.item_id::text=$1 ORDER BY v.number DESC`, id)
 	if e != nil {
 		return nil, e
 	}
@@ -133,7 +140,19 @@ func (a *App) itemData(ctx context.Context, id, product string) (map[string]any,
 	if e != nil {
 		return nil, e
 	}
-	return map[string]any{"item": items[0], "versions": versions, "notes": notes, "extra": a.extraItemData(ctx, id)}, nil
+	ads, err := a.query(ctx, "SELECT ad_type,external_key,brief FROM ads WHERE item_id::text=$1", id)
+	if err != nil {
+		return nil, err
+	}
+	reviews, err := a.query(ctx, "SELECT r.* FROM ad_reviews r JOIN versions v ON v.id=r.version_id WHERE v.item_id::text=$1 ORDER BY r.created_at DESC,r.id DESC", id)
+	if err != nil {
+		return nil, err
+	}
+	var ad any
+	if len(ads) > 0 {
+		ad = ads[0]
+	}
+	return map[string]any{"item": items[0], "versions": versions, "notes": notes, "reviews": reviews, "ad": ad, "extra": a.extraItemData(ctx, id)}, nil
 }
 func (a *App) item(w http.ResponseWriter, r *http.Request) {
 	v, e := a.itemData(r.Context(), r.PathValue("id"), "")
@@ -164,7 +183,12 @@ func (a *App) newVersion(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 	var current string
-	e = tx.QueryRow(r.Context(), "SELECT current_version_id::text FROM items WHERE id::text=$1 FOR UPDATE", id).Scan(&current)
+	var isAd bool
+	e = tx.QueryRow(r.Context(), "SELECT coalesce(current_version_id::text,''),EXISTS(SELECT 1 FROM ads WHERE item_id=items.id) FROM items WHERE id::text=$1 FOR UPDATE", id).Scan(&current, &isAd)
+	if isAd {
+		fail(w, 400, "Last opp en ny filversjon til annonsen, eller rediger annonsebriefen")
+		return
+	}
 	if e != nil {
 		fail(w, 404, "Innholdet finnes ikke")
 		return
@@ -194,9 +218,22 @@ func (a *App) approve(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	tag, e := a.db.Exec(r.Context(), "UPDATE items SET status='approved',updated_at=now() WHERE id::text=$1 AND current_version_id::text=$2", r.PathValue("id"), v.Version)
+	ctx := r.Context()
+	tx, e := a.db.Begin(ctx)
+	if e != nil {
+		fail(w, 500, "Databasefeil")
+		return
+	}
+	defer tx.Rollback(ctx)
+	tag, e := tx.Exec(ctx, "UPDATE items SET status='approved',updated_at=now() WHERE id::text=$1 AND current_version_id::text=$2 AND deleted_at IS NULL", r.PathValue("id"), v.Version)
 	if e != nil || tag.RowsAffected() == 0 {
 		fail(w, 409, "Versjonen er endret. Åpne innholdet på nytt.")
+		return
+	}
+	// The legacy approval endpoint must preserve the same exact-version ad history.
+	_, e = tx.Exec(ctx, "INSERT INTO ad_reviews(version_id,status,author) SELECT $1,'approved',$2 WHERE EXISTS(SELECT 1 FROM ads WHERE item_id::text=$3)", v.Version, actor(r).Name, r.PathValue("id"))
+	if e != nil || tx.Commit(ctx) != nil {
+		fail(w, 500, "Kunne ikke godkjenne versjonen")
 		return
 	}
 	a.audit(r.Context(), actor(r).Name, "version.approved", v.Version)
@@ -320,6 +357,7 @@ func (a *App) file(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", mt)
 	w.Header().Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": name}))
+	mediaCache(w, r, key)
 	http.ServeFile(w, r, filepath.Join(a.storage, key))
 }
 func (a *App) searchData(ctx context.Context, q, product, user string) ([]map[string]any, error) {

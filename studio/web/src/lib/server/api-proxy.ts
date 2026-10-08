@@ -15,6 +15,8 @@ export async function proxyAPI(request: Request, pathname: string): Promise<Resp
     'upload-offset',
     'range',
     'if-range',
+    'if-none-match',
+    'if-modified-since',
     'mcp-protocol-version',
     'mcp-session-id',
     'last-event-id',

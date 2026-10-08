@@ -27,13 +27,16 @@ test('link import, saved category, duplicate, failure and cancellation', async (
     .filter({ has: page.locator('a[href*="e2e_ok_' + suffix + '"]') });
   await expect(row).toHaveAttribute('data-import-status', 'completed', { timeout: 15000 });
   await row.getByRole('button', { name: 'Åpne video' }).click();
-  const dialog = page.getByRole('dialog');
+  await page
+    .getByText('Flere verktøy · rettigheter, behandling og deling', { exact: true })
+    .click();
+  const dialog = page.locator('.review-page');
   await expect(dialog.getByRole('combobox', { name: 'Kategori', exact: true })).toBeVisible();
   await dialog
     .getByRole('combobox', { name: 'Kategori', exact: true })
     .selectOption('merkevare_design');
   await expect(dialog.getByText('Valgt av dere', { exact: true })).toBeVisible();
-  await dialog.getByRole('button', { name: 'Lukk', exact: true }).click();
+  await page.getByRole('link', { name: 'Til biblioteket' }).click();
   await page.getByLabel('Filtrer kategori').selectOption('merkevare_design');
   await expect(page.locator('.asset-grid')).toContainText('Importtest design');
   await input.fill(source + '?igsh=tracking');

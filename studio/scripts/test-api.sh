@@ -12,5 +12,15 @@ export BOOTSTRAP_TOKEN=test-browser-bootstrap
 export AI_ENABLED=false
 export SOCIAL_IMPORT_PYTHON=python3
 export SOCIAL_IMPORT_SCRIPT="$PWD/scripts/fixtures/social-download.py"
+# Browser tests exercise actual thumbnails/proxies. Prefer host binaries; fall
+# back to the already built API image, mounting only isolated test storage.
+for binary in ffmpeg ffprobe tesseract; do
+  if ! command -v "$binary" >/dev/null 2>&1; then
+    docker image inspect studio-api >/dev/null 2>&1 || { echo 'Build the media runtime first: docker compose build api' >&2; exit 1; }
+    mkdir -p "$PWD/.data/test-bin" "$STORAGE_PATH"
+    ln -sf "$PWD/scripts/fixtures/media-command.sh" "$PWD/.data/test-bin/$binary"
+  fi
+done
+export PATH="$PATH:$PWD/.data/test-bin"
 cd api
 exec go run ./cmd/server

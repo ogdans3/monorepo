@@ -24,6 +24,17 @@ Agentreservasjon og faktisk jobbkjøring er ulike ting. En utløpt reservasjon
 frigjør oppgaven, men betyr ikke at en ekstern prosess ble terminert. `lease_id`
 hindrer at denne prosessen leverer etter at oppgaven er overtatt av en annen agent.
 
+## Direkte annonseiterasjon
+
+Eksterne agenter kan levere direkte til et annonsekonsept uten å opprette en
+produksjonsoppgave. `studio_create_ad` bruker produktavgrenset, stabil nøkkel og
+er idempotent under samtidige kall. `studio_prepare_ad_upload` gjenbruker samme
+opplastingsoperasjon som grensesnittet, med produktkontroll og forventet versjon.
+Fullføring låser annonsen og oppretter neste uforanderlige filversjon. Nye filer
+setter status til gjennomgang. Feedback og godkjenning peker på en eksakt versjon;
+MCP tilbyr bare lesing av menneskelige vurderinger. Ingen hendelse starter ny AI.
+Se [CLI- og MCP-oppskriften](../agent/README.md).
+
 ## Stopp og kostnader
 
 - `AI_ENABLED=false` og tom nøkkel er standard.
@@ -73,7 +84,9 @@ brukes til prioritering. Poengene er ikke sannsynligheten for et salg.
 ## Lokal mediebehandling
 
 FFmpeg, Tesseract, MiniLM, CLIP og Whisper kjører i lokalt avgrensede containere.
-Originalfiler bevares og versjoneres. Modeller lastes ned til separat cache første
+Originalfiler bevares og versjoneres. Miniatyrer og mobilproxy har hver sin
+avgrensede worker, slik at analyse ikke blokkerer forhåndsvisning. Gamle manglende
+previews legges i kø i små batcher; tidligere feilede forsøk krever manuell retry. Modeller lastes ned til separat cache første
 gang. Jobber har tidsgrense og stoppknapp; prosessrestart gjenopptar ikke uferdige
 jobber automatisk. Bare lokale «opptatt»-svar prøves på nytt, i maksimalt 30 sekunder
 innenfor kallers tidsgrense. Betalte provider-kall gjentas ikke.

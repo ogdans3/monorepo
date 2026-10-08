@@ -10,11 +10,12 @@ mobil og desktop. Lokal mediebehandling kjører i en egen CPU-container.
 | --- | --- |
 | Tilgang | Invitasjoner, tre arbeidsromsroller, produktmedlemmer/roller, begrensede produkter, engangslenker for passordbytte og tilbakekalling |
 | Produkt | Flere produkter, versjonert merkevare-/produktgrunnlag, kildebelagte påstander og kontekstpakker |
+| Annonser | Egen startside, annonsetyper/brief/stabil nøkkel, nummererte filversjoner, gjenbruk av eksisterende opplastinger, egne review-URL-er, video/sammenligning, eksakt godkjenning og endringsønsker via MCP |
 | Bibliotek | Medier, manus, hooks, referanser, samlinger, favoritter, etiketter, innboks, CSV, massehandlinger, relasjoner, papirkurv og eksport |
 | Versjoner | Uforanderlige tekst-/filversjoner, samtidig redigeringsvern, tekstsammenligning, medier side ved side og godkjenning av en bestemt versjon |
 | Opplasting | Gjenopptakbare 8 MB-deler, opptil 2 GB per fil, SHA-256-duplikatsjekk, private filer og rettighetsdokumentasjon med utløp |
 | Lenkeimport | Instagram, TikTok og Snapchat Spotlight; varig kø, fremdrift, stopp, eksplisitt nytt forsøk, kilde/opphav, duplikater og lokal kategorisering med manuell overstyring |
-| Medier | FFmpeg-miniatyrer, mobilproxy, rammeuttrekk, norsk/engelsk OCR, lokal Whisper-transkribering og tidsfestede segmenter |
+| Medier | Separate prioriterte miniatyr-/proxy-køer, reparasjon av eldre manglende previews, lazy-loadede kort og privat revalidering; rammeuttrekk, norsk/engelsk OCR, lokal Whisper-transkribering og tidsfestede segmenter |
 | Søk | Norsk fulltekst, tittel-likhet, flerspråklig semantikk, visuell tekst-/bildelikhet, tidskoder, filtre, lagrede søk og massevalg |
 | Chat | Private samtaler, vedlegg/faste versjoner/kampanjer, strømmede svar, søk, utkast og produksjonsidéer; stopp og kjøringslogg |
 | Modeller | Rolle-/produktprofiler, modelloverstyring, kontrollert reservemodell, bounded manus/analyse og separat TypeSafe Jev-adapter |
@@ -36,6 +37,9 @@ mobil og desktop. Lokal mediebehandling kjører i en egen CPU-container.
   Plattformblokkering og innlogging kan hindre import. Private snaps/stories, album
   og profiler støttes ikke. Standardrettigheten er «Kun referanse». Kategorier er
   lokale likhetsforslag, med usikkerhet og mulighet for manuell retting.
+- Eksisterende opplastinger grupperes eksplisitt fra grensesnittet eller via MCP;
+  ingen automatisk navnegjetting. Agenten må bruke annonse-ID og forventet
+  versjons-ID for hver render. De gamle generelle opplastingsrutene beholdes.
 - **Video/design utføres av en tilkoblet ekstern agent.** Studio leverer brief,
   låste malfelt, referanser, ønskede klipp/lyd/undertekster/logo/mockup, formater og
   sjekkliste. Agenten må ha produksjonsverktøy og eget kostnadstak. Ingen automatisk

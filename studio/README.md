@@ -1,6 +1,6 @@
 # Studio
 
-Privat arbeidsrom for innhold, produksjon og publisering. PostgreSQL, Go og
+Privat arbeidsrom for annonser, innhold, produksjon og publisering. PostgreSQL, Go og
 SvelteKit/TypeScript, med lokal CPU-behandling av medier. Mobil først. Mappen er
 selvstendig og kan flyttes til et tomt repo uten avhengigheter til andre prosjekter.
 
@@ -30,6 +30,9 @@ Docker-volumer. `docker compose down` beholder data; `down -v` sletter dem.
 
 ## Funksjoner
 
+- Annonser som startside: én annonse-ID, annonsetype, brief og nummererte filversjoner.
+  Egne gjennomgangssider med video, sammenligning, tidsfestede kommentarer og
+  godkjenning/endringsønsker for eksakt versjon. Vanlig tilbake-/fremovernavigasjon.
 - Bibliotek med versjoner, filer, samlinger, favoritter, etiketter, innboks,
   rettigheter, kommentarer, CSV, papirkurv, delingslenker og eksportpakker.
 - Gjenopptakbar opplasting opptil 2 GB, duplikatsjekk, miniatyrer, mobilvideo,
@@ -48,7 +51,32 @@ Docker-volumer. `docker compose down` beholder data; `down -v` sletter dem.
 [Produktplanen](docs/product-plan.md) beskriver detaljene og de praktiske grensene.
 Compose binder tjenestene til loopback. Publisering på sosiale plattformer gjøres manuelt.
 
+## Annonser og iterasjon
+
+Start i **Annonser**. Opprett én annonse per konsept, velg en annonsetype og legg
+inn briefen. «Last opp neste versjon» legger ny video eller nytt bilde til samme
+annonse. Tittelen på konseptet beholdes, mens hvert render beholder fullt filnavn.
+Ny filversjon krever ny gjennomgang; tidligere vurderinger og kommentarer bevares.
+
+Eksisterende bibliotekinnhold kan velges når annonsen opprettes. Flere opplastinger
+som hører sammen kan samles fra gjennomgangssiden med «Bruk en eksisterende
+opplasting». Originalene beholdes. Studio gjetter ikke grupper ut fra filnavn.
+
+Eksterne agenter bruker `studio_create_ad` med en stabil `external_key`, leser
+`studio_get_ad` for feedback og leverer hver render med `studio_prepare_ad_upload`
+eller `agent/studio.py upload --ad-id`. Se [den konkrete agentflyten](agent/README.md).
+Vanlig opplasting uten annonse-ID oppretter fortsatt bibliotekinnhold.
+
 ## Lokale modeller og medier
+
+Kortene laster små, lazy-loadede miniatyrer i stedet for originalvideoer/-bilder.
+Egne thumbnail- og proxy-workers kjører uavhengig av OCR/transkribering/modellkøen.
+Eksisterende medier som mangler forhåndsvisning, legges i små reparasjonsbatcher
+etter oppstart. Feilede forsøk gjentas bare på forespørsel. Gjennomgangssiden bruker
+mobilproxy når den er klar, med mulighet til å spille av originalen.
+Private medier mellomlagres med autorisert revalidering og støtte for byte ranges.
+Annonselisten henter bare relevant metadata, oppdateres mens den er synlig og har
+knapp for manuell oppdatering; bakgrunnsoppdateringen er avgrenset.
 
 Første bruk laster ned flerspråklig MiniLM, CLIP med flerspråklig tekstmodell og
 Whisper base til modellvolumet. Nedlasting kan ta flere minutter; senere kjører
@@ -188,6 +216,9 @@ Oppstart låser migreringene og kontrollerer sjekksummene.
 ## Utvikling og tester
 
 Go 1.22+, Node 22.12+ og Python 3.12 for CLI/backupverifisering. Installer med `go mod download` i `api` og `npm ci` i `web`.
+Nettlesertestene krever FFmpeg/FFprobe/Tesseract på verten eller et bygget
+`studio-api`-image (`docker compose build api`). Testserveren bruker automatisk
+containerverktøyene når verten mangler dem, med kun isolert testlagring montert.
 Integrasjonstester bruker bare `studio_test`, nettlesere `studio_e2e`, medier
 `studio_media_test`. Opprett testdatabasene én gang:
 

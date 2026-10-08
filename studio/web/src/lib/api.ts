@@ -82,6 +82,7 @@ export async function uploadFile(
     'studio-upload',
     product,
     fields.item_id || '',
+    fields.expected_version_id || '',
     file.name,
     file.size,
     file.lastModified,
@@ -104,6 +105,7 @@ export async function uploadFile(
       body: fields.body || '',
       rights: fields.rights || 'unknown',
       item_id: fields.item_id || '',
+      ad_id: fields.ad_id || '',
       expected_version_id: fields.expected_version_id || '',
     });
     localStorage.setItem(marker, session!.id);
