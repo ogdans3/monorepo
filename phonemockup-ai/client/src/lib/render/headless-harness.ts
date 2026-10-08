@@ -27,6 +27,7 @@ export type InitOptions = {
     caseColor?: string | null;
     /** Turn off MSAA to trade edge quality for speed. */
     antialias?: boolean;
+    showCameraIsland?: boolean;
     lidAngle?: number;
     lidOpenDuration?: number;
 };
@@ -47,7 +48,9 @@ function catalog() {
             id: m.id,
             name: m.name,
             modelPath: m.modelPath,
-            caseColor: m.caseColor
+            caseColor: m.caseColor,
+            supportsCameraIsland: !!m.cameraIsland,
+            showCameraIsland: m.cameraIsland ? m.showCameraIsland !== false : undefined
         })),
         animations: (animationGroups as AnimationGroup[]).map((g) => ({
             id: g.id,
@@ -114,6 +117,7 @@ async function init(opts: InitOptions) {
     await renderer.setModel(
         {...model,
             ...(opts.caseColor === undefined ? {} : {caseColor: opts.caseColor}),
+            ...(opts.showCameraIsland === undefined ? {} : {showCameraIsland: opts.showCameraIsland}),
             ...(opts.lidAngle === undefined ? {} : {lidAngle: opts.lidAngle}),
             ...(opts.lidOpenDuration === undefined ? {} : {lidOpenDuration: opts.lidOpenDuration})}
     );

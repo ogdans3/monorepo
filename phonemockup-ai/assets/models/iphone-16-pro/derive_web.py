@@ -155,6 +155,8 @@ bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'iphone-16-pro-web.blend'),compress=True)
 bpy.ops.export_scene.gltf(filepath=str(RUNTIME),export_format='GLB',export_yup=True,export_apply=True,export_texcoords=True,export_normals=True,export_materials='EXPORT',export_image_format='AUTO',export_cameras=False,export_lights=False,export_animations=False,export_draco_mesh_compression_enable=False)
 catalog={'id':'iphone-16-pro','name':'iPhone 16 Pro','modelPath':'/iphone-16-pro.glb','defaultPosition':{'x':0,'y':0,'z':round(3-1.42*.14961,7)},'defaultRotation':{'x':0,'y':0,'z':0},'layers':[{'match':'screen','material':'video','uv':'planar'}],'caseColor':None}
+catalog['cameraIsland']={'nodes':['camera_cutout','front_camera_optical_lens','front_camera_pupil']}
+catalog['showCameraIsland']=True
 (ROOT/'client/src/lib/models/3d-models/iphone-16-pro.model.json').write_text(json.dumps(catalog,indent=2)+'\n')
 stats={'device':'iPhone 16 Pro','body_dimensions_mm':{'width':71.45,'height':149.61,'depth':8.25},'screenshot_pixels':[1206,2622],'screen_web_mm':[float(x1-x0)*1000,float(z1-z0)*1000],'full_bounds_mm':list((hi-lo)*1000),'original_origin_shift_mm':list(center*1000),'triangles':sum(len(p.vertices)-2 for o in coll.objects for p in o.data.polygons),'mesh_objects':len(coll.objects),'glb_bytes':RUNTIME.stat().st_size,'omitted_hidden_or_glass_parts':omit}
 (OUT/'export-stats.json').write_text(json.dumps(stats,indent=2)+'\n')

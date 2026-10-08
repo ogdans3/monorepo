@@ -341,6 +341,19 @@ export class SceneRenderer {
         const restDistance = this.camera.position.z - this.basePos.z;
         this.zScale = restDistance > 0 ? restDistance / REFERENCE_DISTANCE : 1;
         this.setLidAtTime(this.lastLidTime);
+        this.applyCameraIslandVisibility(config);
+    }
+
+    private applyCameraIslandVisibility(config: Model) {
+        if (!this.model || !config.cameraIsland) return;
+        const visible = config.showCameraIsland !== false;
+        for (const name of config.cameraIsland.nodes) {
+            const node = this.model.getObjectByName(name);
+            if (node && node.visible !== visible) {
+                node.visible = visible;
+                this.dirty = true;
+            }
+        }
     }
 
     /** Pose only the articulated lid, retaining the base and the rest-pose pivot. */

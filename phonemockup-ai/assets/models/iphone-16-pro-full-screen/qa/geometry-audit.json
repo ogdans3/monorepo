@@ -1,0 +1,25 @@
+{
+  "variant": "iPhone 16 Pro Full Screen",
+  "intent": "Creative mockup variant; front Dynamic Island and optics removed, not a physical Apple device.",
+  "studio": {
+    "removed": [
+      "SCREEN_DynamicIsland__Occluder",
+      "FRONT_Camera_Optical_Lens",
+      "FRONT_Camera_Pupil"
+    ],
+    "unchanged_meshes": 159,
+    "all_remaining_geometry_transforms_and_uvs_identical": true
+  },
+  "web": {
+    "removed": [
+      "camera_cutout",
+      "front_camera_optical_lens",
+      "front_camera_pupil"
+    ],
+    "unchanged_meshes": 70,
+    "all_remaining_geometry_transforms_and_uvs_identical": true
+  },
+  "glb_bytes": 2005576,
+  "glb_sha256": "4e504cb1e9b7e979af8150bf496c4d2e023eceb8ad6688b18c743c58889c8b29",
+  "triangles": 93609
+}

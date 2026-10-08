@@ -94,7 +94,7 @@ The **server is not in this compose file** — it's deployed as a separate swarm
 
 ## Dashboard test version (root)
 
-This repo is wired into the **AI Central master dashboard** (`/home/ai_user/git/master-dashboard`). The root `Dockerfile` + `.dashboard.yaml` build and run **only the client** as a single container — same shape as the production compose. The Express server is not started here; routes that need the API (project save, file upload, login) will 404, but the marketing page and the in-browser editor work fully.
+The project-local `Dockerfile` + `.dashboard.yaml` build and run **only the client** as a single container — same shape as the production compose. Use this PhoneMockup folder as the Docker build context. The Express server is not started here; routes that need the API (project save, file upload, login) will 404, but the marketing page and the in-browser editor work fully.
 
 To run a real end-to-end stack inside the dashboard, swap the root Dockerfile for a `docker-compose.yml` and provide secrets for WorkOS / Neon / B2 / Google Secret Manager.
 
@@ -131,3 +131,11 @@ To run a real end-to-end stack inside the dashboard, swap the root Dockerfile fo
   model is switched.
 - **Tailwind v4.** Configured via `@tailwindcss/vite`, no `tailwind.config.js`. Theme files (`theme.css`, `theme-2.css`, …) are CSS, not JS config.
 - **Bun is used in dev** (`bun run dev`, `bun.lockb` present) but the Dockerfiles use `npm ci` against `package-lock.json`. Both lockfiles are committed.
+
+## Dynamic Island
+
+The iPhone 16 Pro and Full Screen variant use exact `cameraIsland.nodes` metadata
+and `showCameraIsland`. Keep visibility in the shared renderer, preserve the
+setting in saved projects and forward it through the MCP harness. Full Screen
+reuses the original GLB for reversible toggling; a separate island-free GLB and
+Blender sources are provided for external use. See `docs/models/iphone-16-pro-full-screen.md`.

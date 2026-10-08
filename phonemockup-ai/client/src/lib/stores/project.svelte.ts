@@ -45,6 +45,8 @@ function resolveModel(saved: Model | undefined, formatVersion: number | undefine
     const current: Model = models.find((m) => m.id === saved?.id) ?? saved ?? defaultModel;
     const pickedColor = (formatVersion ?? 1) >= 2 ? saved?.caseColor ?? null : null;
     return {...current, caseColor: pickedColor ?? current.caseColor ?? null,
+        ...(current.cameraIsland ? {showCameraIsland: typeof saved?.showCameraIsland === "boolean"
+            ? saved.showCameraIsland : current.showCameraIsland ?? true} : {}),
         ...(current.hinge ? {lidAngle: saved?.lidAngle ?? current.lidAngle,
             lidOpenDuration: saved?.lidOpenDuration ?? current.lidOpenDuration} : {})};
 }

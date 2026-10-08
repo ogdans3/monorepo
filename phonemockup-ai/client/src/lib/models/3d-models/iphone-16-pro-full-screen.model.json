@@ -1,6 +1,6 @@
 {
-  "id": "iphone-16-pro",
-  "name": "iPhone 16 Pro",
+  "id": "iphone-16-pro-full-screen",
+  "name": "iPhone 16 Pro \u00b7 Full Screen",
   "modelPath": "/iphone-16-pro.glb",
   "defaultPosition": {
     "x": 0,
@@ -27,5 +27,5 @@
       "front_camera_pupil"
     ]
   },
-  "showCameraIsland": true
+  "showCameraIsland": false
 }

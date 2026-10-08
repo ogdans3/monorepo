@@ -1,0 +1,30 @@
+{
+  "browser_tests_passed": 4,
+  "browser_tests": [
+    "rendered pixels and exact restoration without reload",
+    "saved on/off states and defaults",
+    "toggle during pending GLB load",
+    "paused editor redraw and model-specific UI"
+  ],
+  "client_build": "passed",
+  "mcp_build": "passed",
+  "svelte_check": {
+    "errors": 0,
+    "existing_warnings": 8
+  },
+  "headless_catalogue_models_rendered": 17,
+  "headless_stills": 21,
+  "animated_frames": 4,
+  "blender_views": [
+    "front",
+    "back",
+    "left",
+    "right",
+    "top",
+    "bottom",
+    "front perspective",
+    "back perspective"
+  ],
+  "glb_audit": "all 70 remaining meshes and materials identical to original; three front camera meshes removed",
+  "glb_bytes": 2005576
+}

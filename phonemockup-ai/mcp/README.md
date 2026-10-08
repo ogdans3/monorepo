@@ -113,3 +113,11 @@ bundling them or fetching them on demand.
 Every preset renders on every model. Keyframe depth is scaled by how far each
 model rests from the camera, so zooms behave the same on the tiny Pixel models
 as on the iPhones (see the "Models are centred" note in the repo's CLAUDE.md).
+
+### iPhone Dynamic Island
+
+Use `model: "iphone-16-pro-full-screen"` for the island-free default, or pass
+`showCameraIsland: false` with `iphone-16-pro`. Either entry accepts `true` to
+show it. Omitting the option uses the selected model’s default. The setting
+applies to images and every video frame. `list_phone_models` reports
+`supportsCameraIsland` and `showCameraIsland` for discoverability.

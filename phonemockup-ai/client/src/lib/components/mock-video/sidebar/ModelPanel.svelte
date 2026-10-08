@@ -85,6 +85,17 @@
         </Select.Root>
     </div>
 
+    {#if project.model.cameraIsland}
+        <label class="flex items-center gap-2 text-xs">
+            <input type="checkbox" role="switch"
+                checked={project.model.showCameraIsland !== false}
+                onchange={(event) => {
+                    project.model = {...project.model, showCameraIsland: event.currentTarget.checked};
+                }} />
+            Show Dynamic Island
+        </label>
+    {/if}
+
     {#if project.model.hinge}
         <div class="grid gap-2">
             <Label for="lid-angle" class="text-xs text-muted-foreground">

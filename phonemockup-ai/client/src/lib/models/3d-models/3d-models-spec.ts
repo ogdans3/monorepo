@@ -5,6 +5,7 @@ import iphoneTestPhone3 from "./iphone-3.model.json";
 import iphoneTestPhone3Point1 from "./iphone-3-1.model.json";
 import iphoneTestPhone3Point2 from "./iphone-3-2.model.json";
 import iphone16Pro from "./iphone-16-pro.model.json";
+import iphone16ProFullScreen from "./iphone-16-pro-full-screen.model.json";
 import iphone17Test1 from "./iphone-17.1.model.json";
 import iphone17WhiteTest1 from "./iphone-17-white.1.model.json";
 import iphone17ProMax from "./iphone-17-pro-max.model.json";
@@ -36,6 +37,10 @@ export type Model = {
     defaultRotation: Vec3,
     layers: Layer[];
     caseColor: string | null;
+    /** Exact node names for the removable front camera island and its optics. */
+    cameraIsland?: {nodes: string[]};
+    /** Defaults to visible when omitted, including in older saved projects. */
+    showCameraIsland?: boolean;
     /** Rigid display articulation around the named node's local X axis. */
     hinge?: {node: string; minAngle: number; maxAngle: number; defaultAngle: number};
     lidAngle?: number;
@@ -50,6 +55,7 @@ export const models: Model[] = [
     iphoneTestPhone3Point1,
     iphoneTestPhone3Point2,
     iphone16Pro,
+    iphone16ProFullScreen,
     iphone17Test1,
     iphone17WhiteTest1,
     iphone17ProMax,

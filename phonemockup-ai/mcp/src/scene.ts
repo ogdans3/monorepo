@@ -42,6 +42,7 @@ export const sceneSchema = {
         .string()
         .optional()
         .describe('Override the phone body colour, e.g. "#1d1d1f".'),
+    showCameraIsland: z.boolean().optional().describe("Show the front Dynamic Island on supported iPhones. Omit to use the selected model’s default."),
     lidAngle: z.number().min(0).max(130).optional().describe("Lid opening in degrees for hinged laptops; 0 closes it."),
     lidOpenDuration: z.number().min(0).max(60).optional().describe("Seconds to open a laptop from closed to lidAngle; 0 holds the angle."),
     antialias: z
@@ -63,6 +64,7 @@ export type SceneInput = {
     glassReflections: boolean;
     caseColor?: string;
     antialias: boolean;
+    showCameraIsland?: boolean;
     lidAngle?: number;
     lidOpenDuration?: number;
 };
@@ -76,6 +78,7 @@ export function resolveScene(input: SceneInput, fallback: {width: number; height
         background: parseBackground(input.background),
         glassReflections: input.glassReflections,
         caseColor: input.caseColor ?? undefined,
+        showCameraIsland: input.showCameraIsland,
         lidAngle: input.lidAngle,
         lidOpenDuration: input.lidOpenDuration,
         antialias: input.antialias

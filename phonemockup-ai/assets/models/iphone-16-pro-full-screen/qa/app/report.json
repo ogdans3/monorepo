@@ -1,0 +1,145 @@
+{
+  "passed": true,
+  "renderer": "Public MCP RenderSession + resolveScene + shared SceneRenderer",
+  "catalogueModels": 17,
+  "results": [
+    {
+      "model": "macbook-pro-14-m4",
+      "name": "models/macbook-pro-14-m4",
+      "bytes": 163801
+    },
+    {
+      "model": "test-phone-1",
+      "name": "models/test-phone-1",
+      "bytes": 212331
+    },
+    {
+      "model": "iphone-test-phone-1",
+      "name": "models/iphone-test-phone-1",
+      "bytes": 214012
+    },
+    {
+      "model": "iphone-test-phone-3",
+      "name": "models/iphone-test-phone-3",
+      "bytes": 221232
+    },
+    {
+      "model": "iphone-test-phone-3-1",
+      "name": "models/iphone-test-phone-3-1",
+      "bytes": 217202
+    },
+    {
+      "model": "iphone-test-phone-3-2",
+      "name": "models/iphone-test-phone-3-2",
+      "bytes": 232776
+    },
+    {
+      "model": "iphone-16-pro",
+      "name": "models/iphone-16-pro",
+      "bytes": 221408
+    },
+    {
+      "model": "iphone-16-pro-full-screen",
+      "name": "models/iphone-16-pro-full-screen",
+      "bytes": 222706
+    },
+    {
+      "model": "iphone-test-phone-17-1",
+      "name": "models/iphone-test-phone-17-1",
+      "bytes": 212935
+    },
+    {
+      "model": "iphone-test-phone-17-1-white",
+      "name": "models/iphone-test-phone-17-1-white",
+      "bytes": 215824
+    },
+    {
+      "model": "iphone-17-pro-max",
+      "name": "models/iphone-17-pro-max",
+      "bytes": 218967
+    },
+    {
+      "model": "iphone-17-pro-max-baked",
+      "name": "models/iphone-17-pro-max-baked",
+      "bytes": 222130
+    },
+    {
+      "model": "iphone-17-pro-max-baked-fiverr",
+      "name": "models/iphone-17-pro-max-baked-fiverr",
+      "bytes": 219191
+    },
+    {
+      "model": "galaxy-s24-ultra",
+      "name": "models/galaxy-s24-ultra",
+      "bytes": 213057
+    },
+    {
+      "model": "pixel-9-pro",
+      "name": "models/pixel-9-pro",
+      "bytes": 212911
+    },
+    {
+      "model": "pixel-10",
+      "name": "models/pixel-10",
+      "bytes": 244128
+    },
+    {
+      "model": "pixel-10-baked",
+      "name": "models/pixel-10-baked",
+      "bytes": 252845
+    },
+    {
+      "model": "iphone-16-pro",
+      "showCameraIsland": true,
+      "name": "original-on",
+      "bytes": 221408
+    },
+    {
+      "model": "iphone-16-pro",
+      "showCameraIsland": false,
+      "name": "original-off",
+      "bytes": 222706
+    },
+    {
+      "model": "iphone-16-pro-full-screen",
+      "showCameraIsland": true,
+      "name": "full-screen-on",
+      "bytes": 221408
+    },
+    {
+      "model": "iphone-16-pro-full-screen",
+      "showCameraIsland": false,
+      "name": "full-screen-off",
+      "bytes": 222706
+    }
+  ],
+  "hashes": {
+    "models/macbook-pro-14-m4": "04b63b8ce9703566180c8e4c6961c54f8746750ab2682fbe728c31183411276a",
+    "models/test-phone-1": "1cbfc169a8636aeeb201a4df5af97c55505ddc0aa5b92c14cfc0989febf761b7",
+    "models/iphone-test-phone-1": "a1230dfde1c1a1280fe359c99a166fb89aa27b7588c19994024c71875b7e6337",
+    "models/iphone-test-phone-3": "93c3da2fb69aa085424c3808fccd90de052461152a3a2ef93738297e1fac3f68",
+    "models/iphone-test-phone-3-1": "f215c08be687c54f974b17f7b2fd0fd7baf81cfd436f63f4144a13c4cb259068",
+    "models/iphone-test-phone-3-2": "36fbd06d9ef6ef0bc81987a601e06d23ebd34de5fc8392ebcddf69328957bcea",
+    "models/iphone-16-pro": "adc8c904ec46ddbb569905eb3c723ef625706e7357db0cbbdc2f83b66b05d586",
+    "models/iphone-16-pro-full-screen": "1f250d669b9fee5ff3cb889272ded0a00ecc45db4b4f4db3ddbdf17005c8f2c0",
+    "models/iphone-test-phone-17-1": "c71693c33fcb8f8ea908c2a3f48875cf06eece7ab0e1e8729f964bc40ef80594",
+    "models/iphone-test-phone-17-1-white": "8dbe5239519698c641ed937c2b5f0a20f8c175a7f73ce5747ff1f9b3197ef281",
+    "models/iphone-17-pro-max": "3a405d0e177db09cd4d4c3aee4ef2a99f2cfe6ae53d96cbdb4b91aacf73f4c36",
+    "models/iphone-17-pro-max-baked": "5f7e7b5b02947c158c7019962de842470c5dca3520c34ae66338fd87588a91bf",
+    "models/iphone-17-pro-max-baked-fiverr": "5805b048c8440b11725c6acd80bb364be2136a77e106e4b4837e2e1d201ba5e2",
+    "models/galaxy-s24-ultra": "bc53d8545bf8688755c2769cf4728887819df818f7055d607d3d3ff3c5fab7af",
+    "models/pixel-9-pro": "7caa114e1ec93d153f8bb272aad90a5f5f40535773d8dd308b8efed89dc2bd83",
+    "models/pixel-10": "efda1d2f3b51a867eea8ab06de87ad6231ee79468404ce5da71ebee53099d01c",
+    "models/pixel-10-baked": "023ed42f8fd5b235960155cdf38a0fb8ab8337a9dc8de27446f130bdacdd30fd",
+    "original-on": "adc8c904ec46ddbb569905eb3c723ef625706e7357db0cbbdc2f83b66b05d586",
+    "original-off": "1f250d669b9fee5ff3cb889272ded0a00ecc45db4b4f4db3ddbdf17005c8f2c0",
+    "full-screen-on": "adc8c904ec46ddbb569905eb3c723ef625706e7357db0cbbdc2f83b66b05d586",
+    "full-screen-off": "1f250d669b9fee5ff3cb889272ded0a00ecc45db4b4f4db3ddbdf17005c8f2c0"
+  },
+  "animatedFrames": {
+    "original-on-motion.png": "1f1ca6eae65d16c10a56344f062e58f9698d5bcdacc4202f6c6848e1699e89de",
+    "original-off-motion.png": "a6b91799a5e74063e238825ce6b07865d2841d80968c10ccf15e5a002a8a8db9",
+    "full-screen-on-motion.png": "1f1ca6eae65d16c10a56344f062e58f9698d5bcdacc4202f6c6848e1699e89de",
+    "full-screen-off-motion.png": "a6b91799a5e74063e238825ce6b07865d2841d80968c10ccf15e5a002a8a8db9"
+  }
+}
