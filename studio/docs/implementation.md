@@ -111,3 +111,24 @@ integreres mot Studio-mottaket. Disse forbindelsene, serverdrift og punktene und
 - Lokale API/web-containere er oppdatert. Deploy av begge tjenester og migrering
   005 til `studio.freelunch.no` gjøres manuelt. Produksjonens faktiske lastetider
   er ikke målt; ytelsesendringene er kontrollert lokalt.
+
+## Annonsemapper, kanaler og avspilling i oversikten — 8. oktober 2026
+
+- Produktavgrensede mapper med oppretting, navneendring og fjerning. Annonser kan
+  flyttes fra kortet og gjennomgangssiden; ny annonse opprettes atomisk i valgt
+  mappe. Fjerning av mapper beholder annonsene, filene og vurderingene.
+- Uavhengige kanalmerker på hele annonser og eksakte filversjoner. Ni valg med
+  symboler og tekst, kanalfilter og synlige merker i oversikt og versjonshistorikk.
+  Mapper og kanalmerker endrer aldri filversjoner eller godkjenning.
+- Direkte videoavspilling i annonsekortene med én aktiv spiller, proxy når klar,
+  originalvalg og lukking. Ingen videofil lastes før eksplisitt avspilling.
+  Pågående avspilling beholder sin versjon når listen oppdateres.
+- MCP: `studio_list_ad_folders`, `studio_save_ad_folder`, `studio_organize_ad`.
+  Nye tabeller inngår i arbeidsromseksport. Migrering 006 bevarer eksisterende data.
+- Go/PostgreSQL med race-detektor og Svelte/TypeScript bestått. Tester dekker
+  kanalmerking/rydding på eldre versjoner, bevarte vurderinger, leser-/produkt-/
+  agenttilgang, atomisk validering og samtidige mappeflyttinger/slettinger.
+- Fire Ads-nettlesertester bestått på desktop og 390 px mobil med ekte video,
+  proxy og miniatyrer: avspilling uten navigasjon, bytte av spiller, mapper,
+  kanalmerker, filter, tilbake/fremover, favoritter og filversjoner.
+  Mobil- og desktopskjermbilder visuelt kontrollert. API/web-containerbygg bestått.

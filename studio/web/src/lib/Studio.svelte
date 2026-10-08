@@ -93,6 +93,7 @@
     name = '',
     authToken = '';
   let ads: Row[] = [];
+  let adFolders: Row[] = [];
   let routeLoading = false,
     lastRoute = '',
     routeGeneration = 0;
@@ -275,6 +276,9 @@
     const requests: Promise<unknown>[] = [];
     if (view === 'ads')
       requests.push(
+        api('/ad-folders' + suffix).then((value) => {
+          if (accept()) adFolders = value;
+        }),
         api('/ads' + suffix).then((value) => {
           if (accept()) ads = value;
         }),
@@ -946,6 +950,7 @@
         {#if routeLoading}<p class="muted" role="status">Henter innhold …</p>
         {:else if view === 'ads'}{#key product}<AdsPage
               {ads}
+              folders={adFolders}
               {product}
               {canEdit}
               onopen={openItem}

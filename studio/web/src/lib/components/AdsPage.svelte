@@ -2,10 +2,14 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Plus, Search, ArrowRight, Star } from '@lucide/svelte';
+  import { Plus, Search, ArrowRight, Star, Folder, Play } from '@lucide/svelte';
   import { api, formatDate, type Row } from '$lib/api';
   import MediaCard from './MediaCard.svelte';
+  import AdPreview from './AdPreview.svelte';
+  import ChannelLabels from './ChannelLabels.svelte';
+  import { channels } from '$lib/channels';
   export let ads: Row[] = [];
+  export let folders: Row[] = [];
   export let product: string;
   export let canEdit = false;
   export let onopen: (id: string) => void;
@@ -19,6 +23,64 @@
     source = '';
   let existing: Row[] = [];
   let savingFavorites: string[] = [];
+  let folderForm = false,
+    folderName = '',
+    editingFolder = '',
+    playing = '';
+  $: folder = $page.url.searchParams.get('folder') || '';
+  $: channel = $page.url.searchParams.get('channel') || '';
+  $: activeFolder = folders.find((f) => f.id === folder);
+  $: if (playing && !filtered.some((ad) => ad.id === playing)) playing = '';
+  async function organize(ad: Row, folder_id: string) {
+    busy = true;
+    error = '';
+    try {
+      await api(`/ads/${ad.id}/organization`, 'PATCH', { folder_id });
+      await onrefresh();
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      busy = false;
+    }
+  }
+  function editFolder(id = '', name = '') {
+    editingFolder = id;
+    folderName = name;
+    folderForm = true;
+  }
+  async function saveFolder(e: SubmitEvent) {
+    e.preventDefault();
+    busy = true;
+    error = '';
+    try {
+      const saved = await api(
+        '/ad-folders' + (editingFolder ? '/' + editingFolder : ''),
+        editingFolder ? 'PATCH' : 'POST',
+        { product_id: product, name: folderName },
+      );
+      await onrefresh();
+      folderForm = false;
+      filter('folder', saved.id);
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      busy = false;
+    }
+  }
+  async function removeFolder() {
+    busy = true;
+    error = '';
+    try {
+      await api('/ad-folders/' + editingFolder, 'DELETE');
+      await onrefresh();
+      folderForm = false;
+      filter('folder', 'unfiled');
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      busy = false;
+    }
+  }
   const presets = [
     'UGC',
     'Produktdemo',
@@ -36,6 +98,10 @@
   $: filtered = ads.filter(
     (a) =>
       (!favoritesOnly || a.favorite) &&
+      (!folder || (folder === 'unfiled' ? !a.folder_id : a.folder_id === folder)) &&
+      (!channel ||
+        (a.channels || []).includes(channel) ||
+        (a.version_channels || []).includes(channel)) &&
       (!type || a.ad_type === type) &&
       (!status || a.review_status === status) &&
       `${a.title} ${a.file_name || ''} ${a.external_key}`
@@ -109,6 +175,7 @@
         ad_type: adType,
         brief,
         item_id: source,
+        folder_id: folder === 'unfiled' ? '' : folder,
       });
       creating = false;
       await onrefresh();
@@ -186,6 +253,58 @@
       >Opprett annonse<ArrowRight size={16} /></button
     >
   </form>{/if}
+<div class="ad-folders-bar">
+  <nav class="ad-folders" aria-label="Annonsemapper">
+    <button class:chosen={!folder} aria-pressed={!folder} onclick={() => filter('folder', '')}
+      >Alle <span>{ads.length}</span></button
+    >
+    <button
+      class:chosen={folder === 'unfiled'}
+      aria-pressed={folder === 'unfiled'}
+      onclick={() => filter('folder', 'unfiled')}
+      >Uten mappe <span>{ads.filter((a) => !a.folder_id).length}</span></button
+    >
+    {#each folders as f}<button
+        class:chosen={folder === f.id}
+        aria-pressed={folder === f.id}
+        onclick={() => filter('folder', f.id)}
+        ><Folder size={15} />{f.name}<span>{ads.filter((a) => a.folder_id === f.id).length}</span
+        ></button
+      >{/each}
+  </nav>
+  {#if canEdit}<div class="button-row">
+      <button class="text-button" onclick={() => editFolder()}><Plus size={15} />Ny mappe</button
+      >{#if activeFolder}<button
+          class="text-button"
+          onclick={() => editFolder(activeFolder.id, activeFolder.name)}>Rediger mappe</button
+        >{/if}
+    </div>{/if}
+</div>
+{#if folderForm}<form class="ad-folder-form review-panel" onsubmit={saveFolder}>
+    <label
+      >Mappenavn<input
+        bind:value={folderName}
+        maxlength="80"
+        required
+        placeholder="For eksempel: Ferdig"
+      /></label
+    >
+    <div class="button-row">
+      <button class="primary" disabled={busy}>Lagre mappe</button><button
+        type="button"
+        class="secondary"
+        onclick={() => (folderForm = false)}>Avbryt</button
+      >{#if editingFolder}<button
+          type="button"
+          class="text-button"
+          disabled={busy}
+          onclick={removeFolder}>Fjern mappe</button
+        >{/if}
+    </div>
+    {#if editingFolder}<p class="small muted">
+        Fjerner du mappen, flyttes annonsene til «Uten mappe». Alle filer og versjoner beholdes.
+      </p>{/if}
+  </form>{/if}
 <div class="ads-filters">
   <label class="ad-search"
     ><Search size={17} /><input
@@ -209,6 +328,14 @@
       value="changes_requested">Trenger endringer</option
     ><option value="approved">Godkjent</option></select
   >
+  <select
+    aria-label="Kanalfilter"
+    value={channel}
+    onchange={(e) => filter('channel', e.currentTarget.value)}
+    ><option value="">Alle kanaler</option>{#each channels as c}<option value={c.id}
+        >{c.name}</option
+      >{/each}</select
+  >
   <button
     class="secondary ad-favorites-filter"
     class:chosen={favoritesOnly}
@@ -220,11 +347,25 @@
 </div>
 {#if filtered.length}<div class="ad-grid">
     {#each filtered as ad (ad.id)}<article class="ad-card">
+        {#if playing === ad.id}<AdPreview {ad} onclose={() => (playing = '')} />
+        {:else if ad.mime?.startsWith('video/')}<button
+            class="ad-play"
+            aria-label={`Spill av ${ad.title}`}
+            onclick={() => (playing = ad.id)}
+            ><MediaCard item={ad} /><span class="ad-play-label"
+              ><Play size={16} fill="currentColor" />Spill av</span
+            ></button
+          >
+        {:else}<a
+            class="ad-media-link"
+            aria-label={`Åpne ${ad.title}`}
+            href={`/ads/${ad.id}?product=${product}&from=${encodeURIComponent($page.url.pathname + $page.url.search)}`}
+            ><MediaCard item={ad} /></a
+          >{/if}
         <a
           class="ad-card-link"
           href={`/ads/${ad.id}?product=${product}&from=${encodeURIComponent($page.url.pathname + $page.url.search)}`}
         >
-          <MediaCard item={ad} />
           <div class="ad-card-body">
             <div class="ad-card-meta">
               <span>{ad.ad_type}</span><span>{ad.number ? 'v' + ad.number : 'Ingen versjon'}</span>
@@ -233,6 +374,12 @@
             {#if ad.file_name && ad.file_name !== ad.title}<p class="ad-filename">
                 {ad.file_name}
               </p>{/if}
+            {#if ad.channels?.length}<div class="ad-platform-row">
+                <span>Annonse</span><ChannelLabels value={ad.channels} />
+              </div>{/if}
+            {#if ad.version_channels?.length}<div class="ad-platform-row">
+                <span>v{ad.number}</span><ChannelLabels value={ad.version_channels} />
+              </div>{/if}
             <div class="ad-card-footer">
               <span
                 class="review-status"
@@ -249,6 +396,19 @@
             </div>
           </div>
         </a>
+        <div class="ad-card-folder">
+          {#if canEdit}<label
+              ><Folder size={15} /><span class="sr-only">Mappe for {ad.title}</span><select
+                aria-label={`Mappe for ${ad.title}`}
+                value={ad.folder_id || ''}
+                disabled={busy}
+                onchange={(e) => organize(ad, e.currentTarget.value)}
+                ><option value="">Uten mappe</option>{#each folders as f}<option value={f.id}
+                    >{f.name}</option
+                  >{/each}</select
+              ></label
+            >{:else if ad.folder_name}<span><Folder size={15} />{ad.folder_name}</span>{/if}
+        </div>
         <button
           type="button"
           class="ad-favorite"
@@ -268,11 +428,14 @@
       {favoritesOnly
         ? 'Ingen favoritter passer søket'
         : ads.length
-          ? 'Ingen annonser passer søket'
+          ? folder
+            ? 'Ingen annonser i denne mappen passer filtrene'
+            : 'Ingen annonser passer søket'
           : 'Klar for første annonse'}
     </h2>
     <p>
       {#if favoritesOnly}Trykk på stjernen på en annonse for å lagre den som favoritt.
+      {:else if folder}Velg «Alle» for å flytte annonser hit, eller opprett en ny annonse i mappen.
       {:else}Opprett en annonse, eller samle eksisterende videoer. Agenten leverer videre versjoner
         til samme annonse.{/if}
     </p>

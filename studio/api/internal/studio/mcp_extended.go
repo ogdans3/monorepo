@@ -14,6 +14,9 @@ func extraMCPTools() []map[string]any {
 		name, description string
 		fields            []string
 	}{
+		{"studio_list_ad_folders", "List this product's ad folders and counts.", []string{}},
+		{"studio_save_ad_folder", "Create or rename a folder. payload JSON: name, optional folder_id. A folder named Ferdig does not approve or publish ads.", []string{"payload"}},
+		{"studio_organize_ad", "Move an ad or set platform labels. payload JSON: ad_id, optional folder_id (empty string unfiles), optional channels array (tiktok, instagram, snapchat, linkedin, x, facebook, youtube, pinterest, other). To label one exact version, send version_id and channels only alongside ad_id. Replaces that target's labels; [] clears them. Ad and version labels are independent. Does not alter renders, approve or publish.", []string{"payload"}},
 		{"studio_create_item", "Create a draft. payload is JSON with title, kind, body, source_url, rights and tags.", []string{"payload"}},
 		{"studio_create_version", "Create an immutable text version of library content. For ad renders use studio_prepare_ad_upload instead. payload JSON: item_id, expected_version_id, title, body, model, prompt.", []string{"payload"}},
 		{"studio_get_task", "Read task specification, exact source versions, feedback and previous deliveries.", []string{"task_id"}},
@@ -43,6 +46,22 @@ func (a *App) callExtraMCP(ctx context.Context, u Actor, name string, args map[s
 	ctx = context.WithValue(ctx, actorKey{}, u)
 	ctx = context.WithValue(ctx, writeKey{}, true)
 	switch name {
+	case "studio_list_ad_folders":
+		return a.listAdFolders(ctx, u.Product)
+	case "studio_save_ad_folder":
+		var v adFolderInput
+		if err := parsePayload(args, &v); err != nil {
+			return nil, err
+		}
+		v.Product = u.Product
+		return a.saveAdFolder(ctx, v)
+	case "studio_organize_ad":
+		var v adOrganizationInput
+		if err := parsePayload(args, &v); err != nil {
+			return nil, err
+		}
+		err := a.organizeAd(ctx, v)
+		return map[string]bool{"ok": err == nil}, err
 	case "studio_create_item":
 		var v itemInput
 		if e := parsePayload(args, &v); e != nil {

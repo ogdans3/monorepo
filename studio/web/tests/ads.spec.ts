@@ -6,6 +6,7 @@ test('agent renders stay under one ad, with real previews and page navigation', 
   baseURL,
 }, info) => {
   test.setTimeout(120_000);
+  page.setDefaultTimeout(15000);
   const request = page.request,
     origin = baseURL!;
   const errors: string[] = [],
@@ -101,6 +102,9 @@ test('agent renders stay under one ad, with real previews and page navigation', 
         { timeout: 60_000, intervals: [1000, 2000] },
       )
       .toBe(true);
+    await tool('studio_organize_ad', {
+      payload: JSON.stringify({ ad_id: ad.id, version_id: v1, channels: ['snapchat'] }),
+    });
     await page.goto('/ads?product=' + product + '&q=' + unique);
     await expect(page.locator('.ad-card')).toHaveCount(1);
     await expect(page.locator('.ad-card')).toContainText('2 versjoner');
@@ -124,10 +128,82 @@ test('agent renders stay under one ad, with real previews and page navigation', 
       fullPage: true,
       scale: 'css',
     });
-    await page.locator('.ad-card').click();
+    // Playback is explicit, stays on the list, and only mounts one video at a time.
+    const listURL = page.url();
+    await page.getByRole('button', { name: 'Spill av ' + title, exact: true }).click();
+    await expect(page).toHaveURL(listURL);
+    const inlineVideo = page.locator('.ad-inline-preview video');
+    await expect(inlineVideo).toHaveAttribute('src', '/api/previews/' + v2 + '?kind=proxy');
+    await expect
+      .poll(() => inlineVideo.evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeGreaterThan(0);
+    const secondAd = await tool('studio_create_ad', {
+      title: title + ' ekstra',
+      external_key: unique + '-extra',
+    });
+    const attached = await (
+      await request.post('/api/ads/' + secondAd.id + '/versions/from-item', {
+        headers: { Origin: origin },
+        data: { source_version_id: v2, expected_version_id: '' },
+      })
+    ).json();
+    await page.getByRole('button', { name: 'Oppdater', exact: true }).click();
+    await page.getByRole('button', { name: 'Spill av ' + title + ' ekstra', exact: true }).click();
+    await expect(inlineVideo).toHaveCount(1);
+    await expect(inlineVideo).toHaveAttribute(
+      'src',
+      '/api/previews/' + attached.version_id + '?kind=proxy',
+    );
+    await expect(page).toHaveURL(listURL);
+    await page.getByRole('button', { name: 'Lukk video', exact: true }).click();
+    await expect(inlineVideo).toHaveCount(0);
+    expect(
+      (
+        await request.post('/api/items/bulk', {
+          headers: { Origin: origin },
+          data: { ids: [secondAd.id], action: 'trash' },
+        })
+      ).status(),
+    ).toBe(200);
+    await page.getByRole('button', { name: 'Oppdater', exact: true }).click();
+    await expect(page.locator('.ad-card')).toHaveCount(1);
+
+    // Folders can be created, used from cards, and survive navigation and reload.
+    const folderName = 'Ferdig ' + unique;
+    await page.getByRole('button', { name: 'Ny mappe', exact: true }).click();
+    await page.getByLabel('Mappenavn', { exact: true }).fill(folderName);
+    await page.getByRole('button', { name: 'Lagre mappe', exact: true }).click();
+    await expect(page.locator('.ad-card')).toHaveCount(0);
+    const folder = (await (await request.get('/api/ad-folders?product=' + product)).json()).find(
+      (f: any) => f.name === folderName,
+    );
+    const folders = page.getByRole('navigation', { name: 'Annonsemapper' });
+    await folders.getByRole('button', { name: /^Alle / }).click();
+    await page.getByLabel('Mappe for ' + title, { exact: true }).selectOption(folder.id);
+    await folders.getByRole('button', { name: new RegExp('^' + folderName) }).click();
+    await expect(page).toHaveURL(new RegExp('folder=' + folder.id));
+    await page.reload();
+    await expect(page.getByLabel('Mappe for ' + title, { exact: true })).toHaveValue(folder.id);
+    await page.locator('.ad-card-link').click();
     await expect(page).toHaveURL(new RegExp('/ads/' + ad.id));
     await expect(page.getByRole('dialog')).not.toBeVisible();
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+    await expect(page.getByLabel('Mappe', { exact: true })).toHaveValue(folder.id);
+    const adChannels = page.getByRole('group', { name: 'Kanaler for annonsen', exact: true });
+    const versionChannels = page.getByRole('group', { name: 'Kanaler for v2', exact: true });
+    await adChannels.getByRole('button', { name: 'LinkedIn', exact: true }).click();
+    await expect(adChannels.getByRole('button', { name: 'LinkedIn', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await versionChannels.getByRole('button', { name: 'TikTok', exact: true }).click();
+    await expect(
+      versionChannels.getByRole('button', { name: 'TikTok', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await versionChannels.getByRole('button', { name: 'Instagram', exact: true }).click();
+    await expect(
+      versionChannels.getByRole('button', { name: 'Instagram', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
     const video = page.locator('.review-media video').first();
     await expect(video).toHaveAttribute('src', '/api/previews/' + v2 + '?kind=proxy');
     await expect
@@ -178,6 +254,13 @@ test('agent renders stay under one ad, with real previews and page navigation', 
     });
     await page.getByLabel('Vis versjon', { exact: true }).selectOption(v1);
     await expect(page).toHaveURL(new RegExp('version=' + v1));
+    const olderChannels = page.getByRole('group', { name: 'Kanaler for v1', exact: true });
+    await expect(
+      olderChannels.getByRole('button', { name: 'Snapchat', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      olderChannels.getByRole('button', { name: 'TikTok', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByRole('button', { name: /Godkjenn v/ })).not.toBeVisible();
     await page.reload();
     await expect(page.getByLabel('Vis versjon', { exact: true })).toHaveValue(v1);
@@ -192,6 +275,15 @@ test('agent renders stay under one ad, with real previews and page navigation', 
     await page.getByLabel('Hva er endret?').fill('Appen vises tidligere.');
     await page.getByRole('button', { name: 'Lagre filversjon' }).click();
     await expect(page.getByRole('button', { name: 'Godkjenn v3', exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole('group', { name: 'Kanaler for v3', exact: true })
+        .getByRole('button', { name: 'TikTok', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'false');
+    await expect(adChannels.getByRole('button', { name: 'LinkedIn', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(page.locator('.review-player-header .review-status')).toHaveText(
       'Til gjennomgang',
     );
@@ -206,9 +298,34 @@ test('agent renders stay under one ad, with real previews and page navigation', 
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
       false,
     );
+    await expect(page).toHaveURL(new RegExp('folder=' + folder.id));
+    await page.getByLabel('Kanalfilter').selectOption('linkedin');
+    await expect(page.locator('.ad-card')).toHaveCount(1);
+    await page.getByLabel('Kanalfilter').selectOption('snapchat');
+    await expect(page.locator('.ad-card')).toHaveCount(0); // Only ad + current render labels filter the list.
+    await page.getByLabel('Kanalfilter').selectOption('');
+    await page.getByRole('button', { name: 'Rediger mappe', exact: true }).click();
+    await page.getByLabel('Mappenavn', { exact: true }).fill('Levert ' + unique);
+    await page.getByRole('button', { name: 'Lagre mappe', exact: true }).click();
+    await expect(
+      page.getByLabel('Mappe for ' + title, { exact: true }).locator('option:checked'),
+    ).toHaveText('Levert ' + unique);
+    await page.screenshot({
+      path: '../.data/screenshots/' + info.project.name + '-ad-folders.png',
+      fullPage: true,
+      scale: 'css',
+    });
+    await page.getByRole('button', { name: 'Rediger mappe', exact: true }).click();
+    await page.getByRole('button', { name: 'Fjern mappe', exact: true }).click();
+    await expect(page).toHaveURL(/folder=unfiled/);
+    await expect(page.locator('.ad-card')).toHaveCount(1);
+    await expect(page.locator('.ad-card')).toContainText('3 versjoner');
+    await expect(page.getByLabel('Mappe for ' + title, { exact: true })).toHaveValue('');
     expect(errors).toEqual([]);
   } finally {
-    await request.delete('/api/agent-tokens/' + key.id, { headers: { Origin: origin } });
+    await request
+      .delete('/api/agent-tokens/' + key.id, { headers: { Origin: origin } })
+      .catch(() => {});
   }
 });
 

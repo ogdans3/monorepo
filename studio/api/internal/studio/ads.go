@@ -18,10 +18,14 @@ type adInput struct {
 	Brief   string `json:"brief"`
 	Item    string `json:"item_id"`
 	Rights  string `json:"rights"`
+	Folder  string `json:"folder_id"`
 }
 
 const adSelect = `SELECT i.id,i.product_id,i.title,i.kind,i.status,i.current_version_id,i.updated_at,
- a.ad_type,a.external_key,a.brief,v.number,v.mime,v.file_name,
+ a.ad_type,a.external_key,a.brief,a.folder_id,a.channels,
+ (SELECT name FROM ad_folders WHERE id=a.folder_id) AS folder_name,
+ coalesce((SELECT channels FROM ad_version_channels WHERE version_id=v.id),'{}'::text[]) AS version_channels,
+ v.number,v.mime,v.file_name,
  EXISTS(SELECT 1 FROM favorites f WHERE f.item_id=i.id AND f.user_id=nullif($2,'')::uuid) AS favorite,
  (SELECT count(*) FROM versions WHERE item_id=i.id) AS version_count,
  EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='thumbnail') AS has_thumbnail,
@@ -109,7 +113,7 @@ func (a *App) createAd(ctx context.Context, u Actor, v adInput) (map[string]any,
 			return nil, err
 		}
 	}
-	if _, err = tx.Exec(ctx, `INSERT INTO ads(item_id,product_id,external_key,ad_type,brief) VALUES($1,$2,$3,$4,$5)`, id, v.Product, v.Key, v.Type, v.Brief); err != nil {
+	if _, err = tx.Exec(ctx, `INSERT INTO ads(item_id,product_id,external_key,ad_type,brief,folder_id) VALUES($1,$2,$3,$4,$5,nullif($6,'')::uuid)`, id, v.Product, v.Key, v.Type, v.Brief, v.Folder); err != nil {
 		return nil, fmt.Errorf("innholdet eller nøkkelen er allerede knyttet til en annonse")
 	}
 	if _, err = tx.Exec(ctx, `UPDATE items SET title=$1,updated_at=now() WHERE id::text=$2`, v.Title, id); err != nil {

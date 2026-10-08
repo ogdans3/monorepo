@@ -60,6 +60,21 @@ Ny filversjon krever ny gjennomgang; tidligere vurderinger og kommentarer bevare
 Stjernen på annonsekortet lagrer annonsen som personlig favoritt. Bruk
 «Favoritter» for å vise bare disse; valget deles med bibliotekets favoritter.
 
+Lag egne mapper, for eksempel «Under arbeid» og «Ferdig». Flytt annonser med
+mappevalget på kortet eller gjennomgangssiden. Mapper kan endres og fjernes;
+annonsene og alle versjoner beholdes når en mappe fjernes. Mapper er felles innen
+produktet, og «Ferdig» endrer ikke godkjenningsstatus.
+
+Merk annonsen og hver enkelt versjon med én eller flere kanaler: TikTok,
+Instagram, Snapchat, LinkedIn, X, Facebook, YouTube, Pinterest eller Annet.
+Merkene har små symboler og tekst. Versjonsmerking er uavhengig av annonsemerking;
+ye filversjoner begynner uten egne kanalmerker. Kanalfilteret i oversikten søker
+på annonsemerkene og merkene på nyeste versjon.
+
+Trykk **Spill av** på et annonsekort for å se videoen direkte i oversikten.
+Bare én video spiller om gangen. Originalen lastes ikke før du starter avspilling;
+mobilproxy brukes når den er klar, og originalen kan velges i spilleren.
+
 Eksisterende bibliotekinnhold kan velges når annonsen opprettes. Flere opplastinger
 som hører sammen kan samles fra gjennomgangssiden med «Bruk en eksisterende
 opplasting». Originalene beholdes. Studio gjetter ikke grupper ut fra filnavn.

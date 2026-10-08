@@ -56,6 +56,36 @@ Agenten kan ikke godkjenne eller publisere. `studio_create_version` er for
 tekstinnhold, og avviser annonser; nye renders krever ny filopplasting.
 Opplasting uten `--ad-id`/`--item-id` oppretter vanlig bibliotekinnhold.
 
+## Mapper og kanaler
+
+`studio_list_ad_folders` viser produktets mapper. `studio_save_ad_folder` tar
+`payload` som JSON-streng med `name` og valgfri `folder_id` for navneendring.
+Les mappene først og gjenbruk riktig mappe; navnet er unikt innen produktet.
+
+`studio_organize_ad` tar `payload` som JSON-streng, for eksempel:
+
+```json
+{"ad_id":"AD_UUID","folder_id":"FOLDER_UUID","channels":["instagram","facebook"]}
+```
+
+For å merke en bestemt render:
+
+```json
+{"ad_id":"AD_UUID","version_id":"VERSION_UUID","channels":["tiktok","snapchat"]}
+```
+
+Tillatte kanaler: `tiktok`, `instagram`, `snapchat`, `linkedin`, `x`, `facebook`,
+`youtube`, `pinterest`, `other`. Listen erstatter merkene på akkurat det angitte
+målet; `[]` fjerner merkene. Utelatte felt beholdes. `folder_id:""` flytter annonsen
+til «Uten mappe». Mapper gjelder hele annonsen, aldri én versjon.
+
+Annonse- og versjonsmerker er uavhengige. Merk en ny render etter opplasting når
+versjons-ID er kjent; tidligere versjonsmerker kopieres ikke automatisk.
+`studio_list_ads` inkluderer `folder_id`, `folder_name`, `channels` og
+`version_channels` for nyeste render. `studio_get_ad` inkluderer `ad.channels`
+og `versions[].channels`. Organisering endrer aldri render, godkjenning eller
+publisering, heller ikke når mappen heter «Ferdig».
+
 ## Reserverte produksjonsoppgaver
 
 Arbeidsrekkefølge:

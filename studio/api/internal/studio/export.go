@@ -94,7 +94,7 @@ func (a *App) exportWorkspace(w http.ResponseWriter, r *http.Request) {
 	z := zip.NewWriter(w)
 	defer z.Close()
 	// Content export excludes credentials, private conversations and token tables.
-	for _, table := range []string{"products", "product_history", "items", "versions", "ads", "ad_reviews", "notes", "collections", "collection_items", "relations", "ratings", "tasks", "task_sources", "task_deliveries", "task_feedback", "templates", "template_versions", "media_imports", "publications", "campaigns", "measurements", "conversions", "experiments", "claims", "segments", "evaluations"} {
+	for _, table := range []string{"products", "product_history", "items", "versions", "ad_folders", "ads", "ad_version_channels", "ad_reviews", "notes", "collections", "collection_items", "relations", "ratings", "tasks", "task_sources", "task_deliveries", "task_feedback", "templates", "template_versions", "media_imports", "publications", "campaigns", "measurements", "conversions", "experiments", "claims", "segments", "evaluations"} {
 		rows, e := a.query(ctx, "SELECT * FROM "+table)
 		if e != nil {
 			return

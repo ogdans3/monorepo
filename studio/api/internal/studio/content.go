@@ -129,6 +129,7 @@ func (a *App) itemData(ctx context.Context, id, product string) (map[string]any,
 		return nil, fmt.Errorf("innholdet finnes ikke")
 	}
 	versions, e := a.query(ctx, `SELECT v.id,v.number,v.title,v.body,v.file_name,v.mime,v.checksum,v.bytes,v.provenance,v.created_by,v.created_at,
+ coalesce((SELECT channels FROM ad_version_channels WHERE version_id=v.id),'{}'::text[]) AS channels,
  EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='thumbnail') AS has_thumbnail,
  EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='proxy') AS has_proxy,
  coalesce((SELECT status FROM ad_reviews WHERE version_id=v.id ORDER BY created_at DESC,id DESC LIMIT 1),'review') AS review_status
@@ -140,7 +141,7 @@ func (a *App) itemData(ctx context.Context, id, product string) (map[string]any,
 	if e != nil {
 		return nil, e
 	}
-	ads, err := a.query(ctx, "SELECT ad_type,external_key,brief FROM ads WHERE item_id::text=$1", id)
+	ads, err := a.query(ctx, "SELECT ad_type,external_key,brief,folder_id,channels,(SELECT name FROM ad_folders WHERE id=ads.folder_id) AS folder_name FROM ads WHERE item_id::text=$1", id)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,15 @@
   import { api, uploadFile, seconds, formatDate, type Row } from '$lib/api';
   import MediaCard from './MediaCard.svelte';
   import ItemTools from './ItemTools.svelte';
+  import ChannelPicker from './ChannelPicker.svelte';
+  import ChannelLabels from './ChannelLabels.svelte';
+  let folders: Row[] = [];
+  async function organize(values: Row) {
+    await act(async () => {
+      await api(`/ads/${detail.item.id}/organization`, 'PATCH', values);
+      await refresh();
+    });
+  }
   export let detail: Row;
   export let canEdit = false;
   export let onrefresh: () => Promise<void>;
@@ -210,6 +219,10 @@
     }
   }
   onMount(() => {
+    if (detail.ad)
+      void api('/ad-folders?product=' + detail.item.product_id)
+        .then((value) => (folders = value))
+        .catch((e) => (error = e.message));
     // Poll only processing metadata, only while visible, and stop after five minutes.
     const timer = setInterval(() => {
       if (
@@ -275,6 +288,16 @@
               download><Download size={16} />Last ned</a
             >{/if}
         </div>
+        {#if detail.ad}<section class="version-channels">
+            {#if canEdit}<ChannelPicker
+                label={`Kanaler for v${selected.number}`}
+                value={selected.channels || []}
+                disabled={busy}
+                onchange={(channels) => organize({ version_id: selected.id, channels })}
+              />
+            {:else}<p class="small muted">Kanaler for v{selected.number}</p>
+              <ChannelLabels value={selected.channels || []} />{/if}
+          </section>{/if}
         <div class:comparing={!!comparison} class="review-players">
           <div>
             {#key selected.id}<div class="review-media">
@@ -489,6 +512,30 @@
         </div>{/if}
     </div>
     <aside class="review-sidebar">
+      {#if detail.ad}<section class="review-panel ad-organization">
+          <h2>Organisering</h2>
+          {#if canEdit}<label
+              >Mappe<select
+                aria-label="Mappe"
+                value={detail.ad.folder_id || ''}
+                disabled={busy}
+                onchange={(e) => organize({ folder_id: e.currentTarget.value })}
+                ><option value="">Uten mappe</option>{#each folders as f}<option value={f.id}
+                    >{f.name}</option
+                  >{/each}</select
+              ></label
+            >
+            <ChannelPicker
+              label="Kanaler for annonsen"
+              value={detail.ad.channels || []}
+              disabled={busy}
+              onchange={(channels) => organize({ channels })}
+            />
+          {:else}<p>{detail.ad.folder_name || 'Uten mappe'}</p>
+            <p class="small muted">Kanaler for annonsen</p>
+            <ChannelLabels value={detail.ad.channels || []} />{/if}
+          <p class="small muted">Hver versjon kan merkes med egne kanaler.</p>
+        </section>{/if}
       <section class="review-panel">
         <div class="section-heading">
           <h2>Versjoner</h2>
@@ -502,7 +549,7 @@
                   >v{v.number} {v.id === detail.item.current_version_id ? '· nyeste' : ''}</strong
                 ><span>{v.file_name || v.title}</span><small
                   >{formatDate(v.created_at)} · {v.created_by}</small
-                >
+                ><ChannelLabels value={v.channels || []} />
               </div></a
             >{/each}
         </div>
