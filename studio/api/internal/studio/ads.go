@@ -22,6 +22,7 @@ type adInput struct {
 
 const adSelect = `SELECT i.id,i.product_id,i.title,i.kind,i.status,i.current_version_id,i.updated_at,
  a.ad_type,a.external_key,a.brief,v.number,v.mime,v.file_name,
+ EXISTS(SELECT 1 FROM favorites f WHERE f.item_id=i.id AND f.user_id=nullif($2,'')::uuid) AS favorite,
  (SELECT count(*) FROM versions WHERE item_id=i.id) AS version_count,
  EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='thumbnail') AS has_thumbnail,
  EXISTS(SELECT 1 FROM media_artifacts WHERE version_id=v.id AND kind='proxy') AS has_proxy,
@@ -29,7 +30,8 @@ const adSelect = `SELECT i.id,i.product_id,i.title,i.kind,i.status,i.current_ver
  FROM ads a JOIN items i ON i.id=a.item_id LEFT JOIN versions v ON v.id=i.current_version_id `
 
 func (a *App) listAds(ctx context.Context, product string) ([]map[string]any, error) {
-	rows, err := a.query(ctx, adSelect+`WHERE i.product_id::text=$1 AND i.deleted_at IS NULL ORDER BY i.updated_at DESC`, product)
+	u, _ := ctx.Value(actorKey{}).(Actor)
+	rows, err := a.query(ctx, adSelect+`WHERE i.product_id::text=$1 AND i.deleted_at IS NULL ORDER BY i.updated_at DESC`, product, u.ID)
 	if rows == nil {
 		rows = []map[string]any{}
 	}

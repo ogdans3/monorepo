@@ -2786,6 +2786,7 @@ progress {
   gap: 20px;
 }
 .ad-card {
+  position: relative;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: white;
@@ -2798,7 +2799,7 @@ progress {
   text-decoration: none;
   border-color: #9ca88e;
 }
-.ad-card:focus-visible {
+.ad-card:focus-within {
   outline: 2px solid var(--green);
   outline-offset: 3px;
 }
@@ -3426,4 +3427,54 @@ progress {
 .review-display-options[open] summary::before,
 .comment-options[open] summary::before {
   content: '−';
+}
+
+.ad-card-link {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.ad-card-link:hover {
+  text-decoration: none;
+}
+.ad-favorite {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fffffff2;
+  color: var(--muted);
+  box-shadow: 0 1px 8px #0001;
+}
+.ad-favorite.chosen {
+  color: #896323;
+  background: #fff7e6;
+  border-color: #decca4;
+}
+.ad-favorite:hover {
+  border-color: #9ca88e;
+}
+.ad-favorites-filter {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ad-favorites-filter.chosen {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+@media (max-width: 560px) {
+  .ad-favorites-filter {
+    width: 100%;
+  }
 }

@@ -57,6 +57,8 @@ Start i **Annonser**. Opprett én annonse per konsept, velg en annonsetype og le
 inn briefen. «Last opp neste versjon» legger ny video eller nytt bilde til samme
 annonse. Tittelen på konseptet beholdes, mens hvert render beholder fullt filnavn.
 Ny filversjon krever ny gjennomgang; tidligere vurderinger og kommentarer bevares.
+Stjernen på annonsekortet lagrer annonsen som personlig favoritt. Bruk
+«Favoritter» for å vise bare disse; valget deles med bibliotekets favoritter.
 
 Eksisterende bibliotekinnhold kan velges når annonsen opprettes. Flere opplastinger
 som hører sammen kan samles fra gjennomgangssiden med «Bruk en eksisterende

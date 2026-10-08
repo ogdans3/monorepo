@@ -282,3 +282,58 @@ func TestReviewNavigationAuthStatusLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestAdFavoritesStayPersonal(t *testing.T) {
+	a := testApp(t)
+	admin := setupAdmin(t, a)
+	reader := userCookie(t, a, admin, "ad-reader@example.test", "reader")
+	p := productID(t, a)
+	status, ad, _ := request(t, a, "POST", "/api/ads", adInput{Product: p, Title: "Favorite ad", Key: "favorite-ad"}, admin, "")
+	if status != 201 {
+		t.Fatal(status, ad)
+	}
+	id := ad["id"].(string)
+	favorite := func(cookie *http.Cookie) bool {
+		rows := listRequest(t, a, "/api/ads?product="+p, cookie)
+		if len(rows) != 1 || rows[0]["id"] != id {
+			t.Fatal(rows)
+		}
+		value, valid := rows[0]["favorite"].(bool)
+		if !valid {
+			t.Fatal("missing favorite flag", rows)
+		}
+		return value
+	}
+	if favorite(admin) || favorite(reader) {
+		t.Fatal("ad starts as a favorite")
+	}
+	// A reader can save a personal favorite without changing shared ad content.
+	status, out, _ := request(t, a, "POST", "/api/items/"+id+"/favorite", nil, reader, "")
+	if status != 200 {
+		t.Fatal(status, out)
+	}
+	if !favorite(reader) || favorite(admin) {
+		t.Fatal("favorite leaked between users")
+	}
+	// The same storage is used by the existing library/detail controls.
+	status, detail, _ := request(t, a, "GET", "/api/items/"+id, nil, reader, "")
+	if status != 200 || detail["extra"].(map[string]any)["favorite"] != true {
+		t.Fatal("library favorite disagrees with ad", detail)
+	}
+	status, _, _ = request(t, a, "POST", "/api/items/"+id+"/favorite", nil, admin, "")
+	if status != 200 {
+		t.Fatal(status)
+	}
+	status, _, _ = request(t, a, "DELETE", "/api/items/"+id+"/favorite", nil, reader, "")
+	if status != 200 || favorite(reader) || !favorite(admin) {
+		t.Fatal("removing one user's favorite changed another's")
+	}
+	agent, _ := adAgent(t, a, admin, p)
+	result, err := a.callMCP(context.Background(), agent, "studio_list_ads", map[string]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.([]map[string]any)[0]["favorite"] != false {
+		t.Fatal("agent sees a human's personal favorite")
+	}
+}

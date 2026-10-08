@@ -277,4 +277,43 @@ test('organize an existing upload as an ad without losing its approved version',
   await page.getByLabel('Søk i annonser').fill(title);
   await expect(page.locator('.ad-card')).toHaveCount(1);
   await expect(page.locator('.ad-card')).toContainText('Bildeannonse');
+
+  const listURL = page.url();
+  await page.getByRole('button', { name: 'Lagre favoritt', exact: true }).click();
+  await expect(page).toHaveURL(listURL); // A star click must not open the review page.
+  await expect(page.getByRole('button', { name: 'Fjern favoritt', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Fjern favoritt', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByRole('button', { name: 'Favoritter', exact: true }).click();
+  await expect(page).toHaveURL(/favorites=1/);
+  await expect(page.locator('.ad-card')).toHaveCount(1);
+  await page.locator('.ad-card-link').click();
+  await expect(page.locator('.review-page')).toBeVisible();
+  await page.getByRole('link', { name: 'Til annonser', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Favoritter', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await mkdir('../.data/screenshots', { recursive: true });
+  await page.screenshot({
+    path: '../.data/screenshots/' + info.project.name + '-ad-favorites.png',
+    fullPage: true,
+    scale: 'css',
+  });
+  await page.getByRole('button', { name: 'Fjern favoritt', exact: true }).click();
+  await expect(page.locator('.ad-card')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Ingen favoritter passer søket' })).toBeVisible();
+  await page.getByRole('button', { name: 'Favoritter', exact: true }).click();
+  await expect(page.locator('.ad-card')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Lagre favoritt', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
 });

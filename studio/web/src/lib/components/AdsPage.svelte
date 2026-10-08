@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Plus, Search, ArrowRight } from '@lucide/svelte';
+  import { Plus, Search, ArrowRight, Star } from '@lucide/svelte';
   import { api, formatDate, type Row } from '$lib/api';
   import MediaCard from './MediaCard.svelte';
   export let ads: Row[] = [];
@@ -18,6 +18,7 @@
     brief = '',
     source = '';
   let existing: Row[] = [];
+  let savingFavorites: string[] = [];
   const presets = [
     'UGC',
     'Produktdemo',
@@ -30,9 +31,11 @@
   $: query = $page.url.searchParams.get('q') || '';
   $: type = $page.url.searchParams.get('type') || '';
   $: status = $page.url.searchParams.get('status') || '';
+  $: favoritesOnly = $page.url.searchParams.get('favorites') === '1';
   $: types = [...new Set([...presets, ...ads.map((a) => a.ad_type)])];
   $: filtered = ads.filter(
     (a) =>
+      (!favoritesOnly || a.favorite) &&
       (!type || a.ad_type === type) &&
       (!status || a.review_status === status) &&
       `${a.title} ${a.file_name || ''} ${a.external_key}`
@@ -50,7 +53,7 @@
     let polls = 0,
       refreshing = false;
     async function refreshVisible() {
-      if (document.hidden || busy || refreshing || polls >= 40) return;
+      if (document.hidden || busy || savingFavorites.length || refreshing || polls >= 40) return;
       polls++;
       refreshing = true;
       try {
@@ -71,6 +74,20 @@
       window.removeEventListener('focus', focus);
     };
   });
+  async function toggleFavorite(ad: Row) {
+    if (savingFavorites.includes(ad.id)) return;
+    const favorite = !ad.favorite;
+    savingFavorites = [...savingFavorites, ad.id];
+    error = '';
+    try {
+      await api(`/items/${ad.id}/favorite`, favorite ? 'POST' : 'DELETE');
+      ads = ads.map((item) => (item.id === ad.id ? { ...item, favorite } : item));
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      savingFavorites = savingFavorites.filter((id) => id !== ad.id);
+    }
+  }
   async function start() {
     creating = !creating;
     if (creating) {
@@ -192,41 +209,71 @@
       value="changes_requested">Trenger endringer</option
     ><option value="approved">Godkjent</option></select
   >
+  <button
+    class="secondary ad-favorites-filter"
+    class:chosen={favoritesOnly}
+    aria-pressed={favoritesOnly}
+    onclick={() => filter('favorites', favoritesOnly ? '' : '1')}
+  >
+    <Star size={16} fill={favoritesOnly ? 'currentColor' : 'none'} />Favoritter
+  </button>
 </div>
 {#if filtered.length}<div class="ad-grid">
-    {#each filtered as ad}<a
-        class="ad-card"
-        href={`/ads/${ad.id}?product=${product}&from=${encodeURIComponent($page.url.pathname + $page.url.search)}`}
-      >
-        <MediaCard item={ad} />
-        <div class="ad-card-body">
-          <div class="ad-card-meta">
-            <span>{ad.ad_type}</span><span>{ad.number ? 'v' + ad.number : 'Ingen versjon'}</span>
+    {#each filtered as ad (ad.id)}<article class="ad-card">
+        <a
+          class="ad-card-link"
+          href={`/ads/${ad.id}?product=${product}&from=${encodeURIComponent($page.url.pathname + $page.url.search)}`}
+        >
+          <MediaCard item={ad} />
+          <div class="ad-card-body">
+            <div class="ad-card-meta">
+              <span>{ad.ad_type}</span><span>{ad.number ? 'v' + ad.number : 'Ingen versjon'}</span>
+            </div>
+            <h2>{ad.title}</h2>
+            {#if ad.file_name && ad.file_name !== ad.title}<p class="ad-filename">
+                {ad.file_name}
+              </p>{/if}
+            <div class="ad-card-footer">
+              <span
+                class="review-status"
+                class:approved={ad.review_status === 'approved'}
+                class:changes={ad.review_status === 'changes_requested'}
+                >{!ad.current_version_id
+                  ? 'Klart for opplasting'
+                  : ad.review_status === 'approved'
+                    ? 'Godkjent'
+                    : ad.review_status === 'changes_requested'
+                      ? 'Trenger endringer'
+                      : 'Til gjennomgang'}</span
+              ><span>{ad.version_count} versjoner · {formatDate(ad.updated_at)}</span>
+            </div>
           </div>
-          <h2>{ad.title}</h2>
-          {#if ad.file_name && ad.file_name !== ad.title}<p class="ad-filename">
-              {ad.file_name}
-            </p>{/if}
-          <div class="ad-card-footer">
-            <span
-              class="review-status"
-              class:approved={ad.review_status === 'approved'}
-              class:changes={ad.review_status === 'changes_requested'}
-              >{!ad.current_version_id
-                ? 'Klart for opplasting'
-                : ad.review_status === 'approved'
-                  ? 'Godkjent'
-                  : ad.review_status === 'changes_requested'
-                    ? 'Trenger endringer'
-                    : 'Til gjennomgang'}</span
-            ><span>{ad.version_count} versjoner · {formatDate(ad.updated_at)}</span>
-          </div>
-        </div>
-      </a>{/each}
+        </a>
+        <button
+          type="button"
+          class="ad-favorite"
+          class:chosen={ad.favorite}
+          aria-label={ad.favorite ? 'Fjern favoritt' : 'Lagre favoritt'}
+          aria-pressed={!!ad.favorite}
+          title={ad.favorite ? 'Fjern fra favoritter' : 'Legg til i favoritter'}
+          disabled={savingFavorites.includes(ad.id)}
+          aria-busy={savingFavorites.includes(ad.id)}
+          onclick={() => toggleFavorite(ad)}
+        >
+          <Star size={20} fill={ad.favorite ? 'currentColor' : 'none'} />
+        </button>
+      </article>{/each}
   </div>{:else}<div class="empty-large">
-    <h2>{ads.length ? 'Ingen annonser passer søket' : 'Klar for første annonse'}</h2>
+    <h2>
+      {favoritesOnly
+        ? 'Ingen favoritter passer søket'
+        : ads.length
+          ? 'Ingen annonser passer søket'
+          : 'Klar for første annonse'}
+    </h2>
     <p>
-      Opprett en annonse, eller samle eksisterende videoer. Agenten leverer videre versjoner til
-      samme annonse.
+      {#if favoritesOnly}Trykk på stjernen på en annonse for å lagre den som favoritt.
+      {:else}Opprett en annonse, eller samle eksisterende videoer. Agenten leverer videre versjoner
+        til samme annonse.{/if}
     </p>
   </div>{/if}

@@ -10,7 +10,7 @@ mobil og desktop. Lokal mediebehandling kjører i en egen CPU-container.
 | --- | --- |
 | Tilgang | Invitasjoner, tre arbeidsromsroller, produktmedlemmer/roller, begrensede produkter, engangslenker for passordbytte og tilbakekalling |
 | Produkt | Flere produkter, versjonert merkevare-/produktgrunnlag, kildebelagte påstander og kontekstpakker |
-| Annonser | Egen startside, annonsetyper/brief/stabil nøkkel, nummererte filversjoner, gjenbruk av eksisterende opplastinger, egne review-URL-er, video/sammenligning, eksakt godkjenning og endringsønsker via MCP |
+| Annonser | Egen startside, personlige favoritter med stjerneknapp og filter, annonsetyper/brief/stabil nøkkel, nummererte filversjoner, gjenbruk av eksisterende opplastinger, egne review-URL-er, video/sammenligning, eksakt godkjenning og endringsønsker via MCP |
 | Bibliotek | Medier, manus, hooks, referanser, samlinger, favoritter, etiketter, innboks, CSV, massehandlinger, relasjoner, papirkurv og eksport |
 | Versjoner | Uforanderlige tekst-/filversjoner, samtidig redigeringsvern, tekstsammenligning, medier side ved side og godkjenning av en bestemt versjon |
 | Opplasting | Gjenopptakbare 8 MB-deler, opptil 2 GB per fil, SHA-256-duplikatsjekk, private filer og rettighetsdokumentasjon med utløp |
