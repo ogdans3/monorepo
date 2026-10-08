@@ -23,6 +23,8 @@ export type AnimationGroup = {
     animations: Animation[];
     preview?: string;
     poster?: string;
+    /** Back-facing interval where a screen change is occluded. */
+    screenCut?: {start: number; end: number; at: number};
     description?: string;
     loop?: boolean;
     framing?: "full" | "detail";
@@ -44,6 +46,8 @@ export type Animation = {
     startKeyframe: Keyframe;
     endKeyframe: Keyframe;
     curve: AnimationCurve;
+    /** A stationary, back-facing hold; its midpoint is the suggested screen cut. */
+    screenCut?: boolean;
 };
 
 export function getAnimation(track: Track, animationId: string): Animation | undefined {
@@ -51,6 +55,7 @@ export function getAnimation(track: Track, animationId: string): Animation | und
 }
 
 export enum AnimationCategories {
+    Flip = "Flip",
     Cinematic = "Cinematic",
     Reveal = "Reveal",
     Detail = "Detail",

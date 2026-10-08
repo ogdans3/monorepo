@@ -21,6 +21,7 @@
         selectedAnimationStore
     } from "$lib/stores/animation.svelte";
     import {onMount} from "svelte";
+    import ScreenSwitch from "./ScreenSwitch.svelte";
     import TimelineTools from "$lib/components/mock-video/timeline/TimelineTools.svelte";
     import AnimationPreviewDialog from "$lib/components/mock-video/timeline/AnimationPreviewDialog.svelte";
     import {
@@ -306,6 +307,7 @@
 </script>
 
 <div class="timeline flex flex-col border-t" data-testid="timeline">
+    <ScreenSwitch/>
     <!-- Controls row -->
     <div class="px-4 pt-4 grid grid-cols-[1fr_auto_1fr] items-center">
         <div class="justify-self-start flex gap-2">

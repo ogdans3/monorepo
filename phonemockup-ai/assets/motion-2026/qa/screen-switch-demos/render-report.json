@@ -1,0 +1,35 @@
+{
+  "renderer": "Shared SceneRenderer via public RenderSession",
+  "fps": 24,
+  "width": 640,
+  "height": 800,
+  "previews": [
+    {
+      "id": "flip-cut",
+      "model": "iphone-16-pro",
+      "frames": 132,
+      "duration": 5.5,
+      "bytes": 228804,
+      "sha256": "756ec42ba99d55811124e8454ad13dd00fb95f5f3bed35e8a1a24851bdab92f1",
+      "renderSeconds": 241.755
+    },
+    {
+      "id": "tumble-cut",
+      "model": "pixel-9-pro",
+      "frames": 132,
+      "duration": 5.5,
+      "bytes": 197798,
+      "sha256": "7221f8e6f6ea6ca75f35351546eaf86b1fc7dff7bdd6ff1a17f63742df068e38",
+      "renderSeconds": 191.85
+    },
+    {
+      "id": "whip-switch",
+      "model": "galaxy-s24-ultra",
+      "frames": 96,
+      "duration": 4,
+      "bytes": 209033,
+      "sha256": "d85e65548032ca723584518e20cedd1b2318e19e90ee385fa3ebbee6ca134551",
+      "renderSeconds": 140.784
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "id": "double-spin",
+  "name": "Double Spin",
+  "description": "Two full turns with a clean front-facing finish.",
+  "preview": "motion-2026/double-spin.mp4",
+  "poster": "motion-2026/double-spin.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 89,
+  "categories": [
+    "Spin"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "galaxy-s24-ultra",
+  "previewBackground": [
+    232,
+    223,
+    210,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "double-spin-clip-0",
+      "name": "Double Spin \u00b7 1",
+      "start": 0,
+      "end": 0.6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "double-spin-key-0",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.25
+        },
+        "rotation": {
+          "x": 8,
+          "y": -12,
+          "z": -4
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "double-spin-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.25
+        },
+        "rotation": {
+          "x": 8,
+          "y": -12,
+          "z": -4
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "double-spin-clip-1",
+      "name": "Double Spin \u00b7 2",
+      "start": 0.6,
+      "end": 4.2,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "double-spin-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.25
+        },
+        "rotation": {
+          "x": 8,
+          "y": -12,
+          "z": -4
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "double-spin-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.25
+        },
+        "rotation": {
+          "x": 8,
+          "y": 708,
+          "z": -4
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "double-spin-clip-2",
+      "name": "Double Spin \u00b7 3",
+      "start": 4.2,
+      "end": 5,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "double-spin-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.25
+        },
+        "rotation": {
+          "x": 8,
+          "y": 708,
+          "z": -4
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "double-spin-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.25
+        },
+        "rotation": {
+          "x": 8,
+          "y": 708,
+          "z": -4
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

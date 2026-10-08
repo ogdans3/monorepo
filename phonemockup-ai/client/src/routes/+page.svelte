@@ -12,11 +12,22 @@
   import MotionPreview from "$lib/components/marketing/MotionPreview.svelte";
 
   const motions = animationGroups;
-  const heroOptions = [motions[0], motions[1], motions[7]];
+  const heroOptions = ["soft-orbit", "edge-reveal", "top-down"].map((id) =>
+    motions.find((m) => m.id === id)!,
+  );
   let featured = $state(heroOptions[0]);
   let motionPaused = $state(false);
   let category = $state("All motions");
-  const categories = ["All motions", "Cinematic", "Reveal", "Detail", "Loop"];
+  const categories = [
+    "All motions",
+    "Zoom",
+    "Spin",
+    "Flip",
+    "Cinematic",
+    "Reveal",
+    "Detail",
+    "Loop",
+  ];
   const filtered = $derived(
     category === "All motions"
       ? motions
@@ -78,7 +89,7 @@
   <title>PhoneMockup — Your work. In motion.</title>
   <meta
     name="description"
-    content="Turn your screens into beautiful 3D mockups. Eight original animations, four detailed devices, and a studio right in your browser. Free during beta."
+    content={`Turn your screens into beautiful 3D mockups. ${motions.length} original animations, four detailed devices, and a studio right in your browser. Free during beta.`}
   />
   <meta property="og:title" content="PhoneMockup — Your work. In motion." />
   <meta
@@ -198,8 +209,8 @@
           </h2>
         </div>
         <p>
-          From a quiet orbit to a confident reveal.<br />Eight original moves.
-          Every one editable.
+          From quiet orbits to full spins and screen flips.<br
+          />{motions.length} original moves. Every one editable.
         </p>
       </div>
       <div class="gallery-toolbar">
@@ -246,6 +257,9 @@
               ></a
             >
             <p>{group.description}</p>
+            {#if group.screenCut}<span class="cut-label"
+                >Screen switch · {group.screenCut.at.toFixed(2)}s</span
+              >{/if}
           </article>
         {/each}
       </div>
@@ -787,6 +801,15 @@
     color: var(--muted);
     margin-top: 6px;
     max-width: 220px;
+  }
+  .cut-label {
+    display: inline-block;
+    margin-top: 9px;
+    font-size: 10px;
+    padding: 6px 8px;
+    background: #e1e9d4;
+    border-radius: 6px;
+    color: #425332;
   }
   .gallery-foot {
     display: flex;

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "flip-cut",
+    "bytes": 228804,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "tumble-cut",
+    "bytes": 197798,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "whip-switch",
+    "bytes": 209033,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  }
+]

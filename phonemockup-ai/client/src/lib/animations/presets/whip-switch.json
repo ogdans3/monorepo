@@ -1,0 +1,207 @@
+{
+  "id": "whip-switch",
+  "name": "Whip Switch",
+  "description": "A fast sideways flip with a clean screen cut.",
+  "preview": "motion-2026/whip-switch.mp4",
+  "poster": "motion-2026/whip-switch.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 85,
+  "categories": [
+    "Flip"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "galaxy-s24-ultra",
+  "previewBackground": [
+    219,
+    229,
+    237,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "whip-switch-clip-0",
+      "name": "Whip Switch \u00b7 1",
+      "start": 0,
+      "end": 0.5,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "whip-switch-key-0",
+        "position": {
+          "x": -0.06,
+          "y": 0,
+          "z": -1.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": -8
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "whip-switch-key-1",
+        "position": {
+          "x": -0.06,
+          "y": 0,
+          "z": -1.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": -8
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "whip-switch-clip-1",
+      "name": "Whip Switch \u00b7 2",
+      "start": 0.5,
+      "end": 1.6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "whip-switch-key-1",
+        "position": {
+          "x": -0.06,
+          "y": 0,
+          "z": -1.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": -8
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "whip-switch-key-2",
+        "position": {
+          "x": 0.08,
+          "y": 0.02,
+          "z": -1.4
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 8
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "whip-switch-clip-2",
+      "name": "Back facing \u00b7 switch screen",
+      "start": 1.6,
+      "end": 2,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "whip-switch-key-2",
+        "position": {
+          "x": 0.08,
+          "y": 0.02,
+          "z": -1.4
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 8
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "whip-switch-key-3",
+        "position": {
+          "x": 0.08,
+          "y": 0.02,
+          "z": -1.4
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 8
+        },
+        "opacity": 1
+      },
+      "screenCut": true
+    },
+    {
+      "id": "whip-switch-clip-3",
+      "name": "Whip Switch \u00b7 4",
+      "start": 2,
+      "end": 3.3,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "whip-switch-key-3",
+        "position": {
+          "x": 0.08,
+          "y": 0.02,
+          "z": -1.4
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 8
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "whip-switch-key-4",
+        "position": {
+          "x": -0.06,
+          "y": 0,
+          "z": -1.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 360,
+          "z": -8
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "whip-switch-clip-4",
+      "name": "Whip Switch \u00b7 5",
+      "start": 3.3,
+      "end": 4,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "whip-switch-key-4",
+        "position": {
+          "x": -0.06,
+          "y": 0,
+          "z": -1.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 360,
+          "z": -8
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "whip-switch-key-5",
+        "position": {
+          "x": -0.06,
+          "y": 0,
+          "z": -1.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 360,
+          "z": -8
+        },
+        "opacity": 1
+      }
+    }
+  ],
+  "screenCut": {
+    "start": 1.6,
+    "end": 2,
+    "at": 1.8
+  }
+}

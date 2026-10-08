@@ -20,8 +20,8 @@ async function go(p: Page, url = "/") {
     ).toHaveAttribute("data-visible", "true");
 }
 
-test("eight shipped motions have continuous clips and closed loops", () => {
-  expect(presets).toHaveLength(8);
+test("sixteen shipped motions have continuous clips and closed loops", () => {
+  expect(presets).toHaveLength(16);
   for (const group of presets) {
     const clips = group.animations;
     expect(clips[0].start).toBe(0);
@@ -51,7 +51,7 @@ for (const width of [320, 390, 768, 1440])
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "Your work.",
     );
-    await expect(page.locator(".motion-card")).toHaveCount(8);
+    await expect(page.locator(".motion-card")).toHaveCount(16);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
@@ -174,9 +174,9 @@ test("featured choices and gallery filters use the new collection", async ({
     "Snap In",
   ]);
   await page.getByRole("button", { name: "All motions", exact: true }).click();
-  await expect(page.locator(".motion-card")).toHaveCount(8);
+  await expect(page.locator(".motion-card")).toHaveCount(16);
   await go(page, "/platform/animation");
-  await expect(page.locator("a .preset-preview")).toHaveCount(8);
+  await expect(page.locator("a .preset-preview")).toHaveCount(16);
   await expect(
     page.getByRole("button", { name: "Fancy", exact: true }),
   ).toHaveCount(0);

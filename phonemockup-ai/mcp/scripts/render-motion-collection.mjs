@@ -7,8 +7,19 @@ import { createHash } from "node:crypto";
 import ffmpeg from "ffmpeg-static";
 import { RenderSession } from "../dist/renderer.js";
 const root = resolve(import.meta.dirname, "../..");
-const out = resolve(root, "client/static/previews/motion-2026");
-const qa = resolve(root, "assets/motion-2026/qa");
+const screenSwitchDemo = process.argv.includes("--screen-switch-demo");
+const out = resolve(
+  root,
+  screenSwitchDemo
+    ? "assets/motion-2026/screen-switch-demos"
+    : "client/static/previews/motion-2026",
+);
+const qa = resolve(
+  root,
+  screenSwitchDemo
+    ? "assets/motion-2026/qa/screen-switch-demos"
+    : "assets/motion-2026/qa",
+);
 await mkdir(out, { recursive: true });
 await mkdir(qa, { recursive: true });
 const presets = [];
@@ -24,10 +35,12 @@ for (const name of await readdir(
     ),
   );
 presets.sort((a, b) => b.priority - a.priority);
-const selected = process.argv.slice(2);
-const groups = selected.length
-  ? presets.filter((p) => selected.includes(p.id))
-  : presets;
+const selected = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+const groups = presets.filter(
+  (p) =>
+    (!selected.length || selected.includes(p.id)) &&
+    (!screenSwitchDemo || p.screenCut),
+);
 const posterTime = {
   "soft-orbit": 1,
   "edge-reveal": 2.2,
@@ -37,13 +50,29 @@ const posterTime = {
   "side-step": 1,
   "snap-in": 1.8,
   "top-down": 2.5,
+  "macro-rush": 0.4,
+  "pull-focus": 2.6,
+  "orbit-dive": 1,
+  "double-spin": 0.3,
+  "barrel-roll": 0.3,
+  "flip-cut": 0.3,
+  "tumble-cut": 0.3,
+  "whip-switch": 0.3,
 };
+let previous = [];
+try {
+  previous = JSON.parse(
+    await readFile(resolve(qa, "render-report.json"), "utf8"),
+  ).previews;
+} catch {}
 const report = {
   renderer: "Shared SceneRenderer via public RenderSession",
   fps: 24,
   width: 640,
   height: 800,
-  previews: [],
+  previews: selected.length
+    ? previous.filter((p) => !selected.includes(p.id))
+    : [],
 };
 const session = await RenderSession.launch();
 async function encode(args, frames) {
@@ -106,9 +135,17 @@ try {
       Math.round(count * 0.5),
       Math.round(count * 0.75),
       count - 1,
+      ...(group.screenCut ? [Math.round(group.screenCut.at * 24)] : []),
     ]);
     async function* frames() {
+      let switched = false;
       for (let i = 0; i < count; i++) {
+        if (screenSwitchDemo && !switched && i / 24 >= group.screenCut.at) {
+          await session.setScreenSource(
+            resolve(root, "client/static/media/studio/focus-complete.png"),
+          );
+          switched = true;
+        }
         const bytes = await session.renderFrame(
           group.id,
           i / 24,

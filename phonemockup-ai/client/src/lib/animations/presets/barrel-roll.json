@@ -1,0 +1,131 @@
+{
+  "id": "barrel-roll",
+  "name": "Barrel Roll",
+  "description": "A full rolling turn, with room to move.",
+  "preview": "motion-2026/barrel-roll.mp4",
+  "poster": "motion-2026/barrel-roll.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 88,
+  "categories": [
+    "Spin"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "pixel-9-pro",
+  "previewBackground": [
+    218,
+    228,
+    218,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "barrel-roll-clip-0",
+      "name": "Barrel Roll \u00b7 1",
+      "start": 0,
+      "end": 0.6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "barrel-roll-key-0",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -2.4
+        },
+        "rotation": {
+          "x": 8,
+          "y": -16,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "barrel-roll-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -2.4
+        },
+        "rotation": {
+          "x": 8,
+          "y": -16,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "barrel-roll-clip-1",
+      "name": "Barrel Roll \u00b7 2",
+      "start": 0.6,
+      "end": 5.4,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "barrel-roll-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -2.4
+        },
+        "rotation": {
+          "x": 8,
+          "y": -16,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "barrel-roll-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -2.4
+        },
+        "rotation": {
+          "x": 8,
+          "y": -16,
+          "z": 360
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "barrel-roll-clip-2",
+      "name": "Barrel Roll \u00b7 3",
+      "start": 5.4,
+      "end": 6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "barrel-roll-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -2.4
+        },
+        "rotation": {
+          "x": 8,
+          "y": -16,
+          "z": 360
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "barrel-roll-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -2.4
+        },
+        "rotation": {
+          "x": 8,
+          "y": -16,
+          "z": 360
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

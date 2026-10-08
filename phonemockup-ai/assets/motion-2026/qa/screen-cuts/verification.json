@@ -1,0 +1,83 @@
+[
+  {
+    "preset": "flip-cut",
+    "modelId": "iphone-16-pro",
+    "cutAt": 2.5,
+    "changedPixels": {
+      "front": 34864,
+      "cut": 0
+    }
+  },
+  {
+    "preset": "flip-cut",
+    "modelId": "pixel-9-pro",
+    "cutAt": 2.5,
+    "changedPixels": {
+      "front": 33922,
+      "cut": 0
+    }
+  },
+  {
+    "preset": "flip-cut",
+    "modelId": "galaxy-s24-ultra",
+    "cutAt": 2.5,
+    "changedPixels": {
+      "front": 35306,
+      "cut": 0
+    }
+  },
+  {
+    "preset": "tumble-cut",
+    "modelId": "iphone-16-pro",
+    "cutAt": 2.5,
+    "changedPixels": {
+      "front": 29331,
+      "cut": 0
+    }
+  },
+  {
+    "preset": "tumble-cut",
+    "modelId": "pixel-9-pro",
+    "cutAt": 2.5,
+    "changedPixels": {
+      "front": 28235,
+      "cut": 0
+    }
+  },
+  {
+    "preset": "tumble-cut",
+    "modelId": "galaxy-s24-ultra",
+    "cutAt": 2.5,
+    "changedPixels": {
+      "front": 29469,
+      "cut": 0
+    }
+  },
+  {
+    "preset": "whip-switch",
+    "modelId": "iphone-16-pro",
+    "cutAt": 1.8,
+    "changedPixels": {
+      "front": 31039,
+      "cut": 0
+    }
+  },
+  {
+    "preset": "whip-switch",
+    "modelId": "pixel-9-pro",
+    "cutAt": 1.8,
+    "changedPixels": {
+      "front": 30136,
+      "cut": 0
+    }
+  },
+  {
+    "preset": "whip-switch",
+    "modelId": "galaxy-s24-ultra",
+    "cutAt": 1.8,
+    "changedPixels": {
+      "front": 31345,
+      "cut": 0
+    }
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "preset": "flip-cut",
+    "modelId": "iphone-16-pro",
+    "cutAt": 2.5
+  },
+  {
+    "preset": "flip-cut",
+    "modelId": "pixel-9-pro",
+    "cutAt": 2.5
+  },
+  {
+    "preset": "flip-cut",
+    "modelId": "galaxy-s24-ultra",
+    "cutAt": 2.5
+  },
+  {
+    "preset": "tumble-cut",
+    "modelId": "iphone-16-pro",
+    "cutAt": 2.5
+  },
+  {
+    "preset": "tumble-cut",
+    "modelId": "pixel-9-pro",
+    "cutAt": 2.5
+  },
+  {
+    "preset": "tumble-cut",
+    "modelId": "galaxy-s24-ultra",
+    "cutAt": 2.5
+  },
+  {
+    "preset": "whip-switch",
+    "modelId": "iphone-16-pro",
+    "cutAt": 1.8
+  },
+  {
+    "preset": "whip-switch",
+    "modelId": "pixel-9-pro",
+    "cutAt": 1.8
+  },
+  {
+    "preset": "whip-switch",
+    "modelId": "galaxy-s24-ultra",
+    "cutAt": 1.8
+  }
+]

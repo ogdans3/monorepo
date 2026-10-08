@@ -1,0 +1,207 @@
+{
+  "id": "tumble-cut",
+  "name": "Tumble Cut",
+  "description": "Flip end over end. Change the screen on the back.",
+  "preview": "motion-2026/tumble-cut.mp4",
+  "poster": "motion-2026/tumble-cut.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 86,
+  "categories": [
+    "Flip"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "pixel-9-pro",
+  "previewBackground": [
+    231,
+    227,
+    212,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "tumble-cut-clip-0",
+      "name": "Tumble Cut \u00b7 1",
+      "start": 0,
+      "end": 0.7,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "tumble-cut-key-0",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "tumble-cut-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "tumble-cut-clip-1",
+      "name": "Tumble Cut \u00b7 2",
+      "start": 0.7,
+      "end": 2.2,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "tumble-cut-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "tumble-cut-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 180,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "tumble-cut-clip-2",
+      "name": "Back facing \u00b7 switch screen",
+      "start": 2.2,
+      "end": 2.8,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "tumble-cut-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 180,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "tumble-cut-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 180,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "screenCut": true
+    },
+    {
+      "id": "tumble-cut-clip-3",
+      "name": "Tumble Cut \u00b7 4",
+      "start": 2.8,
+      "end": 4.7,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "tumble-cut-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 180,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "tumble-cut-key-4",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 360,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "tumble-cut-clip-4",
+      "name": "Tumble Cut \u00b7 5",
+      "start": 4.7,
+      "end": 5.5,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "tumble-cut-key-4",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 360,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "tumble-cut-key-5",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.3
+        },
+        "rotation": {
+          "x": 360,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    }
+  ],
+  "screenCut": {
+    "start": 2.2,
+    "end": 2.8,
+    "at": 2.5
+  }
+}

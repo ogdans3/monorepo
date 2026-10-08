@@ -75,6 +75,78 @@
       "bytes": 471285,
       "sha256": "cdc9bbf1c9557b589b3a4c477407b9aee58a02297df7280ac6e0d00b17b16c0f",
       "renderSeconds": 43.681
+    },
+    {
+      "id": "macro-rush",
+      "model": "iphone-16-pro",
+      "frames": 144,
+      "duration": 6,
+      "bytes": 373620,
+      "sha256": "be13d878d9721900f550795c52111d4cd1e904312c0d927618c12afc1e288d45",
+      "renderSeconds": 68.8
+    },
+    {
+      "id": "pull-focus",
+      "model": "pixel-9-pro",
+      "frames": 144,
+      "duration": 6,
+      "bytes": 370678,
+      "sha256": "57b2907439a70b4416b81e639c527c7780ca42624e664748b00acf921888e30b",
+      "renderSeconds": 59.426
+    },
+    {
+      "id": "orbit-dive",
+      "model": "iphone-16-pro",
+      "frames": 144,
+      "duration": 6,
+      "bytes": 485983,
+      "sha256": "e143b80c15d8a6f5d293488c394caa9d526d9d52610df80b079dd80c0e1a4b20",
+      "renderSeconds": 123.426
+    },
+    {
+      "id": "double-spin",
+      "model": "galaxy-s24-ultra",
+      "frames": 120,
+      "duration": 5,
+      "bytes": 278253,
+      "sha256": "f9ac3800c2ab7b1573f21e2a5038cc213462cadae6b6639effb84c3fca3a6ec3",
+      "renderSeconds": 112.87
+    },
+    {
+      "id": "barrel-roll",
+      "model": "pixel-9-pro",
+      "frames": 144,
+      "duration": 6,
+      "bytes": 362279,
+      "sha256": "faf9174157c091e87d34defa5a2d1210b88d03d9499bc4b4372444fd12094935",
+      "renderSeconds": 173.163
+    },
+    {
+      "id": "flip-cut",
+      "model": "iphone-16-pro",
+      "frames": 132,
+      "duration": 5.5,
+      "bytes": 235058,
+      "sha256": "fc1fa5f4f9b27892e1a4a3b8633161b2912a073bff0757ca990027406ff9ec50",
+      "renderSeconds": 238.788
+    },
+    {
+      "id": "tumble-cut",
+      "model": "pixel-9-pro",
+      "frames": 132,
+      "duration": 5.5,
+      "bytes": 204588,
+      "sha256": "dd774a469a69db6460cc4a11d879368d3f068aeedec1880d5a73d1fee686d5c0",
+      "renderSeconds": 191.416
+    },
+    {
+      "id": "whip-switch",
+      "model": "galaxy-s24-ultra",
+      "frames": 96,
+      "duration": 4,
+      "bytes": 206692,
+      "sha256": "088be79665bdfcc47704e513fb5358edd6b15942674ea5afc4df930423b93a1a",
+      "renderSeconds": 137.372
     }
   ]
 }

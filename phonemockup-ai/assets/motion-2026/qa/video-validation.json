@@ -1,7 +1,25 @@
 [
   {
+    "id": "barrel-roll",
+    "bytes": 362279,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
     "id": "detail-study",
     "bytes": 428168,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "double-spin",
+    "bytes": 278253,
     "codec": "H.264",
     "pixelFormat": "yuv420p",
     "audio": false,
@@ -18,8 +36,44 @@
     "fullDecode": "pass"
   },
   {
+    "id": "flip-cut",
+    "bytes": 235058,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
     "id": "lift-off",
     "bytes": 240614,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "macro-rush",
+    "bytes": 373620,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "orbit-dive",
+    "bytes": 485983,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "pull-focus",
+    "bytes": 370678,
     "codec": "H.264",
     "pixelFormat": "yuv420p",
     "audio": false,
@@ -65,6 +119,24 @@
   {
     "id": "top-down",
     "bytes": 471285,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "tumble-cut",
+    "bytes": 204588,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "whip-switch",
+    "bytes": 206692,
     "codec": "H.264",
     "pixelFormat": "yuv420p",
     "audio": false,

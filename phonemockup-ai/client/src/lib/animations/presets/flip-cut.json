@@ -1,0 +1,207 @@
+{
+  "id": "flip-cut",
+  "name": "Flip Cut",
+  "description": "A complete turn with a hidden screen-change moment.",
+  "preview": "motion-2026/flip-cut.mp4",
+  "poster": "motion-2026/flip-cut.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 87,
+  "categories": [
+    "Flip"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "iphone-16-pro",
+  "previewBackground": [
+    228,
+    220,
+    238,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "flip-cut-clip-0",
+      "name": "Flip Cut \u00b7 1",
+      "start": 0,
+      "end": 0.7,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "flip-cut-key-0",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "flip-cut-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "flip-cut-clip-1",
+      "name": "Flip Cut \u00b7 2",
+      "start": 0.7,
+      "end": 2.2,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "flip-cut-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "flip-cut-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "flip-cut-clip-2",
+      "name": "Back facing \u00b7 switch screen",
+      "start": 2.2,
+      "end": 2.8,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "flip-cut-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "flip-cut-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "screenCut": true
+    },
+    {
+      "id": "flip-cut-clip-3",
+      "name": "Flip Cut \u00b7 4",
+      "start": 2.8,
+      "end": 4.7,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "flip-cut-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 180,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "flip-cut-key-4",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 360,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "flip-cut-clip-4",
+      "name": "Flip Cut \u00b7 5",
+      "start": 4.7,
+      "end": 5.5,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "flip-cut-key-4",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 360,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "flip-cut-key-5",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.85
+        },
+        "rotation": {
+          "x": 0,
+          "y": 360,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    }
+  ],
+  "screenCut": {
+    "start": 2.2,
+    "end": 2.8,
+    "at": 2.5
+  }
+}

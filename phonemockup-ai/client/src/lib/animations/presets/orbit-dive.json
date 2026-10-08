@@ -1,0 +1,131 @@
+{
+  "id": "orbit-dive",
+  "name": "Orbit Dive",
+  "description": "A wide sweep, a close pass, a flying return.",
+  "preview": "motion-2026/orbit-dive.mp4",
+  "poster": "motion-2026/orbit-dive.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 90,
+  "categories": [
+    "Cinematic"
+  ],
+  "loop": true,
+  "framing": "detail",
+  "previewModelId": "iphone-16-pro",
+  "previewBackground": [
+    216,
+    231,
+    235,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "orbit-dive-clip-0",
+      "name": "Orbit Dive \u00b7 1",
+      "start": 0,
+      "end": 2,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "orbit-dive-key-0",
+        "position": {
+          "x": -0.18,
+          "y": -0.1,
+          "z": -1.7
+        },
+        "rotation": {
+          "x": 18,
+          "y": -42,
+          "z": -22
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "orbit-dive-key-1",
+        "position": {
+          "x": 0.12,
+          "y": 0.08,
+          "z": 0.65
+        },
+        "rotation": {
+          "x": -18,
+          "y": 30,
+          "z": 18
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "orbit-dive-clip-1",
+      "name": "Orbit Dive \u00b7 2",
+      "start": 2,
+      "end": 4,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "orbit-dive-key-1",
+        "position": {
+          "x": 0.12,
+          "y": 0.08,
+          "z": 0.65
+        },
+        "rotation": {
+          "x": -18,
+          "y": 30,
+          "z": 18
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "orbit-dive-key-2",
+        "position": {
+          "x": 0.16,
+          "y": -0.1,
+          "z": -1.05
+        },
+        "rotation": {
+          "x": 16,
+          "y": 48,
+          "z": 24
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "orbit-dive-clip-2",
+      "name": "Orbit Dive \u00b7 3",
+      "start": 4,
+      "end": 6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "orbit-dive-key-2",
+        "position": {
+          "x": 0.16,
+          "y": -0.1,
+          "z": -1.05
+        },
+        "rotation": {
+          "x": 16,
+          "y": 48,
+          "z": 24
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "orbit-dive-key-3",
+        "position": {
+          "x": -0.18,
+          "y": -0.1,
+          "z": -1.7
+        },
+        "rotation": {
+          "x": 18,
+          "y": -42,
+          "z": -22
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

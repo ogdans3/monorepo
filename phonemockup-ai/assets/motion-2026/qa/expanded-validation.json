@@ -1,0 +1,31 @@
+{
+  "browserChecks": {
+    "collectionAndScreenSwitch": 16,
+    "screenSwitchRerunAfterPolish": 5,
+    "result": "pass"
+  },
+  "typeCheck": {
+    "errors": 0,
+    "existingWarnings": 8
+  },
+  "productionBuilds": [
+    "client",
+    "mcp"
+  ],
+  "previewEncoding": {
+    "publicVideos": 16,
+    "screenTransitionDemos": 3,
+    "result": "pass"
+  },
+  "hiddenCutComparisons": {
+    "motions": 3,
+    "models": 3,
+    "cases": 9,
+    "changedPixelsAtCut": 0
+  },
+  "visualReview": {
+    "newMotionCheckpoints": 45,
+    "screenTransitionDemoCheckpoints": 18
+  },
+  "productionAssetsMatch": 32
+}

@@ -48,6 +48,7 @@ export type CatalogModel = {
 };
 
 export type CatalogAnimation = {
+    screenCut?: {start: number; end: number; at: number};
     id: string;
     name: string;
     categories: string[];

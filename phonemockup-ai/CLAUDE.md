@@ -30,7 +30,7 @@ SvelteKit with `@sveltejs/adapter-node`, Svelte 5 runes (`$state`, `$props`), Ta
   - `sidebar/` — model picker, transform controls, scene settings, export panel
   - `timeline/` — keyframe timeline + playhead
   - `topbar/` — top bar
-- `src/lib/animations/presets/*.json` — the eight active motion presets. Top-level `animations/*.json` remain available by ID for old links and projects, but are not listed in the catalogue. See `docs/motion-2026.md` for preview generation.
+- `src/lib/animations/presets/*.json` — the sixteen active motion presets. Top-level `animations/*.json` remain available by ID for old links and projects, but are not listed in the catalogue. See `docs/motion-2026.md` for preview generation.
 - `src/lib/stores/*.svelte.ts` — runes-based stores for `project`, `video`, `tracks`, `transform`, `animation`, `settings`
 - `src/lib/repo/` — `localstorage` (project JSON), `media-store` (a saved project's screen media, in IndexedDB), `uploadFile` (image/video detection)
 - `src/lib/models/` — 3D phone models (loaded via three.js). A new one is
@@ -144,3 +144,18 @@ The iPhone 16 Pro and Pixel 9 Pro use exact `cameraIsland.nodes` metadata and
 setting in saved projects and forward it through the MCP harness. Pixel uses
 `cameraIsland.label` to show “Show camera cutout” in the UI. Standalone cutout-free
 GLBs and Blender files exist for downloads, without duplicate picker entries.
+
+## Screen-switch helper
+
+`animations/screen-switch.ts` derives hidden cut times from `Animation.screenCut`
+back-facing hold clips. Cues follow the stored clip times and disappear if the
+hold pose is edited. The helper appears for one track and the three audited
+phones; it does not assume that a MacBook or a legacy model hides its screen
+at the same pose.
+
+`timeline/ScreenSwitch.svelte` takes two images and encodes ordinary screen
+video through the existing Mediabunny muxer (AVC/MP4, falling back to VP9/VP8
+WebM after checking codec support). That File follows the regular media,
+IndexedDB and export path. The cut is baked into the media: regenerate after
+changing timeline timing. Do not introduce separate preview/export screen
+selection rules. See `docs/motion-2026.md` for validation and demo rendering.

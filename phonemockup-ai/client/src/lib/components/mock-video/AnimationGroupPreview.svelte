@@ -27,6 +27,11 @@
       <strong>{animationGroup.name}</strong><span>{duration.toFixed(1)}s</span>
     </div>
     {#if animationGroup.description}<p>{animationGroup.description}</p>{/if}
+    {#if animationGroup.screenCut}<p>
+        <strong
+          >Screen switch · {animationGroup.screenCut.at.toFixed(2)}s</strong
+        >
+      </p>{/if}
   </div>
 {:else}
   <div class="preset-preview empty">Your next move.</div>

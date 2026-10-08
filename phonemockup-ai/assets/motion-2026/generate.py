@@ -24,6 +24,27 @@ specs=[
  ('top-down','Top Down','An overhead study, opening into a hero angle.','Cinematic','macbook-pro-14-m4','#DDE1F0',6,True,False,[
  (0,(0,0,-.5),(30,-22,-8)),(3,(0,.015,-.2),(-3,18,4)),(6,(0,0,-.5),(30,-22,-8))]),
 ]
+# Higher-energy additions, including explicit back-facing holds for screen cuts.
+specs += [
+ ('macro-rush','Macro Rush','Push right into the screen, then breathe out.','Zoom','iphone-16-pro','#E6EAD6',6,True,True,[
+ (0,(0,0,-1.4),(-8,-18,-6)),(2.1,(.035,-.16,1.65),(4,8,3)),(3.2,(.035,-.16,1.65),(4,8,3)),(6,(0,0,-1.4),(-8,-18,-6))]),
+ ('pull-focus','Pull Focus','Start with the details. Reveal the whole picture.','Zoom','pixel-9-pro','#E3DDEB',6,True,True,[
+ (0,(-.035,-.21,1.6),(-3,-8,-3)),(2.4,(0,0,-1.05),(12,28,9)),(3.7,(0,0,-1.05),(12,28,9)),(6,(-.035,-.21,1.6),(-3,-8,-3))]),
+ ('orbit-dive','Orbit Dive','A wide sweep, a close pass, a flying return.','Cinematic','iphone-16-pro','#D8E7EB',6,True,True,[
+ (0,(-.18,-.1,-1.7),(18,-42,-22)),(2,(.12,.08,.65),(-18,30,18)),(4,(.16,-.1,-1.05),(16,48,24)),(6,(-.18,-.1,-1.7),(18,-42,-22))]),
+ ('double-spin','Double Spin','Two full turns with a clean front-facing finish.','Spin','galaxy-s24-ultra','#E8DFD2',5,True,False,[
+ (0,(0,0,-1.25),(8,-12,-4)),(.6,(0,0,-1.25),(8,-12,-4)),(4.2,(0,0,-1.25),(8,708,-4)),(5,(0,0,-1.25),(8,708,-4))]),
+ ('barrel-roll','Barrel Roll','A full rolling turn, with room to move.','Spin','pixel-9-pro','#DAE4DA',6,True,False,[
+ (0,(0,0,-2.4),(8,-16,0)),(.6,(0,0,-2.4),(8,-16,0)),(5.4,(0,0,-2.4),(8,-16,360)),(6,(0,0,-2.4),(8,-16,360))]),
+ ('flip-cut','Flip Cut','A complete turn with a hidden screen-change moment.','Flip','iphone-16-pro','#E4DCEE',5.5,True,False,[
+ (0,(0,0,-.85),(0,0,0)),(.7,(0,0,-.85),(0,0,0)),(2.2,(0,0,-.85),(0,180,0)),(2.8,(0,0,-.85),(0,180,0)),(4.7,(0,0,-.85),(0,360,0)),(5.5,(0,0,-.85),(0,360,0))]),
+ ('tumble-cut','Tumble Cut','Flip end over end. Change the screen on the back.','Flip','pixel-9-pro','#E7E3D4',5.5,True,False,[
+ (0,(0,0,-1.3),(0,0,0)),(.7,(0,0,-1.3),(0,0,0)),(2.2,(0,0,-1.3),(180,0,0)),(2.8,(0,0,-1.3),(180,0,0)),(4.7,(0,0,-1.3),(360,0,0)),(5.5,(0,0,-1.3),(360,0,0))]),
+ ('whip-switch','Whip Switch','A fast sideways flip with a clean screen cut.','Flip','galaxy-s24-ultra','#DBE5ED',4,True,False,[
+ (0,(-.06,0,-1.15),(0,0,-8)),(.5,(-.06,0,-1.15),(0,0,-8)),(1.6,(.08,.02,-1.4),(0,180,8)),(2,(.08,.02,-1.4),(0,180,8)),(3.3,(-.06,0,-1.15),(0,360,-8)),(4,(-.06,0,-1.15),(0,360,-8))]),
+]
+cut_windows = {'flip-cut':(2.2,2.8), 'tumble-cut':(2.2,2.8), 'whip-switch':(1.6,2)}
+
 for i,(id,name,desc,category,model,color,duration,loop,detail,keys) in enumerate(specs):
  def key(index,p,r):return {'id':f'{id}-key-{index}','position':dict(zip('xyz',p)),'rotation':dict(zip('xyz',r)),'opacity':1}
  clips=[]
@@ -31,6 +52,13 @@ for i,(id,name,desc,category,model,color,duration,loop,detail,keys) in enumerate
   t,p,r=left;end,p2,r2=right
   clips.append({'id':f'{id}-clip-{n}','name':name if len(keys)==2 else f'{name} · {n+1}', 'start':t,'end':end,'curve':'CubicOut' if id in ['lift-off','snap-in'] and n==0 else 'SineInOut', 'startKeyframe':key(n,p,r),'endKeyframe':key(n+1,p2,r2)})
  d={'id':id,'name':name,'description':desc,'preview':f'motion-2026/{id}.mp4','poster':f'motion-2026/{id}.webp','isOfficial':True,'isCommunity':False,'favorited':False,'priority':100-i,'categories':[category], 'loop':loop,'framing':'detail' if detail else 'full','previewModelId':model,'previewBackground':[int(color[n:n+2],16) for n in (1,3,5)]+[1],'demoMediaId':'workspace' if 'macbook' in model else 'focus','animations':clips}
+ if id in cut_windows:
+  start,end = cut_windows[id]
+  d['screenCut'] = {'start':start,'end':end,'at':round((start+end)/2,3)}
+  for clip in clips:
+   if clip['start']==start and clip['end']==end:
+    clip['screenCut']=True
+    clip['name']='Back facing · switch screen'
  (OUT/(id+'.json')).write_text(json.dumps(d,indent=2)+'\n')
 # Small, original screen designs used by both the published previews and the editor.
 media=ROOT/'client/static/media/studio';media.mkdir(parents=True,exist_ok=True)
@@ -48,6 +76,20 @@ for i,h in enumerate([42,75,64,100,82,124,111]):d.rounded_rectangle((720+i*43,21
 d.rounded_rectangle((84,2287,1122,2429),radius=71,fill='#C7F27A');text(302,2328,'Start a session  →',43,fill='#14271F',bold=True)
 d.rounded_rectangle((423,2537,783,2548),radius=6,fill='#DBE5D5')
 im.save(media/'focus.png',optimize=True)
+im=Image.new('RGB',(1206,2622),'#F1E7D9');d=ImageDraw.Draw(im)
+text(84,66,'9:41',34,fill='#28382A',bold=True)
+text(84,233,'FORMA',42,fill='#28382A',bold=True)
+text(84,329,'A LITTLE PROGRESS, EVERY DAY',24,fill='#6C7867')
+text(77,447,'Good',148,fill='#28382A',bold=True)
+text(77,605,'work.',148,fill='#28382A',bold=True)
+d.ellipse((173,936,1033,1796),fill='#C7DEAB')
+d.line([(398,1346),(551,1502),(822,1204)],fill='#29462B',width=38)
+text(235,1880,'SESSION COMPLETE',46,fill='#28382A',bold=True)
+text(220,1980,'A little space. A fresh start.',43,fill='#6C7867')
+d.rounded_rectangle((84,2287,1122,2429),radius=71,fill='#28382A')
+text(367,2328,'Keep going  →',43,fill='#F1E7D9',bold=True)
+d.rounded_rectangle((423,2537,783,2548),radius=6,fill='#28382A')
+im.save(media/'focus-complete.png',optimize=True)
 im=Image.new('RGB',(1920,1248),'#EDEFE5');d=ImageDraw.Draw(im)
 def text(x,y,s,size=30,fill='#17251B',bold=False):d.text((x,y),s,font=font(size,bold),fill=fill)
 d.rectangle((0,0,324,1248),fill='#182B20');text(55,60,'FORMA',35,'#E5F4C8',True)
@@ -63,4 +105,4 @@ text(416,1010,'YOUR COLLECTIONS',20,'#5C715C')
 for i,label in enumerate(['Deep work','A fresh start','Space to think']):
  x=410+i*480;d.rounded_rectangle((x,1064,x+450,1170),radius=20,fill='#E0E5D7');text(x+30,1100,label,25,bold=True)
 im.save(media/'workspace.png',optimize=True)
-print('Generated',len(specs),'presets and 2 original demo screens')
+print('Generated',len(specs),'presets and 3 original demo screens')

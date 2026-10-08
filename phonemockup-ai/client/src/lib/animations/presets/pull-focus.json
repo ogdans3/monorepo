@@ -1,0 +1,131 @@
+{
+  "id": "pull-focus",
+  "name": "Pull Focus",
+  "description": "Start with the details. Reveal the whole picture.",
+  "preview": "motion-2026/pull-focus.mp4",
+  "poster": "motion-2026/pull-focus.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 91,
+  "categories": [
+    "Zoom"
+  ],
+  "loop": true,
+  "framing": "detail",
+  "previewModelId": "pixel-9-pro",
+  "previewBackground": [
+    227,
+    221,
+    235,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "pull-focus-clip-0",
+      "name": "Pull Focus \u00b7 1",
+      "start": 0,
+      "end": 2.4,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "pull-focus-key-0",
+        "position": {
+          "x": -0.035,
+          "y": -0.21,
+          "z": 1.6
+        },
+        "rotation": {
+          "x": -3,
+          "y": -8,
+          "z": -3
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "pull-focus-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.05
+        },
+        "rotation": {
+          "x": 12,
+          "y": 28,
+          "z": 9
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "pull-focus-clip-1",
+      "name": "Pull Focus \u00b7 2",
+      "start": 2.4,
+      "end": 3.7,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "pull-focus-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.05
+        },
+        "rotation": {
+          "x": 12,
+          "y": 28,
+          "z": 9
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "pull-focus-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.05
+        },
+        "rotation": {
+          "x": 12,
+          "y": 28,
+          "z": 9
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "pull-focus-clip-2",
+      "name": "Pull Focus \u00b7 3",
+      "start": 3.7,
+      "end": 6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "pull-focus-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.05
+        },
+        "rotation": {
+          "x": 12,
+          "y": 28,
+          "z": 9
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "pull-focus-key-3",
+        "position": {
+          "x": -0.035,
+          "y": -0.21,
+          "z": 1.6
+        },
+        "rotation": {
+          "x": -3,
+          "y": -8,
+          "z": -3
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

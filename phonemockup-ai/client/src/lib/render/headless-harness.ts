@@ -57,6 +57,7 @@ function catalog() {
             name: g.name,
             categories: g.categories ?? [],
             priority: g.priority,
+            screenCut: g.screenCut,
             /** Longest `end` across the group — its natural duration in seconds. */
             duration: g.animations.reduce((max, a) => Math.max(max, a.end), 0)
         }))

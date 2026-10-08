@@ -1,0 +1,131 @@
+{
+  "id": "macro-rush",
+  "name": "Macro Rush",
+  "description": "Push right into the screen, then breathe out.",
+  "preview": "motion-2026/macro-rush.mp4",
+  "poster": "motion-2026/macro-rush.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 92,
+  "categories": [
+    "Zoom"
+  ],
+  "loop": true,
+  "framing": "detail",
+  "previewModelId": "iphone-16-pro",
+  "previewBackground": [
+    230,
+    234,
+    214,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "macro-rush-clip-0",
+      "name": "Macro Rush \u00b7 1",
+      "start": 0,
+      "end": 2.1,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "macro-rush-key-0",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.4
+        },
+        "rotation": {
+          "x": -8,
+          "y": -18,
+          "z": -6
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "macro-rush-key-1",
+        "position": {
+          "x": 0.035,
+          "y": -0.16,
+          "z": 1.65
+        },
+        "rotation": {
+          "x": 4,
+          "y": 8,
+          "z": 3
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "macro-rush-clip-1",
+      "name": "Macro Rush \u00b7 2",
+      "start": 2.1,
+      "end": 3.2,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "macro-rush-key-1",
+        "position": {
+          "x": 0.035,
+          "y": -0.16,
+          "z": 1.65
+        },
+        "rotation": {
+          "x": 4,
+          "y": 8,
+          "z": 3
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "macro-rush-key-2",
+        "position": {
+          "x": 0.035,
+          "y": -0.16,
+          "z": 1.65
+        },
+        "rotation": {
+          "x": 4,
+          "y": 8,
+          "z": 3
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "macro-rush-clip-2",
+      "name": "Macro Rush \u00b7 3",
+      "start": 3.2,
+      "end": 6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "macro-rush-key-2",
+        "position": {
+          "x": 0.035,
+          "y": -0.16,
+          "z": 1.65
+        },
+        "rotation": {
+          "x": 4,
+          "y": 8,
+          "z": 3
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "macro-rush-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -1.4
+        },
+        "rotation": {
+          "x": -8,
+          "y": -18,
+          "z": -6
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}
