@@ -125,3 +125,44 @@ python3 mcp/scripts/assemble-more-motion.py --output-dir /tmp/phonemockup-more-m
 ```
 
 The presentation uses the actual shared-renderer output. The final three clips show the screen changing; the editable phone poses loop, while the two-image screen content deliberately starts and ends differently.
+
+## Mobile tap-to-play recovery
+
+The previous fallback could remain stuck after a failed video request because
+`play()` does not clear a media resource error. A tap before the visibility
+observer ran also tried to play before the reactive `src` attribute existed.
+Both failures were reproduced against the deployed site in Android Chromium
+and iPhone WebKit contexts, using failed-request and delayed-observer scenarios.
+
+`MotionPreview.svelte` now attaches the source synchronously before `play()`,
+reloads failed media in that same tap, and keeps the reactive policy from
+restarting an in-flight play request. Request generations ignore stale promise
+results after pausing or changing sources. Controls become enabled after
+hydration and show playing state on the actual `playing` event. The custom
+button remains above the video layer and accepts touch input.
+
+This preserves the direct user-gesture requirement described in
+[WebKit's video playback policy](https://webkit.org/blog/6784/new-video-policies-for-ios/).
+No native autoplay attribute competes with the visibility, reduced-motion,
+page-wide pause or local pause policy.
+
+Run the mobile regression matrix from `client/`:
+
+```sh
+npx playwright install --with-deps chromium webkit
+npx playwright test --config playwright.mobile.config.ts
+```
+
+The matrix uses real `tap()` input and asserts that video time advances, not
+just that the button changes. It covers muted inline playback, explicit
+pause/resume, rejected autoplay on hero and gallery previews, failed-download
+recovery, a tap before lazy loading, reduced motion, global pause and scrolling.
+`PLAYWRIGHT_BASE_URL` targets an already running production build or deployed
+site; `PLAYWRIGHT_CHROMIUM_EXECUTABLE` and `PLAYWRIGHT_WEBKIT_EXECUTABLE` can
+select installed browsers. Otherwise the config starts the local dev server.
+
+Validation: all 12 mobile cases passed against the compiled production app;
+all 11 existing motion collection regressions passed. Client build and type
+check passed (zero errors, eight existing warnings). These are mobile browser
+engine tests with device emulation, not a physical handset or Low Power Mode
+certification.

@@ -159,3 +159,13 @@ WebM after checking codec support). That File follows the regular media,
 IndexedDB and export path. The cut is baked into the media: regenerate after
 changing timeline timing. Do not introduce separate preview/export screen
 selection rules. See `docs/motion-2026.md` for validation and demo rendering.
+
+## Landing preview playback checks
+
+When changing `MotionPreview.svelte`, run the touch-based mobile suite with
+`client/playwright.mobile.config.ts` in both Chromium and WebKit, in addition
+to the existing motion collection tests. It verifies actual playback progress,
+blocked autoplay and retry after a failed video download. Keep source loading
+and explicit `play()` in the same user gesture, and keep the visibility/pause
+policy from racing that request. See `docs/motion-2026.md` for commands and the
+limits of device emulation.

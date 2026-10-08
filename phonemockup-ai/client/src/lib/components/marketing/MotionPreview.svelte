@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { Play, Pause } from "@lucide/svelte";
 
   let {
@@ -62,55 +62,80 @@
       observer.disconnect();
       preference.removeEventListener("change", syncPreference);
       document.removeEventListener("visibilitychange", syncVisibility);
-      video?.pause();
+      if (video) stop(video);
     };
   });
+
+  // Source assignment and play() must happen in the same trusted tap. A
+  // reactive src attribute can otherwise reload the video after that gesture.
+  let playRequest = 0;
+  function prepare(el: HTMLVideoElement, source: string) {
+    el.muted = true;
+    el.defaultMuted = true;
+    el.playsInline = true;
+    if (el.getAttribute("src") !== source) {
+      ++playRequest;
+      playing = false;
+      el.setAttribute("src", source);
+    }
+  }
+
+  function stop(el: HTMLVideoElement) {
+    ++playRequest;
+    el.pause();
+    playing = false;
+  }
+
+  function start(el: HTMLVideoElement, source: string) {
+    prepare(el, source);
+    // play() alone cannot recover a failed media resource. Reload it while
+    // still inside the tap, before asking the browser to play again.
+    if (el.error || el.networkState === HTMLMediaElement.NETWORK_NO_SOURCE)
+      el.load();
+    if (!el.paused) return; // Do not race an in-flight, gesture-started play.
+    const request = ++playRequest;
+    blocked = false;
+    el.play()
+      .then(() => {
+        if (request === playRequest) blocked = false;
+      })
+      .catch((error: unknown) => {
+        if (request !== playRequest) return;
+        playing = false;
+        // Scrolling, pausing, and changing sources legitimately abort play.
+        if (!(error instanceof DOMException && error.name === "AbortError"))
+          blocked = true;
+      });
+  }
 
   $effect(() => {
     const el = video;
     const play = shouldPlay;
-    src; // A new source must receive the same playback policy.
+    const source = src;
+    const load = loaded;
     if (!el || !mounted) return;
-    let cancelled = false;
-    el.muted = true;
-    el.defaultMuted = true;
-    // One playback authority: native autoplay would race this policy and
-    // could restart a locally paused or reduced-motion preview.
-    if (play) {
-      el.play()
-        .then(() => {
-          if (!cancelled) blocked = false;
-        })
-        .catch(() => {
-          if (!cancelled) blocked = true;
-        });
-    } else el.pause();
-    return () => {
-      cancelled = true;
-    };
+    untrack(() => {
+      if (load) prepare(el, source);
+      // One playback authority; no competing native autoplay or src update.
+      if (play) start(el, source);
+      else stop(el);
+    });
   });
 
   function toggle(event: MouseEvent) {
     event.stopPropagation();
     event.preventDefault();
-    if (!video) return;
-    if (playing) {
+    if (!video || paused || !mounted) return;
+    if (!video.paused && !blocked) {
       locallyPaused = true;
-      video.pause();
+      stop(video);
     } else {
       manualPlay = true;
       locallyPaused = false;
       loaded = true;
-      // Keep play() in the actual user gesture for restrictive Safari settings.
-      video.muted = true;
-      video
-        .play()
-        .then(() => {
-          blocked = false;
-        })
-        .catch(() => {
-          blocked = true;
-        });
+      // A tappable control is visible, even if its observer callback is late.
+      visible = true;
+      start(video, src);
     }
   }
 </script>
@@ -125,7 +150,6 @@
   <!-- svelte-ignore a11y_media_has_caption (Silent decorative product motion; described by the adjacent title.) -->
   <video
     bind:this={video}
-    src={loaded ? src : undefined}
     {poster}
     muted
     playsinline
@@ -133,13 +157,15 @@
     preload={priority ? "auto" : "none"}
     disablepictureinpicture
     aria-label={`${label} animation preview`}
-    onplay={() => {
+    onplaying={() => {
       playing = true;
+      blocked = false;
     }}
     onpause={() => {
       playing = false;
     }}
     onerror={() => {
+      ++playRequest;
       blocked = true;
       playing = false;
     }}
@@ -149,6 +175,7 @@
       type="button"
       class="playback"
       onclick={toggle}
+      disabled={!mounted}
       aria-label={`${playing ? "Pause" : "Play"} ${label}`}
     >
       {#if playing}<Pause size={14} fill="currentColor" />{:else}<Play
@@ -174,9 +201,12 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    pointer-events: none;
   }
   .playback {
     position: absolute;
+    z-index: 1;
+    touch-action: manipulation;
     right: 14px;
     bottom: 14px;
     display: flex;
