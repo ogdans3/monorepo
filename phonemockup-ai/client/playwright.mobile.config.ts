@@ -8,7 +8,7 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? base.use?.baseURL,
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : base.webServer,
-  testMatch: "mobile-motion-playback.spec.ts",
+  testMatch: ["mobile-motion-playback.spec.ts", "preview-delivery.spec.ts"],
   projects: [
     {
       name: "android-chromium",

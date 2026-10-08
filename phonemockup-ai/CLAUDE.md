@@ -169,3 +169,11 @@ blocked autoplay and retry after a failed video download. Keep source loading
 and explicit `play()` in the same user gesture, and keep the visibility/pause
 policy from racing that request. See `docs/motion-2026.md` for commands and the
 limits of device emulation.
+
+
+Production previews require `client/server.mjs` (`npm start` from `client/`),
+which adds `no-transform` so CDN delivery preserves Content-Length and byte
+ranges for iPhone playback. Both Dockerfiles use it. Do not revert their
+entry point to `node build`. When changing video delivery, run the mobile
+matrix with `PLAYWRIGHT_BASE_URL` against the production server and published
+site; it includes exact-byte range checks and 13-second loop playback.

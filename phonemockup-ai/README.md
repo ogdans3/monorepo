@@ -10,7 +10,8 @@ npm --prefix client run dev
 ```
 
 Build/check the client with `npm --prefix client run build` and
-`npm --prefix client run check`. Build the local renderer with
+`npm --prefix client run check`. Start a production build with `npm --prefix client start`; this uses
+the video delivery headers required for iPhone streaming. Build the local renderer with
 `npm --prefix mcp ci` then `npm --prefix mcp run build`.
 The root `Dockerfile` builds the client with this folder as its build context.
 API deployment remains separately configured; see `CLAUDE.md` and `deploy/`.

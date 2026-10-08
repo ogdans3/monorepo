@@ -166,3 +166,47 @@ all 11 existing motion collection regressions passed. Client build and type
 check passed (zero errors, eight existing warnings). These are mobile browser
 engine tests with device emulation, not a physical handset or Low Power Mode
 certification.
+
+## iPhone delivery and continuous playback
+
+A subsequent live-site check reproduced a separate delivery failure: uncached
+`Range: bytes=0-1` requests returned `200` with the complete 333,105-byte video
+and no `Content-Length`, rather than a two-byte `206` response. The same fault
+occurred for middle and tail ranges. Four delivery checks failed against the
+published site in Chromium and WebKit before the fix.
+
+`client/server.mjs` delegates to the built SvelteKit handler and adds
+`Cache-Control: public, max-age=14400, no-transform` and `Accept-Ranges: bytes`
+for preview MP4s. Both Docker entry points run this server. Use
+`npm --prefix client start` after building; running `node build` directly
+bypasses these headers. The player adds `delivery=iphone-range-v1` to avoid
+previously cached responses with broken delivery metadata.
+
+The header addresses the behavior documented by Cloudflare:
+[MP4 delivery on iOS/Safari](https://developers.cloudflare.com/cache/troubleshooting/mp4-videos-on-ios-and-safari/)
+and [preserving Content-Length](https://developers.cloudflare.com/speed/optimization/content/compression/#content-length-header-handling).
+Video bytes, encoding and models are unchanged.
+
+The longer WebKit test also reproduced a native-loop freeze: the decoder
+returned to time zero after six seconds but never produced another frame.
+Looping now restarts the same authorized video element from `ended`, subject
+to the existing visibility and pause policy. The regression watches playback
+for 13 seconds, requires more than 12 seconds of media progress and two full
+loops, and fails on a stopped/errored video.
+
+The production mobile matrix has 18 cases: the previous touch interactions,
+sustained looping, exact initial/middle/tail byte comparisons, and full/cached
+response headers. Run it against the actual production server, and again
+against the published URL after deployment:
+
+```sh
+# After building, start from the client directory:
+PORT=5193 npm start
+# In another terminal, also from client/:
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:5193 npx playwright test --config playwright.mobile.config.ts
+PLAYWRIGHT_BASE_URL=https://phonemockup-ai.freelunch.no npx playwright test --config playwright.mobile.config.ts
+```
+
+The delivery cases skip Vite intentionally: local playback alone cannot
+verify a CDN response. The sustained checks use Chromium and WebKit with
+mobile/touch emulation; they do not claim a physical iPhone test.

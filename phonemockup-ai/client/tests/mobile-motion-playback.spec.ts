@@ -78,7 +78,7 @@ test("one tap retries a failed mobile video download after the connection recove
   page,
 }) => {
   let failedConnection = true;
-  await page.route("**/previews/motion-2026/soft-orbit.mp4", (route) =>
+  await page.route("**/previews/motion-2026/soft-orbit.mp4*", (route) =>
     failedConnection
       ? route.fulfill({
           status: 503,
@@ -175,4 +175,36 @@ test("touch-started previews pause offscreen; explicit pause survives scrolling"
     "true",
   );
   await expect(video).toHaveJSProperty("paused", true);
+});
+
+test("a touch-started preview keeps playing for two complete loops", async ({
+  page,
+}) => {
+  await gestureOnlyPlayback(page);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const preview = hero(page);
+  await expect(preview.getByRole("button")).toContainText("Tap to play");
+  await preview.getByRole("button").tap();
+  const video = preview.locator("video");
+  await advances(video);
+  const result = await video.evaluate(async (v: HTMLVideoElement) => {
+    let previous = v.currentTime,
+      elapsed = 0,
+      loops = 0;
+    const pauses: number[] = [];
+    for (let i = 0; i < 52; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      if (v.paused || v.error) pauses.push(i);
+      const now = v.currentTime;
+      if (now < previous) {
+        elapsed += v.duration - previous + now;
+        loops++;
+      } else elapsed += now - previous;
+      previous = now;
+    }
+    return { elapsed, loops, pauses };
+  });
+  expect(result.pauses).toEqual([]);
+  expect(result.elapsed).toBeGreaterThan(12);
+  expect(result.loops).toBeGreaterThanOrEqual(2);
 });

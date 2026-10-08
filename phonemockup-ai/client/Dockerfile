@@ -23,12 +23,12 @@ EXPOSE 3000
 
 # Copy only what's needed to run the Node adapter output
 COPY --from=builder /app/build ./build
+COPY --from=builder /app/server.mjs ./server.mjs
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 
 # Run as non-root
 USER node
 
-# Starts the standalone Node server produced by adapter-node
-# Run the build foder
-CMD ["node", "build"]
+# Start SvelteKit with the preview-video delivery headers.
+CMD ["node", "server.mjs"]

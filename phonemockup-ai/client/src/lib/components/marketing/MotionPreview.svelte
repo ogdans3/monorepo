@@ -17,6 +17,10 @@
     paused?: boolean;
     controls?: boolean;
   } = $props();
+  // New cache key avoids the old CDN entries that lack byte-range metadata.
+  const playbackSrc = $derived(
+    `${src}${src.includes("?") ? "&" : "?"}delivery=iphone-range-v1`,
+  );
   let root: HTMLDivElement;
   let video = $state<HTMLVideoElement>();
   let mounted = $state(false);
@@ -111,7 +115,7 @@
   $effect(() => {
     const el = video;
     const play = shouldPlay;
-    const source = src;
+    const source = playbackSrc;
     const load = loaded;
     if (!el || !mounted) return;
     untrack(() => {
@@ -135,7 +139,7 @@
       loaded = true;
       // A tappable control is visible, even if its observer callback is late.
       visible = true;
-      start(video, src);
+      start(video, playbackSrc);
     }
   }
 </script>
@@ -153,13 +157,20 @@
     {poster}
     muted
     playsinline
-    loop
     preload={priority ? "auto" : "none"}
     disablepictureinpicture
     aria-label={`${label} animation preview`}
     onplaying={() => {
       playing = true;
       blocked = false;
+    }}
+    onended={() => {
+      // Restart the same authorized element explicitly: native looping can
+      // seek to zero without resuming the decoder on WebKit.
+      if (video && shouldPlay) {
+        video.currentTime = 0;
+        start(video, playbackSrc);
+      }
     }}
     onpause={() => {
       playing = false;
