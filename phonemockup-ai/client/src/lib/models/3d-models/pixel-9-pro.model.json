@@ -19,5 +19,14 @@
       "uv": "planar"
     }
   ],
-  "caseColor": null
+  "caseColor": null,
+  "cameraIsland": {
+    "nodes": [
+      "camera_cutout",
+      "front_lens",
+      "front_lens_pupil"
+    ],
+    "label": "Show camera cutout"
+  },
+  "showCameraIsland": true
 }

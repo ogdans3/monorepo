@@ -1,0 +1,26 @@
+{
+  "browser_tests_passed": 6,
+  "client_build": "passed",
+  "mcp_build": "passed",
+  "svelte_check": {
+    "errors": 0,
+    "preexisting_warnings": 8
+  },
+  "active_catalogue_models": 4,
+  "headless_stills": 11,
+  "headless_animated_frames": 6,
+  "legacy_saved_models_checked": 13,
+  "blender_views": [
+    "front",
+    "back",
+    "left",
+    "right",
+    "top",
+    "bottom",
+    "front perspective",
+    "back perspective"
+  ],
+  "glb_bytes": 1543968,
+  "unchanged_meshes": 59,
+  "original_asset_files_retained": true
+}

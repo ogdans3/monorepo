@@ -6,7 +6,7 @@ import type {
     ProjectTimelineSettings,
     Track
 } from "$lib/components/mock-video/Project";
-import defaultModel, {models, type Model} from "$lib/models/3d-models/3d-models-spec";
+import defaultModel, {getModel, type Model} from "$lib/models/3d-models/3d-models-spec";
 import type {Vec3} from '../components/mock-video/Animation';
 import {PresetName, type Resolution, type RGBA} from "$lib/models/models";
 
@@ -42,7 +42,7 @@ export const PROJECT_FORMAT_VERSION = 2;
  * path and defaults, which go stale when the catalogue is fixed.
  */
 function resolveModel(saved: Model | undefined, formatVersion: number | undefined): Model {
-    const current: Model = models.find((m) => m.id === saved?.id) ?? saved ?? defaultModel;
+    const current: Model = getModel(saved?.id) ?? saved ?? defaultModel;
     const pickedColor = (formatVersion ?? 1) >= 2 ? saved?.caseColor ?? null : null;
     return {...current, caseColor: pickedColor ?? current.caseColor ?? null,
         ...(current.cameraIsland ? {showCameraIsland: typeof saved?.showCameraIsland === "boolean"

@@ -77,6 +77,9 @@ bpy.ops.wm.save_as_mainfile(filepath=str(out/(id+'-web.blend')),compress=True)
 path=root/'client/static'/(id+'.glb')
 bpy.ops.export_scene.gltf(filepath=str(path),export_format='GLB',export_yup=True,export_apply=True,export_texcoords=True,export_normals=True,export_materials='EXPORT',export_image_format='AUTO',export_cameras=False,export_lights=False,export_animations=False,export_draco_mesh_compression_enable=False)
 cat={'id':id,'name':device.split(' — ')[0],'modelPath':'/'+id+'.glb','defaultPosition':{'x':0,'y':0,'z':round(3-1.42*body[1]*.001,7)},'defaultRotation':{'x':0,'y':0,'z':0},'layers':[{'match':'screen','material':'video','uv':'planar'}],'caseColor':None}
+if id=='pixel-9-pro':
+    cat['cameraIsland']={'nodes':['camera_cutout','front_lens','front_lens_pupil'],'label':'Show camera cutout'}
+    cat['showCameraIsland']=True
 (root/'client/src/lib/models/3d-models'/(id+'.model.json')).write_text(json.dumps(cat,indent=2)+'\n')
 stats={'device':device,'body_dimensions_mm':dict(zip(['width','height','depth'],body)),'native_pixels':pixels,'screen_mm':[w*1000,h*1000],'full_bounds_mm':list((hi-lo)*1000),'origin_shift_mm':list(center*1000),'triangles':sum(len(p.vertices)-2 for o in coll.objects for p in o.data.polygons),'mesh_objects':len(coll.objects),'glb_bytes':path.stat().st_size,'omitted_studio_coatings':omit}
 (out/'export-stats.json').write_text(json.dumps(stats,indent=2)+'\n');print('EXPORT_STATS',json.dumps(stats),flush=True)

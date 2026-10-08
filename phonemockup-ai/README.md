@@ -15,17 +15,26 @@ Build/check the client with `npm --prefix client run build` and
 The root `Dockerfile` builds the client with this folder as its build context.
 API deployment remains separately configured; see `CLAUDE.md` and `deploy/`.
 
-## iPhone without Dynamic Island
+## Device catalogue and front camera
 
-In the editor's **Model** panel, select **iPhone 16 Pro · Full Screen**, or select
-**iPhone 16 Pro** and turn **Show Dynamic Island** off. Both support turning it
-back on. The choice is saved with the project and used in still/video exports.
-Other device models retain their own existing behavior.
+New mockups offer four audited models: iPhone 16 Pro, Google Pixel 9 Pro,
+Samsung Galaxy S24 Ultra and MacBook Pro 14-inch M4. Pixel 9 Pro is the default.
+Earlier prototype models are hidden from the picker and public MCP catalogue;
+their assets are retained so existing projects and old API calls still work.
 
-The MCP render tools accept `showCameraIsland: false` (or `true`). Omitting it
-uses the selected model's default: on for the original, off for Full Screen.
+The iPhone appears once. In **Model**, use **Show Dynamic Island** to turn the
+island on or off. The Pixel has **Show camera cutout** for its front camera
+hole. These settings persist with the project and apply to still/video exports.
+The MCP render tools accept `showCameraIsland: false` (or `true`) for either.
 
-[Asset files, regeneration and validation](docs/models/iphone-16-pro-full-screen.md).
+Old `iphone-16-pro-full-screen` projects resolve to iPhone 16 Pro with the
+island off unless they explicitly saved another setting. The separate
+island-free Blender/GLB downloads are still available for independent use;
+they do not add duplicate entries to the app.
+
+[iPhone asset details](docs/models/iphone-16-pro-full-screen.md) ·
+[Pixel asset details](docs/models/pixel-9-pro-full-screen.md) ·
+[Catalogue selection](docs/models/catalogue.md).
 
 ## Import provenance
 

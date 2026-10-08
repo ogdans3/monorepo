@@ -104,7 +104,7 @@ Two things follow from that:
 | `PHONEMOCKUP_GPU` | `1` to use hardware GL instead of SwiftShader. |
 | `FFMPEG_PATH` | Override the bundled ffmpeg binary. |
 
-The `.glb` models total ~85 MB and are read from the client's static directory
+The `.glb` models, including retained legacy assets, are read from the client's static directory
 rather than copied in here. Publishing this package standalone would mean
 bundling them or fetching them on demand.
 
@@ -114,10 +114,14 @@ Every preset renders on every model. Keyframe depth is scaled by how far each
 model rests from the camera, so zooms behave the same on the tiny Pixel models
 as on the iPhones (see the "Models are centred" note in the repo's CLAUDE.md).
 
-### iPhone Dynamic Island
+### Catalogue and front camera cutouts
 
-Use `model: "iphone-16-pro-full-screen"` for the island-free default, or pass
-`showCameraIsland: false` with `iphone-16-pro`. Either entry accepts `true` to
-show it. Omitting the option uses the selected model’s default. The setting
-applies to images and every video frame. `list_phone_models` reports
-`supportsCameraIsland` and `showCameraIsland` for discoverability.
+`list_phone_models` lists iPhone 16 Pro, Pixel 9 Pro, Galaxy S24 Ultra and
+MacBook Pro 14-inch M4. Pixel 9 Pro is the default. Retired model IDs still
+resolve for old scripts, but are not offered for new mockups.
+
+Pass `showCameraIsland: false` with `iphone-16-pro` or `pixel-9-pro` to hide
+the front camera cutout, or `true` to show it. Omitting the option defaults
+to on. It applies to images and every video frame. The old
+`iphone-16-pro-full-screen` ID is a compatibility alias with an off default;
+it no longer appears as a duplicate phone in the catalogue.

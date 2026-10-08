@@ -23,20 +23,20 @@ requires no island mask. The original model files are retained unchanged.
 
 ## App setting
 
-Choose **iPhone 16 Pro · Full Screen** for an island-free default. Both this
-entry and **iPhone 16 Pro** offer **Show Dynamic Island** in the Model panel.
-The shared renderer hides exactly `camera_cutout`, `front_camera_optical_lens`
-and `front_camera_pupil`, marks the paused scene dirty and restores them when
-enabled. Toggling does not reload or recenter the model and does not change UVs.
+Choose **iPhone 16 Pro** and turn **Show Dynamic Island** off. There is one
+iPhone 16 entry in the catalogue. The shared renderer hides exactly
+`camera_cutout`, `front_camera_optical_lens` and `front_camera_pupil`, marks the
+paused scene dirty and restores them when enabled. Toggling does not reload
+or recenter the model and does not change UVs.
 
-Both catalogue entries reuse `/iphone-16-pro.glb`, so either can restore the
-island instantly without a second asset download. The separate full-screen
-GLB above is for independent use outside the editor and has the parts deleted.
+The app reuses `/iphone-16-pro.glb` for reversible toggling. The separate
+full-screen GLB above is for independent use outside the editor and has the
+three parts deleted. Its Blender and GLB files remain available.
 
-Saved projects retain explicit on/off choices and resolve node metadata from
-the current catalogue. Older projects without the setting keep the original
-model's on default. The MCP still/video tools accept `showCameraIsland` with
-the same defaults and expose support/default information in their catalogue.
+The former `iphone-16-pro-full-screen` model ID is a compatibility alias for
+iPhone 16 Pro with `showCameraIsland: false`. Old saves retain explicit on/off
+choices and resolve node metadata from the current catalogue. The MCP
+still/video tools accept `showCameraIsland` with the same defaults.
 
 ## Reproduce
 

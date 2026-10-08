@@ -11,7 +11,7 @@ export const PRESETS = {
 
 export type PresetName = keyof typeof PRESETS;
 
-export const DEFAULT_MODEL = "pixel-10-baked";
+export const DEFAULT_MODEL = "pixel-9-pro";
 
 export const sceneSchema = {
     model: z
@@ -42,7 +42,7 @@ export const sceneSchema = {
         .string()
         .optional()
         .describe('Override the phone body colour, e.g. "#1d1d1f".'),
-    showCameraIsland: z.boolean().optional().describe("Show the front Dynamic Island on supported iPhones. Omit to use the selected model’s default."),
+    showCameraIsland: z.boolean().optional().describe("Show the front camera cutout on supported models (iPhone Dynamic Island or Pixel punch hole). Omit to use the model’s default."),
     lidAngle: z.number().min(0).max(130).optional().describe("Lid opening in degrees for hinged laptops; 0 closes it."),
     lidOpenDuration: z.number().min(0).max(60).optional().describe("Seconds to open a laptop from closed to lidAngle; 0 holds the angle."),
     antialias: z

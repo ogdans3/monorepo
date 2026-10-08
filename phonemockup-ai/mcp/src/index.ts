@@ -99,7 +99,8 @@ server.registerTool(
         const lines = models.map((m) => {
             const available = existsSync(join(staticDir, m.modelPath));
             const suffix = available ? "" : "  [UNAVAILABLE: asset missing]";
-            return `${m.id}  —  ${m.name}${suffix}`;
+            const camera = m.supportsCameraIsland ? `  [showCameraIsland: ${m.showCameraIsland}; configurable]` : "";
+            return `${m.id}  —  ${m.name}${camera}${suffix}`;
         });
         return text(
             `${models.length} models (default: ${DEFAULT_MODEL}):\n\n${lines.join("\n")}`

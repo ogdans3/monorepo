@@ -5,7 +5,6 @@ import iphoneTestPhone3 from "./iphone-3.model.json";
 import iphoneTestPhone3Point1 from "./iphone-3-1.model.json";
 import iphoneTestPhone3Point2 from "./iphone-3-2.model.json";
 import iphone16Pro from "./iphone-16-pro.model.json";
-import iphone16ProFullScreen from "./iphone-16-pro-full-screen.model.json";
 import iphone17Test1 from "./iphone-17.1.model.json";
 import iphone17WhiteTest1 from "./iphone-17-white.1.model.json";
 import iphone17ProMax from "./iphone-17-pro-max.model.json";
@@ -37,8 +36,8 @@ export type Model = {
     defaultRotation: Vec3,
     layers: Layer[];
     caseColor: string | null;
-    /** Exact node names for the removable front camera island and its optics. */
-    cameraIsland?: {nodes: string[]};
+    /** Exact node names for the removable front camera cutout and its optics. */
+    cameraIsland?: {nodes: string[]; label?: string};
     /** Defaults to visible when omitted, including in older saved projects. */
     showCameraIsland?: boolean;
     /** Rigid display articulation around the named node's local X axis. */
@@ -47,24 +46,21 @@ export type Model = {
     /** Seconds to ease from closed to lidAngle; absent/zero holds the pose. */
     lidOpenDuration?: number;
 }
-export const models: Model[] = [
-    macbookPro14M4,
-    testPhone,
-    iphoneTestPhone,
-    iphoneTestPhone3,
-    iphoneTestPhone3Point1,
-    iphoneTestPhone3Point2,
-    iphone16Pro,
-    iphone16ProFullScreen,
-    iphone17Test1,
-    iphone17WhiteTest1,
-    iphone17ProMax,
-    iphone17ProMaxBaked,
-    iphone17ProMaxBakedFiverr,
-    galaxyS24Ultra,
-    pixel9Pro,
-    pixel10,
-    pixel10Baked,
+/** The audited models offered for new mockups. */
+// JSON imports widen the validated UV enum values to string.
+export const models = [iphone16Pro, pixel9Pro, galaxyS24Ultra, macbookPro14M4] as Model[];
+
+// Preserve existing projects and API calls without offering prototypes in the picker.
+const legacyModels: Model[] = [
+    testPhone, iphoneTestPhone, iphoneTestPhone3, iphoneTestPhone3Point1,
+    iphoneTestPhone3Point2, iphone17Test1, iphone17WhiteTest1,
+    iphone17ProMax, iphone17ProMaxBaked, iphone17ProMaxBakedFiverr,
+    pixel10, pixel10Baked,
 ];
 
-export default pixel10Baked;
+export function getModel(id: string | undefined): Model | undefined {
+    if (id === "iphone-16-pro-full-screen") return {...getModel("iphone-16-pro")!, showCameraIsland: false};
+    return models.find((model) => model.id === id) ?? legacyModels.find((model) => model.id === id);
+}
+
+export default getModel("pixel-9-pro")!;

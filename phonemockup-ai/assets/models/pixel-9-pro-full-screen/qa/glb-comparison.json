@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "removed_meshes": [
+    "camera_cutout",
+    "front_lens",
+    "front_lens_pupil"
+  ],
+  "identical_remaining_meshes": 59,
+  "compared": [
+    "positions",
+    "normals",
+    "UVs",
+    "indices",
+    "material properties",
+    "node transforms"
+  ],
+  "screen_included_and_identical": true,
+  "glb_bytes": 1543968
+}

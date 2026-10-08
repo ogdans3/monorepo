@@ -92,7 +92,7 @@
                 onchange={(event) => {
                     project.model = {...project.model, showCameraIsland: event.currentTarget.checked};
                 }} />
-            Show Dynamic Island
+            {project.model.cameraIsland.label ?? "Show Dynamic Island"}
         </label>
     {/if}
 

@@ -10,7 +10,7 @@
  * involved.
  */
 import {SceneRenderer} from "./scene-renderer";
-import {models} from "$lib/models/3d-models/3d-models-spec";
+import {models, getModel} from "$lib/models/3d-models/3d-models-spec";
 import type {Model} from "$lib/models/3d-models/3d-models-spec";
 import animationGroups from "$lib/animations/animations.svelte";
 import type {AnimationGroup} from "$lib/components/mock-video/Animation";
@@ -64,7 +64,7 @@ function catalog() {
 }
 
 function findModel(id: string): Model {
-    const model = models.find((m) => m.id === id);
+    const model = getModel(id);
     if (!model) {
         throw new Error(
             `Unknown model "${id}". Available: ${models.map((m) => m.id).join(", ")}`

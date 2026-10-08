@@ -1,0 +1,90 @@
+{
+  "passed": true,
+  "renderer": "Public MCP RenderSession + shared SceneRenderer",
+  "catalogueModels": 4,
+  "animationTime": 0.2,
+  "results": [
+    {
+      "model": "iphone-16-pro",
+      "name": "models/iphone-16-pro",
+      "bytes": 221408
+    },
+    {
+      "model": "pixel-9-pro",
+      "name": "models/pixel-9-pro",
+      "bytes": 223841
+    },
+    {
+      "model": "galaxy-s24-ultra",
+      "name": "models/galaxy-s24-ultra",
+      "bytes": 213057
+    },
+    {
+      "model": "macbook-pro-14-m4",
+      "name": "models/macbook-pro-14-m4",
+      "bytes": 147314
+    },
+    {
+      "model": "iphone-16-pro",
+      "showCameraIsland": true,
+      "name": "iphone-16-pro-on",
+      "bytes": 221408
+    },
+    {
+      "model": "iphone-16-pro",
+      "showCameraIsland": false,
+      "name": "iphone-16-pro-off",
+      "bytes": 222706
+    },
+    {
+      "model": "pixel-9-pro",
+      "showCameraIsland": true,
+      "name": "pixel-9-pro-on",
+      "bytes": 223841
+    },
+    {
+      "model": "pixel-9-pro",
+      "showCameraIsland": false,
+      "name": "pixel-9-pro-off",
+      "bytes": 223563
+    },
+    {
+      "model": "iphone-16-pro-full-screen",
+      "showCameraIsland": true,
+      "name": "iphone-16-pro-full-screen-on",
+      "bytes": 221408
+    },
+    {
+      "model": "iphone-16-pro-full-screen",
+      "showCameraIsland": false,
+      "name": "iphone-16-pro-full-screen-off",
+      "bytes": 222706
+    },
+    {
+      "model": "iphone-16-pro-full-screen",
+      "name": "legacy-full-screen-default",
+      "bytes": 222706
+    }
+  ],
+  "hashes": {
+    "models/iphone-16-pro": "adc8c904ec46ddbb569905eb3c723ef625706e7357db0cbbdc2f83b66b05d586",
+    "models/pixel-9-pro": "33229116af2e50561cc942dc6c363aa4925efcb98062ef565c9ff80650def61d",
+    "models/galaxy-s24-ultra": "bc53d8545bf8688755c2769cf4728887819df818f7055d607d3d3ff3c5fab7af",
+    "models/macbook-pro-14-m4": "aae2ab2ea2f448d6b2f98c7f2d5fcdead83d2b542f3ad6548af121cdbc7e6091",
+    "iphone-16-pro-on": "adc8c904ec46ddbb569905eb3c723ef625706e7357db0cbbdc2f83b66b05d586",
+    "iphone-16-pro-off": "1f250d669b9fee5ff3cb889272ded0a00ecc45db4b4f4db3ddbdf17005c8f2c0",
+    "pixel-9-pro-on": "33229116af2e50561cc942dc6c363aa4925efcb98062ef565c9ff80650def61d",
+    "pixel-9-pro-off": "7ca3cf193ede78443c410fb0dc21b1bfb685f43f7ec3c95eb6a4e18aca824543",
+    "iphone-16-pro-full-screen-on": "adc8c904ec46ddbb569905eb3c723ef625706e7357db0cbbdc2f83b66b05d586",
+    "iphone-16-pro-full-screen-off": "1f250d669b9fee5ff3cb889272ded0a00ecc45db4b4f4db3ddbdf17005c8f2c0",
+    "legacy-full-screen-default": "1f250d669b9fee5ff3cb889272ded0a00ecc45db4b4f4db3ddbdf17005c8f2c0"
+  },
+  "animatedFrames": {
+    "iphone-16-pro-on": "d5930c054c651cf2c34877f6231d18f685955495f5c40e80b9e8e27d58abe696",
+    "iphone-16-pro-off": "9ffc7b83ea253214b92de75dbd6ad33ee343086a54cd665faa3ad8323c896efc",
+    "pixel-9-pro-on": "80f301632c2d04e2538a114a62fceffa01e8daf241ff3d2cd4db7d3d13eb500a",
+    "pixel-9-pro-off": "5692daf8b75b4f28554aeaff96aa4bf26f02db9bed8ba3e535cca60901d3b45b",
+    "iphone-16-pro-full-screen-on": "d5930c054c651cf2c34877f6231d18f685955495f5c40e80b9e8e27d58abe696",
+    "iphone-16-pro-full-screen-off": "9ffc7b83ea253214b92de75dbd6ad33ee343086a54cd665faa3ad8323c896efc"
+  }
+}

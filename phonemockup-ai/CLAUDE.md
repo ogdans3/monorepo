@@ -132,10 +132,15 @@ To run a real end-to-end stack inside the dashboard, swap the root Dockerfile fo
 - **Tailwind v4.** Configured via `@tailwindcss/vite`, no `tailwind.config.js`. Theme files (`theme.css`, `theme-2.css`, …) are CSS, not JS config.
 - **Bun is used in dev** (`bun run dev`, `bun.lockb` present) but the Dockerfiles use `npm ci` against `package-lock.json`. Both lockfiles are committed.
 
-## Dynamic Island
+## Model catalogue and camera cutouts
 
-The iPhone 16 Pro and Full Screen variant use exact `cameraIsland.nodes` metadata
-and `showCameraIsland`. Keep visibility in the shared renderer, preserve the
-setting in saved projects and forward it through the MCP harness. Full Screen
-reuses the original GLB for reversible toggling; a separate island-free GLB and
-Blender sources are provided for external use. See `docs/models/iphone-16-pro-full-screen.md`.
+Offer only the four audited entries in `models`. Use `getModel` when resolving
+saved projects or MCP model IDs: it supports hidden legacy models and merges
+`iphone-16-pro-full-screen` into the current iPhone with the island off.
+Keep the old asset files for project compatibility.
+
+The iPhone 16 Pro and Pixel 9 Pro use exact `cameraIsland.nodes` metadata and
+`showCameraIsland`. Keep visibility in the shared renderer, preserve the
+setting in saved projects and forward it through the MCP harness. Pixel uses
+`cameraIsland.label` to show “Show camera cutout” in the UI. Standalone cutout-free
+GLBs and Blender files exist for downloads, without duplicate picker entries.

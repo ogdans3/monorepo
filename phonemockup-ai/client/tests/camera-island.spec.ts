@@ -2,13 +2,14 @@ import {test, expect} from '@playwright/test';
 
 // Read actual rendered pixels, not just the visibility flag: the entire
 // island area must show screen content, including both separate lens meshes.
-test('island toggles in place and exposes continuous screen pixels', async ({page}) => {
+for (const modelId of ['iphone-16-pro', 'pixel-9-pro']) {
+test(`${modelId}: camera cutout toggles in place and exposes continuous screen pixels`, async ({page}) => {
     await page.goto('/');
-    const result = await page.evaluate(async () => {
+    const result = await page.evaluate(async (modelId) => {
         const load = (url: string) => import(url);
         const {SceneRenderer} = await load('/src/lib/render/scene-renderer.ts');
         const {models} = await load('/src/lib/models/3d-models/3d-models-spec.ts');
-        const config = models.find((m: any) => m.id === 'iphone-16-pro');
+        const config = models.find((m: any) => m.id === modelId);
         const r = new SceneRenderer({width: 640, height: 960, background: [20, 27, 38, 1]});
         await r.setModel(config);
         r.applyTransform({x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 0});
@@ -45,28 +46,24 @@ test('island toggles in place and exposes continuous screen pixels', async ({pag
         const unchanged = model === r.model && pivot.every((n: number, i: number) => n === model.matrixWorld.elements[i]) && uvs.every((n, i) => n === screen.geometry.attributes.uv.array[i]);
         await r.setModel({...config, showCameraIsland: true});r.render();
         const restoredPixels = pixels();const restored = on.every((n, i) => n === restoredPixels[i]);
-        await r.setModel(models.find((m: any) => m.id === 'iphone-16-pro-full-screen'));
-        const variantHidden = config.cameraIsland.nodes.every((name: string) => !r.model.getObjectByName(name).visible);
-        await r.setModel({...models.find((m: any) => m.id === 'iphone-16-pro-full-screen'), showCameraIsland: true});
-        const variantCanRestore = config.cameraIsland.nodes.every((name: string) => r.model.getObjectByName(name).visible);
         r.dispose();
-        return {dirty, hidden, changed, outsideIslandChanged, samples, unchanged, restored, variantHidden, variantCanRestore};
-    });
+        return {dirty, hidden, changed, outsideIslandChanged, samples, unchanged, restored};
+    }, modelId);
     expect(result.dirty).toBe(true);expect(result.hidden).toBe(true);
     expect(result.changed).toBeGreaterThan(250);expect(result.outsideIslandChanged).toBe(0);
     expect(result.samples.every((rgb: number[]) => rgb.every((n: number) => n > 220))).toBe(true);
     expect(result.unchanged).toBe(true);expect(result.restored).toBe(true);
-    expect(result.variantHidden).toBe(true);expect(result.variantCanRestore).toBe(true);
 });
+}
 
 test('saved projects preserve both states and old projects keep model defaults', async ({page}) => {
     await page.goto('/');
     const result = await page.evaluate(async () => {
         const load = (url: string) => import(url);
         const {ProjectState} = await load('/src/lib/stores/project.svelte.ts');
-        const {models} = await load('/src/lib/models/3d-models/3d-models-spec.ts');
-        return ['iphone-16-pro', 'iphone-16-pro-full-screen'].flatMap(id => [true, false, undefined].map(showCameraIsland => {
-            const p = new ProjectState();p.model = {...models.find((m: any) => m.id === id), showCameraIsland};
+        const {getModel} = await load('/src/lib/models/3d-models/3d-models-spec.ts');
+        return ['iphone-16-pro', 'iphone-16-pro-full-screen', 'pixel-9-pro'].flatMap(id => [true, false, undefined].map(showCameraIsland => {
+            const p = new ProjectState();p.model = {...getModel(id), id, showCameraIsland};
             const saved = JSON.parse(JSON.stringify(p.toProject()));
             saved.model.modelPath = '/stale.glb';saved.model.cameraIsland = {nodes: ['stale']};
             const restored = new ProjectState();restored.fromProject(saved);
@@ -74,9 +71,9 @@ test('saved projects preserve both states and old projects keep model defaults',
         }));
     });
     for (const r of result) {
-        expect(r.visible).toBe(r.input ?? (r.id === 'iphone-16-pro'));
-        expect(r.path).toBe('/iphone-16-pro.glb');
-        expect(r.nodes).toEqual(['camera_cutout', 'front_camera_optical_lens', 'front_camera_pupil']);
+        expect(r.visible).toBe(r.input ?? (r.id !== 'iphone-16-pro-full-screen'));
+        expect(r.path).toBe(r.id === 'pixel-9-pro' ? '/pixel-9-pro.glb' : '/iphone-16-pro.glb');
+        expect(r.nodes).toEqual(r.id === 'pixel-9-pro' ? ['camera_cutout', 'front_lens', 'front_lens_pupil'] : ['camera_cutout', 'front_camera_optical_lens', 'front_camera_pupil']);
     }
 });
 
@@ -127,7 +124,38 @@ test('editor switch changes the paused canvas and follows model defaults', async
     await expect.poll(pixels).not.toBe(on);
     await toggle.check();await expect(toggle).toBeChecked();
     await expect.poll(pixels).toBe(on);
-    await select('iPhone 16 Pro · Full Screen');await expect(toggle).not.toBeChecked();
-    await toggle.check();await expect(toggle).toBeChecked();
     await select('Google Pixel 9 Pro');await expect(toggle).toHaveCount(0);
+    const pixelToggle = page.getByRole('switch', {name: 'Show camera cutout'});
+    await expect(pixelToggle).toBeChecked();await pixelToggle.uncheck();await expect(pixelToggle).not.toBeChecked();
+    await select('Samsung Galaxy S24 Ultra');await expect(pixelToggle).toHaveCount(0);
+    await page.getByLabel('Select 3D model').click();
+    await expect(page.getByRole('option')).toHaveCount(4);
+    await expect(page.getByRole('option', {name: 'iPhone 16 Pro · Full Screen', exact: true})).toHaveCount(0);
+});
+
+
+test('curated catalogue has four models and legacy saves still resolve', async ({page}) => {
+    await page.goto('/');
+    const result = await page.evaluate(async () => {
+        const load = (url: string) => import(url);
+        const {models, getModel, default: defaultModel} = await load('/src/lib/models/3d-models/3d-models-spec.ts');
+        const {ProjectState} = await load('/src/lib/stores/project.svelte.ts');
+        const oldIds = ['test-phone-1', 'iphone-test-phone-1', 'iphone-test-phone-3', 'iphone-test-phone-3-1',
+            'iphone-test-phone-3-2', 'iphone-test-phone-17-1', 'iphone-test-phone-17-1-white',
+            'iphone-17-pro-max', 'iphone-17-pro-max-baked', 'iphone-17-pro-max-baked-fiverr',
+            'pixel-10', 'pixel-10-baked', 'iphone-16-pro-full-screen'];
+        const restored = [];
+        for (const id of oldIds) {
+            const p = new ProjectState();p.model = {...getModel(id), id, caseColor: '#345678'};
+            const saved = JSON.parse(JSON.stringify(p.toProject()));saved.model.modelPath = '/obsolete.glb';
+            const q = new ProjectState();q.fromProject(saved);
+            const response = await fetch(q.model.modelPath);
+            restored.push({id: q.model.id, name: q.model.name, color: q.model.caseColor, found: response.ok, visible: q.model.showCameraIsland});
+        }
+        return {ids: models.map((m: any) => m.id), defaultId: defaultModel.id, restored};
+    });
+    expect(result.ids).toEqual(['iphone-16-pro', 'pixel-9-pro', 'galaxy-s24-ultra', 'macbook-pro-14-m4']);
+    expect(result.defaultId).toBe('pixel-9-pro');
+    for (const model of result.restored) {expect(model.found).toBe(true);expect(model.color).toBe('#345678');}
+    expect(result.restored.at(-1)).toMatchObject({id: 'iphone-16-pro', name: 'iPhone 16 Pro', visible: false});
 });

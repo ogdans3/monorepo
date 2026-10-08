@@ -1,0 +1,25 @@
+{
+  "variant": "Pixel 9 Pro Full Screen",
+  "intent": "Creative mockup variant; front camera cutout and optics removed, not a physical Google device.",
+  "studio": {
+    "removed": [
+      "camera_cutout",
+      "front_lens",
+      "front_lens_pupil"
+    ],
+    "unchanged_meshes": 110,
+    "all_remaining_geometry_transforms_and_uvs_identical": true
+  },
+  "web": {
+    "removed": [
+      "camera_cutout",
+      "front_lens",
+      "front_lens_pupil"
+    ],
+    "unchanged_meshes": 59,
+    "all_remaining_geometry_transforms_and_uvs_identical": true
+  },
+  "glb_bytes": 1543968,
+  "glb_sha256": "02cf8bde43ccd5d0e7a9c3a1ffbcd02e7e296686413704073baddcfe65299ad9",
+  "triangles": 75387
+}
