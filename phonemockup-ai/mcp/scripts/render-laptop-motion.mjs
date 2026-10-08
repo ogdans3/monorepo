@@ -9,9 +9,8 @@ await mkdir(resolve(out,'previews/animation'),{recursive:true});
 const session=await RenderSession.launch();
 const report={glbSha256:createHash('sha256').update(await readFile(resolve(root,'client/static/macbook-pro-14-m4.glb'))).digest('hex'),fps:24,frames:[],angles:[]};
 try {
- const catalog=await session.catalog();
- const still=catalog.animations.find(x=>x.name.toLowerCase().includes('still'));
- if(!still)throw new Error('Still preset missing');
+ // Still remains a supported legacy ID, outside the curated motion catalogue.
+ const still={id:'still'};
  await session.initScene({modelId:'macbook-pro-14-m4',width:960,height:720,background:[25,32,39,1],glassReflections:false,antialias:true,lidAngle:105,lidOpenDuration:2.5});
  await session.setScreenSource(resolve(out,'screen-demo.png'));
  for(let i=0;i<72;i++){

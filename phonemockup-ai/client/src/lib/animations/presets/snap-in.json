@@ -1,0 +1,166 @@
+{
+  "id": "snap-in",
+  "name": "Snap In",
+  "description": "A quick entrance. A confident finish.",
+  "preview": "motion-2026/snap-in.mp4",
+  "poster": "motion-2026/snap-in.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 94,
+  "categories": [
+    "Reveal"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "iphone-16-pro",
+  "previewBackground": [
+    232,
+    222,
+    217,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "snap-in-clip-0",
+      "name": "Snap In \u00b7 1",
+      "start": 0,
+      "end": 0.85,
+      "curve": "CubicOut",
+      "startKeyframe": {
+        "id": "snap-in-key-0",
+        "position": {
+          "x": 0.42,
+          "y": -0.1,
+          "z": -1.4
+        },
+        "rotation": {
+          "x": 10,
+          "y": 52,
+          "z": -22
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "snap-in-key-1",
+        "position": {
+          "x": -0.022,
+          "y": 0.016,
+          "z": -0.55
+        },
+        "rotation": {
+          "x": -3,
+          "y": -8,
+          "z": 4
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "snap-in-clip-1",
+      "name": "Snap In \u00b7 2",
+      "start": 0.85,
+      "end": 1.3,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "snap-in-key-1",
+        "position": {
+          "x": -0.022,
+          "y": 0.016,
+          "z": -0.55
+        },
+        "rotation": {
+          "x": -3,
+          "y": -8,
+          "z": 4
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "snap-in-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "snap-in-clip-2",
+      "name": "Snap In \u00b7 3",
+      "start": 1.3,
+      "end": 3,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "snap-in-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "snap-in-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "snap-in-clip-3",
+      "name": "Snap In \u00b7 4",
+      "start": 3,
+      "end": 4.4,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "snap-in-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "snap-in-key-4",
+        "position": {
+          "x": 0.42,
+          "y": -0.1,
+          "z": -1.4
+        },
+        "rotation": {
+          "x": 10,
+          "y": 52,
+          "z": -22
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

@@ -42,6 +42,8 @@ export type Project = {
     model: Model;
     /** Null when the demo recording was showing. */
     screenMedia?: ScreenMediaInfo | null;
+    /** Built-in sample, used only when there is no uploaded screen media. */
+    demoMediaId?: "focus" | "workspace";
 }
 
 export type ProjectFile = {

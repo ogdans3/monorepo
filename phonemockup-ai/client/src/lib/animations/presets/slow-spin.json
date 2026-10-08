@@ -1,0 +1,131 @@
+{
+  "id": "slow-spin",
+  "name": "Slow Spin",
+  "description": "One measured turn. Every detail gets its moment.",
+  "preview": "motion-2026/slow-spin.mp4",
+  "poster": "motion-2026/slow-spin.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 97,
+  "categories": [
+    "Cinematic"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "galaxy-s24-ultra",
+  "previewBackground": [
+    216,
+    229,
+    233,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "slow-spin-clip-0",
+      "name": "Slow Spin \u00b7 1",
+      "start": 0,
+      "end": 1,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "slow-spin-key-0",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.7
+        },
+        "rotation": {
+          "x": 8,
+          "y": -20,
+          "z": -3
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "slow-spin-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.7
+        },
+        "rotation": {
+          "x": 8,
+          "y": -20,
+          "z": -3
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "slow-spin-clip-1",
+      "name": "Slow Spin \u00b7 2",
+      "start": 1,
+      "end": 5,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "slow-spin-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.7
+        },
+        "rotation": {
+          "x": 8,
+          "y": -20,
+          "z": -3
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "slow-spin-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.7
+        },
+        "rotation": {
+          "x": 8,
+          "y": 340,
+          "z": -3
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "slow-spin-clip-2",
+      "name": "Slow Spin \u00b7 3",
+      "start": 5,
+      "end": 6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "slow-spin-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.7
+        },
+        "rotation": {
+          "x": 8,
+          "y": 340,
+          "z": -3
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "slow-spin-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.7
+        },
+        "rotation": {
+          "x": 8,
+          "y": 340,
+          "z": -3
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

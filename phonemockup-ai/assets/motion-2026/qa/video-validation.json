@@ -1,0 +1,74 @@
+[
+  {
+    "id": "detail-study",
+    "bytes": 428168,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "edge-reveal",
+    "bytes": 321116,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "lift-off",
+    "bytes": 240614,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "side-step",
+    "bytes": 292286,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "slow-spin",
+    "bytes": 284293,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "snap-in",
+    "bytes": 207294,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "soft-orbit",
+    "bytes": 333105,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  },
+  {
+    "id": "top-down",
+    "bytes": 471285,
+    "codec": "H.264",
+    "pixelFormat": "yuv420p",
+    "audio": false,
+    "fastStart": true,
+    "fullDecode": "pass"
+  }
+]

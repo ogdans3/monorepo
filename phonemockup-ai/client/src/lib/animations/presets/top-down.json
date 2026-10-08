@@ -1,0 +1,96 @@
+{
+  "id": "top-down",
+  "name": "Top Down",
+  "description": "An overhead study, opening into a hero angle.",
+  "preview": "motion-2026/top-down.mp4",
+  "poster": "motion-2026/top-down.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 93,
+  "categories": [
+    "Cinematic"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "macbook-pro-14-m4",
+  "previewBackground": [
+    221,
+    225,
+    240,
+    1
+  ],
+  "demoMediaId": "workspace",
+  "animations": [
+    {
+      "id": "top-down-clip-0",
+      "name": "Top Down \u00b7 1",
+      "start": 0,
+      "end": 3,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "top-down-key-0",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 30,
+          "y": -22,
+          "z": -8
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "top-down-key-1",
+        "position": {
+          "x": 0,
+          "y": 0.015,
+          "z": -0.2
+        },
+        "rotation": {
+          "x": -3,
+          "y": 18,
+          "z": 4
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "top-down-clip-1",
+      "name": "Top Down \u00b7 2",
+      "start": 3,
+      "end": 6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "top-down-key-1",
+        "position": {
+          "x": 0,
+          "y": 0.015,
+          "z": -0.2
+        },
+        "rotation": {
+          "x": -3,
+          "y": 18,
+          "z": 4
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "top-down-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 30,
+          "y": -22,
+          "z": -8
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

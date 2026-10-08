@@ -18,9 +18,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const out = resolve(output);
 const source = resolve(screenshot);
 const groups = [];
-for (const name of await readdir(join(root, "client/src/lib/animations"))) {
+for (const name of await readdir(join(root, "client/src/lib/animations/presets"))) {
     if (name.endsWith(".json")) {
-        groups.push(JSON.parse(await readFile(join(root, "client/src/lib/animations", name), "utf8")));
+        groups.push(JSON.parse(await readFile(join(root, "client/src/lib/animations/presets", name), "utf8")));
     }
 }
 await mkdir(out, {recursive: true});

@@ -1,0 +1,96 @@
+{
+  "id": "soft-orbit",
+  "name": "Soft Orbit",
+  "description": "A slow, floating orbit. Let the work breathe.",
+  "preview": "motion-2026/soft-orbit.mp4",
+  "poster": "motion-2026/soft-orbit.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 100,
+  "categories": [
+    "Cinematic"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "iphone-16-pro",
+  "previewBackground": [
+    221,
+    231,
+    213,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "soft-orbit-clip-0",
+      "name": "Soft Orbit \u00b7 1",
+      "start": 0,
+      "end": 3,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "soft-orbit-key-0",
+        "position": {
+          "x": -0.025,
+          "y": 0,
+          "z": -0.65
+        },
+        "rotation": {
+          "x": -8,
+          "y": -22,
+          "z": -7
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "soft-orbit-key-1",
+        "position": {
+          "x": 0.025,
+          "y": 0.018,
+          "z": -0.45
+        },
+        "rotation": {
+          "x": 7,
+          "y": 22,
+          "z": 7
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "soft-orbit-clip-1",
+      "name": "Soft Orbit \u00b7 2",
+      "start": 3,
+      "end": 6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "soft-orbit-key-1",
+        "position": {
+          "x": 0.025,
+          "y": 0.018,
+          "z": -0.45
+        },
+        "rotation": {
+          "x": 7,
+          "y": 22,
+          "z": 7
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "soft-orbit-key-2",
+        "position": {
+          "x": -0.025,
+          "y": 0,
+          "z": -0.65
+        },
+        "rotation": {
+          "x": -8,
+          "y": -22,
+          "z": -7
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

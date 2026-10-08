@@ -1,0 +1,96 @@
+{
+  "id": "side-step",
+  "name": "Side Step",
+  "description": "A lateral glide with a little attitude.",
+  "preview": "motion-2026/side-step.mp4",
+  "poster": "motion-2026/side-step.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 95,
+  "categories": [
+    "Loop"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "galaxy-s24-ultra",
+  "previewBackground": [
+    223,
+    231,
+    238,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "side-step-clip-0",
+      "name": "Side Step \u00b7 1",
+      "start": 0,
+      "end": 2.8,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "side-step-key-0",
+        "position": {
+          "x": -0.1,
+          "y": -0.01,
+          "z": -0.95
+        },
+        "rotation": {
+          "x": 8,
+          "y": -28,
+          "z": -8
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "side-step-key-1",
+        "position": {
+          "x": 0.1,
+          "y": 0.01,
+          "z": -0.95
+        },
+        "rotation": {
+          "x": -8,
+          "y": 28,
+          "z": 8
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "side-step-clip-1",
+      "name": "Side Step \u00b7 2",
+      "start": 2.8,
+      "end": 5.6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "side-step-key-1",
+        "position": {
+          "x": 0.1,
+          "y": 0.01,
+          "z": -0.95
+        },
+        "rotation": {
+          "x": -8,
+          "y": 28,
+          "z": 8
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "side-step-key-2",
+        "position": {
+          "x": -0.1,
+          "y": -0.01,
+          "z": -0.95
+        },
+        "rotation": {
+          "x": 8,
+          "y": -28,
+          "z": -8
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

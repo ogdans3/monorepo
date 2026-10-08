@@ -13,9 +13,7 @@
     let search = $state("");
     let selectedCats = $state<Set<AnimationCategories>>(new Set());
 
-    const allCategories = Object.values(
-        AnimationCategories
-    ) as AnimationCategories[];
+    const allCategories = [...new Set(animationGroups.flatMap(group => group.categories ?? []))];
 
     // Pre-sort by priority (desc), official first; use slice().sort for compatibility
     const sorted: AnimationGroup[] = (animationGroups ?? [])

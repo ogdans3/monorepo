@@ -1,5 +1,6 @@
 // Scene-related enums and types
 export enum PresetName {
+    Portrait_4_5 = 'Portrait (4:5)',
     FullHD_16_9 = 'Full HD (16:9)',
     Square_1_1 = 'Square (1:1)',
     TikTok_9_16 = 'TikTok (9:16)',

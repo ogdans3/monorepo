@@ -15,9 +15,11 @@ import {
     selectedAnimationStore
 } from "$lib/stores/animation.svelte";
 import {transformControlPosition, transformControlRotation, transformCurve} from "$lib/stores/transform.svelte";
-import {AnimationCurve, ChangeOrigin, zeroVec} from "$lib/components/mock-video/Animation";
+import {AnimationCurve, ChangeOrigin, zeroVec, type AnimationGroup} from "$lib/components/mock-video/Animation";
 import type {Project, ProjectFile} from "$lib/components/mock-video/Project";
 import {loadProjectMedia} from "$lib/repo/media-store";
+import {getModel} from "$lib/models/3d-models/3d-models-spec";
+import {PresetName} from "$lib/models/models";
 import {detectIsImage} from "$lib/repo/uploadFile.svelte";
 
 /** What's on the phone before the user drops anything in. */
@@ -41,11 +43,28 @@ function resetEditorState() {
     transformCurve.set(AnimationCurve.Linear);
 }
 
+/** Restore a built-in sample with the correct media element type. */
+function applyDemoMedia() {
+    const id = project.demoMediaId;
+    const image = id === "focus" || id === "workspace";
+    get(videoController).setMediaSource(image ? `/media/studio/${id}.png` : DEMO_MEDIA, image);
+}
+
 /** A fresh project; the editor's timeline fills in the chosen animation. */
-export function startNewProject() {
+export function startNewProject(group?: AnimationGroup) {
     resetEditorState();
     project.startNew();
-    get(videoController).setMediaSource(DEMO_MEDIA, false);
+    if (group?.previewModelId) {
+        const model = getModel(group.previewModelId);
+        if (model) project.model = {...model};
+    }
+    if (group?.previewBackground) {
+        project.sceneSettings.backgroundColor = [...group.previewBackground];
+        project.sceneSettings.glassReflections = false;
+        project.sceneSettings.selectedPreset = PresetName.Portrait_4_5;
+    }
+    project.demoMediaId = group?.demoMediaId;
+    applyDemoMedia();
 }
 
 /** Load a saved project, then bring back its screen media from IndexedDB. */
@@ -55,7 +74,7 @@ export function openSavedProject(saved: Project) {
 
     const controller = get(videoController);
     if (!saved.screenMedia) {
-        controller.setMediaSource(DEMO_MEDIA, false);
+        applyDemoMedia();
     } else {
         // Blank until the stored file is read, rather than flashing the demo.
         controller.setMediaSource(null, false);
@@ -94,6 +113,6 @@ async function restoreMedia(saved: Project) {
     }
     if (hadMedia) {
         toast.warning("This project's screen image or video wasn't found in this browser.");
-        controller.setMediaSource(DEMO_MEDIA, false);
+        applyDemoMedia();
     }
 }

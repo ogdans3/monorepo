@@ -12,7 +12,7 @@
 import {SceneRenderer} from "./scene-renderer";
 import {models, getModel} from "$lib/models/3d-models/3d-models-spec";
 import type {Model} from "$lib/models/3d-models/3d-models-spec";
-import animationGroups from "$lib/animations/animations.svelte";
+import animationGroups, {findAnimationGroupById} from "$lib/animations/animations.svelte";
 import type {AnimationGroup} from "$lib/components/mock-video/Animation";
 import type {Track} from "$lib/components/mock-video/Project";
 import type {RGBA} from "$lib/models/models";
@@ -74,7 +74,7 @@ function findModel(id: string): Model {
 }
 
 function findAnimationGroup(id: string): AnimationGroup {
-    const group = (animationGroups as AnimationGroup[]).find((g) => g.id === id);
+    const group = findAnimationGroupById(id);
     if (!group) {
         throw new Error(
             `Unknown animation "${id}". Available: ` +

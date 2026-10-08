@@ -8,5 +8,5 @@
 <!-- Every visit starts a new project from this animation; keying on the id
      remounts the editor when only the id in the URL changes. -->
 {#key data.animationGroup.id}
-    <MockVideo animationGroup={data.animationGroup} prepare={startNewProject}/>
+    <MockVideo animationGroup={data.animationGroup} prepare={() => startNewProject(data.animationGroup)}/>
 {/key}

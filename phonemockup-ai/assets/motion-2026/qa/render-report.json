@@ -1,0 +1,80 @@
+{
+  "renderer": "Shared SceneRenderer via public RenderSession",
+  "fps": 24,
+  "width": 640,
+  "height": 800,
+  "previews": [
+    {
+      "id": "soft-orbit",
+      "model": "iphone-16-pro",
+      "frames": 144,
+      "duration": 6,
+      "bytes": 333105,
+      "sha256": "e217f77f94aee61e4e33f5cb409a821c62fd05fb071ccf00f8e8a21f83b66da2",
+      "renderSeconds": 184.35
+    },
+    {
+      "id": "edge-reveal",
+      "model": "iphone-16-pro",
+      "frames": 130,
+      "duration": 5.416666666666667,
+      "bytes": 321116,
+      "sha256": "932e7953f27e9674ceaa668fdb321ddf2092373cac84ed7127dc4e3a24e96517",
+      "renderSeconds": 94.89
+    },
+    {
+      "id": "lift-off",
+      "model": "pixel-9-pro",
+      "frames": 120,
+      "duration": 5,
+      "bytes": 240614,
+      "sha256": "f490fc4a90d38c520d5635cf2648a2fb88960599200ac2946353a3e59f0bcad9",
+      "renderSeconds": 43.914
+    },
+    {
+      "id": "slow-spin",
+      "model": "galaxy-s24-ultra",
+      "frames": 144,
+      "duration": 6,
+      "bytes": 284293,
+      "sha256": "bbb26d1934374b43866996c2dc66a195d18d8438584a4bae4241616e0e32d9da",
+      "renderSeconds": 42.061
+    },
+    {
+      "id": "detail-study",
+      "model": "pixel-9-pro",
+      "frames": 144,
+      "duration": 6,
+      "bytes": 428168,
+      "sha256": "5d85e22fc530bc9537ad2cee1b7b5dcc5a574eca28007b8b89d362000f7ecbd4",
+      "renderSeconds": 63.037
+    },
+    {
+      "id": "side-step",
+      "model": "galaxy-s24-ultra",
+      "frames": 134,
+      "duration": 5.583333333333333,
+      "bytes": 292286,
+      "sha256": "9ca276df65292af8ef772100c8239e8b6a689f69db325767a6de0a1db01111a3",
+      "renderSeconds": 39.989
+    },
+    {
+      "id": "snap-in",
+      "model": "iphone-16-pro",
+      "frames": 106,
+      "duration": 4.416666666666667,
+      "bytes": 207294,
+      "sha256": "a9901b32df8538a71ce4834d105712800bcf2013e9eaf72f62ba0ed5c91c2a85",
+      "renderSeconds": 41.716
+    },
+    {
+      "id": "top-down",
+      "model": "macbook-pro-14-m4",
+      "frames": 144,
+      "duration": 6,
+      "bytes": 471285,
+      "sha256": "cdc9bbf1c9557b589b3a4c477407b9aee58a02297df7280ac6e0d00b17b16c0f",
+      "renderSeconds": 43.681
+    }
+  ]
+}

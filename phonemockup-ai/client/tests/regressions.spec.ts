@@ -116,13 +116,13 @@ test.describe("Regressions", () => {
 
     test("picking a second preset from the gallery opens that preset", async ({page}) => {
         await page.goto("/platform/animation");
-        await page.locator('a[href="/platform/animation/group-pop-out"]').first().click();
+        await page.locator('a[href="/platform/animation/snap-in"]').first().click();
         await waitForAppReady(page);
         const first = await clipNames(page);
 
         await page.goBack();
-        await page.locator('a[href="/platform/animation/group-ball-turn"]').first().click();
-        await expect(page).toHaveURL(/group-ball-turn/);
+        await page.locator('a[href="/platform/animation/soft-orbit"]').first().click();
+        await expect(page).toHaveURL(/soft-orbit/);
         await expect.poll(() => clipNames(page)).not.toEqual(first);
     });
 

@@ -12,6 +12,7 @@ import {PresetName, type Resolution, type RGBA} from "$lib/models/models";
 
 // Scene presets
 export const presets: Record<PresetName, Resolution> = {
+    [PresetName.Portrait_4_5]: {width: 2160, height: 2700},
     [PresetName.FullHD_16_9]: {width: 3840, height: 2160},
     [PresetName.Square_1_1]: {width: 2160, height: 2160},
     [PresetName.TikTok_9_16]: {width: 2160, height: 3840},
@@ -62,6 +63,8 @@ export class ProjectState {
     tracks = $state<Track[]>([]);
     files = $state<ProjectFile[]>([]);
     isBulk = $derived(this.files.length > 1);
+
+    demoMediaId = $state<"focus" | "workspace" | undefined>(undefined);
 
     // Model
     model = $state<Model>(defaultModel);
@@ -117,6 +120,7 @@ export class ProjectState {
             timeline: this.timeline,
             savedOnServer: this.savedOnServer,
             sceneSettings: this.sceneSettings,
+            demoMediaId: this.demoMediaId,
         } as Project;
     }
 
@@ -134,6 +138,7 @@ export class ProjectState {
         this.tracks.splice(0, this.tracks.length, ...(project.tracks as Track[]));
 
         this.model = resolveModel(project.model, project.formatVersion);
+        this.demoMediaId = project.demoMediaId === "focus" || project.demoMediaId === "workspace" ? project.demoMediaId : undefined;
 
         this.timeline = {...this.timeline, ...(project?.timeline ?? {})}
         this.settings = {
@@ -156,6 +161,7 @@ export class ProjectState {
         this.tracks = [];
         this.files = [];
         this.model = {...defaultModel};
+        this.demoMediaId = undefined;
         this.settings = fresh.settings;
         this.timeline = fresh.timeline;
         this.sceneSettings = fresh.sceneSettings;

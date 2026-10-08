@@ -1,0 +1,86 @@
+{
+  "catalogue": [
+    {
+      "id": "soft-orbit",
+      "name": "Soft Orbit",
+      "categories": [
+        "Cinematic"
+      ],
+      "priority": 100,
+      "duration": 6
+    },
+    {
+      "id": "edge-reveal",
+      "name": "Edge Reveal",
+      "categories": [
+        "Reveal"
+      ],
+      "priority": 99,
+      "duration": 5.4
+    },
+    {
+      "id": "lift-off",
+      "name": "Lift Off",
+      "categories": [
+        "Reveal"
+      ],
+      "priority": 98,
+      "duration": 5
+    },
+    {
+      "id": "slow-spin",
+      "name": "Slow Spin",
+      "categories": [
+        "Cinematic"
+      ],
+      "priority": 97,
+      "duration": 6
+    },
+    {
+      "id": "detail-study",
+      "name": "Detail Study",
+      "categories": [
+        "Detail"
+      ],
+      "priority": 96,
+      "duration": 6
+    },
+    {
+      "id": "side-step",
+      "name": "Side Step",
+      "categories": [
+        "Loop"
+      ],
+      "priority": 95,
+      "duration": 5.6
+    },
+    {
+      "id": "snap-in",
+      "name": "Snap In",
+      "categories": [
+        "Reveal"
+      ],
+      "priority": 94,
+      "duration": 4.4
+    },
+    {
+      "id": "top-down",
+      "name": "Top Down",
+      "categories": [
+        "Cinematic"
+      ],
+      "priority": 93,
+      "duration": 6
+    }
+  ],
+  "legacy": [
+    {
+      "id": "still",
+      "bytes": 15009
+    },
+    {
+      "id": "group-center-spin-zoom",
+      "bytes": 12037
+    }
+  ]
+}

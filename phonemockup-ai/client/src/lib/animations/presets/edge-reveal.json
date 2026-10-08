@@ -1,0 +1,131 @@
+{
+  "id": "edge-reveal",
+  "name": "Edge Reveal",
+  "description": "From a sliver of light to the whole story.",
+  "preview": "motion-2026/edge-reveal.mp4",
+  "poster": "motion-2026/edge-reveal.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 99,
+  "categories": [
+    "Reveal"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "iphone-16-pro",
+  "previewBackground": [
+    226,
+    222,
+    240,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "edge-reveal-clip-0",
+      "name": "Edge Reveal \u00b7 1",
+      "start": 0,
+      "end": 1.8,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "edge-reveal-key-0",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 3,
+          "y": -78,
+          "z": -5
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "edge-reveal-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.45
+        },
+        "rotation": {
+          "x": -3,
+          "y": 9,
+          "z": 2
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "edge-reveal-clip-1",
+      "name": "Edge Reveal \u00b7 2",
+      "start": 1.8,
+      "end": 3.5,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "edge-reveal-key-1",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.45
+        },
+        "rotation": {
+          "x": -3,
+          "y": 9,
+          "z": 2
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "edge-reveal-key-2",
+        "position": {
+          "x": 0,
+          "y": 0.01,
+          "z": -0.35
+        },
+        "rotation": {
+          "x": -3,
+          "y": -4,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "edge-reveal-clip-2",
+      "name": "Edge Reveal \u00b7 3",
+      "start": 3.5,
+      "end": 5.4,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "edge-reveal-key-2",
+        "position": {
+          "x": 0,
+          "y": 0.01,
+          "z": -0.35
+        },
+        "rotation": {
+          "x": -3,
+          "y": -4,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "edge-reveal-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 3,
+          "y": -78,
+          "z": -5
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

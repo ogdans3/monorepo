@@ -1,0 +1,166 @@
+{
+  "id": "detail-study",
+  "name": "Detail Study",
+  "description": "Move in close, glide across, pull back.",
+  "preview": "motion-2026/detail-study.mp4",
+  "poster": "motion-2026/detail-study.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 96,
+  "categories": [
+    "Detail"
+  ],
+  "loop": true,
+  "framing": "detail",
+  "previewModelId": "pixel-9-pro",
+  "previewBackground": [
+    233,
+    227,
+    217,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "detail-study-clip-0",
+      "name": "Detail Study \u00b7 1",
+      "start": 0,
+      "end": 1.8,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "detail-study-key-0",
+        "position": {
+          "x": 0,
+          "y": -0.23,
+          "z": 1.25
+        },
+        "rotation": {
+          "x": -5,
+          "y": -12,
+          "z": -4
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "detail-study-key-1",
+        "position": {
+          "x": 0,
+          "y": 0.22,
+          "z": 1.25
+        },
+        "rotation": {
+          "x": 5,
+          "y": 12,
+          "z": 4
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "detail-study-clip-1",
+      "name": "Detail Study \u00b7 2",
+      "start": 1.8,
+      "end": 3.4,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "detail-study-key-1",
+        "position": {
+          "x": 0,
+          "y": 0.22,
+          "z": 1.25
+        },
+        "rotation": {
+          "x": 5,
+          "y": 12,
+          "z": 4
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "detail-study-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.6
+        },
+        "rotation": {
+          "x": -6,
+          "y": 15,
+          "z": -5
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "detail-study-clip-2",
+      "name": "Detail Study \u00b7 3",
+      "start": 3.4,
+      "end": 4.4,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "detail-study-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.6
+        },
+        "rotation": {
+          "x": -6,
+          "y": 15,
+          "z": -5
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "detail-study-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.6
+        },
+        "rotation": {
+          "x": -6,
+          "y": 15,
+          "z": -5
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "detail-study-clip-3",
+      "name": "Detail Study \u00b7 4",
+      "start": 4.4,
+      "end": 6,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "detail-study-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.6
+        },
+        "rotation": {
+          "x": -6,
+          "y": 15,
+          "z": -5
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "detail-study-key-4",
+        "position": {
+          "x": 0,
+          "y": -0.23,
+          "z": 1.25
+        },
+        "rotation": {
+          "x": -5,
+          "y": -12,
+          "z": -4
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}

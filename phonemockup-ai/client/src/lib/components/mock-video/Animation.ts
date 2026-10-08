@@ -22,6 +22,13 @@ export type AnimationGroup = {
     name: string;
     animations: Animation[];
     preview?: string;
+    poster?: string;
+    description?: string;
+    loop?: boolean;
+    framing?: "full" | "detail";
+    previewModelId?: string;
+    previewBackground?: [number, number, number, number];
+    demoMediaId?: "focus" | "workspace";
     favorited?: boolean;
     isOfficial: boolean;
     isCommunity: boolean;
@@ -44,6 +51,10 @@ export function getAnimation(track: Track, animationId: string): Animation | und
 }
 
 export enum AnimationCategories {
+    Cinematic = "Cinematic",
+    Reveal = "Reveal",
+    Detail = "Detail",
+    Loop = "Loop",
     Zoom = "Zoom",
     Slow = "Slow",
     Fast = "Fast",

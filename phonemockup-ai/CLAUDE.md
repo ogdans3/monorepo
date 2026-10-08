@@ -30,7 +30,7 @@ SvelteKit with `@sveltejs/adapter-node`, Svelte 5 runes (`$state`, `$props`), Ta
   - `sidebar/` — model picker, transform controls, scene settings, export panel
   - `timeline/` — keyframe timeline + playhead
   - `topbar/` — top bar
-- `src/lib/animations/*.json` — premade animation presets (Still, SpinZoom, RollInZoom, …)
+- `src/lib/animations/presets/*.json` — the eight active motion presets. Top-level `animations/*.json` remain available by ID for old links and projects, but are not listed in the catalogue. See `docs/motion-2026.md` for preview generation.
 - `src/lib/stores/*.svelte.ts` — runes-based stores for `project`, `video`, `tracks`, `transform`, `animation`, `settings`
 - `src/lib/repo/` — `localstorage` (project JSON), `media-store` (a saved project's screen media, in IndexedDB), `uploadFile` (image/video detection)
 - `src/lib/models/` — 3D phone models (loaded via three.js). A new one is
@@ -105,7 +105,7 @@ To run a real end-to-end stack inside the dashboard, swap the root Dockerfile fo
 - **Data access is Drizzle only.** Don't bring back raw template-string SQL beside it.
 - **Svelte 5 runes only.** Stores are `.svelte.ts` files using `$state`, not the legacy `writable()` API. (A few files still import `get` from `svelte/store` against a runes-style controller — fine, but don't introduce new `writable`-based stores.)
 - **Editor state is local-first.** The browser drives the entire mockup pipeline (three.js render → MediaRecorder/WebCodecs encoder → download). The server is only persistence.
-- **Editor state is module-level singletons** (`project`, the video controller, selection and transform stores). A route that shows the editor must say which project it is: `/platform/animation/[id]` calls `startNewProject()` and `/platform/project/[id]` calls `openSavedProject()` (`stores/session.svelte.ts`), through `MockVideo`'s `prepare` prop. Without that, the last project's tracks, files and selection carry over.
+- **Editor state is module-level singletons** (`project`, the video controller, selection and transform stores). A route that shows the editor must say which project it is: `/platform/animation/[id]` calls `startNewProject(animationGroup)` and `/platform/project/[id]` calls `openSavedProject()` (`stores/session.svelte.ts`), through `MockVideo`'s `prepare` prop. Without that, the last project's tracks, files and selection carry over.
 - **Saved projects are two stores.** The project JSON goes to localStorage; the screen media (a File, which JSON can't hold) goes to IndexedDB under the same id (`repo/media-store.ts`). Deleting a project deletes both.
 - **The editor canvas draws on demand.** While paused, `ThreeScene`'s loop poses the phone every frame but only renders when `SceneRenderer.needsRender` says something changed. Anything new that changes a frame must set `dirty` in `scene-renderer.ts`, or it won't show until something else moves. The export dialog's canvases are `passive` (no loop, no pointer controls); the exporter draws every frame itself and waits for `whenReady()` first.
 - **Scene code is shared, not duplicated.** Anything that affects how a frame

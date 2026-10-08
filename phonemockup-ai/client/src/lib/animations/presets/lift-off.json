@@ -1,0 +1,166 @@
+{
+  "id": "lift-off",
+  "name": "Lift Off",
+  "description": "A rising entrance with a soft landing.",
+  "preview": "motion-2026/lift-off.mp4",
+  "poster": "motion-2026/lift-off.webp",
+  "isOfficial": true,
+  "isCommunity": false,
+  "favorited": false,
+  "priority": 98,
+  "categories": [
+    "Reveal"
+  ],
+  "loop": true,
+  "framing": "full",
+  "previewModelId": "pixel-9-pro",
+  "previewBackground": [
+    241,
+    223,
+    209,
+    1
+  ],
+  "demoMediaId": "focus",
+  "animations": [
+    {
+      "id": "lift-off-clip-0",
+      "name": "Lift Off \u00b7 1",
+      "start": 0,
+      "end": 1.7,
+      "curve": "CubicOut",
+      "startKeyframe": {
+        "id": "lift-off-key-0",
+        "position": {
+          "x": 0,
+          "y": -0.52,
+          "z": -1.7
+        },
+        "rotation": {
+          "x": 22,
+          "y": -24,
+          "z": -12
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "lift-off-key-1",
+        "position": {
+          "x": 0,
+          "y": 0.025,
+          "z": -0.55
+        },
+        "rotation": {
+          "x": -5,
+          "y": 12,
+          "z": 3
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "lift-off-clip-1",
+      "name": "Lift Off \u00b7 2",
+      "start": 1.7,
+      "end": 2.3,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "lift-off-key-1",
+        "position": {
+          "x": 0,
+          "y": 0.025,
+          "z": -0.55
+        },
+        "rotation": {
+          "x": -5,
+          "y": 12,
+          "z": 3
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "lift-off-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 8,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "lift-off-clip-2",
+      "name": "Lift Off \u00b7 3",
+      "start": 2.3,
+      "end": 3.5,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "lift-off-key-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 8,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "lift-off-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 8,
+          "z": 0
+        },
+        "opacity": 1
+      }
+    },
+    {
+      "id": "lift-off-clip-3",
+      "name": "Lift Off \u00b7 4",
+      "start": 3.5,
+      "end": 5,
+      "curve": "SineInOut",
+      "startKeyframe": {
+        "id": "lift-off-key-3",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": -0.5
+        },
+        "rotation": {
+          "x": 0,
+          "y": 8,
+          "z": 0
+        },
+        "opacity": 1
+      },
+      "endKeyframe": {
+        "id": "lift-off-key-4",
+        "position": {
+          "x": 0,
+          "y": -0.52,
+          "z": -1.7
+        },
+        "rotation": {
+          "x": 22,
+          "y": -24,
+          "z": -12
+        },
+        "opacity": 1
+      }
+    }
+  ]
+}
