@@ -166,7 +166,8 @@
   $: upcoming = publications.filter((p) => p.status !== 'published').slice(0, 4);
   $: reviewTasks = tasks.filter((t) => t.status === 'review');
   $: activeRun = latestRun && ['queued', 'running'].includes(latestRun.status);
-  $: canEdit = !!user && user.role !== 'reader' && currentProduct?.can_edit !== false;
+  $: canEdit =
+    !!user && !!currentProduct && user.role !== 'reader' && currentProduct.can_edit !== false;
   $: calendarDays = calendarMode === 'month' ? monthDays(monthOffset) : weekDays(calendarOffset);
   $: weekPublications = publications.filter((p) =>
     calendarDays.includes(localInput(new Date(p.scheduled_at)).slice(0, 10)),
@@ -268,6 +269,7 @@
     }
   }
   async function refresh() {
+    if (!product && view !== 'settings') return;
     const atView = view,
       atProduct = product,
       generation = routeGeneration;
@@ -348,7 +350,9 @@
     const requested = url.searchParams.get('product');
     const nextProduct = products.some((p) => p.id === requested)
       ? requested!
-      : product || products[0]?.id || '';
+      : products.some((p) => p.id === product)
+        ? product
+        : products[0]?.id || '';
     const routeKey = url.pathname + ':' + nextProduct;
     if (!force && lastRoute === routeKey) return;
     const generation = ++routeGeneration;
@@ -393,7 +397,7 @@
     user = status.user;
     if (user) {
       products = await api('/products');
-      product = product || products[0]?.id || '';
+      if (!products.some((p) => p.id === product)) product = products[0]?.id || '';
       await syncRoute(true);
     } else if (setup) {
       authMode = 'setup';
@@ -404,7 +408,7 @@
     if (hash.has('invite')) {
       authMode = 'invite';
       authToken = hash.get('invite') || '';
-      history.replaceState(null, '', location.pathname);
+      history.replaceState(null, '', location.pathname + location.search);
     }
     if (hash.has('reset')) {
       authMode = 'reset';
@@ -499,6 +503,7 @@
       reminder_minutes: 60,
       email: '',
       role: 'editor',
+      product_id: product,
       ...data,
     };
     dialog.showModal();
@@ -565,7 +570,11 @@
           reminder_minutes: Number(draft.reminder_minutes),
         });
       else if (modal === 'invite') {
-        const result = await api('/invites', 'POST', { email: draft.email, role: draft.role });
+        const result = await api('/invites', 'POST', {
+          email: draft.email,
+          role: draft.role,
+          product_id: draft.role === 'admin' ? '' : draft.product_id,
+        });
         inviteLink = result.url;
         invites = await api('/invites');
         return;
@@ -948,6 +957,16 @@
       </div>
       <main class:chat-main={view === 'chat'}>
         {#if routeLoading}<p class="muted" role="status">Henter innhold …</p>
+        {:else if !currentProduct && view !== 'settings' && view !== 'item' && !(view === 'work' && user.role === 'admin')}
+          <section class="empty-large">
+            <h1>Ingen produkttilgang ennå</h1>
+            <p>
+              Kontoen din er med i arbeidsrommet, men har ikke tilgang til noe produkt. Be
+              administrator gi deg tilgang under Produksjon og innsikt → Arbeidsrom → Tilgang til
+              produktet.
+            </p>
+            <button class="secondary" onclick={() => safely(load)}>Sjekk tilgang på nytt</button>
+          </section>
         {:else if view === 'ads'}{#key product}<AdsPage
               {ads}
               folders={adFolders}
@@ -1658,7 +1677,12 @@
               </div>
               <p class="muted">Kopier en invitasjonslenke og del den selv. Gyldig i syv dager.</p>
               {#each invites as invite}<div class="settings-list-row">
-                  <span>{invite.email}<small>{invite.role}</small></span><span class="status"
+                  <span
+                    >{invite.email}<small
+                      >{invite.role} · {invite.product_name ||
+                        (invite.role === 'admin' ? 'Alle produkter' : 'Arbeidsrom')}</small
+                    ></span
+                  ><span class="status"
                     >{invite.revoked_at
                       ? 'Tilbakekalt'
                       : invite.used_at
@@ -2107,6 +2131,18 @@
               ><option value="admin">Administrator</option></select
             ></label
           >
+          {#if draft.role !== 'admin'}
+            <label
+              >Produkttilgang<select bind:value={draft.product_id}>
+                <option value="">Bare arbeidsrommet</option>
+                {#each products as p}<option value={p.id}>{p.name}</option>{/each}
+              </select></label
+            >
+            <p class="small muted">
+              Valgt produkt gir tilgang til både annonser og bibliotek, også når produktet er
+              begrenset. Åpne produkter er tilgjengelige for alle i arbeidsrommet.
+            </p>
+          {:else}<p class="small muted">Administratorer får tilgang til alle produkter.</p>{/if}
         {:else}<label
             >{modal === 'agent' ? 'Agentens navn' : 'Tittel'}<input
               bind:value={draft.title}

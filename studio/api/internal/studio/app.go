@@ -358,8 +358,9 @@ func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 }
 func (a *App) invite(w http.ResponseWriter, r *http.Request) {
 	var c struct {
-		Email string `json:"email"`
-		Role  string `json:"role"`
+		Email   string `json:"email"`
+		Role    string `json:"role"`
+		Product string `json:"product_id"`
 	}
 	if !decode(w, r, &c) {
 		return
@@ -368,17 +369,31 @@ func (a *App) invite(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "Ugyldig e-post eller rolle")
 		return
 	}
+	if c.Product != "" {
+		if c.Role == "admin" {
+			fail(w, 400, "Administratorer har tilgang til alle produkter")
+			return
+		}
+		if e := validateProduct(r.Context(), a, c.Product); e != nil {
+			fail(w, 400, e.Error())
+			return
+		}
+	}
 	t := token()
-	_, e := a.db.Exec(r.Context(), "INSERT INTO invites(token_hash,email,role,expires_at,created_by) VALUES($1,lower($2),$3,now()+interval '7 days',$4)", hash(t), c.Email, c.Role, actor(r).ID)
+	_, e := a.db.Exec(r.Context(), "INSERT INTO invites(token_hash,email,role,expires_at,created_by,product_id) VALUES($1,lower($2),$3,now()+interval '7 days',$4,nullif($5,'')::uuid)", hash(t), c.Email, c.Role, actor(r).ID, c.Product)
 	if e != nil {
 		fail(w, 500, "Kunne ikke opprette invitasjon")
 		return
 	}
 	a.audit(r.Context(), actor(r).Name, "invite.created", c.Email)
-	write(w, 201, map[string]string{"url": a.origin + "/#invite=" + t, "email": c.Email})
+	inviteURL := a.origin + "/"
+	if c.Product != "" {
+		inviteURL += "?product=" + c.Product
+	}
+	write(w, 201, map[string]string{"url": inviteURL + "#invite=" + t, "email": c.Email})
 }
 func (a *App) invites(w http.ResponseWriter, r *http.Request) {
-	a.list(w, r, "SELECT id,email,role,expires_at,used_at,revoked_at,created_at FROM invites ORDER BY created_at DESC LIMIT 100")
+	a.list(w, r, "SELECT i.id,i.email,i.role,i.expires_at,i.used_at,i.revoked_at,i.created_at,i.product_id,p.name AS product_name FROM invites i LEFT JOIN products p ON p.id=i.product_id ORDER BY i.created_at DESC LIMIT 100")
 }
 func (a *App) acceptInvite(w http.ResponseWriter, r *http.Request) {
 	var c credentials
@@ -396,8 +411,8 @@ func (a *App) acceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context())
-	var role, id string
-	e = tx.QueryRow(r.Context(), "UPDATE invites SET used_at=now() WHERE token_hash=$1 AND email=lower($2) AND used_at IS NULL AND revoked_at IS NULL AND expires_at>now() RETURNING role", hash(c.Token), c.Email).Scan(&role)
+	var role, id, product string
+	e = tx.QueryRow(r.Context(), "UPDATE invites SET used_at=now() WHERE token_hash=$1 AND email=lower($2) AND used_at IS NULL AND revoked_at IS NULL AND expires_at>now() RETURNING role,coalesce(product_id::text,'')", hash(c.Token), c.Email).Scan(&role, &product)
 	if e != nil {
 		fail(w, 400, "Invitasjonen er brukt, utløpt eller tilhører en annen e-post")
 		return
@@ -406,6 +421,12 @@ func (a *App) acceptInvite(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		fail(w, 409, "Brukeren finnes allerede")
 		return
+	}
+	if product != "" {
+		if _, e = tx.Exec(r.Context(), "INSERT INTO product_members(product_id,user_id,role) VALUES($1,$2,$3)", product, id, role); e != nil {
+			fail(w, 500, "Kunne ikke gi tilgang til produktet")
+			return
+		}
 	}
 	if tx.Commit(r.Context()) != nil {
 		fail(w, 500, "Kunne ikke lagre bruker")

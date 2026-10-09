@@ -24,6 +24,14 @@ manuelt. Administrator kan opprette 30-minutters passordlenker fra Arbeidsrom;
 passordbytte avslutter eksisterende sesjoner. Arbeidsrom har administrator,
 redaktør og leser, og produkter kan begrenses til utvalgte medlemmer.
 
+Velg **Produkttilgang** i invitasjonen for å gi tilgang til både annonser og bibliotek
+i det produktet. Valgt produkt legges til når invitasjonen godtas. «Bare arbeidsrommet»
+gir tilgang til åpne produkter, men ikke begrensede produkter. Administratorer har
+tilgang til alle produkter. Eksisterende brukere som mangler tilgang, legges til under
+**Produksjon og innsikt → Arbeidsrom → Tilgang til produktet**. Redaktører kan se og
+redigere annonser; lesere kan se dem. Invitasjoner laget før denne endringen beholder
+sin opprinnelige tilgang til arbeidsrommet.
+
 Web (5178), API/MCP (8088) og Postgres (5448) er bundet til loopback. Mediemotoren
 har ingen publisert port. Database, originalfiler og modellcache ligger i separate
 Docker-volumer. `docker compose down` beholder data; `down -v` sletter dem.
