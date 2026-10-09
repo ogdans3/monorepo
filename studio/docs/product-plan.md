@@ -15,7 +15,7 @@ mobil og desktop. Lokal mediebehandling kjører i en egen CPU-container.
 | Versjoner | Uforanderlige tekst-/filversjoner, samtidig redigeringsvern, tekstsammenligning, medier side ved side og godkjenning av en bestemt versjon |
 | Opplasting | Gjenopptakbare 8 MB-deler, opptil 2 GB per fil, SHA-256-duplikatsjekk, private filer og rettighetsdokumentasjon med utløp |
 | Lenkeimport | Instagram, TikTok og Snapchat Spotlight; varig kø, fremdrift, stopp, eksplisitt nytt forsøk, kilde/opphav, duplikater og lokal kategorisering med manuell overstyring |
-| Medier | Separate prioriterte miniatyr-/proxy-køer, reparasjon av eldre manglende previews, lazy-loadede kort og privat revalidering; rammeuttrekk, norsk/engelsk OCR, lokal Whisper-transkribering og tidsfestede segmenter |
+| Medier | Native fildeling fra valgt originalversjon og veiledning for Bilder på iPhone, separate prioriterte miniatyr-/proxy-køer, reparasjon av eldre manglende previews, lazy-loadede kort og privat revalidering; rammeuttrekk, norsk/engelsk OCR, lokal Whisper-transkribering og tidsfestede segmenter |
 | Søk | Norsk fulltekst, tittel-likhet, flerspråklig semantikk, visuell tekst-/bildelikhet, tidskoder, filtre, lagrede søk og massevalg |
 | Chat | Private samtaler, vedlegg/faste versjoner/kampanjer, strømmede svar, søk, utkast og produksjonsidéer; stopp og kjøringslogg |
 | Modeller | Rolle-/produktprofiler, modelloverstyring, kontrollert reservemodell, bounded manus/analyse og separat TypeSafe Jev-adapter |

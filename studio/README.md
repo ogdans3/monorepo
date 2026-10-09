@@ -84,6 +84,19 @@ Eksterne agenter bruker `studio_create_ad` med en stabil `external_key`, leser
 eller `agent/studio.py upload --ad-id`. Se [den konkrete agentflyten](agent/README.md).
 Vanlig opplasting uten annonse-ID oppretter fortsatt bibliotekinnhold.
 
+## Lagre til Bilder på iPhone
+
+På gjennomgangssiden kan **Del / lagre** klargjøre den valgte versjonens originalfil.
+Trykk deretter **Åpne delingsmenyen** og velg **Lagre video** eller **Lagre bilde**,
+hvis iOS tilbyr det. Studio kan ikke legge Bilder til filvelgeren eller bestemme
+innholdet i den native delingsmenyen. Tilgjengelighet avhenger av nettleser og
+filformat; Safari på en fysisk iPhone må brukes for å bekrefte akkurat dette valget.
+
+Knappen vises når nettleseren støtter fildeling. Filer over 100 MB bruker vanlig
+**Last ned** for å unngå å holde store videoer i nettleserminnet. Da kan filen åpnes
+i Filer, og **Del → Lagre video/bilde** brukes hvis tilgjengelig. Originalfilen
+beholdes; den kortere mobilproxyen brukes ikke ved eksport.
+
 ## Lokale modeller og medier
 
 Kortene laster små, lazy-loadede miniatyrer i stedet for originalvideoer/-bilder.

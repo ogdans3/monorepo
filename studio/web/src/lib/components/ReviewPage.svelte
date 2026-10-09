@@ -2,9 +2,10 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { ArrowLeft, Upload, Download, Check, Clock3 } from '@lucide/svelte';
+  import { ArrowLeft, Upload, Check, Clock3 } from '@lucide/svelte';
   import { api, uploadFile, seconds, formatDate, type Row } from '$lib/api';
   import MediaCard from './MediaCard.svelte';
+  import MediaExport from './MediaExport.svelte';
   import ItemTools from './ItemTools.svelte';
   import ChannelPicker from './ChannelPicker.svelte';
   import ChannelLabels from './ChannelLabels.svelte';
@@ -282,11 +283,7 @@
               : review?.status === 'changes_requested'
                 ? 'Trenger endringer'
                 : 'Til gjennomgang'}</span
-          >{#if selected.file_name}<a
-              class="text-button"
-              href={`/api/files/${selected.id}?download=1`}
-              download><Download size={16} />Last ned</a
-            >{/if}
+          >{#if selected.file_name}{#key selected.id}<MediaExport version={selected} />{/key}{/if}
         </div>
         {#if detail.ad}<section class="version-channels">
             {#if canEdit}<ChannelPicker

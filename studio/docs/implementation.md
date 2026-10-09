@@ -132,3 +132,22 @@ integreres mot Studio-mottaket. Disse forbindelsene, serverdrift og punktene und
   proxy og miniatyrer: avspilling uten navigasjon, bytte av spiller, mapper,
   kanalmerker, filter, tilbake/fremover, favoritter og filversjoner.
   Mobil- og desktopskjermbilder visuelt kontrollert. API/web-containerbygg bestått.
+
+
+## Fildeling og Bilder på iPhone — 9. oktober 2026
+
+- «Del / lagre» på gjennomgangssiden klargjør den valgte originalfilen. Et nytt
+  trykk åpner systemets delingsmeny med `files` alene, slik at en langsom nedlasting
+  ikke bruker opp iOS sin tidsbegrensede brukeraktivering.
+- Ingen forhåndsnedlasting for deling. Opptil 100 MB, to minutters tidsgrense,
+  avbrudd ved navigasjon/versjonsbytte, kontroll av komplett fil og fortsatt
+  vanlig nedlastingslenke. Innholdet sendes først når brukeren velger i systemmenyen.
+- Bilder-valget styres av iOS og filformatet. UI gir også Filer → Del-veiledning;
+  ingen direkte Photos-tilgang eller bekreftelse på lagring til et bestemt mål loves.
+- Nettlesertestene bruker ekte Studio-opplasting og originalbytes, men simulerer
+  kun grensen til OS-delingsmenyen. De verifiserer SHA-256, valgt historisk versjon,
+  aktivt brukertrykk, avbrudd, gjenforsøk, minnegrense og nedlastingsfeil på desktop
+  og mobil. Native «Lagre video/bilde» er ikke testet på fysisk iPhone.
+
+Grunnlag: [Web Share-standarden](https://www.w3.org/TR/web-share/) og
+[WebKit om brukeraktivering](https://webkit.org/blog/13862/the-user-activation-api/).
