@@ -58,9 +58,22 @@ Opplasting uten `--ad-id`/`--item-id` oppretter vanlig bibliotekinnhold.
 
 ## Mapper og kanaler
 
-`studio_list_ad_folders` viser produktets mapper. `studio_save_ad_folder` tar
-`payload` som JSON-streng med `name` og valgfri `folder_id` for navneendring.
-Les mappene først og gjenbruk riktig mappe; navnet er unikt innen produktet.
+`studio_list_ad_folders` viser alle produktets mapper med `parent_id` (`null` på
+toppnivå), `ad_count` og `folder_count` for direkte innhold. Antall mappenivåer har
+ingen fast grense. Bygg stien ved å følge `parent_id`.
+
+`studio_save_ad_folder` tar `payload` som JSON-streng med `name`, valgfri
+`folder_id` for endring, og valgfri `parent_id` for plassering:
+
+```json
+{"name":"Ferdig","parent_id":"PARENT_FOLDER_UUID"}
+```
+
+Ved endring beholder utelatt `parent_id` dagens plassering; `parent_id:""` flytter
+mappen til toppnivå. Flytting beholder undermapper og annonser. En mappe kan ikke
+flyttes til et annet produkt, til seg selv eller til sine undermapper. Les mappene
+først og gjenbruk riktig mappe; navnet er unikt blant søsken, uavhengig av store og
+små bokstaver. Samme navn kan brukes under ulike foreldre.
 
 `studio_organize_ad` tar `payload` som JSON-streng, for eksempel:
 

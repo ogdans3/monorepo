@@ -18,16 +18,19 @@ type adOrganizationInput struct {
 }
 
 type adFolderInput struct {
-	Product string `json:"product_id"`
-	ID      string `json:"folder_id"`
-	Name    string `json:"name"`
+	Product string  `json:"product_id"`
+	ID      string  `json:"folder_id"`
+	Name    string  `json:"name"`
+	Parent  *string `json:"parent_id"`
 }
 
 func (a *App) listAdFolders(ctx context.Context, product string) ([]map[string]any, error) {
 	if !a.productAccess(ctx, product, false) {
 		return nil, fmt.Errorf("ingen tilgang til produktet")
 	}
-	rows, err := a.query(ctx, `SELECT f.id,f.name,count(i.id) AS ad_count FROM ad_folders f LEFT JOIN ads a ON a.folder_id=f.id LEFT JOIN items i ON i.id=a.item_id AND i.deleted_at IS NULL WHERE f.product_id::text=$1 GROUP BY f.id ORDER BY lower(f.name),f.id`, product)
+	rows, err := a.query(ctx, `SELECT f.id,f.name,f.parent_id,count(i.id) AS ad_count,
+ (SELECT count(*) FROM ad_folders child WHERE child.parent_id=f.id) AS folder_count
+ FROM ad_folders f LEFT JOIN ads a ON a.folder_id=f.id LEFT JOIN items i ON i.id=a.item_id AND i.deleted_at IS NULL WHERE f.product_id::text=$1 GROUP BY f.id ORDER BY lower(f.name),f.id`, product)
 	if rows == nil {
 		rows = []map[string]any{}
 	}
@@ -41,27 +44,77 @@ func (a *App) saveAdFolder(ctx context.Context, v adFolderInput) (map[string]str
 	if v.Name == "" || len([]rune(v.Name)) > 80 {
 		return nil, fmt.Errorf("mappenavn må ha 1–80 tegn")
 	}
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	// Serialize structural changes per product: concurrent moves must not create a cycle.
+	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, v.Product+":ad-folders"); err != nil {
+		return nil, err
+	}
+	parent := ""
+	if v.ID != "" {
+		if err = tx.QueryRow(ctx, `SELECT coalesce(parent_id::text,'') FROM ad_folders WHERE id::text=$1 AND product_id::text=$2 FOR UPDATE`, v.ID, v.Product).Scan(&parent); err != nil {
+			return nil, fmt.Errorf("mappen finnes ikke i dette produktet")
+		}
+	}
+	if v.Parent != nil {
+		parent = *v.Parent
+	}
+	if parent != "" {
+		var found string
+		if err = tx.QueryRow(ctx, `SELECT id::text FROM ad_folders WHERE id::text=$1 AND product_id::text=$2`, parent, v.Product).Scan(&found); err != nil {
+			return nil, fmt.Errorf("overordnet mappe finnes ikke i dette produktet")
+		}
+		var cycle bool
+		// UNION also terminates safely if imported data ever contains an existing cycle.
+		if err = tx.QueryRow(ctx, `WITH RECURSIVE ancestors AS (
+ SELECT id,parent_id FROM ad_folders WHERE id::text=$1 AND product_id::text=$2
+ UNION SELECT f.id,f.parent_id FROM ad_folders f JOIN ancestors p ON f.id=p.parent_id WHERE f.product_id::text=$2
+) SELECT EXISTS(SELECT 1 FROM ancestors WHERE id::text=$3)`, parent, v.Product, v.ID).Scan(&cycle); err != nil {
+			return nil, err
+		}
+		if cycle {
+			return nil, fmt.Errorf("en mappe kan ikke flyttes inn i seg selv eller en av sine undermapper")
+		}
+	}
 	var id string
-	var err error
 	if v.ID == "" {
-		err = a.db.QueryRow(ctx, `INSERT INTO ad_folders(product_id,name) VALUES($1,$2) RETURNING id::text`, v.Product, v.Name).Scan(&id)
+		err = tx.QueryRow(ctx, `INSERT INTO ad_folders(product_id,name,parent_id) VALUES($1,$2,nullif($3,'')::uuid) RETURNING id::text`, v.Product, v.Name, parent).Scan(&id)
 	} else {
-		err = a.db.QueryRow(ctx, `UPDATE ad_folders SET name=$1 WHERE id::text=$2 AND product_id::text=$3 RETURNING id::text`, v.Name, v.ID, v.Product).Scan(&id)
+		err = tx.QueryRow(ctx, `UPDATE ad_folders SET name=$1,parent_id=nullif($4,'')::uuid WHERE id::text=$2 AND product_id::text=$3 RETURNING id::text`, v.Name, v.ID, v.Product, parent).Scan(&id)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("kunne ikke lagre mappen; navnet kan være i bruk")
+		return nil, fmt.Errorf("kunne ikke lagre mappen; navnet kan være i bruk på samme nivå")
 	}
-	return map[string]string{"id": id, "name": v.Name}, nil
+	if err = tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id, "name": v.Name, "parent_id": parent}, nil
 }
 func (a *App) removeAdFolder(ctx context.Context, id string) error {
+	var product string
+	if a.db.QueryRow(ctx, `SELECT product_id::text FROM ad_folders WHERE id::text=$1`, id).Scan(&product) != nil || !a.productAccess(ctx, product, true) {
+		return fmt.Errorf("ingen tilgang til mappen")
+	}
 	tx, err := a.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	var product string
-	if tx.QueryRow(ctx, `SELECT product_id::text FROM ad_folders WHERE id::text=$1 FOR UPDATE`, id).Scan(&product) != nil || !a.productAccess(ctx, product, true) {
-		return fmt.Errorf("ingen tilgang til mappen")
+	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, product+":ad-folders"); err != nil {
+		return err
+	}
+	if err = tx.QueryRow(ctx, `SELECT id::text FROM ad_folders WHERE id::text=$1 FOR UPDATE`, id).Scan(&id); err != nil {
+		return fmt.Errorf("mappen finnes ikke")
+	}
+	var children bool
+	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM ad_folders WHERE parent_id::text=$1)`, id).Scan(&children); err != nil {
+		return err
+	}
+	if children {
+		return fmt.Errorf("flytt eller fjern undermappene før du fjerner denne mappen")
 	}
 	if _, err = tx.Exec(ctx, `UPDATE ads SET folder_id=NULL WHERE folder_id::text=$1`, id); err != nil {
 		return err

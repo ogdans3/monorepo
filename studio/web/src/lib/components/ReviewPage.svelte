@@ -9,7 +9,9 @@
   import ItemTools from './ItemTools.svelte';
   import ChannelPicker from './ChannelPicker.svelte';
   import ChannelLabels from './ChannelLabels.svelte';
+  import { folderTree } from '$lib/folders';
   let folders: Row[] = [];
+  $: tree = folderTree(folders);
   async function organize(values: Row) {
     await act(async () => {
       await api(`/ads/${detail.item.id}/organization`, 'PATCH', values);
@@ -517,8 +519,8 @@
                 value={detail.ad.folder_id || ''}
                 disabled={busy}
                 onchange={(e) => organize({ folder_id: e.currentTarget.value })}
-                ><option value="">Uten mappe</option>{#each folders as f}<option value={f.id}
-                    >{f.name}</option
+                ><option value="">Uten mappe</option>{#each tree.options as f}<option value={f.id}
+                    >{f.path}</option
                   >{/each}</select
               ></label
             >
@@ -528,7 +530,9 @@
               disabled={busy}
               onchange={(channels) => organize({ channels })}
             />
-          {:else}<p>{detail.ad.folder_name || 'Uten mappe'}</p>
+          {:else}<p>
+              {tree.paths.get(detail.ad.folder_id) || detail.ad.folder_name || 'Uten mappe'}
+            </p>
             <p class="small muted">Kanaler for annonsen</p>
             <ChannelLabels value={detail.ad.channels || []} />{/if}
           <p class="small muted">Hver versjon kan merkes med egne kanaler.</p>

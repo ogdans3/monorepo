@@ -14,8 +14,8 @@ func extraMCPTools() []map[string]any {
 		name, description string
 		fields            []string
 	}{
-		{"studio_list_ad_folders", "List this product's ad folders and counts.", []string{}},
-		{"studio_save_ad_folder", "Create or rename a folder. payload JSON: name, optional folder_id. A folder named Ferdig does not approve or publish ads.", []string{"payload"}},
+		{"studio_list_ad_folders", "List all ad folders in this product with parent_id (null at root), direct ad_count and direct folder_count. Nesting has no fixed depth limit.", []string{}},
+		{"studio_save_ad_folder", "Create, rename or move an ad folder. payload JSON: name, optional folder_id for updates, optional parent_id for nesting (empty string moves to root; omitted preserves the parent on updates). Names are unique among siblings, case-insensitively. Cannot move a folder inside itself or its descendants or to another product. Moving a folder keeps its subtree and ads. A folder named Ferdig does not approve or publish ads.", []string{"payload"}},
 		{"studio_organize_ad", "Move an ad or set platform labels. payload JSON: ad_id, optional folder_id (empty string unfiles), optional channels array (tiktok, instagram, snapchat, linkedin, x, facebook, youtube, pinterest, other). To label one exact version, send version_id and channels only alongside ad_id. Replaces that target's labels; [] clears them. Ad and version labels are independent. Does not alter renders, approve or publish.", []string{"payload"}},
 		{"studio_create_item", "Create a draft. payload is JSON with title, kind, body, source_url, rights and tags.", []string{"payload"}},
 		{"studio_create_version", "Create an immutable text version of library content. For ad renders use studio_prepare_ad_upload instead. payload JSON: item_id, expected_version_id, title, body, model, prompt.", []string{"payload"}},

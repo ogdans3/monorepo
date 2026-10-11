@@ -69,9 +69,17 @@ Stjernen på annonsekortet lagrer annonsen som personlig favoritt. Bruk
 «Favoritter» for å vise bare disse; valget deles med bibliotekets favoritter.
 
 Lag egne mapper, for eksempel «Under arbeid» og «Ferdig». Flytt annonser med
-mappevalget på kortet eller gjennomgangssiden. Mapper kan endres og fjernes;
-annonsene og alle versjoner beholdes når en mappe fjernes. Mapper er felles innen
-produktet, og «Ferdig» endrer ikke godkjenningsstatus.
+mappevalget på kortet eller gjennomgangssiden. Mapper kan ha undermapper uten en
+fast dybdegrense. Åpne en mappe og velg «Ny undermappe», og bruk mappestien eller
+nettleserens tilbakeknapp for å gå opp igjen. «Alle» viser alle annonser; inne i
+en mappe vises dens direkte undermapper og annonser. Mappevalgene viser hele stien.
+
+«Rediger mappe» lar deg endre navn og overordnet mappe. Undermapper og annonser
+følger med ved flytting. Navn er unike på samme nivå, og en mappe kan ikke flyttes
+inn i seg selv eller sine undermapper. Mapper med undermapper må tømmes for
+undermapper før de kan fjernes. Annonsene flyttes til «Uten mappe» når en mappe
+fjernes; alle filer og versjoner beholdes. Mapper er felles innen produktet, og
+«Ferdig» endrer ikke godkjenningsstatus.
 
 Merk annonsen og hver enkelt versjon med én eller flere kanaler: TikTok,
 Instagram, Snapchat, LinkedIn, X, Facebook, YouTube, Pinterest eller Annet.

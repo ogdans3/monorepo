@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { Plus, Search, ArrowRight, Star, Folder, Play } from '@lucide/svelte';
+  import { Plus, Search, ArrowRight, Star, Folder, Play, ChevronRight } from '@lucide/svelte';
   import { api, formatDate, type Row } from '$lib/api';
   import MediaCard from './MediaCard.svelte';
   import AdPreview from './AdPreview.svelte';
   import ChannelLabels from './ChannelLabels.svelte';
   import { channels } from '$lib/channels';
+  import { folderTree, folderTrail, folderDescendants } from '$lib/folders';
   export let ads: Row[] = [];
   export let folders: Row[] = [];
   export let product: string;
@@ -25,11 +26,17 @@
   let savingFavorites: string[] = [];
   let folderForm = false,
     folderName = '',
+    folderParent = '',
     editingFolder = '',
     playing = '';
   $: folder = $page.url.searchParams.get('folder') || '';
   $: channel = $page.url.searchParams.get('channel') || '';
-  $: activeFolder = folders.find((f) => f.id === folder);
+  $: tree = folderTree(folders);
+  $: activeFolder = tree.byID.get(folder);
+  $: trail = folderTrail(tree, folder);
+  $: childFolders = folder === 'unfiled' ? [] : tree.children.get(activeFolder?.id || '') || [];
+  $: excludedParents = folderDescendants(tree, editingFolder);
+  $: hasSubfolders = !!tree.children.get(editingFolder)?.length;
   $: if (playing && !filtered.some((ad) => ad.id === playing)) playing = '';
   async function organize(ad: Row, folder_id: string) {
     busy = true;
@@ -46,6 +53,8 @@
   function editFolder(id = '', name = '') {
     editingFolder = id;
     folderName = name;
+    folderParent = id ? tree.byID.get(id)?.parent_id || '' : activeFolder?.id || '';
+    error = '';
     folderForm = true;
   }
   async function saveFolder(e: SubmitEvent) {
@@ -56,7 +65,7 @@
       const saved = await api(
         '/ad-folders' + (editingFolder ? '/' + editingFolder : ''),
         editingFolder ? 'PATCH' : 'POST',
-        { product_id: product, name: folderName },
+        { product_id: product, name: folderName, parent_id: folderParent },
       );
       await onrefresh();
       folderForm = false;
@@ -113,7 +122,25 @@
     const url = new URL($page.url);
     if (value) url.searchParams.set(name, value);
     else url.searchParams.delete(name);
-    void goto(url.pathname + url.search, { replaceState: true, noScroll: true, keepFocus: true });
+    void goto(url.pathname + url.search, {
+      replaceState: name !== 'folder',
+      noScroll: true,
+      keepFocus: true,
+    });
+  }
+  function folderURL(id: string) {
+    const url = new URL($page.url);
+    if (id) url.searchParams.set('folder', id);
+    else url.searchParams.delete('folder');
+    return url.pathname + url.search;
+  }
+  function revealCurrentFolder(node: HTMLElement, _folder: string) {
+    const reveal = () =>
+      void tick().then(() => {
+        if (node.isConnected) node.scrollLeft = node.scrollWidth;
+      });
+    reveal();
+    return { update: reveal };
   }
   onMount(() => {
     let polls = 0,
@@ -253,6 +280,18 @@
       >Opprett annonse<ArrowRight size={16} /></button
     >
   </form>{/if}
+{#if activeFolder}<nav
+    class="ad-folder-trail"
+    aria-label="Mappesti"
+    use:revealCurrentFolder={folder}
+  >
+    <a href={folderURL('')}>Alle</a>
+    {#each trail as ancestor}<ChevronRight size={14} aria-hidden="true" />
+      <a href={folderURL(ancestor.id)} aria-current={ancestor.id === folder ? 'page' : undefined}
+        >{ancestor.name}</a
+      >
+    {/each}
+  </nav>{/if}
 <div class="ad-folders-bar">
   <nav class="ad-folders" aria-label="Annonsemapper">
     <button class:chosen={!folder} aria-pressed={!folder} onclick={() => filter('folder', '')}
@@ -264,16 +303,19 @@
       onclick={() => filter('folder', 'unfiled')}
       >Uten mappe <span>{ads.filter((a) => !a.folder_id).length}</span></button
     >
-    {#each folders as f}<button
+    {#each childFolders as f}<button
         class:chosen={folder === f.id}
         aria-pressed={folder === f.id}
         onclick={() => filter('folder', f.id)}
-        ><Folder size={15} />{f.name}<span>{ads.filter((a) => a.folder_id === f.id).length}</span
+        ><Folder size={15} />{f.name}<span
+          >{f.ad_count || 0} annonser{#if f.folder_count}
+            · {f.folder_count} mapper{/if}</span
         ></button
       >{/each}
   </nav>
   {#if canEdit}<div class="button-row">
-      <button class="text-button" onclick={() => editFolder()}><Plus size={15} />Ny mappe</button
+      <button class="text-button" onclick={() => editFolder()}
+        ><Plus size={15} />{activeFolder ? 'Ny undermappe' : 'Ny mappe'}</button
       >{#if activeFolder}<button
           class="text-button"
           onclick={() => editFolder(activeFolder.id, activeFolder.name)}>Rediger mappe</button
@@ -289,6 +331,14 @@
         placeholder="For eksempel: Ferdig"
       /></label
     >
+    <label
+      >Overordnet mappe<select bind:value={folderParent}>
+        <option value="">Toppnivå</option>
+        {#each tree.options.filter((f) => !excludedParents.has(f.id)) as f}<option value={f.id}
+            >{f.path}</option
+          >{/each}
+      </select></label
+    >
     <div class="button-row">
       <button class="primary" disabled={busy}>Lagre mappe</button><button
         type="button"
@@ -297,12 +347,14 @@
       >{#if editingFolder}<button
           type="button"
           class="text-button"
-          disabled={busy}
+          disabled={busy || hasSubfolders}
           onclick={removeFolder}>Fjern mappe</button
         >{/if}
     </div>
     {#if editingFolder}<p class="small muted">
-        Fjerner du mappen, flyttes annonsene til «Uten mappe». Alle filer og versjoner beholdes.
+        {#if hasSubfolders}Flytt eller fjern undermappene før du fjerner denne mappen.
+        {:else}Fjerner du mappen, flyttes annonsene til «Uten mappe». Alle filer og versjoner
+          beholdes.{/if}
       </p>{/if}
   </form>{/if}
 <div class="ads-filters">
@@ -403,11 +455,13 @@
                 value={ad.folder_id || ''}
                 disabled={busy}
                 onchange={(e) => organize(ad, e.currentTarget.value)}
-                ><option value="">Uten mappe</option>{#each folders as f}<option value={f.id}
-                    >{f.name}</option
+                ><option value="">Uten mappe</option>{#each tree.options as f}<option value={f.id}
+                    >{f.path}</option
                   >{/each}</select
               ></label
-            >{:else if ad.folder_name}<span><Folder size={15} />{ad.folder_name}</span>{/if}
+            >{:else if ad.folder_name}<span
+              ><Folder size={15} />{tree.paths.get(ad.folder_id) || ad.folder_name}</span
+            >{/if}
         </div>
         <button
           type="button"

@@ -3486,6 +3486,30 @@ progress {
   flex-wrap: wrap;
   align-items: center;
 }
+.ad-folder-trail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.ad-folder-trail a {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--muted);
+}
+.ad-folder-trail a[aria-current='page'] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ad-folder-trail svg {
+  flex-shrink: 0;
+}
 .ad-folders {
   display: flex;
   gap: 8px;
@@ -3538,9 +3562,13 @@ progress {
   font-size: 12px;
 }
 .ad-card-folder select {
+  min-width: 0;
   font-size: 12px;
   min-height: 44px;
   background: transparent;
+}
+.ad-card-folder > span {
+  overflow-wrap: anywhere;
 }
 .ad-play {
   display: block;
