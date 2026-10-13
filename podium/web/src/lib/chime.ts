@@ -73,13 +73,26 @@ export function noiseOf(ctx: BaseAudioContext): AudioBuffer {
  * peaks a little above the strike and carries about three quarters of the
  * strike's loudness over its first 20 ms.
  */
-export const CLICK = { down: 3.2, wheel: 1.3, back: 1.5, tens: 0.5 };
+export const CLICK = { down: 3.2, wheel: 1.3, back: 1.5, tens: 1.6 };
+
+/** When the lever comes back after it went down, in seconds. */
+export const CLICK_BACK = 0.062;
+
+/**
+ * How far apart the clicks of a run are. Further than the lever takes to come
+ * back, with room to spare: a tick landing a hair after another is not two
+ * ticks to the ear but one harsh crack, which is what a room voting at once
+ * used to make of the click.
+ */
+export const CLICK_GAP = 0.1;
 
 /**
  * One press of a tally counter. The lever goes down, a hard tick of noise
  * high up, with the number wheel's small tone under it at the count's step;
  * then the lever comes back, a softer, lower tick, a moment after. Every
- * tenth count turns the tens wheel too, and rings an octave up.
+ * tenth count turns the tens wheel too: a lower tick between the two, and
+ * not a tone, since an octave up on the top step is a piercing 4 kHz that
+ * does not sound like the click at all.
  */
 export function click(ctx: BaseAudioContext, out: AudioNode, at: number, count: number, noise: AudioBuffer) {
 	const tick = (t: number, centre: number, gain: number, decay: number) => {
@@ -112,8 +125,8 @@ export function click(ctx: BaseAudioContext, out: AudioNode, at: number, count: 
 	const freq = tallyPitch(count);
 	tick(at, 4600, CLICK.down, 0.016);
 	tone(at + 0.001, freq, CLICK.wheel, 0.075);
-	tick(at + 0.062, 2400, CLICK.back, 0.012);
-	if (Math.floor(count) % LADDER.length === 0) tone(at + 0.03, freq * 2, CLICK.tens, 0.14);
+	if (Math.floor(count) % LADDER.length === 0) tick(at + 0.024, 1700, CLICK.tens, 0.016);
+	tick(at + CLICK_BACK, 2400, CLICK.back, 0.012);
 }
 
 
@@ -152,6 +165,7 @@ class Chime {
 	private url = '';
 	private voice: Voice = 'bell';
 	private cadence = new Cadence();
+	private clicks = new Cadence(CLICK_GAP);
 	private listeners = new Set<() => void>();
 	muted = false;
 
@@ -210,7 +224,8 @@ class Chime {
 	vote(count = 0) {
 		const ctx = this.ctx;
 		if (this.muted || !ctx || ctx.state !== 'running' || !this.out) return;
-		const slot = this.cadence.take(ctx.currentTime);
+		const clicking = !this.buffer && this.voice === 'click';
+		const slot = (clicking ? this.clicks : this.cadence).take(ctx.currentTime);
 		if (slot) this.play(ctx, this.out, slot.at, slot.step, count || slot.step + 1, this.voice);
 	}
 
@@ -227,7 +242,7 @@ class Chime {
 		}
 		const now = ctx.currentTime + 0.02;
 		if (this.buffer) this.play(ctx, this.out, now, 0, 1, voice);
-		else if (voice === 'click') for (let i = 0; i < 6; i++) this.play(ctx, this.out, now + i * 0.16, i, i + 1, voice);
+		else if (voice === 'click') for (let i = 0; i < 10; i++) this.play(ctx, this.out, now + i * 0.16, i, i + 1, voice);
 		else for (let i = 0; i < 4; i++) this.play(ctx, this.out, now + i * 0.11, i, i + 1, voice);
 	}
 

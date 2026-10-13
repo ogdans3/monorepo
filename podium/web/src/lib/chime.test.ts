@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { Cadence, LADDER, pitch, SCALE, tallyPitch } from './chime';
+import { Cadence, CLICK_BACK, CLICK_GAP, LADDER, pitch, SCALE, tallyPitch } from './chime';
 
 it('spaces votes that land together into a run', () => {
 	const c = new Cadence(0.06, 0.9, 1.2);
@@ -46,4 +46,12 @@ it('counts up a major scale from G5, a step a vote, and comes round at the eleve
 	expect(tallyPitch(0)).toBe(tallyPitch(1));
 	const climb = Array.from({ length: LADDER.length }, (_, i) => tallyPitch(i + 1));
 	expect(climb.every((f, i) => i === 0 || f > climb[i - 1])).toBe(true);
+});
+
+it('spaces a run of clicks so no tick lands on another', () => {
+	// The lever coming back must be well clear of the next click going down.
+	expect(CLICK_GAP - CLICK_BACK).toBeGreaterThan(0.025);
+	const c = new Cadence(CLICK_GAP);
+	const at = Array.from({ length: 5 }, () => c.take(3)!.at);
+	expect(at.every((t, i) => i === 0 || t - at[i - 1] >= CLICK_GAP - 1e-9)).toBe(true);
 });
