@@ -335,6 +335,9 @@ The one modal in the desk, and it exists because the owner asked for it. «Start
 ### Presentation votes
 Under «Presentasjonen» in the inspector, the total for every question together in the figure face, beside «Nullstill alle stemmer» (small button, disabled at zero, confirms first). It sits above the marks and the sound, because it is what a presenter needs between a rehearsal and the talk.
 
+### Testpublikum
+The rehearsal room (`testpublikum/`, its own service) is a page of the desk and uses the desk's own parts, copied into its stylesheet: hairline sections under a 2px ink rule, Desk Label field names, segments built on real radios, the primary button, the «Direkte» chip. A running room shows the question on screen as rows of answers: the answer's mark square in its colour, the label, the share in Desk Quiet, the count in the figure face, and a 3px bar in the answer's colour on a hairline. A count that has just moved turns Deep Amber, since the desk is paper, and goes back once it has been still for 1400 ms. Nothing else on the page is amber except the «Direkte» chip. Links back to Podium are quiet buttons with a small arrow, because they open beside the page.
+
 ### Sound
 A synthesized bell sounds each vote. Simultaneous votes are spaced 60 ms apart and climb a major pentatonic from C6, so a room voting at once is heard as a rising arpeggio. A run that would lag more than 0.9 s drops notes, because the count is the record. A presentation may carry its own uploaded sound.
 

@@ -1,0 +1,9 @@
+name: Testpublikum
+description: "Telefoner som stemmer i en Podium-presentasjon mens du øver."
+
+# One container: the Go server, with the page built in. It keeps no secret:
+# signing in is Podium's own password, checked by Podium, so the only thing
+# it needs to know is where Podium is.
+http_port: 8080
+env:
+  PODIUM_URL: https://podium.freelunch.no

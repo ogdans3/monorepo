@@ -6,3 +6,5 @@ web/build
 web/test-results
 web/playwright-report
 backend/webdist/dist
+# Its own image, built from its own folder.
+testpublikum

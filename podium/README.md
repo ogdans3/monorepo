@@ -108,6 +108,16 @@ Compose reads `.env` for the same settings, plus `POSTGRES_PASSWORD`,
 - Two volumes hold everything: `podium-db` and `podium-media`. Back up both.
   Replacing the container keeps them; `docker compose down -v` deletes them.
 
+## Try it with a room
+
+`testpublikum/` is a room of phones for rehearsing:
+<https://testpublikum.freelunch.no>, signed in with Podium's password. Pick a
+presentation, a number of phones and a tempo. The phones join as phones do and
+answer each question that comes up, a little at random and not all at once,
+so the display counts and chimes as it will in the talk. Its votes are real
+votes; reset them before the talk. It is its own small Go service, deployed on
+its own. See `testpublikum/README.md`.
+
 ## The vote sound
 
 The brief asked for the sound from Dr Kawashima's Brain Training. That sound

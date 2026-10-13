@@ -122,6 +122,15 @@ next number.
   (`docker exec aicentral-podium-db-1 pg_dump -U podium -Fc podium`), and never
   run `down -v`.
 
+## Testpublikum
+
+`testpublikum/` is a separate Go module and a separate deployment, a room of
+fake phones for rehearsing (`testpublikum/README.md`). It uses only the phone's
+endpoints and the admin sign-in, over HTTP. If a phone-facing endpoint
+changes, the ballot, the vote, the stream or the state frame's shape,
+change `testpublikum/podium.go` and its fake in `testpublikum_test.go` in the same
+commit. Its page copies the desk's tokens; it does not import them.
+
 ## Checks
 
 ```sh
@@ -129,6 +138,9 @@ cd backend && go vet ./... && go test ./...          # needs `docker compose up 
 cd web && pnpm check && pnpm test
 cd web && PODIUM_URL=… PODIUM_PASSWORD=… pnpm e2e     # the whole loop, against a running Podium
 ```
+
+`cd testpublikum && go vet ./... && go test -race ./...` checks the room of
+phones against a fake Podium; it needs no database.
 
 `go test -race` needs cgo. Without a C compiler, run it in
 `golang:1.27.1-bookworm` with `--network host`.
