@@ -55,7 +55,8 @@ The tests run phones against a fake Podium in the test file. They cover:
   Podium's;
 - an answer still to be given is let go when the question leaves the screen;
 - phones come back when their streams are cut;
-- the room answers again after a reset;
+- the room answers again after a reset, and a reset after the room shrank
+  counts only the phones still in it;
 - turnout leaves some out;
 - a deleted presentation ends the run;
 - the room leans the way its lean says;

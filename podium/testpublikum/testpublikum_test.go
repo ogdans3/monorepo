@@ -402,6 +402,37 @@ func TestTheRoomAnswersAgainAfterAReset(t *testing.T) {
 	})
 }
 
+func TestAResetAfterTheRoomShrankCountsOnlyWhoIsLeft(t *testing.T) {
+	f := newFake(t)
+	r := start(t, f, 20, quick)
+
+	f.show("a", "Krymper?", "Ja", "Nei")
+	eventually(t, 5*time.Second, "20 votes", func() bool { return f.voters("a") == 20 })
+	for _, n := range []int{15, 10, 5} {
+		r.resize(n)
+	}
+	eventually(t, 5*time.Second, "five phones", func() bool { return f.openPhones() == 5 })
+	f.reset()
+	eventually(t, 5*time.Second, "the five to answer again", func() bool { return f.voters("a") == 5 })
+	eventually(t, 2*time.Second, "the tally to agree with Podium", func() bool {
+		q := r.view().Screen.Question
+		return q != nil && q.Voted == 5 && q.Waiting == 0
+	})
+	v := r.view()
+	if !logged(v, "«Krymper?»: alle 5 svarte.") {
+		t.Errorf("the log counts phones that have left: %+v", v.Log)
+	}
+	changes := 0
+	for _, l := range v.Log {
+		if strings.HasPrefix(l.Text, "Endret til ") {
+			changes++
+		}
+	}
+	if changes != 1 || !logged(v, "Endret til 5 telefoner.") {
+		t.Errorf("three presses in a row are one line, where they ended: %+v", v.Log)
+	}
+}
+
 func TestSomeOfTheRoomLetsAQuestionGoBy(t *testing.T) {
 	f := newFake(t)
 	half := quick

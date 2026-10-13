@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"math/rand/v2"
+	"strings"
 	"sync"
 	"time"
 )
@@ -170,7 +171,13 @@ func (r *run) resize(n int) {
 		r.phones = r.phones[:len(r.phones)-1]
 	}
 	if before > 0 && before != n {
-		r.say(fmt.Sprintf("Endret til %d telefoner.", n))
+		// A row of presses is one change: the last line says where it ended.
+		text := fmt.Sprintf("Endret til %d telefoner.", n)
+		if i := len(r.lines) - 1; i >= 0 && strings.HasPrefix(r.lines[i].Text, "Endret til ") && time.Since(r.lines[i].At) < 10*time.Second {
+			r.lines[i] = line{At: time.Now(), Text: text}
+		} else {
+			r.say(text)
+		}
 	}
 }
 
@@ -343,7 +350,10 @@ func (r *run) gaveUp(n int, slideID string) {
 }
 
 // lost is a phone whose answer Podium no longer has: the votes were reset.
-// The phone answers again, as a person would whose phone asks again.
+// A reset takes every answer on the question, so the first phone to notice
+// takes them all off the tally, those of phones that have left the room too,
+// which no phone is left to notice. The phones answer again, as people do
+// whose phones ask again.
 func (r *run) lost(n int, q question) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -352,6 +362,7 @@ func (r *run) lost(n int, q question) {
 	t.told = false
 	if time.Since(r.resetAt[q.SlideID]) > 10*time.Second {
 		r.resetAt[q.SlideID] = time.Now()
+		t.votes = map[int]string{}
 		r.say(fmt.Sprintf("Stemmene på «%s» ble nullstilt. Telefonene svarer på nytt.", titled(q.Title)))
 	}
 }
