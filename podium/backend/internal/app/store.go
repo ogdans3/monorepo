@@ -79,7 +79,10 @@ type Presentation struct {
 	Title string `json:"title"`
 	Code  string `json:"code"`
 	// What marks the answers besides their colour: «letters» or «numbers».
-	Marks        string    `json:"marks"`
+	Marks string `json:"marks"`
+	// The built-in vote sound, «bell» or «click». An uploaded sound, when
+	// there is one, plays instead.
+	Chime        string    `json:"chime"`
 	LiveSlideID  *string   `json:"liveSlideId"`
 	SoundMediaID *string   `json:"soundMediaId"`
 	UpdatedAt    time.Time `json:"updatedAt"`
@@ -209,12 +212,12 @@ func presentationByCode(ctx context.Context, q querier, code string) (Presentati
 	return scanPresentation(q.QueryRow(ctx, presentationColumns+` where p.code = $1`, strings.ToUpper(code)))
 }
 
-const presentationColumns = `select p.id, p.title, p.code, p.marks, p.live_slide_id, p.sound_media_id, p.updated_at,
+const presentationColumns = `select p.id, p.title, p.code, p.marks, p.chime, p.live_slide_id, p.sound_media_id, p.updated_at,
 	(select count(*) from slides s where s.presentation_id = p.id) from presentations p`
 
 func scanPresentation(row pgx.Row) (Presentation, error) {
 	var p Presentation
-	err := row.Scan(&p.ID, &p.Title, &p.Code, &p.Marks, &p.LiveSlideID, &p.SoundMediaID, &p.UpdatedAt, &p.SlideCount)
+	err := row.Scan(&p.ID, &p.Title, &p.Code, &p.Marks, &p.Chime, &p.LiveSlideID, &p.SoundMediaID, &p.UpdatedAt, &p.SlideCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return p, errNotFound
 	}

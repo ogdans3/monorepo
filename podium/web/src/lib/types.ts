@@ -65,6 +65,8 @@ export interface Presentation {
 	marks: 'letters' | 'numbers';
 	liveSlideId: string | null;
 	soundMediaId: string | null;
+	/** The built-in vote sound, for when there is no upload. */
+	chime: 'bell' | 'click';
 	updatedAt: string;
 	slideCount: number;
 	slides?: Slide[];
@@ -77,8 +79,10 @@ export interface LiveState {
 	title: string;
 	code: string;
 	marks?: 'letters' | 'numbers';
-	/** The uploaded vote sound, or empty for the built-in chime. */
+	/** The uploaded vote sound, or empty for the built-in one. */
 	sound: string;
+	/** The built-in sound: the bell, or the tally counter's click. */
+	chime?: 'bell' | 'click';
 	slide: Slide | null;
 	index: number;
 	count: number;

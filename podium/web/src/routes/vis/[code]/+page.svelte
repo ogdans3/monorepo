@@ -39,7 +39,7 @@
 		}
 		live = s;
 		if (s.slide) started = true;
-		chime.use(s.sound);
+		chime.use(s.sound, s.chime ?? 'bell');
 	}
 
 	function onVote(v: VoteEvent) {
@@ -47,7 +47,8 @@
 		if (!slide || slide.id !== v.slideId) return;
 		for (const o of slide.options) o.count = v.counts[o.id] ?? 0;
 		slide.total = v.total;
-		chime.vote();
+		// The count goes with it: the click's tone climbs with the votes.
+		chime.vote(v.total);
 		// The change colour holds while the votes keep coming, and lets go
 		// once they have stopped for a moment.
 		moving[v.optionId] = true;

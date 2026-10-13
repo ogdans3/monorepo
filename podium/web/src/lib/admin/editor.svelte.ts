@@ -426,12 +426,15 @@ export class Editor {
 		}
 	}
 
-	async setSound(mediaId: string) {
+	/** The sound for every vote: an uploaded one, or, with no upload, a built-in [chime]. */
+	async setSound(mediaId: string, chime?: 'bell' | 'click') {
 		try {
 			const res = await api<{ presentation: Presentation }>('PATCH', `/api/admin/presentations/${this.p.id}`, {
-				soundMediaId: mediaId
+				soundMediaId: mediaId,
+				...(chime ? { chime } : {})
 			});
 			this.p.soundMediaId = res.presentation.soundMediaId;
+			this.p.chime = res.presentation.chime;
 		} catch (err) {
 			this.notice = message(err);
 		}

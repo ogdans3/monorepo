@@ -17,8 +17,10 @@ type liveState struct {
 	Code  string `json:"code"`
 	// What marks the answers besides their colour: «letters» or «numbers».
 	Marks string `json:"marks,omitempty"`
-	// The uploaded vote sound, or empty for the built-in chime.
+	// The uploaded vote sound, or empty for the built-in one.
 	Sound string `json:"sound"`
+	// The built-in sound, for when there is no upload: «bell» or «click».
+	Chime string `json:"chime,omitempty"`
 	Slide *Slide `json:"slide"`
 	// Where the slide is in the presentation, from 1, and how many there are.
 	Index int `json:"index"`
@@ -36,7 +38,7 @@ type voteEvent struct {
 }
 
 func (s *Server) stateOf(ctx context.Context, p Presentation) (liveState, error) {
-	st := liveState{ID: p.ID, Title: p.Title, Code: p.Code, Marks: p.Marks, Count: p.SlideCount}
+	st := liveState{ID: p.ID, Title: p.Title, Code: p.Code, Marks: p.Marks, Chime: p.Chime, Count: p.SlideCount}
 	if p.SoundMediaID != nil {
 		st.Sound = mediaURL(*p.SoundMediaID)
 	}

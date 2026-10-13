@@ -339,7 +339,11 @@ Under «Presentasjonen» in the inspector, the total for every question together
 The rehearsal room (`testpublikum/`, its own service) is a page of the desk and uses the desk's own parts, copied into its stylesheet: hairline sections under a 2px ink rule, Desk Label field names, segments built on real radios, the primary button, the «Direkte» chip. A running room shows the question on screen as rows of answers: the answer's mark square in its colour, the label, the share in Desk Quiet, the count in the figure face, and a 3px bar in the answer's colour on a hairline. A count that has just moved turns Deep Amber, since the desk is paper, and goes back once it has been still for 1400 ms. Nothing else on the page is amber except the «Direkte» chip. Links back to Podium are quiet buttons with a small arrow, because they open beside the page.
 
 ### Sound
-A synthesized bell sounds each vote. Simultaneous votes are spaced 60 ms apart and climb a major pentatonic from C6, so a room voting at once is heard as a rising arpeggio. A run that would lag more than 0.9 s drops notes, because the count is the record. A presentation may carry its own uploaded sound.
+A presentation chooses its built-in sound under «Lyd for hver stemme»: «Klokke» or «Telleklikk». Both are made in the browser (`web/src/lib/chime.ts`), and an uploaded sound replaces either.
+
+The **Telleklikk** is a tally counter, in the spirit of the click as the boxes are counted in Brain Training, which the owner asked for. Each vote is a press: a hard tick of band-passed noise (4.6 kHz) as the lever goes down, a short triangle tone under it, and a softer tick (2.4 kHz) 62 ms later as the lever comes back. The tone is the count, climbing a major scale from G5 a step a vote on the question and starting again at the eleventh, as a counter's units wheel comes round. Every tenth vote rings an octave up, the tens wheel turning. A click lasts about 80 ms and is set to about three quarters of a bell's loudness over its first 20 ms.
+
+The **Klokke** is the bell. A synthesized bell sounds each vote. Simultaneous votes are spaced 60 ms apart and climb a major pentatonic from C6, so a room voting at once is heard as a rising arpeggio. A run that would lag more than 0.9 s drops notes, because the count is the record. A presentation may carry its own uploaded sound.
 
 ## Do's and Don'ts
 

@@ -120,12 +120,17 @@ its own. See `testpublikum/README.md`.
 
 ## The vote sound
 
-The brief asked for the sound from Dr Kawashima's Brain Training. That sound
-belongs to Nintendo and is not shipped. Podium plays its own chime instead:
-a short bell, synthesised in the browser (`web/src/lib/chime.ts`). Votes
-that land together play as a quick rising run. A presentation can use an
-uploaded sound instead, under *Presentasjonen → Lyd for hver stemme* in the
-editor.
+The brief asked for the sound from Dr Kawashima's Brain Training, the click
+as the boxes are counted. That sound belongs to Nintendo and is not shipped.
+Podium makes its own, in the browser (`web/src/lib/chime.ts`), and a
+presentation chooses one under *Presentasjonen → Lyd for hver stemme*:
+
+- **Klokke**, a short bell. Votes that land together play as a quick rising run.
+- **Telleklikk**, the click of a tally counter. Its small tone climbs a step
+  with every vote on the question and comes round every ten, so the room hears
+  the count go up.
+
+An uploaded sound can replace either.
 
 Browsers only play sound after a click or a key press on the page. The display
 says so until one of them has happened.

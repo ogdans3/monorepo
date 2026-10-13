@@ -276,6 +276,30 @@ func TestAnswersHaveColoursAndMarks(t *testing.T) {
 	}
 }
 
+func TestAPresentationChoosesItsBuiltInSound(t *testing.T) {
+	e := setup(t)
+	p := e.newPresentation("Lyd")
+	if p.Chime != "bell" {
+		t.Fatalf("a presentation starts with the bell: %+v", p)
+	}
+	if st, _ := e.call(e.admin, "PATCH", "/api/admin/presentations/"+p.ID, map[string]string{"chime": "trommer", "title": "Ny"}, nil); st != 400 {
+		t.Fatalf("the sound is the bell or the click: %d", st)
+	}
+	if got := e.get(p.ID); got.Title != "Lyd" {
+		t.Fatalf("a refused change changes nothing: %+v", got)
+	}
+	var updated presentationBody
+	e.call(e.admin, "PATCH", "/api/admin/presentations/"+p.ID, map[string]string{"chime": "click", "soundMediaId": ""}, &updated)
+	if updated.Presentation.Chime != "click" || updated.Presentation.SoundMediaID != nil {
+		t.Fatalf("the click: %+v", updated.Presentation)
+	}
+	var live liveState
+	e.call(e.admin, "PUT", "/api/admin/presentations/"+p.ID+"/live", map[string]string{"slideId": p.Slides[0].ID}, &live)
+	if live.Chime != "click" || live.Sound != "" {
+		t.Fatalf("the display is told to click: %+v", live)
+	}
+}
+
 // scratchDatabase makes an empty database of its own for one test, beside the
 // test database, and takes it away after.
 func scratchDatabase(t *testing.T, name string) string {

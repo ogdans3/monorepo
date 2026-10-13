@@ -96,7 +96,8 @@ next number.
   sound prompt, a lost-connection note and the first-seconds key hints, all
   in the bottom corner.
 - Nintendo's Brain Training sound is never shipped, whatever the brief says.
-  The chime in `chime.ts` is Podium's own.
+  Both built-in sounds in `chime.ts`, the bell and the tally counter's click,
+  are Podium's own, synthesized in the browser. Don't sample the game.
 
 ## Where it runs
 

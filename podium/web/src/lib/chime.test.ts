@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { Cadence, pitch, SCALE } from './chime';
+import { Cadence, LADDER, pitch, SCALE, tallyPitch } from './chime';
 
 it('spaces votes that land together into a run', () => {
 	const c = new Cadence(0.06, 0.9, 1.2);
@@ -35,4 +35,15 @@ it('starts on C6 and rises in pentatonic steps', () => {
 	expect(pitch(0)).toBeCloseTo(1046.5, 1);
 	expect(pitch(5)).toBeCloseTo(2093, 0);
 	expect(pitch(99)).toBe(pitch(SCALE.length - 1));
+});
+
+it('counts up a major scale from G5, a step a vote, and comes round at the eleventh', () => {
+	expect(tallyPitch(1)).toBeCloseTo(783.99, 1);
+	expect(tallyPitch(2)).toBeCloseTo(880, 0);
+	expect(tallyPitch(8)).toBeCloseTo(1567.98, 0);
+	expect(tallyPitch(10)).toBeCloseTo(783.99 * 2 ** (16 / 12), 1);
+	expect(tallyPitch(11)).toBe(tallyPitch(1));
+	expect(tallyPitch(0)).toBe(tallyPitch(1));
+	const climb = Array.from({ length: LADDER.length }, (_, i) => tallyPitch(i + 1));
+	expect(climb.every((f, i) => i === 0 || f > climb[i - 1])).toBe(true);
 });

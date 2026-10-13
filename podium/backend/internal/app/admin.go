@@ -111,12 +111,18 @@ func (s *Server) updatePresentation(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Title *string `json:"title"`
 		// The sound to play for each vote; an empty string goes back to the
-		// built-in chime.
+		// built-in one.
 		SoundMediaID *string `json:"soundMediaId"`
 		// What marks the answers besides their colour.
 		Marks *string `json:"marks"`
+		// The built-in sound, for when there is no upload: «bell» or «click».
+		Chime *string `json:"chime"`
 	}
 	if !readJSON(w, r, &body) {
+		return
+	}
+	if body.Chime != nil && *body.Chime != "bell" && *body.Chime != "click" {
+		fail(w, http.StatusBadRequest, "bad_chime", "Lyden er klokke eller telleklikk.")
 		return
 	}
 	ctx := r.Context()
@@ -141,6 +147,15 @@ func (s *Server) updatePresentation(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.publishState(ctx, id)
+	}
+	if body.Chime != nil {
+		if _, err := s.db.Exec(ctx, `update presentations set chime = $2, updated_at = now() where id = $1`, id, *body.Chime); err != nil {
+			s.oops(w, err)
+			return
+		}
+		if body.SoundMediaID == nil {
+			s.publishState(ctx, id)
+		}
 	}
 	if body.SoundMediaID != nil {
 		var sound *string

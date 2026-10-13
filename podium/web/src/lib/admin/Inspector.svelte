@@ -304,9 +304,14 @@
 				<span id="sound-label">Lyd for hver stemme</span>
 				<div class="sounds">
 					<label class="sound">
-						<input type="radio" name="sound" checked={!ed.p.soundMediaId} onchange={() => ed.setSound('')} />
+						<input type="radio" name="sound" checked={!ed.p.soundMediaId && ed.p.chime !== 'click'} onchange={() => ed.setSound('', 'bell')} />
 						<span>Klokke</span>
-						<button class="btn quiet icon small" aria-label="Hør klokken" title="Hør" onclick={() => chime.preview()}><Play size={14} strokeWidth={2} /></button>
+						<button class="btn quiet icon small" aria-label="Hør klokken" title="Hør" onclick={() => chime.preview('', 'bell')}><Play size={14} strokeWidth={2} /></button>
+					</label>
+					<label class="sound">
+						<input type="radio" name="sound" checked={!ed.p.soundMediaId && ed.p.chime === 'click'} onchange={() => ed.setSound('', 'click')} />
+						<span>Telleklikk</span>
+						<button class="btn quiet icon small" aria-label="Hør telleklikket" title="Hør" onclick={() => chime.preview('', 'click')}><Play size={14} strokeWidth={2} /></button>
 					</label>
 					{#each sounds as m (m.id)}
 						<label class="sound">
