@@ -46,17 +46,51 @@ export function pitch(step: number): number {
 }
 
 /**
- * The click's tone climbs a major scale, a step for every vote on the
- * question, and starts again at the eleventh, as the units wheel of a tally
- * counter comes round: the room hears the count go up.
+ * The click's tone is a Shepard tone, so the count only ever goes up. It is
+ * one note sounded in eight octaves at once, under a loudness that is fixed by
+ * frequency and not by note: loudest around 1.1 kHz, fading to nothing an
+ * octave or three either side. Every vote moves every octave a step up a
+ * major scale. The top octave fades out as it climbs and a new one fades in
+ * at the bottom, so after seven steps the tone is back where it began, and
+ * the ear never hears it come down. A ladder that started again at the
+ * bottom was heard as a drop.
  */
-export const LADDER = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16];
-const TALLY_BASE = 783.99; // G5
+export const MAJOR = [0, 2, 4, 5, 7, 9, 11];
+const SHEPARD_ROOT = 48.999; // G1, the lowest of the octaves
+const SHEPARD_CENTRE = 1100; // Hz, where the tone is loudest
+const SHEPARD_WIDTH = 1; // octaves, how wide the loudness is
+// Eight: from G1 up to F♯9 at the top step, under any sound card's ceiling.
+const SHEPARD_OCTAVES = 8;
 
-/** The tone of the [count]th vote on a question, counting from 1. */
-export function tallyPitch(count: number): number {
-	const i = (Math.max(1, Math.floor(count)) - 1) % LADDER.length;
-	return TALLY_BASE * 2 ** (LADDER[i] / 12);
+/** The semitones above G of the [count]th vote's tone, counting from 1: up a major scale, round and round. */
+export function tallyStep(count: number): number {
+	return MAJOR[(Math.max(1, Math.floor(count)) - 1) % MAJOR.length];
+}
+
+/** The octaves of the tone [step] semitones above G, and how loud each is. */
+export function shepard(step: number): { freq: number; gain: number }[] {
+	return Array.from({ length: SHEPARD_OCTAVES }, (_, k) => {
+		const freq = SHEPARD_ROOT * 2 ** (k + step / 12);
+		const x = Math.log2(freq / SHEPARD_CENTRE) / SHEPARD_WIDTH;
+		return { freq, gain: Math.exp(-0.5 * x * x) };
+	});
+}
+
+/** What a click is made of, made once for an audio context: noise for the ticks, and a wave for each step of the tone. */
+export interface ClickKit {
+	noise: AudioBuffer;
+	waves: PeriodicWave[];
+}
+
+export function clickKit(ctx: BaseAudioContext): ClickKit {
+	// One oscillator plays all eight octaves: they are the 1st, 2nd, 4th …
+	// 128th harmonics of the lowest, which the wave holds at their loudness.
+	const waves = MAJOR.map((step) => {
+		const imag = new Float32Array(2 ** (SHEPARD_OCTAVES - 1) + 1);
+		shepard(step).forEach(({ gain }, k) => (imag[2 ** k] = gain));
+		return ctx.createPeriodicWave(new Float32Array(imag.length), imag, { disableNormalization: true });
+	});
+	return { noise: noiseOf(ctx), waves };
 }
 
 /** A twentieth of a second of white noise, for the clicks to be cut from. */
@@ -73,7 +107,7 @@ export function noiseOf(ctx: BaseAudioContext): AudioBuffer {
  * peaks a little above the strike and carries about three quarters of the
  * strike's loudness over its first 20 ms.
  */
-export const CLICK = { down: 3.2, wheel: 1.3, back: 1.5, tens: 1.6 };
+export const CLICK = { down: 3.2, wheel: 0.7, back: 1.5, tens: 1.6 };
 
 /** When the lever comes back after it went down, in seconds. */
 export const CLICK_BACK = 0.062;
@@ -94,10 +128,10 @@ export const CLICK_GAP = 0.1;
  * not a tone, since an octave up on the top step is a piercing 4 kHz that
  * does not sound like the click at all.
  */
-export function click(ctx: BaseAudioContext, out: AudioNode, at: number, count: number, noise: AudioBuffer) {
+export function click(ctx: BaseAudioContext, out: AudioNode, at: number, count: number, kit: ClickKit) {
 	const tick = (t: number, centre: number, gain: number, decay: number) => {
 		const src = ctx.createBufferSource();
-		src.buffer = noise;
+		src.buffer = kit.noise;
 		const band = ctx.createBiquadFilter();
 		band.type = 'bandpass';
 		band.frequency.setValueAtTime(centre, t);
@@ -110,10 +144,10 @@ export function click(ctx: BaseAudioContext, out: AudioNode, at: number, count: 
 		src.start(t);
 		src.stop(t + decay + 0.01);
 	};
-	const tone = (t: number, freq: number, gain: number, decay: number) => {
+	const tone = (t: number, step: number, gain: number, decay: number) => {
 		const osc = ctx.createOscillator();
-		osc.type = 'triangle';
-		osc.frequency.setValueAtTime(freq, t);
+		osc.setPeriodicWave(kit.waves[MAJOR.indexOf(step)]);
+		osc.frequency.setValueAtTime(SHEPARD_ROOT * 2 ** (step / 12), t);
 		const env = ctx.createGain();
 		env.gain.setValueAtTime(0, t);
 		env.gain.linearRampToValueAtTime(gain, t + 0.002);
@@ -122,12 +156,14 @@ export function click(ctx: BaseAudioContext, out: AudioNode, at: number, count: 
 		osc.start(t);
 		osc.stop(t + decay + 0.02);
 	};
-	const freq = tallyPitch(count);
 	tick(at, 4600, CLICK.down, 0.016);
-	tone(at + 0.001, freq, CLICK.wheel, 0.075);
-	if (Math.floor(count) % LADDER.length === 0) tick(at + 0.024, 1700, CLICK.tens, 0.016);
+	tone(at + 0.001, tallyStep(count), CLICK.wheel, 0.09);
+	if (Math.floor(count) % TENS === 0) tick(at + 0.024, 1700, CLICK.tens, 0.016);
 	tick(at + CLICK_BACK, 2400, CLICK.back, 0.012);
 }
+
+/** Every this many votes turns the tens wheel. */
+const TENS = 10;
 
 
 /**
@@ -160,7 +196,7 @@ export function strike(ctx: BaseAudioContext, out: AudioNode, at: number, freq: 
 class Chime {
 	private ctx: AudioContext | null = null;
 	private out: AudioNode | null = null;
-	private noise: AudioBuffer | null = null;
+	private kit: ClickKit | null = null;
 	private buffer: AudioBuffer | null = null;
 	private url = '';
 	private voice: Voice = 'bell';
@@ -182,7 +218,7 @@ class Chime {
 		ctx.addEventListener('statechange', () => this.listeners.forEach((f) => f()));
 		this.ctx = ctx;
 		this.out = level;
-		this.noise = noiseOf(ctx);
+		this.kit = clickKit(ctx);
 		return ctx;
 	}
 
@@ -242,7 +278,7 @@ class Chime {
 		}
 		const now = ctx.currentTime + 0.02;
 		if (this.buffer) this.play(ctx, this.out, now, 0, 1, voice);
-		else if (voice === 'click') for (let i = 0; i < 10; i++) this.play(ctx, this.out, now + i * 0.16, i, i + 1, voice);
+		else if (voice === 'click') for (let i = 0; i < 15; i++) this.play(ctx, this.out, now + i * 0.16, i, i + 1, voice);
 		else for (let i = 0; i < 4; i++) this.play(ctx, this.out, now + i * 0.11, i, i + 1, voice);
 	}
 
@@ -252,7 +288,7 @@ class Chime {
 			src.buffer = this.buffer;
 			src.connect(out);
 			src.start(at);
-		} else if (voice === 'click' && this.noise) click(ctx, out, at, count, this.noise);
+		} else if (voice === 'click' && this.kit) click(ctx, out, at, count, this.kit);
 		else strike(ctx, out, at, pitch(step));
 	}
 }

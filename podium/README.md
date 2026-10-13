@@ -127,8 +127,9 @@ presentation chooses one under *Presentasjonen → Lyd for hver stemme*:
 
 - **Klokke**, a short bell. Votes that land together play as a quick rising run.
 - **Telleklikk**, the click of a tally counter. Its small tone climbs a step
-  with every vote on the question and comes round every ten, so the room hears
-  the count go up.
+  up a major scale with every vote, and never comes back down: it is a Shepard
+  tone, the same note in eight octaves under a fixed loudness, so the room
+  hears the count go up however long it goes on.
 
 An uploaded sound can replace either.
 
