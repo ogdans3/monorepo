@@ -167,6 +167,32 @@ check passed (zero errors, eight existing warnings). These are mobile browser
 engine tests with device emulation, not a physical handset or Low Power Mode
 certification.
 
+## 26-second presentation showcase
+
+The October 14 presentation film combines the four audited models in a silent
+1920×1080, 24fps H.264 MP4: an iPhone close-up and hidden screen change, a Pixel
+barrel roll, two Samsung spins, a MacBook hinge opening, and a moving four-model
+closing card. Typography and diagonal transitions are composed separately from
+the transparent 3D passes. All device geometry, materials and hinge behavior
+come from the shared `SceneRenderer` and shipped model files.
+
+From this project folder, with client/MCP dependencies, Pillow and the system
+Nimbus Sans fonts installed:
+
+```sh
+node mcp/scripts/render-showcase.mjs /path/to/showcase-output
+python3 mcp/scripts/assemble-showcase.py /path/to/showcase-output
+```
+
+Both scripts accept `--samples` for composition checks. The renderer resumes
+existing numbered PNGs; use a fresh output folder after changing choreography,
+models or screen assets. `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can select an installed
+Chromium. The film has 624 frames, no audio stream and fast-start metadata.
+The renderer writes model hashes; the compositor writes a video manifest and
+decodes the complete MP4 to check the export. Keep the large intermediate passes
+outside the repository. The opening deliberately crops the close-up at the
+video's top/bottom edges; the following device passes show the complete models.
+
 ## iPhone delivery and continuous playback
 
 A subsequent live-site check reproduced a separate delivery failure: uncached
