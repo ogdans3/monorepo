@@ -5,7 +5,12 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: ["auth-ui.spec.ts", "auth-network.spec.ts", "editor-responsive.spec.ts"],
+  testMatch: [
+    "auth-ui.spec.ts",
+    "auth-network.spec.ts",
+    "auth-live.spec.ts",
+    "editor-responsive.spec.ts",
+  ],
   timeout: 60_000,
   expect: { timeout: 15_000 },
   workers: 1,

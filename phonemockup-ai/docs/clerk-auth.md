@@ -24,10 +24,26 @@ this project's framework. No replacement application should be created.
 
 ## Configuration and handoff
 
-At implementation time `clerk doctor` reported the CLI signed out, no project link,
-and no local key file. Therefore no real Clerk users were created or imported, no live
-sessions were tested, and no database migration was applied. Code verification is
-separate from the account/production configuration below.
+On 17 October 2026, the CLI login completed and this repository was linked to the
+selected application. Development credentials were pulled into the ignored
+`client/.env.local` through `clerk env pull`, without reading or printing that file.
+The real sign-in and sign-up forms load in desktop Chromium and iPhone WebKit.
+No test users were created, no completed account sessions were tested, and no
+database migration was applied.
+
+The project-root `Dockerfile` is specifically the dashboard's development preview
+at `phonemockup-ai.freelunch.no`. It supplies this app's **public development key**
+as an overridable build argument/runtime environment default. No secret key is
+included. `.dockerignore` excludes environment files. The separate
+`client/Dockerfile` used by the production stack has no development-key default.
+
+`clerk deploy status` currently reports `not_started`: the selected app has no
+production instance, domain, or production OAuth configuration yet. The preview's
+development login must not be treated as a production rollout. Clerk's production
+wizard requires a human terminal; run `npx -y clerk@latest deploy --mode human`
+from the linked project when ready, then verify with `clerk deploy status`.
+
+To repeat setup on another machine:
 
 1. Sign into the CLI **in your host terminal**:
    ```sh
@@ -37,7 +53,7 @@ separate from the account/production configuration below.
    already-selected application and pull development keys:
    ```sh
    npx -y clerk@latest link --app app_3KpbkjJ8Th3Wsj3wLa3LWI4JRgP
-   npx -y clerk@latest env pull
+   npx -y clerk@latest env pull --app app_3KpbkjJ8Th3Wsj3wLa3LWI4JRgP --instance dev --file .env.local
    npx -y clerk@latest doctor
    ```
    If the CLI cannot detect SvelteKit's key name, the app also accepts the JavaScript
@@ -120,6 +136,16 @@ fallback, and existing editor interactions in Chromium and iPhone-configured Web
 It is browser emulation, not a physical iPhone test. Real sign-up/OAuth/profile flows
 still require connection to the selected Clerk instance and an authorized test account.
 
+To check the real Clerk forms and sign-in/sign-up navigation without submitting
+credentials or creating users, start a configured client and run:
+
+```sh
+CLERK_LIVE_TEST=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:5200 npx playwright test --config=playwright.auth.config.ts auth-live.spec.ts
+```
+
+For the built client, `HOST=127.0.0.1 PORT=5200 node --env-file=.env.local server.mjs`
+loads the CLI-pulled configuration without displaying its contents. Use Node 22.
+
 The npm lockfile remains the production source of truth. `bun.lock` was regenerated
 from that lock with current Bun, replacing the obsolete binary lockfile; use Bun 1.2+
 for local Bun installs.
@@ -148,3 +174,8 @@ warnings), client production build, server typecheck/build, built API module loa
 14 backend tests, 42 production browser account/editor cases, and two production SDK
 network-recovery cases all passed. No physical-device or live-account login claim is
 made by these checks.
+
+After connecting the selected instance, all six opt-in live-form checks passed
+in Chromium and iPhone WebKit, including sign-in/sign-up links retaining the
+requested editor destination. These checks do not create accounts or verify a
+completed email/Google sign-in session.
