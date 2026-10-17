@@ -224,30 +224,39 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 10px;
     border: 1px solid #ffffff70;
     border-radius: 50px;
-    background: #f9faf0df;
-    color: #263329;
+    background: #faf9f6f2;
+    color: #242421;
     cursor: pointer;
-    backdrop-filter: blur(8px);
+    transition:
+      background 160ms ease,
+      transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
     font:
-      500 11px/1.2 Arial,
+      500 12px/1.2 Arial,
       sans-serif;
   }
-  .playback:hover {
-    background: #fff;
+  @media (hover: hover) and (pointer: fine) {
+    .playback:hover {
+      background: #fff;
+    }
+  }
+  .playback:active {
+    transform: scale(0.96);
   }
   .playback:focus-visible {
-    outline: 3px solid #1e4527;
+    outline: 2px solid #242421;
     outline-offset: 3px;
   }
-  @media (pointer: coarse) {
+  @media (prefers-reduced-motion: reduce) {
     .playback {
-      min-width: 44px;
-      min-height: 44px;
+      transition: none;
+    }
+    .playback:active {
+      transform: none;
     }
   }
 </style>

@@ -1,12 +1,10 @@
 <script lang="ts">
   import {
     ArrowUpRight,
-    ArrowDown,
     ArrowRight,
+    ArrowDown,
     Play,
     Pause,
-    Check,
-    Plus,
   } from "@lucide/svelte";
   import animationGroups from "$lib/animations/animations.svelte";
   import MotionPreview from "$lib/components/marketing/MotionPreview.svelte";
@@ -15,9 +13,13 @@
   const heroOptions = ["soft-orbit", "edge-reveal", "top-down"].map((id) =>
     motions.find((m) => m.id === id)!,
   );
+  const desktopMotion = motions.find((m) => m.id === "top-down")!;
   let featured = $state(heroOptions[0]);
   let motionPaused = $state(false);
   let category = $state("All motions");
+  let showAll = $state(false);
+  let menuOpen = $state(false);
+  let menuButton: HTMLButtonElement;
   const categories = [
     "All motions",
     "Zoom",
@@ -28,173 +30,224 @@
     "Detail",
     "Loop",
   ];
+  const firstMotions = [
+    "soft-orbit",
+    "macro-rush",
+    "double-spin",
+    "flip-cut",
+    "top-down",
+    "detail-study",
+  ].map((id) => motions.find((m) => m.id === id)!);
+  const allMotions = [
+    ...firstMotions,
+    ...motions.filter((m) => !firstMotions.some((first) => first.id === m.id)),
+  ];
   const filtered = $derived(
     category === "All motions"
-      ? motions
+      ? allMotions
       : motions.filter((m) => m.categories?.some((c) => c === category)),
+  );
+  const visibleMotions = $derived(
+    category === "All motions" && !showAll ? firstMotions : filtered,
   );
   const duration = (group: (typeof motions)[number]) =>
     Math.max(...group.animations.map((a) => a.end));
   const devices = [
     {
       name: "iPhone 16 Pro",
-      detail: "A frame for your next big thing.",
+      short: "iPhone",
       preset: "soft-orbit",
-      image: "soft-orbit",
+      detail:
+        "Titanium frame. Three cameras. Keep the Dynamic Island, or give your screen the whole stage.",
     },
     {
       name: "Pixel 9 Pro",
-      detail: "Clean lines. Your screen, uninterrupted.",
+      short: "Pixel",
       preset: "detail-study",
-      image: "detail-study",
+      detail:
+        "The distinctive camera bar, down to the details. Show or hide the front camera cutout.",
     },
     {
       name: "Galaxy S24 Ultra",
-      detail: "Sharp corners. All the presence.",
+      short: "Galaxy",
       preset: "slow-spin",
-      image: "slow-spin",
+      detail:
+        "A flat display and a crisp, squared silhouette. Built for close-ups as well as full spins.",
     },
     {
       name: "MacBook Pro 14″",
-      detail: "Give the bigger picture its moment.",
+      short: "MacBook",
       preset: "top-down",
-      image: "top-down",
+      detail:
+        "A bigger canvas for websites and desktop apps. Set the lid angle, or animate it opening.",
     },
   ];
+  let selectedDevice = $state(devices[0]);
+  const deviceMotion = $derived(
+    motions.find((m) => m.id === selectedDevice.preset)!,
+  );
   const faqs = [
     {
-      q: "Can I try it without signing up?",
-      a: "Yes. Open the editor, add an image or video, and export your mockup. No account is needed to get started.",
+      q: "Is it really free?",
+      a: "Yes. PhoneMockup is free during beta. Export without a watermark, and start without an account.",
     },
     {
-      q: "Can I use my own screen recording?",
-      a: "Absolutely. Drop in an image or video. It maps onto the screen while the device follows the animation you picked.",
+      q: "What can I put on the screen?",
+      a: "A screenshot, a design export, or a screen recording. Drop in an image or video and it follows the device’s movement.",
     },
     {
-      q: "Can I change the animation?",
-      a: "Every motion is editable. Adjust the keyframes, timing, easing, model and background, or start from a blank canvas.",
+      q: "Can I change the motion?",
+      a: "Every preset is editable. Adjust keyframes, timing and easing, or build an animation from a blank canvas.",
     },
     {
-      q: "What can I export?",
-      a: "Export video as MP4, WebM or GIF, or download a still image. Transparent backgrounds are available in formats that support them.",
-    },
-    {
-      q: "How much does it cost?",
-      a: "PhoneMockup is free during beta, with no watermark on your exports.",
+      q: "Which formats can I export?",
+      a: "MP4, WebM and GIF for motion. PNG for stills. Choose a transparent background when the format supports it.",
     },
   ];
 </script>
 
+<svelte:window
+  onkeydown={(event) => {
+    if (event.key === "Escape" && menuOpen) {
+      menuOpen = false;
+      menuButton?.focus();
+    }
+  }}
+/>
+
 <svelte:head>
-  <title>PhoneMockup — Your work. In motion.</title>
+  <title>PhoneMockup — Your work. Every angle.</title>
   <meta
     name="description"
-    content={`Turn your screens into beautiful 3D mockups. ${motions.length} original animations, four detailed devices, and a studio right in your browser. Free during beta.`}
+    content="Make animated 3D device mockups from your screenshots and screen recordings. Four detailed devices, 16 editable motions. Free during beta. No watermark."
   />
-  <meta property="og:title" content="PhoneMockup — Your work. In motion." />
+  <meta property="og:title" content="PhoneMockup — Your work. Every angle." />
   <meta
     property="og:description"
-    content="Good work deserves a great entrance. Create and export animated device mockups in your browser."
+    content="Your screenshots and screen recordings, in a whole new dimension. Create animated device mockups in your browser."
   />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://phonemockup.app/og-cover.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#faf9f6" />
   <link rel="canonical" href="https://phonemockup.app/" />
+  <link
+    rel="preload"
+    href="/fonts/archivo/archivo-latin-variable.woff2"
+    as="font"
+    type="font/woff2"
+    crossorigin="anonymous"
+  />
 </svelte:head>
 
 <div class="landing">
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header wrap">
     <a class="wordmark" href="/" aria-label="PhoneMockup home"
-      ><span class="brand-icon" aria-hidden="true">p<span>m</span></span
-      >PhoneMockup</a
+      >phonemockup<span class="brand-mark" aria-hidden="true"></span></a
     >
-    <nav aria-label="Main navigation">
-      <a href="#motions">The motions</a><a href="#devices">The devices</a>
+    <nav
+      id="site-navigation"
+      class:open={menuOpen}
+      aria-label="Main navigation"
+    >
+      <a href="#motions" onclick={() => (menuOpen = false)}>Motions</a><a
+        href="#devices"
+        onclick={() => (menuOpen = false)}>Devices</a
+      ><a href="#workflow" onclick={() => (menuOpen = false)}>How it works</a>
+      <a class="mobile-projects" href="/platform/project"
+        >Your projects <ArrowUpRight size={16} /></a
+      >
     </nav>
-    <a class="nav-cta" href="/platform/animation/soft-orbit"
-      >Open studio <ArrowUpRight size={15} /></a
+    <a class="nav-cta" href="/platform/project"
+      >Your projects <ArrowUpRight size={16} /></a
+    >
+    <button
+      class="menu-toggle"
+      type="button"
+      aria-expanded={menuOpen}
+      aria-controls="site-navigation"
+      bind:this={menuButton}
+      onclick={() => (menuOpen = !menuOpen)}
+      >Menu <ArrowDown size={16} /></button
     >
   </header>
 
   <main id="main">
     <section class="hero wrap" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <p class="eyebrow">
-          <span class="live-dot"></span> A LITTLE MOTION. A BIG DIFFERENCE.
-        </p>
-        <h1 id="hero-title">Your work.<br /><span>In motion.</span></h1>
-        <p class="hero-description">
-          You made something worth showing.<br class="desktop-break" /> Give it an
-          entrance to match.
-        </p>
-        <div class="hero-actions">
-          <a class="button primary" href="/platform/animation/soft-orbit"
-            >Make your mockup <ArrowUpRight size={19} /></a
-          ><a class="text-link" href="#motions"
-            >Find your move <ArrowDown size={16} /></a
-          >
-        </div>
-        <p class="micro-proof">
-          <Check size={13} /> Free during beta <span>·</span> No watermark
-          <span>·</span> No signup
-        </p>
-        <div class="hero-note">
-          <span class="note-line"></span>
+      <div class="hero-heading">
+        <h1 id="hero-title">Your work.<br /><span>Every angle.</span></h1>
+        <div class="hero-copy">
           <p>
-            Your screens. Our studio.<br /><strong
-              >A very good first impression.</strong
-            >
+            Your screenshots and screen recordings,<br class="desktop-break" /> in
+            a whole new dimension.
           </p>
+          <div class="hero-actions">
+            <a class="button primary" href="/platform/animation/soft-orbit"
+              >Make a mockup <ArrowUpRight size={20} /></a
+            >
+            <span class="hero-proof">Free during beta. No watermark.</span>
+          </div>
         </div>
       </div>
-      <div
-        class="hero-stage"
-        style={`--stage-color:rgb(${featured.previewBackground?.slice(0, 3).join(",")})`}
-      >
-        <div class="stage-top">
-          <span>THE MOTION STUDIO</span><span>VOL. 01 ↗</span>
-        </div>
-        <div class="hero-media">
-          {#key featured.id}<MotionPreview
-              src={`/previews/${featured.preview}`}
-              poster={`/previews/${featured.poster}`}
-              label={featured.name}
-              priority
-              paused={motionPaused}
-            />{/key}
-        </div>
-        <div class="stage-bottom">
-          <div>
-            <span class="small-label">NOW PLAYING</span><strong
-              >{featured.name}</strong
+      <div class="hero-exhibit">
+        <div
+          class="hero-stage"
+          style:background={`rgb(${featured.previewBackground?.slice(0, 3).join(",")})`}
+        >
+          <div class="stage-label">
+            <span>Make it move.</span><span class="mono"
+              >{duration(featured).toFixed(0)}s loop</span
             >
           </div>
-          <a
-            href={`/platform/animation/${featured.id}`}
-            aria-label={`Use ${featured.name}`}><ArrowUpRight size={23} /></a
+          <div class="hero-media">
+            {#key featured.id}<MotionPreview
+                src={`/previews/${featured.preview}`}
+                poster={`/previews/${featured.poster}`}
+                label={featured.name}
+                priority
+                paused={motionPaused}
+              />{/key}
+          </div>
+          <div class="stage-bottom">
+            <div class="hero-selector" aria-label="Featured animation">
+              {#each heroOptions as group, i}<button
+                  type="button"
+                  aria-label={`0${i + 1} ${group.name}`}
+                  aria-pressed={featured.id === group.id}
+                  onclick={() => (featured = group)}>{group.name}</button
+                >{/each}
+            </div>
+            <a
+              class="round-link"
+              href={`/platform/animation/${featured.id}`}
+              aria-label={`Use ${featured.name}`}><ArrowUpRight size={21} /></a
+            >
+          </div>
+        </div>
+        <div class="desktop-stage">
+          <div class="stage-label">
+            <span>Desktop, too.</span><span class="mono">6s loop</span>
+          </div>
+          <div class="desktop-media">
+            <MotionPreview
+              src={`/previews/${desktopMotion.preview}`}
+              poster={`/previews/${desktopMotion.poster}`}
+              label="MacBook Top Down"
+              paused={motionPaused}
+            />
+          </div>
+          <a class="desktop-caption" href="/platform/animation/top-down"
+            ><span>MacBook Pro <span class="muted">/ Top Down</span></span
+            ><ArrowUpRight size={21} /></a
           >
         </div>
-        <div class="hero-selector" aria-label="Featured animation">
-          {#each heroOptions as group, i}<button
-              type="button"
-              aria-pressed={featured.id === group.id}
-              onclick={() => {
-                featured = group;
-              }}><span>0{i + 1}</span>{group.name}</button
-            >{/each}
-        </div>
+      </div>
+      <div class="hero-foot">
+        <p>Made in your browser. Ready for wherever you share.</p>
+        <a href="#motions">Explore the motions <ArrowDown size={16} /></a>
       </div>
     </section>
-
-    <div class="benefit-strip wrap">
-      <span>Made for the work you put into it.</span>
-      <div>
-        <span>App launches</span><span>Portfolio pieces</span><span
-          >Social posts</span
-        ><span>Product stories</span>
-      </div>
-    </div>
 
     <section
       class="motions-section wrap"
@@ -203,14 +256,14 @@
     >
       <div class="section-heading">
         <div>
-          <p class="eyebrow">01 / MAKE AN ENTRANCE</p>
-          <h2 id="motions-title">
-            Pick a little<br /><em>main-character energy.</em>
-          </h2>
+          <p class="section-index">
+            The motion library <span class="mono">/ {motions.length}</span>
+          </p>
+          <h2 id="motions-title">Find your first move.</h2>
         </div>
         <p>
-          From quiet orbits to full spins and screen flips.<br
-          />{motions.length} original moves. Every one editable.
+          Orbits, close-ups and full turns.<br />Pick a motion, then make it
+          your own.
         </p>
       </div>
       <div class="gallery-toolbar">
@@ -218,103 +271,139 @@
           {#each categories as item}<button
               type="button"
               aria-pressed={category === item}
-              onclick={() => {
-                category = item;
-              }}>{item}</button
+              onclick={() => (category = item)}>{item}</button
             >{/each}
         </div>
         <button
           class="motion-toggle"
           type="button"
           aria-pressed={motionPaused}
-          onclick={() => {
-            motionPaused = !motionPaused;
-          }}
-          >{#if motionPaused}<Play size={13} />{:else}<Pause
-              size={13}
+          onclick={() => (motionPaused = !motionPaused)}
+        >
+          {#if motionPaused}<Play size={15} />{:else}<Pause
+              size={15}
             />{/if}<span
             >{motionPaused ? "Play animations" : "Pause animations"}</span
-          ></button
-        >
+          >
+        </button>
       </div>
-      <div class="motion-grid" aria-live="polite">
-        {#each filtered as group (group.id)}
+      <p class="sr-only" aria-live="polite">
+        Showing {visibleMotions.length} of {filtered.length}
+        {category === "All motions"
+          ? "motions"
+          : category.toLowerCase() + " motions"}.
+      </p>
+      <div class="motion-grid" id="motion-library">
+        {#each visibleMotions as group (group.id)}
           <article class="motion-card">
-            <div class="card-media">
+            <div
+              class="card-media"
+              style:background={`rgb(${group.previewBackground?.slice(0, 3).join(",")})`}
+            >
               <MotionPreview
                 src={`/previews/${group.preview}`}
                 poster={`/previews/${group.poster}`}
                 label={group.name}
                 paused={motionPaused}
-              /><span class="duration"
-                >{duration(group).toFixed(1)} SEC / LOOP</span
-              >
+              />
+              {#if group.screenCut}<span class="cut-label">Screen switch</span
+                >{/if}
             </div>
             <a class="card-title" href={`/platform/animation/${group.id}`}
               ><h3>{group.name}</h3>
-              <ArrowUpRight size={19} /><span class="sr-only">
+              <span class="card-duration mono"
+                >{duration(group).toFixed(0)}s</span
+              ><ArrowUpRight size={19} /><span class="sr-only">
                 — use this animation</span
               ></a
             >
             <p>{group.description}</p>
-            {#if group.screenCut}<span class="cut-label"
-                >Screen switch · {group.screenCut.at.toFixed(2)}s</span
-              >{/if}
           </article>
         {/each}
       </div>
       <div class="gallery-foot">
-        <span>All the moves. None of the learning curve.</span><a
-          class="text-link"
-          href="/platform/animation/still"
-          >Or start with a blank canvas <ArrowUpRight size={15} /></a
+        {#if category === "All motions"}<button
+            class="button secondary"
+            type="button"
+            aria-expanded={showAll}
+            aria-controls="motion-library"
+            onclick={() => (showAll = !showAll)}
+            >{showAll
+              ? "Show fewer motions"
+              : `View all ${motions.length} motions`}<ArrowDown
+              size={17}
+            /></button
+          >{:else}<span
+            >{filtered.length} motions. Every keyframe is yours to edit.</span
+          >{/if}
+        <a class="text-link" href="/platform/animation/still"
+          >Start from scratch <ArrowUpRight size={17} /></a
         >
       </div>
     </section>
 
-    <section class="workflow-section" aria-labelledby="workflow-title">
-      <div class="wrap workflow-inner">
-        <div class="workflow-intro">
-          <p class="eyebrow">02 / FROM SCREEN TO SCENE</p>
-          <h2 id="workflow-title">
-            Less setup.<br />More <em>“look at this.”</em>
-          </h2>
-          <p>
-            No 3D experience required.<br />Just something you want to share.
-          </p>
+    <section
+      class="workflow-section wrap"
+      id="workflow"
+      aria-labelledby="workflow-title"
+    >
+      <div class="workflow-heading">
+        <p class="section-index">From screenshot to final cut</p>
+        <h2 id="workflow-title">The studio, without the setup.</h2>
+      </div>
+      <div class="workflow-body">
+        <div class="editor-preview">
+          <img
+            src="/media/landing/editor.webp"
+            alt="PhoneMockup editor with an iPhone scene, editable motion timeline and model controls"
+            width="1440"
+            height="1000"
+            loading="lazy"
+          /><a href="/platform/animation/soft-orbit"
+            >Take a look inside <ArrowUpRight size={17} /></a
+          >
         </div>
-        <ol class="steps">
-          <li>
-            <span class="step-number">01</span>
-            <div>
-              <h3>Drop in your screen.</h3>
-              <p>
-                An app screenshot. A screen recording.<br />Whatever you’re
-                working on.
-              </p>
-            </div>
-            <span class="step-symbol">↧</span>
-          </li>
-          <li>
-            <span class="step-number">02</span>
-            <div>
-              <h3>Find its rhythm.</h3>
-              <p>
-                Pick a motion. Make it yours with<br />timing, colour and a
-                camera angle.
-              </p>
-            </div>
-            <span class="step-symbol">↗</span>
-          </li>
-          <li>
-            <span class="step-number">03</span>
-            <div>
-              <h3>Send it out into the world.</h3>
-              <p>Export a video or a still.<br />Ready for your next launch.</p>
-            </div>
-            <span class="step-symbol">↗</span>
-          </li>
-        </ol>
+        <div class="workflow-copy">
+          <p class="workflow-lead">
+            The good part of making a product film. Without learning 3D
+            software.
+          </p>
+          <ol class="steps">
+            <li>
+              <span class="mono">01</span>
+              <div>
+                <h3>Bring your screen.</h3>
+                <p>
+                  Drop in a screenshot or screen recording. Your work fits
+                  straight onto the display.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="mono">02</span>
+              <div>
+                <h3>Find your angle.</h3>
+                <p>
+                  Choose a device and a motion. Adjust the timing, background
+                  and details.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="mono">03</span>
+              <div>
+                <h3>Get it out there.</h3>
+                <p>
+                  Export a video, GIF or still. No watermark. Ready for your
+                  launch, portfolio or feed.
+                </p>
+              </div>
+            </li>
+          </ol>
+          <a class="text-link" href="/platform/animation/soft-orbit"
+            >Open the studio <ArrowRight size={18} /></a
+          >
+        </div>
       </div>
     </section>
 
@@ -325,91 +414,106 @@
     >
       <div class="section-heading">
         <div>
-          <p class="eyebrow">03 / GOOD COMPANY FOR YOUR DESIGN</p>
-          <h2 id="devices-title">
-            The right frame.<br /><em>For your big idea.</em>
-          </h2>
+          <p class="section-index">
+            The devices <span class="mono">/ 04</span>
+          </p>
+          <h2 id="devices-title">Choose your device.</h2>
         </div>
-        <p>Four carefully built devices.<br />One very flexible studio.</p>
-      </div>
-      <div class="device-grid">
-        {#each devices as device}<a
-            href={`/platform/animation/${device.preset}`}
-            class="device-card"
-            ><div
-              class="device-picture"
-              style:background={`rgb(${motions
-                .find((m) => m.id === device.preset)
-                ?.previewBackground?.slice(0, 3)
-                .join(",")})`}
-            >
-              <img
-                src={`/previews/motion-2026/${device.image}.webp`}
-                alt={`${device.name} 3D mockup`}
-                loading="lazy"
-                width="640"
-                height="800"
-              />
-            </div>
-            <div>
-              <h3>{device.name}</h3>
-              <ArrowUpRight size={17} />
-            </div>
-            <p>{device.detail}</p></a
-          >{/each}
-      </div>
-      <div class="device-note">
-        <span>YOUR SCREEN GETS THE SPOTLIGHT.</span>
         <p>
-          Keep the camera cutout, or hide it on iPhone and Pixel. Open the
-          MacBook lid to find your angle.
+          Detailed 3D models, made for the close-up.<br />Use any device with
+          any motion.
         </p>
+      </div>
+      <div class="device-browser">
+        <div class="device-controls">
+          <div class="device-tabs" role="group" aria-label="Preview a device">
+            {#each devices as device, i}<button
+                type="button"
+                aria-pressed={selectedDevice.name === device.name}
+                onclick={() => (selectedDevice = device)}
+                ><span class="mono">0{i + 1}</span><span>{device.name}</span
+                ><ArrowUpRight size={20} /></button
+              >{/each}
+          </div>
+          <div class="device-detail" aria-live="polite">
+            <p>{selectedDevice.detail}</p>
+            <p class="device-options">Show or hide the logo on every model.</p>
+            <a
+              class="text-link"
+              href={`/platform/animation/${selectedDevice.preset}`}
+              >Use this {selectedDevice.short} <ArrowRight size={18} /></a
+            >
+          </div>
+        </div>
+        <div
+          class="device-picture"
+          style:background={`rgb(${deviceMotion.previewBackground?.slice(0, 3).join(",")})`}
+        >
+          {#key selectedDevice.name}<MotionPreview
+              src={`/previews/${deviceMotion.preview}`}
+              poster={`/previews/${deviceMotion.poster}`}
+              label={selectedDevice.name}
+              paused={motionPaused}
+            />{/key}
+        </div>
       </div>
     </section>
 
     <section class="faq-section wrap" aria-labelledby="faq-title">
-      <div>
-        <p class="eyebrow">THE SMALL PRINT, SIMPLIFIED</p>
-        <h2 id="faq-title">Good questions.</h2>
+      <div class="faq-heading">
+        <h2 id="faq-title">A few useful answers.</h2>
+        <p>Less guesswork. More making.</p>
       </div>
       <div class="faq-list">
-        {#each faqs as item}<details>
-            <summary>{item.q}<Plus size={17} /></summary>
+        {#each faqs as item}<article>
+            <h3>{item.q}</h3>
             <p>{item.a}</p>
-          </details>{/each}
+          </article>{/each}
       </div>
     </section>
 
-    <section class="final-cta wrap">
-      <p class="eyebrow">YOUR NEXT BIG THING STARTS HERE.</p>
-      <h2>Ready for your<br /><em>close-up?</em></h2>
+    <section class="final-cta wrap" aria-labelledby="final-title">
+      <div>
+        <p class="section-index">Got something to show?</p>
+        <h2 id="final-title">Let’s see it.</h2>
+      </div>
       <a class="button primary" href="/platform/animation/soft-orbit"
-        >Let’s make it move <ArrowUpRight size={20} /></a
-      ><span>Free during beta. Made in your browser.</span>
-      <div class="cta-orbit orbit-one"></div>
-      <div class="cta-orbit orbit-two"></div>
+        >Make a mockup <ArrowUpRight size={21} /></a
+      >
     </section>
   </main>
   <footer class="site-footer wrap">
-    <a class="wordmark" href="/">PhoneMockup</a>
-    <p>A little motion goes a long way.</p>
-    <a href="/platform/project">Your projects <ArrowUpRight size={14} /></a>
+    <a class="wordmark" href="/"
+      >phonemockup<span class="brand-mark" aria-hidden="true"></span></a
+    >
+    <p>A browser. A screen. A different angle.</p>
+    <a href="/platform/project">Your projects <ArrowUpRight size={16} /></a>
   </footer>
 </div>
 
 <style>
+  @font-face {
+    font-family: Archivo;
+    src: url("/fonts/archivo/archivo-latin-variable.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+  }
   .landing {
-    --ink: #20281f;
-    --muted: #687063;
-    --paper: #f7f7f0;
+    --ink: #242421;
+    --muted: #696963;
+    --paper: #faf9f6;
+    --line: #d9d8d2;
+    --accent: #bc3d20;
+    --ease: cubic-bezier(0.23, 1, 0.32, 1);
     background: var(--paper);
     color: var(--ink);
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: Archivo, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
-    overflow: clip;
+    -webkit-tap-highlight-color: transparent;
   }
   .wrap {
-    width: min(1280px, calc(100% - 96px));
+    width: min(1320px, calc(100% - 96px));
     margin-inline: auto;
   }
   a {
@@ -418,976 +522,1073 @@
   }
   button {
     font: inherit;
+    color: inherit;
     cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
   }
-  button:focus-visible,
-  a:focus-visible,
-  summary:focus-visible {
-    outline: 3px solid #5c7c38;
+  a {
+    touch-action: manipulation;
+  }
+  a,
+  button {
+    transition:
+      color 160ms ease,
+      background 160ms ease,
+      transform 160ms var(--ease);
+  }
+  :is(a, button):focus-visible {
+    outline: 2px solid var(--accent);
     outline-offset: 5px;
+  }
+  :is(button, .button):active {
+    transform: scale(0.98);
+  }
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+  h1,
+  h2 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  .mono {
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+  }
+  .muted {
+    color: var(--muted);
   }
   .skip-link {
     position: fixed;
-    top: -60px;
-    left: 15px;
+    top: 12px;
+    left: 12px;
+    transform: translateY(-160%);
+    z-index: 10;
     background: var(--ink);
     color: white;
-    padding: 14px;
-    z-index: 100;
+    padding: 15px;
   }
   .skip-link:focus {
-    top: 10px;
+    transform: none;
   }
   .site-header {
-    height: 100px;
+    height: 88px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    gap: 24px;
+    position: relative;
+    z-index: 3;
+  }
+  .wordmark {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: -1.2px;
+    white-space: nowrap;
+  }
+  .brand-mark {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    display: inline-block;
+  }
+  nav {
+    display: flex;
+    gap: 30px;
+    font-size: 14px;
+  }
+  nav a,
+  .nav-cta {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .nav-cta {
+    gap: 22px;
+    font-size: 13px;
+  }
+  .menu-toggle,
+  nav .mobile-projects {
+    display: none;
+  }
+  .hero {
+    padding-top: 54px;
+  }
+  .hero-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 50px;
+    margin-bottom: 48px;
+  }
+  h1 {
+    font-size: clamp(76px, 7.7vw, 112px);
+    font-weight: 500;
+    line-height: 0.97;
+    letter-spacing: -0.07em;
+  }
+  h1 span {
+    color: #777770;
+  }
+  .hero-copy {
+    padding-bottom: 5px;
+    max-width: 365px;
+  }
+  .hero-copy > p {
+    font-size: 17px;
+    line-height: 1.6;
+    letter-spacing: -0.25px;
+  }
+  .hero-actions {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 24px;
+  }
+  .button {
+    min-height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    padding: 15px 21px;
+    border: 0;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .primary {
+    background: var(--accent);
+    color: white;
+  }
+  .hero-proof {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .hero-exhibit {
+    display: grid;
+    grid-template-columns: 1.18fr 1fr;
+    gap: 6px;
+  }
+  .hero-stage,
+  .desktop-stage {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 5px;
+  }
+  .desktop-stage {
+    background: #dde1f0;
+  }
+  .stage-label {
+    position: absolute;
+    left: 25px;
+    right: 25px;
+    top: 23px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    z-index: 2;
+    font-size: 13px;
+    pointer-events: none;
+  }
+  .stage-label .mono {
+    color: #5e6658;
+  }
+  .hero-media,
+  .desktop-media {
+    height: 500px;
+  }
+  .hero-media :global(video) {
+    object-fit: contain;
+  }
+  .desktop-media :global(video) {
+    object-fit: cover;
+    transform: scale(1.25);
+  }
+  .hero-media :global(.playback),
+  .desktop-media :global(.playback) {
+    bottom: 80px;
+  }
+  .stage-bottom,
+  .desktop-caption {
+    position: absolute;
+    bottom: 0;
+    left: 25px;
+    right: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    height: 69px;
+    border-top: 1px solid #24242128;
+    font-size: 13px;
+  }
+  .hero-selector {
+    display: flex;
+    gap: 21px;
+    align-items: center;
+  }
+  .hero-selector button {
+    border: 0;
+    background: none;
+    padding: 12px 0;
+    min-height: 44px;
+    font-size: 12px;
+    color: #59634f;
+    position: relative;
+  }
+  .hero-selector button[aria-pressed="true"] {
+    color: var(--ink);
+  }
+  .hero-selector button[aria-pressed="true"]::after {
+    content: "";
+    position: absolute;
+    height: 2px;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    background: currentColor;
+  }
+  .round-link {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .hero-foot {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
-    border-bottom: 1px solid #dedfd4;
-  }
-  .wordmark {
-    display: inline-flex;
-    gap: 9px;
-    align-items: center;
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.8px;
-    white-space: nowrap;
-  }
-  .brand-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--ink);
-    color: #e1f5bd;
-    border-radius: 8px;
-    width: 32px;
-    height: 32px;
-    font-size: 19px;
-    letter-spacing: -5px;
-    padding-right: 5px;
-  }
-  .brand-icon span {
-    font-size: 14px;
-    padding-top: 7px;
-  }
-  nav {
-    display: flex;
-    gap: 32px;
+    padding-block: 22px;
+    border-bottom: 1px solid var(--line);
     font-size: 12px;
-    font-weight: 600;
-  }
-  nav a:hover,
-  .text-link:hover {
-    color: #66833f;
-  }
-  .nav-cta {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    border: 1px solid #c9cdc0;
-    padding: 13px 19px;
-    border-radius: 50px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .hero {
-    display: grid;
-    grid-template-columns: 1fr 1.04fr;
-    gap: 48px;
-    padding-block: 54px 46px;
-    align-items: center;
-  }
-  .eyebrow {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.3px;
-    line-height: 1.6;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-  }
-  .live-dot {
-    height: 6px;
-    width: 6px;
-    border-radius: 50%;
-    background: #789351;
-    box-shadow: 0 0 0 4px #e6ecd9;
-  }
-  h1 {
-    font-size: clamp(70px, 7.25vw, 106px);
-    line-height: 0.99;
-    letter-spacing: -7px;
-    font-weight: 500;
-    margin: 29px 0 27px;
-  }
-  h1 > span {
-    font-family: Georgia, "Times New Roman", serif;
-    font-style: italic;
-    font-weight: 400;
-    letter-spacing: -6px;
-  }
-  .hero-description {
-    font-size: 17px;
-    line-height: 1.65;
     color: var(--muted);
   }
-  .hero-actions {
-    display: flex;
-    gap: 25px;
-    align-items: center;
-    margin-top: 30px;
-  }
-  .button {
-    display: inline-flex;
-    gap: 25px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50px;
-    padding: 18px 25px;
-    font-size: 13px;
-    font-weight: 600;
-    min-height: 52px;
-    transition:
-      background 0.2s,
-      transform 0.2s;
-  }
-  .primary {
-    background: var(--ink);
-    color: #f8f9ed;
-  }
-  .primary:hover {
-    background: #3e5232;
-    transform: translateY(-2px);
-  }
-  .text-link {
-    display: inline-flex;
-    gap: 10px;
-    align-items: center;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .micro-proof {
+  .hero-foot a {
     display: flex;
     align-items: center;
-    gap: 7px;
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 17px;
-  }
-  .micro-proof > span {
-    padding-inline: 2px;
-    color: #9b9f91;
-  }
-  .hero-note {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 64px;
-    font-size: 10px;
-    color: #818678;
-    line-height: 1.65;
-  }
-  .hero-note strong {
-    color: #545e4b;
-    font-weight: 400;
-  }
-  .note-line {
-    width: 24px;
-    height: 1px;
-    background: #adb5a2;
-  }
-  .hero-stage {
-    background: var(--stage-color, #dde7d5);
-    border-radius: 20px;
-    overflow: hidden;
-    position: relative;
-    min-width: 0;
-  }
-  .stage-top {
-    display: flex;
-    justify-content: space-between;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 1.3px;
-    padding: 23px 25px 0;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 2;
-    pointer-events: none;
-  }
-  .hero-media {
-    aspect-ratio: 4/4.6;
-  }
-  .hero-media :global(video) {
-    object-fit: cover;
-  }
-  .stage-bottom {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 25px 23px;
-  }
-  .stage-bottom > div {
-    display: grid;
-    gap: 5px;
-  }
-  .small-label {
-    font-size: 8px;
-    letter-spacing: 1.5px;
-  }
-  .stage-bottom strong {
-    font-size: 16px;
-    font-weight: 500;
-  }
-  .stage-bottom > a {
-    height: 40px;
-    width: 40px;
-    border: 1px solid #9ba88d7a;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-  }
-  .hero-selector {
-    display: flex;
-    border-top: 1px solid #93a28744;
-  }
-  .hero-selector button {
-    flex: 1;
-    padding: 15px 8px;
-    border: none;
-    border-right: 1px solid #93a28744;
-    background: transparent;
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    align-items: center;
-    font-size: 10px;
-  }
-  .hero-selector button:last-child {
-    border-right: 0;
-  }
-  .hero-selector button[aria-pressed="true"] {
-    background: #ffffff70;
-  }
-  .hero-selector button > span {
-    font-size: 8px;
-    color: #6d7863;
-  }
-  .benefit-strip {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-block: 1px solid #dedfd4;
-    padding-block: 23px;
-    gap: 18px;
-    font-size: 11px;
-    color: #687360;
-  }
-  .benefit-strip > div {
-    display: flex;
-    gap: 31px;
-    color: #3c4537;
-    font-weight: 600;
+    gap: 16px;
+    min-height: 44px;
+    color: var(--ink);
   }
   .motions-section {
-    padding-block: 96px 78px;
-    scroll-margin-top: 25px;
+    padding-top: 104px;
+    padding-bottom: 86px;
+    scroll-margin-top: 30px;
   }
   .section-heading {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    gap: 35px;
+    gap: 40px;
     margin-bottom: 38px;
   }
-  h2 {
-    font-size: clamp(36px, 4.25vw, 56px);
-    line-height: 1.1;
-    font-weight: 500;
-    letter-spacing: -2.4px;
-    margin-top: 19px;
+  .section-index {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    margin-bottom: 20px;
   }
-  h2 em {
-    font-family: Georgia, "Times New Roman", serif;
-    font-weight: 400;
-    letter-spacing: -2px;
+  h2 {
+    font-size: clamp(37px, 3.6vw, 50px);
+    font-weight: 500;
+    line-height: 1.08;
+    letter-spacing: -0.055em;
   }
   .section-heading > p {
-    font-size: 13px;
+    max-width: 365px;
+    font-size: 15px;
     line-height: 1.7;
     color: var(--muted);
-    padding-bottom: 4px;
+    padding-bottom: 3px;
   }
   .gallery-toolbar {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 15px;
+    align-items: center;
+    gap: 22px;
+    border-bottom: 1px solid var(--line);
     margin-bottom: 25px;
   }
   .filters {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    gap: 23px;
+    overflow: auto;
+    scrollbar-width: thin;
+    padding: 5px;
+    margin: -5px;
   }
   .filters button {
-    padding: 9px 14px;
-    border: 1px solid #ddded3;
-    border-radius: 30px;
-    background: transparent;
-    font-size: 10px;
+    flex-shrink: 0;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    min-height: 49px;
+    min-width: 44px;
+    padding: 12px 0;
+    background: none;
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
   }
   .filters button[aria-pressed="true"] {
-    color: var(--paper);
-    background: var(--ink);
+    color: var(--ink);
     border-color: var(--ink);
   }
   .motion-toggle {
-    background: transparent;
     border: 0;
+    background: none;
     display: flex;
     align-items: center;
-    gap: 7px;
-    font-size: 10px;
-    color: #69735e;
+    gap: 8px;
+    font-size: 12px;
     white-space: nowrap;
-    padding: 10px 0;
+    min-height: 44px;
   }
   .motion-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 30px 19px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 35px 24px;
   }
   .motion-card {
     min-width: 0;
   }
   .card-media {
     position: relative;
-    aspect-ratio: 4/5;
-    border-radius: 13px;
+    aspect-ratio: 1/1.06;
     overflow: hidden;
-    background: #e2e7db;
+    border-radius: 4px;
   }
-  .duration {
-    position: absolute;
-    left: 14px;
-    top: 15px;
-    font-size: 8px;
-    letter-spacing: 1px;
-    color: #53624d;
-    pointer-events: none;
+  .card-media :global(video) {
+    object-fit: contain;
   }
   .card-title {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-top: 14px;
-  }
-  .card-title:hover {
-    color: #66833f;
+    gap: 13px;
+    min-height: 44px;
+    padding-top: 9px;
   }
   .card-title h3 {
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.4px;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+  }
+  .card-duration {
+    margin-left: auto;
+    color: var(--muted);
   }
   .motion-card > p {
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.6;
     color: var(--muted);
-    margin-top: 6px;
-    max-width: 220px;
   }
   .cut-label {
-    display: inline-block;
-    margin-top: 9px;
-    font-size: 10px;
-    padding: 6px 8px;
-    background: #e1e9d4;
-    border-radius: 6px;
-    color: #425332;
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    background: #faf9f6e8;
+    padding: 7px 10px;
+    font-size: 11px;
+    border-radius: 2px;
+    pointer-events: none;
   }
   .gallery-foot {
+    margin-top: 38px;
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    gap: 18px;
-    margin-top: 35px;
-    padding-top: 22px;
-    border-top: 1px solid #dedfd4;
-    font-size: 11px;
+    gap: 20px;
+    font-size: 13px;
     color: var(--muted);
+  }
+  .secondary {
+    border: 1px solid #bcbcb4;
+    background: transparent;
+    color: var(--ink);
+  }
+  .text-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 22px;
+    font-size: 14px;
+    min-height: 44px;
+    color: var(--ink);
   }
   .workflow-section {
-    background: #e9eddf;
+    border-block: 1px solid var(--line);
+    padding-block: 64px 72px;
+    scroll-margin-top: 25px;
   }
-  .workflow-inner {
-    padding-block: 70px;
+  .workflow-heading {
+    margin-bottom: 40px;
+  }
+  .workflow-body {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 70px;
+    grid-template-columns: 1.55fr 1fr;
+    gap: 64px;
     align-items: center;
   }
-  .workflow-intro > p:last-child {
-    margin-top: 24px;
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--muted);
+  .editor-preview {
+    background: #e5e4df;
+    border-radius: 5px;
+    padding: 22px;
+    min-width: 0;
+  }
+  .editor-preview img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 3px;
+    box-shadow: 0 6px 22px #24242112;
+  }
+  .editor-preview a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    padding-top: 18px;
+    font-size: 12px;
+  }
+  .workflow-lead {
+    font-size: 21px;
+    line-height: 1.5;
+    letter-spacing: -0.6px;
+    max-width: 380px;
   }
   .steps {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 23px 0 17px;
   }
   .steps li {
     display: flex;
-    gap: 25px;
-    align-items: flex-start;
-    padding: 24px 0;
-    border-bottom: 1px solid #cdd4c1;
+    gap: 22px;
+    padding-block: 21px;
+    border-bottom: 1px solid var(--line);
   }
-  .steps li:last-child {
-    border: 0;
-  }
-  .step-number {
-    font-size: 10px;
-    padding-top: 5px;
-    opacity: 0.6;
+  .steps .mono {
+    padding-top: 3px;
+    color: var(--muted);
   }
   .steps h3 {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 500;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
   }
   .steps p {
-    font-size: 12px;
-    line-height: 1.7;
+    font-size: 13px;
+    line-height: 1.65;
     color: var(--muted);
     margin-top: 8px;
-  }
-  .step-symbol {
-    margin-left: auto;
-    font-size: 28px;
-    line-height: 1;
+    max-width: 300px;
   }
   .devices-section {
-    padding-block: 94px 72px;
+    padding-block: 90px 82px;
     scroll-margin-top: 25px;
   }
-  .device-grid {
+  .device-browser {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 80px;
+    align-items: center;
   }
-  .device-picture {
-    height: 230px;
-    background: #eaede1;
-    border-radius: 12px;
-    overflow: hidden;
+  .device-tabs {
+    display: flex;
+    flex-direction: column;
   }
-  .device-picture img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    transition: transform 0.35s;
-  }
-  .device-card:hover img {
-    transform: scale(1.035);
-  }
-  .device-card > div:nth-child(2) {
+  .device-tabs button {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-top: 16px;
-    gap: 5px;
-  }
-  .device-card h3 {
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: -0.25px;
-  }
-  .device-card > p {
-    font-size: 11px;
-    line-height: 1.6;
+    gap: 19px;
+    text-align: left;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 23px 0;
+    min-height: 72px;
+    background: transparent;
+    font-size: 20px;
+    letter-spacing: -0.65px;
     color: var(--muted);
-    margin-top: 7px;
   }
-  .device-note {
-    margin-top: 34px;
-    border-top: 1px solid #dedfd4;
-    padding-top: 23px;
-    display: flex;
-    gap: 30px;
-    justify-content: space-between;
+  .device-tabs button .mono {
+    color: var(--muted);
   }
-  .device-note > span {
-    font-size: 9px;
-    letter-spacing: 1px;
-    line-height: 1.6;
+  .device-tabs button :global(svg) {
+    margin-left: auto;
+    opacity: 0;
   }
-  .device-note > p {
-    font-size: 12px;
+  .device-tabs button[aria-pressed="true"] {
+    color: var(--ink);
+  }
+  .device-tabs button[aria-pressed="true"] .mono {
+    color: var(--accent);
+  }
+  .device-tabs button[aria-pressed="true"] :global(svg) {
+    opacity: 1;
+  }
+  .device-detail {
+    margin-top: 28px;
+    max-width: 360px;
+    min-height: 190px;
+  }
+  .device-detail p {
+    font-size: 14px;
     line-height: 1.7;
     color: var(--muted);
-    max-width: 450px;
   }
-  .faq-section {
-    padding-block: 30px 85px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 70px;
-  }
-  .faq-section h2 {
-    font-size: 42px;
-  }
-  .faq-list details {
-    padding: 20px 0;
-    border-bottom: 1px solid #dedfd4;
-  }
-  .faq-list summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    list-style: none;
-  }
-  .faq-list summary::-webkit-details-marker {
-    display: none;
-  }
-  .faq-list p {
+  .device-detail .device-options {
     font-size: 12px;
-    line-height: 1.8;
-    color: var(--muted);
-    padding-top: 14px;
-    max-width: 450px;
+    margin-block: 12px 18px;
   }
-  .faq-list details[open] summary :global(svg) {
-    transform: rotate(45deg);
-  }
-  .final-cta {
-    text-align: center;
-    position: relative;
-    isolation: isolate;
-    background: #d5e5bc;
-    border-radius: 20px;
-    padding: 60px 20px;
+  .device-picture {
+    height: 560px;
+    min-width: 0;
+    border-radius: 5px;
     overflow: hidden;
   }
-  .final-cta > .eyebrow {
-    justify-content: center;
+  .device-picture :global(video) {
+    object-fit: contain;
+  }
+  .faq-section {
+    border-top: 1px solid var(--line);
+    padding-block: 54px 72px;
+    display: grid;
+    grid-template-columns: 1fr 1.9fr;
+    gap: 90px;
+  }
+  .faq-heading h2 {
+    font-size: 31px;
+    letter-spacing: -1.3px;
+  }
+  .faq-heading p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 15px;
+  }
+  .faq-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 34px 40px;
+  }
+  .faq-list h3 {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .faq-list p {
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--muted);
+  }
+  .final-cta {
+    border-block: 1px solid var(--line);
+    padding-block: 58px 65px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+  }
+  .final-cta .section-index {
+    margin-bottom: 14px;
   }
   .final-cta h2 {
-    font-size: 66px;
-    margin: 20px 0 30px;
-    line-height: 1.03;
-  }
-  .final-cta > .button {
-    position: relative;
-    z-index: 1;
-  }
-  .final-cta > span {
-    display: block;
-    font-size: 10px;
-    color: #657353;
-    margin-top: 16px;
-  }
-  .cta-orbit {
-    position: absolute;
-    border: 1px solid #8aa46c50;
-    border-radius: 50%;
-    width: 620px;
-    height: 360px;
-    top: 25px;
-    z-index: -1;
-  }
-  .orbit-one {
-    left: -330px;
-    transform: rotate(-45deg);
-  }
-  .orbit-two {
-    right: -330px;
-    transform: rotate(-45deg);
+    font-size: 82px;
+    letter-spacing: -0.065em;
   }
   .site-footer {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     gap: 25px;
-    padding-block: 36px;
+    padding-block: 33px 40px;
   }
   .site-footer .wordmark {
-    font-size: 17px;
+    font-size: 21px;
   }
-  .site-footer > p {
-    font-size: 11px;
+  .site-footer p {
+    font-size: 12px;
     color: var(--muted);
   }
   .site-footer > a:last-child {
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 15px;
+    min-height: 44px;
   }
-  @media (min-width: 1450px) {
-    .hero-stage {
-      max-height: 715px;
+  @media (hover: hover) and (pointer: fine) {
+    nav a:hover,
+    .nav-cta:hover,
+    .text-link:hover,
+    .card-title:hover,
+    .hero-foot a:hover {
+      color: var(--accent);
     }
-    .hero-media {
-      height: 555px;
+    .primary:hover {
+      background: #a63218;
+    }
+    .secondary:hover {
+      background: #eeede8;
+    }
+    .hero-selector button:hover,
+    .filters button:hover,
+    .device-tabs button:hover {
+      color: var(--ink);
+    }
+    .round-link:hover {
+      background: #ffffff50;
+      border-radius: 3px;
     }
   }
-  @media (max-width: 1050px) {
+  @media (max-width: 1100px) {
     .wrap {
       width: calc(100% - 56px);
     }
-    .hero {
-      gap: 25px;
+    .hero-heading {
+      gap: 35px;
     }
     h1 {
-      font-size: 75px;
-      letter-spacing: -5px;
+      font-size: 86px;
     }
-    h1 > span {
-      letter-spacing: -4px;
+    .hero-copy {
+      max-width: 315px;
     }
-    .hero-actions {
-      gap: 18px;
-      flex-wrap: wrap;
-    }
-    .hero-note {
-      margin-top: 35px;
-    }
-    .hero-description {
+    .hero-copy > p {
       font-size: 15px;
     }
-    .benefit-strip > div {
+    .hero-media,
+    .desktop-media {
+      height: 430px;
+    }
+    .hero-selector {
+      gap: 13px;
+    }
+    .hero-selector button {
+      font-size: 11px;
+    }
+    .filters {
       gap: 18px;
     }
     .motion-grid {
-      gap: 26px 15px;
+      gap: 28px 18px;
     }
-    .workflow-inner,
-    .faq-section {
+    .workflow-body {
       gap: 35px;
     }
+    .device-browser {
+      gap: 45px;
+    }
     .device-picture {
-      height: 200px;
+      height: 485px;
+    }
+    .faq-section {
+      gap: 45px;
     }
   }
   @media (max-width: 760px) {
     .wrap {
-      width: calc(100% - 36px);
+      width: calc(100% - 40px);
     }
     .site-header {
-      height: 78px;
-      gap: 12px;
-    }
-    .site-header nav {
-      display: none;
+      height: 72px;
+      gap: 15px;
     }
     .wordmark {
-      font-size: 17px;
+      font-size: 20px;
     }
-    .brand-icon {
-      width: 28px;
-      height: 28px;
+    .brand-mark {
+      width: 6px;
+      height: 6px;
+    }
+    nav {
+      display: none;
+      position: absolute;
+      top: 71px;
+      left: 0;
+      right: 0;
+      padding: 12px 20px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 0 0 5px 5px;
+      box-shadow: 0 12px 20px #2424210a;
+      gap: 0;
+    }
+    nav.open {
+      display: flex;
+      flex-direction: column;
+    }
+    nav a {
+      min-height: 48px;
+      border-bottom: 1px solid var(--line);
+      font-size: 15px;
+    }
+    nav .mobile-projects {
+      display: flex;
+      justify-content: space-between;
+      border: 0;
+    }
+    .menu-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 44px;
+      padding: 10px 0 10px 15px;
+      background: none;
+      border: 0;
+      font-size: 13px;
+    }
+    .menu-toggle[aria-expanded="true"] :global(svg) {
+      transform: rotate(180deg);
     }
     .nav-cta {
-      font-size: 10px;
-      gap: 8px;
-      padding: 12px 13px;
-    }
-    .hero {
-      grid-template-columns: 1fr;
-      padding-top: 36px;
-      padding-bottom: 28px;
-      gap: 30px;
-    }
-    .hero-copy {
-      text-align: center;
-    }
-    .hero-copy > .eyebrow {
-      justify-content: center;
-      font-size: 8px;
-      letter-spacing: 1px;
-    }
-    h1 {
-      font-size: clamp(61px, 15vw, 90px);
-      letter-spacing: -4.5px;
-      margin: 23px 0 20px;
-    }
-    h1 > span {
-      letter-spacing: -3.5px;
-    }
-    .hero-description {
-      font-size: 14px;
-      line-height: 1.65;
-    }
-    .hero-actions {
-      justify-content: center;
-      margin-top: 23px;
-      gap: 20px;
-    }
-    .button {
-      font-size: 12px;
-      padding: 15px 21px;
-      min-height: 48px;
-      gap: 20px;
-    }
-    .micro-proof {
-      justify-content: center;
-      font-size: 9px;
-      margin-top: 15px;
-    }
-    .hero-note {
       display: none;
     }
-    .hero-stage {
-      border-radius: 16px;
-      max-width: 510px;
-      width: 100%;
-      margin: auto;
+    .hero {
+      padding-top: 35px;
+    }
+    .hero-heading {
+      display: block;
+      margin-bottom: 30px;
+    }
+    h1 {
+      font-size: clamp(59px, 12vw, 86px);
+      letter-spacing: -0.065em;
+      line-height: 0.99;
+    }
+    .hero-copy {
+      max-width: none;
+      padding: 0;
+      margin-top: 23px;
+    }
+    .hero-copy > p {
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 340px;
+    }
+    .hero-actions {
+      margin-top: 20px;
+      gap: 12px;
+    }
+    .button {
+      min-height: 50px;
+      font-size: 14px;
+      padding: 14px 18px;
+      gap: 36px;
+    }
+    .hero-proof {
+      font-size: 12px;
+    }
+    .hero-exhibit {
+      grid-template-columns: 1fr;
     }
     .hero-media {
-      aspect-ratio: 4/4.25;
+      height: 430px;
     }
-    .stage-top {
-      padding: 19px 20px;
-      font-size: 8px;
+    .stage-label {
+      top: 18px;
+      left: 18px;
+      right: 18px;
+      font-size: 12px;
     }
     .stage-bottom {
-      padding: 0 20px 18px;
+      left: 18px;
+      right: 18px;
+      height: 64px;
     }
-    .stage-bottom strong {
-      font-size: 14px;
+    .hero-selector {
+      gap: 20px;
     }
     .hero-selector button {
-      min-height: 45px;
-      font-size: 9px;
-      gap: 6px;
+      font-size: 12px;
     }
-    .benefit-strip {
-      flex-direction: column;
+    .desktop-stage {
+      display: none;
+    }
+    .hero-foot {
+      padding-block: 15px;
       gap: 14px;
-      padding-block: 21px;
-      font-size: 10px;
+      font-size: 11px;
+      align-items: flex-start;
     }
-    .benefit-strip > div {
-      gap: 16px;
-      flex-wrap: wrap;
-      justify-content: center;
-      font-size: 10px;
+    .hero-foot p {
+      max-width: 170px;
+      line-height: 1.6;
+      padding-top: 9px;
+    }
+    .hero-foot a {
+      gap: 8px;
+      white-space: nowrap;
     }
     .motions-section {
-      padding-block: 54px 43px;
+      padding-block: 60px 50px;
     }
     .section-heading {
       display: block;
-      margin-bottom: 25px;
+      margin-bottom: 24px;
+    }
+    .section-index {
+      font-size: 12px;
+      margin-bottom: 16px;
     }
     h2 {
-      font-size: 38px;
-      letter-spacing: -1.7px;
-      margin-top: 14px;
-    }
-    h2 em {
-      letter-spacing: -1.4px;
-    }
-    .eyebrow {
-      font-size: 8px;
-      letter-spacing: 1px;
+      font-size: 37px;
+      letter-spacing: -0.05em;
     }
     .section-heading > p {
-      font-size: 12px;
-      margin-top: 18px;
+      font-size: 14px;
+      margin-top: 20px;
     }
     .gallery-toolbar {
-      align-items: flex-start;
-      flex-direction: column;
-      gap: 5px;
-      margin-bottom: 14px;
+      display: block;
+      position: relative;
+      margin-bottom: 20px;
     }
     .filters {
-      gap: 5px;
+      gap: 23px;
+      padding-inline: 3px;
+      margin-inline: -3px;
     }
     .filters button {
-      min-height: 44px;
-      font-size: 10px;
-      padding: 9px 13px;
+      font-size: 13px;
+      min-height: 48px;
     }
     .motion-toggle {
-      align-self: flex-end;
+      margin-left: auto;
+      margin-top: 3px;
+      font-size: 12px;
       min-height: 44px;
-      font-size: 9px;
     }
     .motion-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 26px 12px;
+      gap: 25px 14px;
     }
     .card-media {
-      border-radius: 10px;
-    }
-    .duration {
-      font-size: 7px;
-      left: 10px;
-      top: 10px;
-      letter-spacing: 0.6px;
+      aspect-ratio: 4/5;
     }
     .card-title {
-      margin-top: 12px;
-      gap: 5px;
-      min-height: 26px;
+      gap: 7px;
+      padding-top: 6px;
     }
     .card-title h3 {
-      font-size: 13px;
+      font-size: 14px;
+      letter-spacing: -0.4px;
     }
     .card-title :global(svg) {
-      width: 16px;
+      width: 15px;
       flex-shrink: 0;
     }
+    .card-duration {
+      font-size: 12px;
+    }
     .motion-card > p {
-      font-size: 10px;
+      font-size: 12px;
       line-height: 1.55;
+    }
+    .cut-label {
+      font-size: 10px;
+      top: 10px;
+      left: 10px;
+      padding: 5px 7px;
     }
     .gallery-foot {
       flex-direction: column;
-      gap: 14px;
-      margin-top: 27px;
-      font-size: 10px;
+      align-items: stretch;
+      gap: 16px;
+      margin-top: 30px;
     }
     .gallery-foot .text-link {
-      font-size: 11px;
+      justify-content: center;
+      font-size: 13px;
     }
-    .workflow-inner {
-      padding-block: 45px;
+    .workflow-section {
+      padding-block: 42px 45px;
+    }
+    .workflow-heading {
+      margin-bottom: 26px;
+    }
+    .workflow-body {
       grid-template-columns: 1fr;
-      gap: 15px;
+      gap: 29px;
     }
-    .workflow-intro > p:last-child {
+    .editor-preview {
+      padding: 12px;
+    }
+    .editor-preview a {
       font-size: 12px;
-      margin-top: 20px;
+      padding: 10px 3px 0;
+    }
+    .workflow-lead {
+      font-size: 20px;
+      max-width: 340px;
+    }
+    .steps {
+      margin-block: 15px;
     }
     .steps li {
       gap: 20px;
-      padding: 23px 0;
+      padding-block: 18px;
     }
     .steps h3 {
-      font-size: 17px;
+      font-size: 16px;
     }
     .steps p {
-      font-size: 12px;
+      font-size: 14px;
+      max-width: none;
     }
     .devices-section {
-      padding-block: 52px 42px;
+      padding-block: 56px 45px;
     }
-    .device-grid {
+    .device-browser {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .device-controls {
+      display: contents;
+    }
+    .device-tabs {
+      display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 27px 12px;
+      gap: 8px;
+    }
+    .device-tabs button {
+      font-size: 14px;
+      letter-spacing: -0.3px;
+      padding: 13px;
+      min-height: 56px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      line-height: 1.35;
+    }
+    .device-tabs button[aria-pressed="true"] {
+      border-color: var(--ink);
+      background: #eeede8;
+    }
+    .device-tabs .mono,
+    .device-tabs button :global(svg) {
+      display: none;
+    }
+    .device-detail {
+      order: 2;
+      min-height: 0;
+      margin-top: 0;
+      max-width: none;
+    }
+    .device-detail .device-options {
+      font-size: 12px;
+      margin-block: 10px;
     }
     .device-picture {
-      height: 175px;
-    }
-    .device-card h3 {
-      font-size: 12px;
-    }
-    .device-card > p {
-      font-size: 10px;
-    }
-    .device-note {
-      display: block;
-      margin-top: 26px;
-      padding-top: 20px;
-    }
-    .device-note > span {
-      font-size: 8px;
-    }
-    .device-note > p {
-      font-size: 11px;
-      margin-top: 12px;
+      order: 1;
+      height: 380px;
+      width: 100%;
     }
     .faq-section {
+      padding-block: 35px 45px;
       grid-template-columns: 1fr;
-      gap: 15px;
-      padding-bottom: 48px;
+      gap: 30px;
     }
-    .faq-section h2 {
-      font-size: 36px;
+    .faq-heading h2 {
+      font-size: 30px;
     }
-    .faq-list summary {
-      font-size: 12px;
+    .faq-list {
+      grid-template-columns: 1fr;
+      gap: 25px;
     }
-    .faq-list details {
-      padding-block: 19px;
+    .faq-list h3 {
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+    .faq-list p {
+      font-size: 14px;
     }
     .final-cta {
-      padding: 43px 15px;
-      border-radius: 15px;
+      align-items: flex-start;
+      flex-direction: column;
+      padding-block: 37px 42px;
+      gap: 25px;
     }
     .final-cta h2 {
-      font-size: 49px;
-      margin-block: 18px 24px;
-    }
-    .final-cta > span {
-      font-size: 9px;
+      font-size: 64px;
     }
     .site-footer {
       flex-wrap: wrap;
-      gap: 18px;
-      padding-block: 26px;
+      padding-block: 24px 30px;
+      gap: 15px;
     }
-    .site-footer .wordmark {
-      font-size: 15px;
-    }
-    .site-footer > p {
+    .site-footer p {
       order: 3;
       flex-basis: 100%;
-      font-size: 10px;
+      font-size: 11px;
     }
     .site-footer > a:last-child {
-      font-size: 10px;
+      font-size: 11px;
+      gap: 8px;
     }
   }
-  @media (max-width: 350px) {
+  @media (max-width: 360px) {
     .wrap {
-      width: calc(100% - 28px);
+      width: calc(100% - 32px);
     }
     .wordmark {
-      font-size: 15px;
-    }
-    .brand-icon {
-      display: none;
+      font-size: 18px;
     }
     h1 {
-      font-size: 57px;
+      font-size: 54px;
     }
-    .hero-actions {
-      gap: 16px;
+    .hero-media {
+      height: 385px;
     }
-    .filters button {
-      padding: 8px 10px;
+    .hero-selector {
+      gap: 13px;
+    }
+    .hero-selector button {
+      font-size: 11px;
+    }
+    .hero-foot {
+      display: block;
+    }
+    .hero-foot p {
+      max-width: none;
     }
     .motion-grid {
-      grid-template-columns: 1fr;
+      gap: 22px 12px;
     }
-    .device-card h3 {
-      font-size: 11px;
+    .card-duration {
+      display: none;
+    }
+    .card-title :global(svg) {
+      margin-left: auto;
+    }
+    h2 {
+      font-size: 34px;
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      scroll-behavior: auto !important;
-      transition: none !important;
+    a,
+    button {
+      transition: none;
     }
-    .primary:hover,
-    .device-card:hover img {
+    :is(button, .button):active {
       transform: none;
     }
   }

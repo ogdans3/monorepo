@@ -51,6 +51,8 @@ for (const width of [320, 390, 768, 1440])
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "Your work.",
     );
+    await expect(page.locator(".motion-card")).toHaveCount(6);
+    await page.getByRole("button", { name: "View all 16 motions" }).click();
     await expect(page.locator(".motion-card")).toHaveCount(16);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
@@ -96,7 +98,9 @@ test("mobile autoplays without touch, pauses offscreen and resumes", async ({
     .click();
   await expect
     .poll(() =>
-      page.locator("video").evaluateAll((vs) => vs.every((v) => (v as HTMLVideoElement).paused)),
+      page
+        .locator("video")
+        .evaluateAll((vs) => vs.every((v) => (v as HTMLVideoElement).paused)),
     )
     .toBe(true);
   await page
@@ -174,12 +178,60 @@ test("featured choices and gallery filters use the new collection", async ({
     "Snap In",
   ]);
   await page.getByRole("button", { name: "All motions", exact: true }).click();
+  await expect(page.locator(".motion-card")).toHaveCount(6);
+  await page.getByRole("button", { name: "View all 16 motions" }).click();
   await expect(page.locator(".motion-card")).toHaveCount(16);
   await go(page, "/platform/animation");
   await expect(page.locator("a .preset-preview")).toHaveCount(16);
   await expect(
     page.getByRole("button", { name: "Fancy", exact: true }),
   ).toHaveCount(0);
+});
+for (const width of [390, 1440])
+  test(`device previews at ${width}px open the matching preset and expose their selected state`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await go(page);
+    const options = page.getByRole("group", { name: "Preview a device" });
+    for (const [name, id, label] of [
+      ["iPhone 16 Pro", "soft-orbit", "iPhone"],
+      ["Pixel 9 Pro", "detail-study", "Pixel"],
+      ["Galaxy S24 Ultra", "slow-spin", "Galaxy"],
+      ["MacBook Pro 14″", "top-down", "MacBook"],
+    ]) {
+      const button = options.getByRole("button", { name: new RegExp(name) });
+      await button.click();
+      await expect(button).toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator(".device-picture")).toBeInViewport();
+      await expect(page.locator(".device-picture video")).toHaveAttribute(
+        "src",
+        new RegExp(id + ".mp4"),
+      );
+      await expect(
+        page.getByRole("link", { name: `Use this ${label}` }),
+      ).toHaveAttribute("href", `/platform/animation/${id}`);
+    }
+  });
+test("mobile menu supports keyboard dismissal and navigation", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await go(page);
+  const menu = page.getByRole("button", { name: "Menu", exact: true });
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(nav).not.toBeVisible();
+  await menu.click();
+  await expect(menu).toHaveAttribute("aria-expanded", "true");
+  await nav.getByRole("link", { name: "Devices", exact: true }).focus();
+  await page.keyboard.press("Escape");
+  await expect(nav).not.toBeVisible();
+  await expect(menu).toBeFocused();
+  await menu.click();
+  await nav.getByRole("link", { name: "Devices", exact: true }).click();
+  await expect(page).toHaveURL(/#devices$/);
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
+  await expect(nav).not.toBeVisible();
 });
 for (const [id, modelId, sample] of [
   ["soft-orbit", "iphone-16-pro", "focus"],
