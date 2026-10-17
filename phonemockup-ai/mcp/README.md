@@ -125,3 +125,9 @@ the front camera cutout, or `true` to show it. Omitting the option defaults
 to on. It applies to images and every video frame. The old
 `iphone-16-pro-full-screen` ID is a compatibility alias with an off default;
 it no longer appears as a duplicate phone in the catalogue.
+
+The four audited models also accept `showLogo: false` to hide the manufacturer's
+logo, or `true` to show it (the default). Only the named logo nodes change;
+camera cutouts, screen content and laptop hinge behavior are independent.
+After building, `node scripts/check-model-logos.mjs /path/to/qa-output` verifies
+default/on/off still frames and animation frames for all four devices.

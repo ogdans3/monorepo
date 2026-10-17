@@ -27,5 +27,7 @@
       "front_camera_pupil"
     ]
   },
-  "showCameraIsland": true
+  "showCameraIsland": true,
+  "logo": {"nodes": ["brand_apple_logo_body", "brand_apple_logo_leaf"]},
+  "showLogo": true
 }

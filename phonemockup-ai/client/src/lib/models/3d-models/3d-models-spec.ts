@@ -40,6 +40,10 @@ export type Model = {
     cameraIsland?: {nodes: string[]; label?: string};
     /** Defaults to visible when omitted, including in older saved projects. */
     showCameraIsland?: boolean;
+    /** Exact node names for the manufacturer's removable body/lid logo. */
+    logo?: {nodes: string[]};
+    /** Logos are visible by default, including in older saved projects. */
+    showLogo?: boolean;
     /** Rigid display articulation around the named node's local X axis. */
     hinge?: {node: string; minAngle: number; maxAngle: number; defaultAngle: number};
     lidAngle?: number;

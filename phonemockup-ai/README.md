@@ -28,6 +28,12 @@ island on or off. The Pixel has **Show camera cutout** for its front camera
 hole. These settings persist with the project and apply to still/video exports.
 The MCP render tools accept `showCameraIsland: false` (or `true`) for either.
 
+All four models also offer **Show logo** under **Model**. It is checked by
+default and hides only the manufacturer's body/lid logo when unchecked.
+The choice carries across model changes, persists in saved projects and applies
+to image/video exports. Older projects keep their logos on. MCP render tools
+accept `showLogo: false` or `true`; omission keeps the logo on.
+
 Old `iphone-16-pro-full-screen` projects resolve to iPhone 16 Pro with the
 island off unless they explicitly saved another setting. The separate
 island-free Blender/GLB downloads are still available for independent use;

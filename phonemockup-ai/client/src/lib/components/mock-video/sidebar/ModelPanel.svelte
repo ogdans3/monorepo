@@ -45,8 +45,9 @@
 
         const current = project.model;
         if (current?.id === next.id) return;
-        // A colour the user picked carries over to the new phone.
-        project.model = {...next, caseColor: current?.caseColor ?? next.caseColor};
+        // Appearance choices carry over when switching devices.
+        project.model = {...next, caseColor: current?.caseColor ?? next.caseColor,
+            showLogo: current?.showLogo ?? next.showLogo ?? true};
     }
 </script>
 
@@ -84,6 +85,17 @@
             </Select.Content>
         </Select.Root>
     </div>
+
+    {#if project.model.logo}
+        <label class="flex items-center gap-2 text-xs">
+            <input type="checkbox"
+                checked={project.model.showLogo !== false}
+                onchange={(event) => {
+                    project.model = {...project.model, showLogo: event.currentTarget.checked};
+                }} />
+            Show logo
+        </label>
+    {/if}
 
     {#if project.model.cameraIsland}
         <label class="flex items-center gap-2 text-xs">

@@ -26,5 +26,7 @@
     "maxAngle": 130,
     "defaultAngle": 105
   },
-  "lidAngle": 105
+  "lidAngle": 105,
+  "logo": {"nodes": ["brand_apple_body", "brand_apple_leaf"]},
+  "showLogo": true
 }

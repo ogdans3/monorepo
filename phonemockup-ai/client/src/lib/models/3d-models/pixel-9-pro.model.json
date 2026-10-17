@@ -28,5 +28,7 @@
     ],
     "label": "Show camera cutout"
   },
-  "showCameraIsland": true
+  "showCameraIsland": true,
+  "logo": {"nodes": ["brand_google_g"]},
+  "showLogo": true
 }

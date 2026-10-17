@@ -342,12 +342,25 @@ export class SceneRenderer {
         this.zScale = restDistance > 0 ? restDistance / REFERENCE_DISTANCE : 1;
         this.setLidAtTime(this.lastLidTime);
         this.applyCameraIslandVisibility(config);
+        this.applyLogoVisibility(config);
     }
 
     private applyCameraIslandVisibility(config: Model) {
         if (!this.model || !config.cameraIsland) return;
         const visible = config.showCameraIsland !== false;
         for (const name of config.cameraIsland.nodes) {
+            const node = this.model.getObjectByName(name);
+            if (node && node.visible !== visible) {
+                node.visible = visible;
+                this.dirty = true;
+            }
+        }
+    }
+
+    private applyLogoVisibility(config: Model) {
+        if (!this.model || !config.logo) return;
+        const visible = config.showLogo !== false;
+        for (const name of config.logo.nodes) {
             const node = this.model.getObjectByName(name);
             if (node && node.visible !== visible) {
                 node.visible = visible;

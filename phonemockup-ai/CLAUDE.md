@@ -145,6 +145,14 @@ setting in saved projects and forward it through the MCP harness. Pixel uses
 `cameraIsland.label` to show “Show camera cutout” in the UI. Standalone cutout-free
 GLBs and Blender files exist for downloads, without duplicate picker entries.
 
+Manufacturer logos use exact `logo.nodes` metadata and `showLogo`, defaulting
+to visible. All four audited models support it. Keep the setting in the shared
+renderer, saved-project resolution and MCP harness; switching models preserves
+the checkbox choice. Hide only these nodes, never materials or broad name
+matches. Run `client/tests/model-logo.spec.ts` and the built MCP's
+`mcp/scripts/check-model-logos.mjs` when changing this path; they verify real
+rendered pixels, on/off/default behavior and save/reopen.
+
 ## Screen-switch helper
 
 `animations/screen-switch.ts` derives hidden cut times from `Animation.screenCut`

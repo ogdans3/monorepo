@@ -48,6 +48,8 @@ function resolveModel(saved: Model | undefined, formatVersion: number | undefine
     return {...current, caseColor: pickedColor ?? current.caseColor ?? null,
         ...(current.cameraIsland ? {showCameraIsland: typeof saved?.showCameraIsland === "boolean"
             ? saved.showCameraIsland : current.showCameraIsland ?? true} : {}),
+        ...(current.logo ? {showLogo: typeof saved?.showLogo === "boolean"
+            ? saved.showLogo : current.showLogo ?? true} : {}),
         ...(current.hinge ? {lidAngle: saved?.lidAngle ?? current.lidAngle,
             lidOpenDuration: saved?.lidOpenDuration ?? current.lidOpenDuration} : {})};
 }

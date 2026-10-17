@@ -100,7 +100,8 @@ server.registerTool(
             const available = existsSync(join(staticDir, m.modelPath));
             const suffix = available ? "" : "  [UNAVAILABLE: asset missing]";
             const camera = m.supportsCameraIsland ? `  [showCameraIsland: ${m.showCameraIsland}; configurable]` : "";
-            return `${m.id}  —  ${m.name}${camera}${suffix}`;
+            const logo = m.supportsLogo ? `  [showLogo: ${m.showLogo}; configurable]` : "";
+            return `${m.id}  —  ${m.name}${camera}${logo}${suffix}`;
         });
         return text(
             `${models.length} models (default: ${DEFAULT_MODEL}):\n\n${lines.join("\n")}`

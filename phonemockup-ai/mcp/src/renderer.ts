@@ -34,6 +34,7 @@ export type SceneOptions = {
     caseColor?: string | null;
     antialias?: boolean;
     showCameraIsland?: boolean;
+    showLogo?: boolean;
     lidAngle?: number;
     lidOpenDuration?: number;
 };
@@ -45,6 +46,8 @@ export type CatalogModel = {
     caseColor: string | null;
     supportsCameraIsland: boolean;
     showCameraIsland?: boolean;
+    supportsLogo: boolean;
+    showLogo?: boolean;
 };
 
 export type CatalogAnimation = {

@@ -19,5 +19,7 @@
       "uv": "planar"
     }
   ],
-  "caseColor": null
+  "caseColor": null,
+  "logo": {"nodes": ["brand_samsung"]},
+  "showLogo": true
 }
