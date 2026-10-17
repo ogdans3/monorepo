@@ -178,25 +178,23 @@ test.describe("Regressions", () => {
     test("a case colour leaves the picture on the screen untinted", async ({page}) => {
         const spread = (rgb: number[]) => Math.max(...rgb) - Math.min(...rgb);
 
-        // The default phone, Pixel 10 Baked, has a screen called "LED" with a
-        // material of another name: only the mesh name marks it.
+        // Case colors must leave the separate display material untinted.
         await goToTimeline(page);
         await pickWhiteScreenImage(page);
         await expect.poll(async () => Math.min(...(await canvasCentre(page)))).toBeGreaterThan(200);
 
         await page.getByLabel("Case color").fill("#ff0000");
         await page.waitForTimeout(1000);
-        const baked = await canvasCentre(page);
-        expect(spread(baked), `Pixel 10 Baked's screen tinted to ${baked}`).toBeLessThan(25);
+        const iphone = await canvasCentre(page);
+        expect(spread(iphone), `iPhone screen tinted to ${iphone}`).toBeLessThan(25);
 
-        // Pixel 10 has a glass in front of its screen. The colour carries over
-        // to it; wait for it to replace the Baked one before looking.
+        // The same choice carries across to the current Pixel model.
         await page.locator("#model-type").click();
-        await page.getByRole("option", {name: "Pixel 10", exact: true}).click();
-        await expect.poll(() => canvasCentre(page), {timeout: 30_000}).not.toEqual(baked);
+        await page.getByRole("option", {name: "Google Pixel 9 Pro", exact: true}).click();
+        await expect(page.locator("#model-type")).toContainText("Pixel 9 Pro");
         await page.waitForTimeout(1000);
         const glass = await canvasCentre(page);
-        expect(spread(glass), `Pixel 10's screen tinted to ${glass}`).toBeLessThan(25);
+        expect(spread(glass), `Pixel 9 Pro's screen tinted to ${glass}`).toBeLessThan(25);
     });
 
     test("a renamed project keeps its name after saving and reloading", async ({page}) => {

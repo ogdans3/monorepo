@@ -8,7 +8,7 @@
     import {project} from "$lib/stores/project.svelte";
 
     const {
-        color = "bg-red-500",
+        color = "bg-primary",
         class: className = "",
         rulerContainerWidth,
         time = undefined,
@@ -148,7 +148,7 @@
         {#if showTime}
             <!-- Time label above playhead -->
             <div
-                    class="absolute -top-5 text-[10px] text-surface-200 bg-surface-800/90 px-1 rounded pointer-events-none"
+                    class="absolute -top-5 text-[10px] text-primary-foreground bg-primary px-1 rounded pointer-events-none"
                     style:transform={`translateX(${$playheadX}px) translateX(-50%)`}
             >
                 {currentPlayheadTime.toFixed(2)}s

@@ -582,7 +582,7 @@
                     <div
                             role="button"
                             class="overflow-hidden h-full w-full
-                   flex items-stretch bg-emerald-700 hover:bg-emerald-500/75
+                   flex items-stretch studio-clip
                    border rounded-md transition-colors min-w-[70px] animation"
                     >
                         <div
@@ -596,15 +596,13 @@
                         <button
                                 class="w-6 h-full flex items-center justify-center"
                                 aria-label="Set start keyframe"
+                                aria-pressed={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.startKeyframe.id}
                                 title="Set start keyframe"
                                 onclick={(e) => toggleKeyframe(e, anim.id, 0)}
                         >
                             <span
-                                    class="w-4 h-4 rounded-full transition-colors duration-100 ring-1"
-                                    class:bg-white={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.startKeyframe.id}
-                                    class:ring-white={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.startKeyframe.id}
-                                    class:bg-emerald-600={!($selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.startKeyframe.id)}
-                                    class:active:bg-emerald-600={!($selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.startKeyframe.id)}
+                                    class="studio-keyframe"
+                                    class:selected={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.startKeyframe.id}
                             ></span>
                         </button>
 
@@ -621,15 +619,13 @@
                         <button
                                 class="w-6 h-full flex items-center justify-center"
                                 aria-label="Set end keyframe"
+                                aria-pressed={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.endKeyframe.id}
                                 title="Set end keyframe"
                                 onclick={(e) => toggleKeyframe(e, anim.id, 1)}
                         >
                             <span
-                                    class="w-4 h-4 rounded-full transition-colors duration-100 ring-1 "
-                                    class:bg-white={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.endKeyframe.id}
-                                    class:ring-white={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.endKeyframe.id}
-                                    class:bg-emerald-600={!($selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.endKeyframe.id)}
-                                    class:active:bg-emerald-600={!($selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.endKeyframe.id)}
+                                    class="studio-keyframe"
+                                    class:selected={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.endKeyframe.id}
                             ></span>
                         </button>
 
@@ -743,7 +739,7 @@
     /* Lock base background during drag so hover doesn't swap colors */
     .track.dragging .animation,
     .track.dragging .animation:hover {
-        background: rgb(4 120 87); /* tailwind emerald-700 */
+        background: var(--studio-clip, #e9d6ce);
     }
     /* Keep non-hover stripes to avoid repaint flicker */
     .track.dragging .marked-area-left:hover,

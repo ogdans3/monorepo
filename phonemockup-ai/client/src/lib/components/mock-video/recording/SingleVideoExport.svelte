@@ -256,7 +256,7 @@
 
 <div class="flex h-full flex-col gap-4 min-h-0">
     <!-- Controls -->
-    <div class="flex gap-2">
+    <div class="studio-export-controls flex flex-wrap gap-2">
         <div class="w-[180px]">
             <Select.Root
                     type="single"
@@ -305,7 +305,7 @@
     {/if}
 
     <!-- Main -->
-    <div class="flex flex-1 h-full gap-4 max-h-[200px]">
+    <div class="studio-export-progress flex flex-1 h-full gap-4 max-h-[200px]">
         <div class="flex-1 h-full">
             <Card class="h-full">
                 <CardHeader class="space-y-1 py-3">
@@ -348,7 +348,7 @@
             </Card>
         </div>
 
-        <div class="flex-1 h-full w-full basis-[340px] max-w-[360px]">
+        <div class="studio-export-rating flex-1 h-full w-full basis-[340px] max-w-[360px]">
             <Rating/>
         </div>
     </div>

@@ -176,27 +176,12 @@ test.describe("Timeline: keyframes and animation interactions", () => {
         ).toBeVisible();
         await expect(endButton, "End keyframe button not visible").toBeVisible();
 
-        const startDot = startButton.locator("span").first();
-        const endDot = endButton.locator("span").first();
-
-        // Before click, start might not be selected
         await startButton.click();
+        await expect(startButton).toHaveAttribute("aria-pressed", "true");
+        await expect(endButton).toHaveAttribute("aria-pressed", "false");
+        // Selection moves the playhead to the editable keyframe.
+        await expect(page.getByLabel("Start time in seconds")).toHaveValue("2.00");
 
-        // Selected keyframe shows bg-white and ring-white
-        await expect(
-            startDot,
-            "Start keyframe did not present selected styles after click"
-        ).toHaveClass(/bg-white/);
-        await expect(
-            startDot,
-            "Start keyframe did not present selected ring after click"
-        ).toHaveClass(/ring-white/);
-
-        // End keyframe should not be selected
-        await expect(
-            endDot,
-            "End keyframe incorrectly presented selected styles"
-        ).not.toHaveClass(/bg-white/);
     });
 
     test("2) Moving an animation in the timeline works", async ({page}) => {

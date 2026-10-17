@@ -3,7 +3,7 @@
 The homepage introduces the product through its real device renders and editor.
 Archivo, a warm white surface, graphite text and a restrained rust accent replace
 the previous italic headlines, pill controls and repeated promotional slogans.
-The editor keeps its existing interface and behavior.
+The editing workspace now follows this direction too; see [the editor notes](editor-2026.md).
 
 ## Applied skill guidance
 
@@ -30,7 +30,7 @@ The editor keeps its existing interface and behavior.
 - `client/static/fonts/archivo/archivo-latin-variable.woff2` is self-hosted.
   Its SIL Open Font License is alongside it in `OFL.txt`.
 - `client/static/media/landing/editor.webp` is a real 1440×1000 screenshot of
-  `/platform/animation/soft-orbit`, paused at the initial pose with Model open.
+  `/platform/animation/soft-orbit`, paused at 2.5 seconds with Model open.
   It is lazy-loaded with intrinsic dimensions. Refresh it if that editor view changes.
 - All device footage and posters come from the existing `previews/motion-2026`
   collection. No generated UI mockups or additional animation library are used.
