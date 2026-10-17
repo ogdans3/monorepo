@@ -10,6 +10,7 @@ services:
     restart: always
     environment:
       - PORT=80
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY:-}
     deploy:
       replicas: 1
       labels:

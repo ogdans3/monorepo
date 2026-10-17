@@ -1,5 +1,5 @@
-import {db} from './client';
-import {user, project, file} from './schema';
+import {db} from './client.js';
+import {user, project, file} from './schema.js';
 import {
     and,
     desc,

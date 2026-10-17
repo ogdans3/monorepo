@@ -1,61 +1,54 @@
-import type {NextFunction, Request, Response} from "express";
-import type {User} from "@workos-inc/node";
-import workos from "../workos";
+import { clerkMiddleware, getAuth, type ClerkMiddlewareOptions } from '@clerk/express';
+import type { RequestHandler, Response } from 'express';
+import { config } from '../config.js';
+import type { AppIdentity } from '../auth/identity.js';
 
-const SESSION_COOKIE = "wos-session";
-
-export const sessionCookieOptions = {
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax" as const,
-};
-
-/** The signed-in WorkOS user, set on `res.locals` by `withAuth`. */
-export function currentUser(res: Response): User {
-    return res.locals.user as User;
+/** Stable application identity, not the provider's ID. */
+export function currentUser(res: Response): AppIdentity {
+    return res.locals.user as AppIdentity;
 }
 
-function notSignedIn(res: Response) {
-    return res.status(401).json({error: "Not signed in"});
-}
-
-/**
- * Lets a request through only with a valid WorkOS session, and puts the
- * user on `res.locals.user`.
- *
- * These are API routes, so a missing or dead session is a 401 the client can
- * act on, not a redirect to a page. An expired access token is refreshed in
- * place: the new cookie goes out with this response and the request carries
- * on, rather than being redirected, which would turn a POST into a GET and
- * drop its body.
- */
-export async function withAuth(req: Request, res: Response, next: NextFunction) {
-    const sessionData = req.cookies?.[SESSION_COOKIE];
-    if (!sessionData) return notSignedIn(res);
-
-    try {
-        const session = workos.userManagement.loadSealedSession({
-            sessionData,
-            cookiePassword: process.env.WORKOS_COOKIE_PASSWORD,
+export function createAuthMiddleware(
+    options: ClerkMiddlewareOptions,
+    resolveIdentity: (clerkUserId: string) => Promise<AppIdentity>,
+): RequestHandler {
+    const authenticate = clerkMiddleware({ ...options, acceptsToken: 'session_token' });
+    return (req, res, next) => {
+        // Bearer tokens only: ambient cookies cannot authorize cross-site writes.
+        if (!/^Bearer\s+\S+$/i.test(req.headers.authorization ?? '')) {
+            res.status(401).json({ error: 'Not signed in' });
+            return;
+        }
+        authenticate(req, res, (error?: unknown) => {
+            if (error) return next(error);
+            const session = getAuth(req, { acceptsToken: 'session_token' });
+            if (!session.isAuthenticated || !session.userId) {
+                res.status(401).json({ error: 'Not signed in' });
+                return;
+            }
+            resolveIdentity(session.userId).then((identity) => {
+                res.locals.user = identity;
+                next();
+            }).catch(next);
         });
-
-        const auth = await session.authenticate();
-        if (auth.authenticated) {
-            res.locals.user = auth.user;
-            return next();
-        }
-
-        const refreshed = await session.refresh();
-        if (!refreshed.authenticated || !refreshed.sealedSession) {
-            res.clearCookie(SESSION_COOKIE, sessionCookieOptions);
-            return notSignedIn(res);
-        }
-        res.cookie(SESSION_COOKIE, refreshed.sealedSession, sessionCookieOptions);
-        res.locals.user = refreshed.user;
-        return next();
-    } catch {
-        res.clearCookie(SESSION_COOKIE, sessionCookieOptions);
-        return notSignedIn(res);
-    }
+    };
 }
+
+let middleware: RequestHandler | undefined;
+export const withAuth: RequestHandler = (req, res, next) => {
+    if (!req.headers.authorization) {
+        res.status(401).json({ error: 'Not signed in' });
+        return;
+    }
+    if (!process.env.CLERK_SECRET_KEY || !process.env.CLERK_PUBLISHABLE_KEY) {
+        res.status(503).json({ error: 'Authentication is not configured' });
+        return;
+    }
+    middleware ??= createAuthMiddleware({
+        authorizedParties: [new URL(config.appUrl).origin],
+    }, async (clerkId) => {
+        const { resolveClerkIdentity } = await import('../auth/resolve-identity.js');
+        return resolveClerkIdentity(clerkId);
+    });
+    return middleware(req, res, next);
+};

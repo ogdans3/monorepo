@@ -17,6 +17,12 @@ export const user = pgTable('user', {
         .default(sql`now()`),
 });
 
+// Provider IDs remain separate from the stable IDs used by project.owner.
+export const authIdentity = pgTable('auth_identity', {
+    clerkId: text('clerk_id').primaryKey(),
+    userId: text('user_id').notNull().unique().references(() => user.id, { onDelete: 'cascade' }),
+});
+
 // project table (public.project)
 export const project = pgTable('project', {
     id: uuid('id')

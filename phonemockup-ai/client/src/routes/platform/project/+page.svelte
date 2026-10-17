@@ -4,6 +4,7 @@
     import {Spinner} from "$lib/components/ui/spinner";
     import {Button} from "$lib/components/ui/button";
     import Logo from "$lib/components/Logo.svelte";
+    import AuthControls from '$lib/components/auth/AuthControls.svelte';
     import {
         listProjectsFromLocalStorage,
         deleteProjectFromLocalStorage,
@@ -71,7 +72,7 @@
         </a>
     </div>
     <div class="flex items-center gap-2">
-        <!-- Right side actions can be added here -->
+        <AuthControls/>
     </div>
 </div>
 
@@ -116,7 +117,7 @@
                     <div class="text-7xl mb-6 opacity-70">🎬</div>
                     <h2 class="text-2xl font-semibold mb-3">No projects yet</h2>
                     <p class="text-muted-foreground mb-8 leading-relaxed">
-                        Create your first animation project. Cloud projects are automatically synced.
+                        Create your first animation project. Projects are saved in this browser.
                     </p>
                     <Button onclick={createNewProject} size="lg" class="gap-2">
                         <Plus class="w-5 h-5"/>

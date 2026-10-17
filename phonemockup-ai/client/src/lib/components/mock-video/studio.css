@@ -105,7 +105,9 @@ body.studio-theme {
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.7px;
+  min-height: 44px;
 }
+.studio-mobile-brand { display: none; }
 .studio-wordmark > span:first-child {
   width: 9px;
   height: 9px;
@@ -940,4 +942,12 @@ body.studio-theme {
   .studio-topbar-actions .studio-projects-button {
     min-width: 44px;
   }
+}
+
+@media (max-width: 480px) {
+  .studio-brand-name { display: none; }
+  .studio-wordmark > span:first-child { display: none; }
+  .studio-mobile-brand { display: inline; font-size: 21px; }
+  .studio-mobile-brand > span { color: var(--primary); }
+  .studio-wordmark { min-width: 44px; justify-content: center; }
 }

@@ -30,6 +30,7 @@
     Save,
   } from "@lucide/svelte";
   import { get } from "svelte/store";
+  import AuthControls from "$lib/components/auth/AuthControls.svelte";
 
   // Props
   let { onOpenExportPanel } = $props();
@@ -97,9 +98,9 @@
 
 <header class="studio-topbar">
   <a class="studio-wordmark" href="/" aria-label="PhoneMockup home"
-    ><span></span>phonemockup<span class="studio-wordmark-suffix">
-      / studio</span
-    ></a
+    ><span></span><span class="studio-brand-name">phonemockup</span><span
+      class="studio-mobile-brand">pm<span>.</span></span
+    ><span class="studio-wordmark-suffix"> / studio</span></a
   >
   <div class="studio-project-title">
     <span class="studio-project-divider">/</span><span
@@ -107,6 +108,7 @@
     >
   </div>
   <div class="studio-topbar-actions">
+    <AuthControls compact />
     <Button
       variant="ghost"
       class="studio-projects-button"

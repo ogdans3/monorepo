@@ -1,5 +1,5 @@
-import {db} from './client';
-import {user, project} from './schema';
+import {db} from './client.js';
+import {user, project} from './schema.js';
 import {
     and,
     desc,
@@ -28,27 +28,27 @@ export type DBProject = {
 };
 
 // Create or get user (UPSERT-like behavior)
-export async function createUser(workosUserId: string): Promise<DBUser> {
+export async function createUser(userId: string): Promise<DBUser> {
     const inserted = await db
         .insert(user)
-        .values({id: workosUserId})
+        .values({id: userId})
         .onConflictDoNothing()
         .returning({id: user.id, createdAt: user.createdAt});
 
     if (inserted.length === 0) {
-        return getUser(workosUserId) as Promise<DBUser>;
+        return getUser(userId) as Promise<DBUser>;
     }
     return inserted[0];
 }
 
-export async function getUser(workosUserId: string): Promise<DBUser | null> {
+export async function getUser(userId: string): Promise<DBUser | null> {
     const rows = await db
         .select({
             id: user.id,
             createdAt: user.createdAt,
         })
         .from(user)
-        .where(eq(user.id, workosUserId))
+        .where(eq(user.id, userId))
         .limit(1);
 
     return rows[0] ?? null;
@@ -170,7 +170,7 @@ export async function updateProject(
     input: UpdateProjectInput
 ): Promise<DBProject | null> {
     const values: Partial<{
-        name: string | null;
+        name: string;
         fileUrl: string | null;
         fileName: string | null;
         projectJson: unknown | null;

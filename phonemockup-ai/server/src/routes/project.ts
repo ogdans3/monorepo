@@ -1,14 +1,14 @@
 import {Router, type NextFunction, type Request, type Response} from "express";
-import fileRoutes from "./file";
-import {currentUser, withAuth} from "../middleware/auth";
+import fileRoutes from "./file.js";
+import {currentUser, withAuth} from "../middleware/auth.js";
 import {
     createProject,
     getProject,
     getProjects,
     updateProject,
-} from "../db/queries";
-import {db} from "../db/client";
-import {file as fileTable} from "../db/schema";
+} from "../db/queries.js";
+import {db} from "../db/client.js";
+import {file as fileTable} from "../db/schema.js";
 
 const router = Router();
 

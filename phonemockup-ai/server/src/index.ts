@@ -6,8 +6,8 @@ import helmet from "helmet";
 import compression from "compression";
 import cookieParser from 'cookie-parser';
 import {secretManager} from "./secret-manager.js";
-import {config} from "./config";
-import {errorHandler} from "./middleware/errorHandler";
+import {config} from "./config.js";
+import {errorHandler} from "./middleware/errorHandler.js";
 
 const app = express();
 

@@ -1,8 +1,7 @@
 import express from "express";
-import fetch from "node-fetch";
 import multer from "multer";
-import {db} from "../db/client";
-import {file as fileTable} from "../db/schema";
+import {db} from "../db/client.js";
+import {file as fileTable} from "../db/schema.js";
 import {and, eq} from "drizzle-orm";
 
 const router = express.Router({mergeParams: true});
@@ -73,7 +72,7 @@ const upload = multer({
 
 router.get("/", async (req, res) => {
     try {
-        const projectId = req.params.projectId;
+        const projectId = (req.params as {projectId?: string}).projectId;
         if (!projectId) {
             console.error(400, req.method, req.originalUrl, "projectId is required in path");
             return res.status(400).json({error: "projectId is required in path"});
@@ -113,7 +112,7 @@ function receiveFile(req: express.Request, res: express.Response, next: express.
 
 router.post("/", receiveFile, async (req, res) => {
     try {
-        const projectId = req.params.projectId;
+        const projectId = (req.params as {projectId?: string}).projectId;
         if (!projectId) {
             console.error(400, req.method, req.originalUrl, "projectId is required in path");
             return res.status(400).json({error: "projectId is required in path"});
@@ -190,7 +189,7 @@ router.post("/", receiveFile, async (req, res) => {
                     "X-Bz-Info-projectId": projectId,
                     "X-Bz-Info-originalName": encodeURIComponent(originalname),
                 },
-                body: buffer,
+                body: new Uint8Array(buffer.buffer as ArrayBuffer, buffer.byteOffset, buffer.byteLength),
             });
         } catch {
             console.error(502, req.method, req.originalUrl, "Network error calling b2_upload_file");

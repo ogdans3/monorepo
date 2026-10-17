@@ -14,6 +14,7 @@ class SecretManager {
         const name = `projects/${this.projectKey}/secrets/${secretName}/versions/latest`;
         try {
             const [version] = await client.accessSecretVersion({name});
+            if (!version.payload?.data) throw new Error(`Secret ${secretName} is empty`);
             return version.payload.data.toString();
         } catch (error) {
             console.error(`Failed to fetch secret ${secretName}:`, error);

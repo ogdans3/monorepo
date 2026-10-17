@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import {
     ArrowUpRight,
     ArrowRight,
@@ -8,6 +9,7 @@
   } from "@lucide/svelte";
   import animationGroups from "$lib/animations/animations.svelte";
   import MotionPreview from "$lib/components/marketing/MotionPreview.svelte";
+  import AuthControls from "$lib/components/auth/AuthControls.svelte";
 
   const motions = animationGroups;
   const heroOptions = ["soft-orbit", "edge-reveal", "top-down"].map((id) =>
@@ -19,6 +21,10 @@
   let category = $state("All motions");
   let showAll = $state(false);
   let menuOpen = $state(false);
+  let interactive = $state(false);
+  onMount(() => {
+    interactive = true;
+  });
   let menuButton: HTMLButtonElement;
   const categories = [
     "All motions",
@@ -158,13 +164,17 @@
       <a class="mobile-projects" href="/platform/project"
         >Your projects <ArrowUpRight size={16} /></a
       >
+      <div class="mobile-account"><AuthControls /></div>
     </nav>
-    <a class="nav-cta" href="/platform/project"
-      >Your projects <ArrowUpRight size={16} /></a
-    >
+    <div class="header-actions">
+      <a class="nav-cta" href="/platform/project"
+        >Your projects <ArrowUpRight size={16} /></a
+      ><AuthControls />
+    </div>
     <button
       class="menu-toggle"
       type="button"
+      disabled={!interactive}
       aria-expanded={menuOpen}
       aria-controls="site-navigation"
       bind:this={menuButton}
@@ -608,6 +618,25 @@
     display: flex;
     gap: 30px;
     font-size: 14px;
+  }
+  @media (min-width: 761px) and (max-width: 1100px) {
+    .header-actions .nav-cta {
+      display: none;
+    }
+    nav {
+      gap: 14px;
+    }
+    .site-header {
+      gap: 14px;
+    }
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .mobile-account {
+    display: none;
   }
   nav a,
   .nav-cta {
@@ -1205,6 +1234,13 @@
     }
   }
   @media (max-width: 760px) {
+    .header-actions {
+      display: none;
+    }
+    .mobile-account {
+      display: block;
+      padding-top: 10px;
+    }
     .wrap {
       width: calc(100% - 40px);
     }

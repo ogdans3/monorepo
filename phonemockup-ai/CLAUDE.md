@@ -57,14 +57,14 @@ Express 5 + TypeScript, run with `bun --watch` in dev. Bootstrap order matters:
 
 Routes (`/api/*`):
 
-- `auth.ts` — WorkOS AuthKit: `/login`, `/wos-callback`, `/logout`. Sealed session in `wos-session` cookie. The callback and sign-out URLs come from `WORKOS_REDIRECT_URI` and `APP_URL` (`config.ts`), defaulting to localhost; after sign-in it only redirects to a path on this site.
-- `project.ts` — list/get/create/update projects, owned by WorkOS user id. `withAuth` middleware (`middleware/auth.ts`) loads + refreshes the sealed session, puts the user on `res.locals.user`, and answers 401 (not a redirect) without one. The file routes mount behind `withAuth` plus an owner check.
+- Clerk authentication: client uses `@clerk/clerk-js` and `@clerk/ui`; Express uses `@clerk/express`. `withAuth` accepts verified Clerk bearer session tokens, requires the `APP_URL` authorized party, and returns JSON 401 for anonymous requests. Legacy login bookmarks redirect to `/sign-in`; old cookies are not accepted.
+- `project.ts` — list/get/create/update projects, owned by stable application user IDs. `auth_identity` maps Clerk IDs to them; imported users resolve through trusted Backend API `externalId`. Do not replace project owner IDs with Clerk IDs. File routes remain behind `withAuth` and an owner check.
 - `file.ts` — Backblaze B2 upload. Flow: client `POST /api/project` with `fileCount` → server inserts N placeholder rows in `file` table, returns `fileKeys` → client `POST /api/project/:id/file` with `fileKey` + multipart → server authorizes against B2, gets upload URL, uploads, fills in the row.
 - `health.ts`, `user.ts`
 
 DB: Drizzle — `db/client.ts` + `db/queries.ts` + `db/file-queries.ts`, schema in `db/schema.ts` (`user`, `project`, `file`). The raw-SQL layer that used to sit beside it (`database.ts`) was removed: its project listing never ran and nothing else needed it.
 
-Not deployed: phonemockup.app answers `/api/*` with the client's 404 and the client makes no API calls. There is no `tsconfig.json`, so `npm run build`/`typecheck` don't work; `bun` runs the TypeScript directly.
+Not deployed: phonemockup.app answers `/api/*` with the client's 404 and the client makes no API calls. The API now builds as Node ESM with `npm run build`; `npm run typecheck` and `npm test` verify it. Its live database and account migration are separate deployment steps; see `docs/clerk-auth.md`.
 
 ## MCP (`mcp/`)
 
@@ -94,14 +94,14 @@ The **server is not in this compose file** — it's deployed as a separate swarm
 
 ## Dashboard test version (root)
 
-The project-local `Dockerfile` + `.dashboard.yaml` build and run **only the client** as a single container — same shape as the production compose. Use this PhoneMockup folder as the Docker build context. The Express server is not started here; routes that need the API (project save, file upload, login) will 404, but the marketing page and the in-browser editor work fully.
+The project-local `Dockerfile` + `.dashboard.yaml` build and run **only the client** as a single container — same shape as the production compose. Use this PhoneMockup folder as the Docker build context. The Express server is not started here; routes that need the API (cloud project save and file upload) will 404, but the marketing page and the in-browser editor work fully.
 
-To run a real end-to-end stack inside the dashboard, swap the root Dockerfile for a `docker-compose.yml` and provide secrets for WorkOS / Neon / B2 / Google Secret Manager.
+To run a real end-to-end stack inside the dashboard, swap the root Dockerfile for a `docker-compose.yml` and provide secrets for Clerk / Neon / B2 / Google Secret Manager.
 
 ## Conventions and gotchas
 
 - **Secrets bootstrap is async.** Routes are dynamically imported *after* `secretManager.initialize()`. If you add a route that reads `process.env.X` at module top-level, import it the same way.
-- **WorkOS URLs are env-driven** (`WORKOS_REDIRECT_URI`, `APP_URL`). A real deployment must set both; the defaults are localhost.
+- **Clerk configuration is runtime-driven.** Client: `CLERK_PUBLISHABLE_KEY` (also accepts `PUBLIC_`/`VITE_` variants). API: `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `APP_URL`. Only the publishable key is serialized to the browser. Apply `server/migrations/20261017_clerk_identity.sql` before the API cutover. See `docs/clerk-auth.md`.
 - **Data access is Drizzle only.** Don't bring back raw template-string SQL beside it.
 - **Svelte 5 runes only.** Stores are `.svelte.ts` files using `$state`, not the legacy `writable()` API. (A few files still import `get` from `svelte/store` against a runes-style controller — fine, but don't introduce new `writable`-based stores.)
 - **Editor state is local-first.** The browser drives the entire mockup pipeline (three.js render → MediaRecorder/WebCodecs encoder → download). The server is only persistence.
@@ -130,7 +130,7 @@ To run a real end-to-end stack inside the dashboard, swap the root Dockerfile fo
   tint the screen behind them). The picker's colour carries over when the
   model is switched.
 - **Tailwind v4.** Configured via `@tailwindcss/vite`, no `tailwind.config.js`. Theme files (`theme.css`, `theme-2.css`, …) are CSS, not JS config.
-- **Bun is used in dev** (`bun run dev`, `bun.lockb` present) but the Dockerfiles use `npm ci` against `package-lock.json`. Both lockfiles are committed.
+- **Bun is used in dev** (`bun run dev`, `bun.lock` present, requires current Bun) but the Dockerfiles use `npm ci` against `package-lock.json`. Both lockfiles are committed.
 
 ## Model catalogue and camera cutouts
 
