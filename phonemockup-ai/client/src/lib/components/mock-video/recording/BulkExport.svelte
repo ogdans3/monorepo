@@ -14,7 +14,6 @@
     import {Progress} from "$lib/components/ui/progress";
     import * as Select from "$lib/components/ui/select";
     import {Download, Play, Pause} from "@lucide/svelte";
-    import Rating from "$lib/components/mock-video/recording/Rating.svelte";
     import {project} from "$lib/stores/project.svelte";
     import posthog from "posthog-js";
 
@@ -190,7 +189,7 @@
             ? "Ready to export images"
             : "Ready for bulk export";
         progress = 0;
-        exportAll();
+        if (downloadAsImage || autoClose) exportAll();
     });
 
     onDestroy(() => {
@@ -310,14 +309,14 @@
 
 <div class="flex h-full flex-col gap-4 min-h-0">
     <!-- Controls -->
-    <div class="flex gap-2">
+    <div class="studio-export-controls flex flex-wrap gap-2">
         {#if !downloadAsImage}
             <div class="w-[180px]">
                 <Select.Root
                         type="single"
                         name="exportFormat"
                         bind:value={selectedFormat}
-                        disabled={downloadAsImage}
+                        disabled={downloadAsImage || inProgress}
                 >
                     <Select.Trigger
                             class="h-8 w-[180px] rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between"
@@ -346,9 +345,10 @@
             </div>
         {/if}
 
-        <div class="w-[260px]">
+        <div class="w-[260px] max-w-full">
             <Select.Root
                     type="single"
+                    disabled={inProgress}
                     value={String(activeBulkIndex)}
                     onValueChange={(v: string) => {
           const idx = Number(v);
@@ -357,7 +357,7 @@
                     items={bulkList.map((f, i) => ({ value: String(i), label: f.fileBlob.name }))}
             >
                 <Select.Trigger
-                        class="h-8 w-[260px] rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between overflow-hidden whitespace-nowrap"
+                            class="h-8 w-full rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between overflow-hidden whitespace-nowrap"
                         aria-label="Select file to preview"
                 >
                     <span class="truncate">
@@ -393,12 +393,12 @@
         {#if inProgress}
             <Button variant="outline" onclick={cancel}>Cancel</Button>
         {:else}
-            <Button onclick={closeDialog}>Close</Button>
+            <Button variant="outline" onclick={closeDialog}>Close</Button>
         {/if}
     </div>
 
     <!-- Main -->
-    <div class="flex flex-1 h-full gap-4 max-h-[200px]">
+    <div class="studio-export-progress flex flex-1 h-full gap-4 max-h-[200px]">
         <div class="flex-1 h-full">
             <Card class="h-full">
                 <CardHeader class="space-y-1 py-3">
@@ -429,9 +429,6 @@
             </Card>
         </div>
 
-        <div class="flex-1 h-full w-full basis-[340px] max-w-[360px]">
-            <Rating/>
-        </div>
     </div>
 
     <div class="flex-1 h-full min-h-0">

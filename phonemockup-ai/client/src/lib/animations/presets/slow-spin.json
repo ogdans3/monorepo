@@ -9,7 +9,8 @@
   "favorited": false,
   "priority": 97,
   "categories": [
-    "Cinematic"
+    "Cinematic",
+    "Spin"
   ],
   "loop": true,
   "framing": "full",

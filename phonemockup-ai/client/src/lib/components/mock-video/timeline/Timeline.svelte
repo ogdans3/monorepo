@@ -28,6 +28,9 @@
   import ScreenSwitch from "./ScreenSwitch.svelte";
   import TimelineTools from "$lib/components/mock-video/timeline/TimelineTools.svelte";
   import AnimationPreviewDialog from "$lib/components/mock-video/timeline/AnimationPreviewDialog.svelte";
+  import ConfirmDelete from "$lib/components/library/ConfirmDelete.svelte";
+  let clearDialogOpen = $state(false);
+  let clearTrigger = $state<HTMLElement>();
   import {
     addAnimationGroup,
     clipEndingBefore,
@@ -113,13 +116,9 @@
     }
   });
 
-  function clearWithPrompt() {
-    const confirmed = confirm(
-      "This will remove all animations from your timeline",
-    );
-    if (confirmed) {
-      clear();
-    }
+  function clearWithPrompt(event: MouseEvent) {
+    clearTrigger = event.currentTarget as HTMLElement;
+    clearDialogOpen = true;
   }
 
   export async function chooseAnimation(
@@ -370,6 +369,18 @@
   }
 </script>
 
+<ConfirmDelete
+  bind:open={clearDialogOpen}
+  title="Clear the timeline?"
+  description="All animations will be removed. Your screen media, device and scene settings will stay as they are."
+  actionLabel="Clear timeline"
+  onconfirm={() => {
+    clear();
+    clearDialogOpen = false;
+  }}
+  returnFocus={clearTrigger}
+/>
+
 <div class="timeline studio-timeline" data-testid="timeline">
   <ScreenSwitch />
   <div class="studio-timeline-controls">
@@ -424,6 +435,7 @@
       <Button
         size="sm"
         variant="outline"
+        data-motion-chooser-trigger
         onclick={() => {
           openAnimationDialog(project.tracks[0].id);
           unfocusElement();

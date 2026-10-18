@@ -44,6 +44,8 @@ export type Project = {
     screenMedia?: ScreenMediaInfo | null;
     /** Built-in sample, used only when there is no uploaded screen media. */
     demoMediaId?: "focus" | "workspace";
+    /** Small browser-local preview captured on save. Optional on older projects. */
+    thumbnail?: string;
 }
 
 export type ProjectFile = {
@@ -62,4 +64,3 @@ export type ScreenMediaInfo = {
     fileName: string;
     fileType: string;
 };
-

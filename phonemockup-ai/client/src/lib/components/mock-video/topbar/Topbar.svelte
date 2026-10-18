@@ -6,6 +6,8 @@
   import { videoController } from "$lib/stores/video.svelte";
   import { goto, replaceState } from "$app/navigation";
   import { toast } from "svelte-sonner";
+  import { onDestroy } from "svelte";
+  import { captureProjectThumbnail } from "$lib/repo/project-thumbnail";
 
   // UI components
   import { Button } from "$lib/components/ui/button";
@@ -39,21 +41,32 @@
   let savingProject = $state(false);
   let savingDialogOpen = $state(false);
   let projectSaveError = $state<any>(null);
+  let justSaved = $state(false);
+  let savedReset: ReturnType<typeof setTimeout>;
+  onDestroy(() => clearTimeout(savedReset));
 
   // Functions
   async function saveClicked() {
     projectSaveError = null;
     savingProject = true;
-    savingDialogOpen = true;
+    justSaved = false;
     try {
       const screen = get(get(videoController).currentFile);
       const saved = {
         ...project.toProject(),
+        thumbnail: captureProjectThumbnail(),
         screenMedia: screen
           ? { fileName: screen.name, fileType: screen.type }
           : null,
       };
-      saveProjectToLocalStorage(saved);
+      try {
+        saveProjectToLocalStorage(saved);
+      } catch (error) {
+        // A preview is expendable if browser storage is nearly full.
+        if (!saved.thumbnail) throw error;
+        delete saved.thumbnail;
+        saveProjectToLocalStorage(saved);
+      }
 
       // The JSON is safe at this point; the media is a separate store
       // with its own quota, so a failure there shouldn't undo the save.
@@ -73,19 +86,22 @@
       replaceState(`/platform/project/${saved.id}`, { reason: "save" });
       if (mediaSaved) {
         toast.success("Project saved");
+        justSaved = true;
       } else {
         toast.warning(
           "Project saved, but its screen image or video couldn't be stored in this browser.",
         );
       }
 
-      setTimeout(() => {
-        savingDialogOpen = false;
-      }, 800);
+      savingDialogOpen = false;
+      clearTimeout(savedReset);
+      savedReset = setTimeout(() => {
+        justSaved = false;
+      }, 2400);
     } catch (e) {
       projectSaveError = e;
+      savingDialogOpen = true;
       console.error(e);
-      toast.error("Failed to save project");
     } finally {
       savingProject = false;
     }
@@ -123,11 +139,16 @@
       aria-label="Save"
       disabled={savingProject}
     >
-      {#if savingProject}<Spinner class="h-4 w-4" />{:else}<Save
+      {#if savingProject}<Spinner class="h-4 w-4" />{:else if justSaved}<Check
           size={15}
-        />{/if}<span>Save</span>
+        />{:else}<Save size={15} />{/if}<span
+        >{savingProject ? "Saving…" : justSaved ? "Saved" : "Save"}</span
+      >
     </Button>
-    <Button onclick={onOpenExportPanel} class="studio-export-button"
+    <Button
+      onclick={onOpenExportPanel}
+      class="studio-export-button"
+      data-export-trigger
       >{project.isBulk ? "Bulk Export" : "Export"}<ArrowUpRight
         size={16}
       /></Button
@@ -137,7 +158,7 @@
 
 <!-- Dialogs -->
 <Dialog open={savingDialogOpen} onOpenChange={(o) => (savingDialogOpen = o)}>
-  <DialogContent class="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
+  <DialogContent class="app-dialog max-w-md">
     <DialogHeader>
       <DialogTitle class="flex items-center gap-2">
         {#if savingProject}
@@ -145,17 +166,18 @@
           Saving project…
         {:else if projectSaveError}
           <TriangleAlert class="h-5 w-5 text-red-600" />
-          Save Failed
+          Couldn't save this project
         {:else}
           <Check class="h-5 w-5 text-emerald-600" />
-          Saved Successfully
+          Project saved
         {/if}
       </DialogTitle>
       <DialogDescription>
         {#if savingProject}
           Saving in this browser…
         {:else if projectSaveError}
-          Error: {projectSaveError.message || "Unknown error occurred"}
+          Your work is still open. This browser couldn't save it. Free up some
+          browser storage and try again.
         {:else}
           Project saved in this browser.
         {/if}
@@ -163,11 +185,15 @@
     </DialogHeader>
     <DialogFooter>
       <Button
+        variant="outline"
         disabled={savingProject}
         onclick={() => (savingDialogOpen = false)}
       >
         Close
       </Button>
+      <Button disabled={savingProject} onclick={saveClicked}
+        >Try saving again</Button
+      >
     </DialogFooter>
   </DialogContent>
 </Dialog>

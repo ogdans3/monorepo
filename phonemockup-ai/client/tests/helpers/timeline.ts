@@ -152,8 +152,8 @@ export async function clickToolSnugTimeline(page: Page) {
 export async function clickToolClearTimelineWithConfirm(page: Page) {
     const button = page.getByTestId("timeline-tool-clear-timeline");
     await expect(button, "Clear timeline tool not visible").toBeVisible();
-    page.once("dialog", (dialog) => dialog.accept());
     await button.click();
+    await page.getByRole("alertdialog").getByRole("button", {name: "Clear timeline", exact: true}).click();
 }
 
 export async function getAnimationCount(page: Page): Promise<number> {

@@ -45,6 +45,7 @@
   let inspectorOpen = $state(false);
   const compact = new MediaQuery("(max-width: 900px)");
   let inspectorTrigger = $state<HTMLButtonElement>();
+  let exportTrigger: HTMLElement | null = null;
   const width = $derived(Math.round(project.sceneResolution.x));
   const height = $derived(Math.round(project.sceneResolution.y));
 
@@ -65,7 +66,12 @@
   function openRecorder() {
     // The export drives the playhead frame by frame; playback would fight it.
     get(videoController).pause();
+    exportTrigger =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     open = true;
+    inspectorOpen = false;
   }
 
   function handleFinished() {
@@ -111,7 +117,12 @@
       )
     )
       return;
-    if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+    if (
+      document.querySelector(
+        '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]',
+      )
+    )
+      return;
     e.preventDefault();
     e.stopPropagation();
     if (e.repeat) return;
@@ -147,8 +158,9 @@
     autoClose = false;
   }
 
-  function handleOpenExportPanel() {
+  function handleOpenExportPanel(event: MouseEvent) {
     activePanel = "export";
+    inspectorTrigger = event.currentTarget as HTMLButtonElement;
     inspectorOpen = compact.current;
   }
 
@@ -236,7 +248,7 @@
       class="studio-inspector-dialog"
       onCloseAutoFocus={(event) => {
         event.preventDefault();
-        inspectorTrigger?.focus();
+        if (!open) inspectorTrigger?.focus();
       }}
     >
       <DialogHeader class="studio-drawer-heading">
@@ -268,8 +280,16 @@
       rounded-xl bg-background flex flex-col
       sm:max-w-none gap-0 duration-0
     "
-    escapeKeydownBehavior="ignore"
     interactOutsideBehavior="ignore"
+    onCloseAutoFocus={(event) => {
+      event.preventDefault();
+      if (exportTrigger?.isConnected && exportTrigger !== document.body)
+        exportTrigger.focus();
+      else
+        (
+          document.querySelector("[data-export-trigger]") as HTMLElement | null
+        )?.focus();
+    }}
   >
     <DialogHeader class="px-4 py-3 border-b">
       <DialogTitle class="text-base font-semibold leading-6">
@@ -279,7 +299,7 @@
         {downloadAsImage
           ? "Render the current frame as an image."
           : "Render and encode your animation."}
-        You can continue to monitor progress here.
+        Your project stays open after exporting.
       </DialogDescription>
     </DialogHeader>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import "../app.css";
+  import "$lib/components/library/overlays.css";
   import favicon from "$lib/assets/favicon.png";
   import { Toaster } from "$lib/components/ui/sonner";
   import { onMount } from "svelte";

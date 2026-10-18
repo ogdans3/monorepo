@@ -260,7 +260,7 @@
 
         return await new Promise<Blob | null>((resolve) => {
             if (canvas.toBlob) {
-                canvas.toBlob((b) => resolve(b), "image/jpg", quality);
+                canvas.toBlob((b) => resolve(b), type, quality);
             } else {
                 try {
                     const dataUrl = canvas.toDataURL(type, quality);

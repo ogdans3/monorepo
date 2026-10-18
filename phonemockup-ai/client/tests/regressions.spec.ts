@@ -38,6 +38,7 @@ async function canvasCentre(page: Page): Promise<number[]> {
 
 /** Put a plain white picture on the phone's screen through the Model panel. */
 async function pickWhiteScreenImage(page: Page) {
+    await openInspector(page);
     await page.getByRole("button", {name: "Model", exact: true}).click();
     const white = await page.evaluate(() => {
         const c = document.createElement("canvas");
@@ -56,12 +57,19 @@ async function pickWhiteScreenImage(page: Page) {
 }
 
 async function openProjectSettings(page: Page) {
+    await openInspector(page);
     const name = page.getByLabel("Project name");
     if (!(await name.isVisible())) {
         await page.getByRole("button", {name: "Project Settings"}).click();
     }
     await expect(name).toBeVisible();
     return name;
+}
+
+async function openInspector(page: Page) {
+    const drawer = page.getByRole("dialog", {name: "Scene inspector", exact: true});
+    const trigger = page.getByRole("button", {name: "Edit scene", exact: true});
+    if (await trigger.isVisible() && !(await drawer.isVisible())) await trigger.click();
 }
 
 test.describe("Regressions", () => {
@@ -71,6 +79,8 @@ test.describe("Regressions", () => {
         await name.fill("");
         await name.pressSequentially("My demo project");
         await expect(name).toHaveValue("My demo project");
+        const drawer = page.getByRole("dialog", {name: "Scene inspector", exact: true});
+        if (await drawer.isVisible()) await drawer.getByRole("button", {name: "Close", exact: true}).click();
         await expect(playButton(page)).toHaveAttribute("aria-label", "Play");
     });
 
@@ -80,7 +90,7 @@ test.describe("Regressions", () => {
         // page (and anything the first editor left behind) alive.
         await page.getByRole("button", {name: "My Projects"}).click();
         await expect(page).toHaveURL(/\/platform\/project$/);
-        await page.getByRole("button", {name: /Create Project|New Project/}).first().click();
+        await page.getByRole("link", {name: "New project", exact: true}).click();
         await expect(page).toHaveURL(/\/platform\/animation$/);
         await page.locator('a[href="/platform/animation/still"]').first().click();
         await waitForAppReady(page);
@@ -201,6 +211,8 @@ test.describe("Regressions", () => {
         await goToTimeline(page);
         const name = await openProjectSettings(page);
         await name.fill("Regression name");
+        const drawer = page.getByRole("dialog", {name: "Scene inspector", exact: true});
+        if (await drawer.isVisible()) await drawer.getByRole("button", {name: "Close", exact: true}).click();
         await page.getByRole("button", {name: "Save", exact: true}).click();
         await expect(page).toHaveURL(/\/platform\/project\//);
 

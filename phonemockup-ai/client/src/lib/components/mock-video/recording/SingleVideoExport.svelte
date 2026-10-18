@@ -18,7 +18,6 @@
     import {Progress} from "$lib/components/ui/progress";
     import * as Select from "$lib/components/ui/select";
     import {Download, Play, Pause} from "@lucide/svelte";
-    import Rating from "$lib/components/mock-video/recording/Rating.svelte";
     import {project} from "$lib/stores/project.svelte";
     import posthog from "posthog-js";
 
@@ -43,8 +42,8 @@
     let previewSceneRef: any = $state();
 
     let progress = $state(0);
-    let inProgress = $state(true);
-    let status = $state("Preparing…");
+    let inProgress = $state(false);
+    let status = $state("Ready to export");
     let failure = $state<string | null>(null);
     let renderPaused: boolean = $state(false);
 
@@ -165,7 +164,9 @@
             selectedFormat,
             {transparent}
         );
-        startExport();
+        // Automated preview generation still starts immediately. In the
+        // editor, let the user choose a format before doing expensive work.
+        if (autoClose) startExport();
     });
 
     onDestroy(() => {
@@ -289,12 +290,12 @@
             </Select.Root>
         </div>
 
-        <Button onclick={startExport}>{inProgress ? "Restart export" : "Export again"}</Button>
+        <Button onclick={startExport}>{inProgress ? "Restart export" : finalBlob ? "Export again" : failure ? "Try again" : "Export video"}</Button>
 
         {#if inProgress}
             <Button variant="outline" onclick={cancel}>Cancel</Button>
         {:else}
-            <Button onclick={closeDialog}>Close</Button>
+            <Button variant="outline" onclick={closeDialog}>Close</Button>
         {/if}
     </div>
     {#if losesTransparency}
@@ -317,8 +318,10 @@
                                     This may take a moment. Keep this tab open.
                                 {:else if failure}
                                     <span class="text-destructive">Export failed: {failure}</span>
-                                {:else}
+                                {:else if finalBlob}
                                     Export finished.
+                                {:else}
+                                    Choose a format, then export when you're ready.
                                 {/if}
                             </div>
                         </div>
@@ -348,9 +351,7 @@
             </Card>
         </div>
 
-        <div class="studio-export-rating flex-1 h-full w-full basis-[340px] max-w-[360px]">
-            <Rating/>
-        </div>
+
     </div>
 
     <div class="flex-1 h-full min-h-0">

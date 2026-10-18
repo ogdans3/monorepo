@@ -13,7 +13,6 @@
     } from "$lib/components/ui/card";
     import {Progress} from "$lib/components/ui/progress";
     import {Download, Play, Pause} from "@lucide/svelte";
-    import Rating from "$lib/components/mock-video/recording/Rating.svelte";
     import {project} from "$lib/stores/project.svelte";
     import posthog from "posthog-js";
     import {
@@ -224,6 +223,10 @@
                             <div class="text-xs text-muted-foreground">
                                 {#if inProgress}
                                     Exporting image… Keep this tab open.
+                                {:else if finalBlob}
+                                    Your image is ready. Download it again below if needed.
+                                {:else if status === "Failed"}
+                                    <span class="text-destructive">The image couldn't be exported. Try again.</span>
                                 {:else}
                                     Ready to export image.
                                 {/if}
@@ -241,9 +244,7 @@
             </Card>
         </div>
 
-        <div class="studio-export-rating flex-1 h-full w-full basis-[340px] max-w-[360px]">
-            <Rating/>
-        </div>
+
     </div>
 
     <div class="flex-1 h-full min-h-0">

@@ -54,6 +54,7 @@ function applyDemoMedia() {
 export function startNewProject(group?: AnimationGroup) {
     resetEditorState();
     project.startNew();
+    project.name = group?.name && group.id !== "still" ? group.name : "Untitled project";
     if (group?.previewModelId) {
         const model = getModel(group.previewModelId);
         if (model) project.model = {...model};

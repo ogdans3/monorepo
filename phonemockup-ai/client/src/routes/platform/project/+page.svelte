@@ -1,200 +1,488 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import {goto} from "$app/navigation";
-    import {Spinner} from "$lib/components/ui/spinner";
-    import {Button} from "$lib/components/ui/button";
-    import Logo from "$lib/components/Logo.svelte";
-    import AuthControls from '$lib/components/auth/AuthControls.svelte';
-    import {
-        listProjectsFromLocalStorage,
-        deleteProjectFromLocalStorage,
-    } from "$lib/repo/localstorage.svelte";
-    import {deleteProjectMedia} from "$lib/repo/media-store";
-    import {Cloud, FolderOpen, Trash2, Plus} from "@lucide/svelte";
-    import type {Project} from "$lib/components/mock-video/Project";
-
-    let loading = $state(true);
-    let error = $state<string | null>(null);
-    let cloudProjects = $state<Array<{ key: string; project: Project }>>([]);
-    let localProjects = $state<Array<{ key: string; project: Project }>>([]);
-
-    onMount(async () => {
-        try {
-            loading = true;
-            error = null;
-            localProjects = listLocalProjects();
-        } catch (err) {
-            error = err instanceof Error ? err.message : "Failed to load projects";
-        } finally {
-            loading = false;
-        }
-    });
-
-    async function openProject(project: Project) {
-        await goto(`/platform/project/${project.id}`);
+  import { onMount } from "svelte";
+  import {
+    ArrowUpRight,
+    Plus,
+    Search,
+    Pencil,
+    Trash2,
+    HardDrive,
+    Smartphone,
+  } from "@lucide/svelte";
+  import { toast } from "svelte-sonner";
+  import LibraryShell from "$lib/components/library/LibraryShell.svelte";
+  import ConfirmDelete from "$lib/components/library/ConfirmDelete.svelte";
+  import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+  } from "$lib/components/ui/dialog";
+  import { Button } from "$lib/components/ui/button";
+  import {
+    listProjectsFromLocalStorage,
+    saveProjectToLocalStorage,
+    deleteProjectFromLocalStorage,
+  } from "$lib/repo/localstorage.svelte";
+  import { deleteProjectMedia } from "$lib/repo/media-store";
+  type Entry = ReturnType<typeof listProjectsFromLocalStorage>[number];
+  let loading = $state(true);
+  let error = $state("");
+  let unreadable = $state(0);
+  let projects = $state<Entry[]>([]);
+  let search = $state("");
+  let sort = $state("recent");
+  let selected = $state<Entry | null>(null);
+  let deleting = $state(false);
+  let deleteOpen = $state(false);
+  let renameOpen = $state(false);
+  let name = $state("");
+  let actionError = $state("");
+  let actionTrigger = $state<HTMLElement>();
+  let renameInput = $state<HTMLInputElement>();
+  function loadProjects() {
+    try {
+      error = "";
+      const entries = listProjectsFromLocalStorage();
+      unreadable = entries.filter((e) => !e.project).length;
+      projects = entries.filter((e) => e.project);
+    } catch {
+      error =
+        "This browser couldn't open your saved projects. Try again or check that browser storage is available.";
+    } finally {
+      loading = false;
     }
-
-    function createNewProject() {
-        goto("/platform/animation");
+  }
+  onMount(() => {
+    loadProjects();
+    const sync = (e: StorageEvent) => {
+      if (!e.key || e.key.startsWith("project:local:")) loadProjects();
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  });
+  const filtered = $derived(
+    projects
+      .filter((e) =>
+        `${e.project.name} ${e.project.model?.name ?? ""}`
+          .toLowerCase()
+          .includes(search.trim().toLowerCase()),
+      )
+      .sort((a, b) =>
+        sort === "name"
+          ? (a.project.name ?? "").localeCompare(b.project.name ?? "")
+          : (Date.parse(b.metadata?.savedAt) || 0) -
+            (Date.parse(a.metadata?.savedAt) || 0),
+      ),
+  );
+  function savedDate(value: string) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? "Saved in this browser"
+      : `Saved ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(date)}`;
+  }
+  function thumbnail(entry: Entry) {
+    const value = entry.project.thumbnail;
+    return value && /^data:image\/(webp|png|jpeg);base64,/.test(value)
+      ? value
+      : null;
+  }
+  function startAction(
+    entry: Entry,
+    event: MouseEvent,
+    action: "rename" | "delete",
+  ) {
+    selected = entry;
+    actionTrigger = event.currentTarget as HTMLElement;
+    actionError = "";
+    name = entry.project.name;
+    if (action === "rename") renameOpen = true;
+    else deleteOpen = true;
+  }
+  function renameProject(event: SubmitEvent) {
+    event.preventDefault();
+    if (!selected || !name.trim()) return;
+    try {
+      saveProjectToLocalStorage({ ...selected.project, name: name.trim() });
+      loadProjects();
+      renameOpen = false;
+      toast.success("Project renamed");
+    } catch {
+      actionError =
+        "We couldn't save the name. Your project is unchanged. Try again.";
     }
-
-    /** Entries that failed to parse have no project; they aren't listed. */
-    function listLocalProjects() {
-        return listProjectsFromLocalStorage().filter((entry) => entry.project);
-    }
-
-    function deleteLocalProject(key: string, project: Project) {
-        if (confirm("Delete this project? This cannot be undone.")) {
-            deleteProjectFromLocalStorage(key);
-            deleteProjectMedia(project.id).catch((e) => console.warn("Couldn't delete project media", e));
-            localProjects = listLocalProjects();
-        }
-    }
-
-    let allProjects = $derived.by(() => {
-        const cloud = cloudProjects.map(p => ({...p, isLocal: false}));
-        const local = localProjects.map(p => ({...p, isLocal: true}));
-        return [...cloud, ...local].sort((a, b) =>
-            (a.project.name ?? "").localeCompare(b.project.name ?? "")
+  }
+  async function deleteProject() {
+    if (!selected || deleting) return;
+    deleting = true;
+    actionError = "";
+    try {
+      if (!deleteProjectFromLocalStorage(selected.key))
+        throw new Error("delete failed");
+      let mediaRemoved = true;
+      try {
+        await deleteProjectMedia(selected.project.id);
+      } catch {
+        mediaRemoved = false;
+      }
+      loadProjects();
+      deleteOpen = false;
+      if (mediaRemoved) toast.success("Project deleted");
+      else
+        toast.warning(
+          "Project deleted. This browser couldn't clean up its stored media.",
         );
-    });
+    } catch {
+      actionError = "We couldn't delete this project. Please try again.";
+    } finally {
+      deleting = false;
+    }
+  }
 </script>
 
-<svelte:head>
-    <title>My projects — PhoneMockup.app</title>
-</svelte:head>
-
-<!-- Top Bar -->
-<div class="bg-sidebar text-sidebar-foreground h-16 border-b border-surface-800 bg-surface-900 flex items-center justify-between px-4 shrink-0">
-    <div class="flex items-center">
-        <a href="/">
-            <Logo/>
-        </a>
+<svelte:head
+  ><title>My projects — PhoneMockup</title><meta
+    name="robots"
+    content="noindex"
+  /></svelte:head
+>
+<LibraryShell active="projects">
+  <div class="library-heading">
+    <div>
+      <p class="library-eyebrow">Your workspace</p>
+      <h1>My projects<span class="project-heading-dot">.</span></h1>
+      <p class="library-subtitle">
+        Pick up where you left off. Or try a new angle.
+      </p>
     </div>
-    <div class="flex items-center gap-2">
-        <AuthControls/>
+    <a
+      class="library-button primary"
+      data-library-new-project
+      href="/platform/animation">New project <Plus size={18} /></a
+    >
+  </div>
+  {#if error}<div class="library-notice" role="alert">
+      <p>{error}</p>
+      <button class="library-button" onclick={loadProjects}>Try again</button>
     </div>
-</div>
-
-<div class="min-h-dvh bg-surface-950 text-surface-50 p-6 md:p-10">
-    <div class="mx-auto max-w-7xl">
-        <!-- Header -->
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-10">
-            <div>
-                <h1 class="text-3xl md:text-4xl font-bold">My Projects</h1>
-                <p class="text-muted-foreground mt-2 text-sm md:text-base">
-                    {allProjects.length} project{allProjects.length === 1 ? '' : 's'}
-                </p>
-            </div>
-        </div>
-
-        <!-- Error State -->
-        {#if error}
-            <div class="rounded-xl border border-destructive/30 bg-destructive/10 p-6 mb-6">
-                <p class="text-destructive font-medium">{error}</p>
-                <Button
-                        onclick={() => window.location.reload()}
-                        variant="outline"
-                        class="mt-4"
+  {:else if loading}<div
+      class="project-skeletons"
+      role="status"
+      aria-label="Loading projects"
+    >
+      {#each [1, 2, 3] as n}<div></div>{/each}
+    </div>
+  {:else if !projects.length}
+    <section class="library-empty">
+      <div>
+        <h2>A place for your next idea.</h2>
+        <p>
+          Start with a motion, add your screen and make it yours. Your saved
+          work will live here.
+        </p>
+        <a class="library-button primary" href="/platform/animation"
+          >Explore the motions <ArrowUpRight size={18} /></a
+        >
+      </div>
+      <div class="library-empty-art" aria-hidden="true">
+        <img src="/previews/motion-2026/soft-orbit.webp" alt="" /><img
+          src="/previews/motion-2026/top-down.webp"
+          alt=""
+        />
+      </div>
+    </section>
+  {:else}
+    <div class="library-toolbar">
+      <label class="library-search"
+        ><Search size={17} aria-hidden="true" /><span class="sr-only"
+          >Search projects</span
+        ><input
+          type="search"
+          placeholder="Find a project or device"
+          bind:value={search}
+        /></label
+      ><span class="library-count" role="status"
+        >{filtered.length}
+        {filtered.length === 1 ? "project" : "projects"}</span
+      ><label class="library-sort"
+        >Sort by<select bind:value={sort} aria-label="Sort projects"
+          ><option value="recent">Last saved</option><option value="name"
+            >Name A–Z</option
+          ></select
+        ></label
+      >
+    </div>
+    {#if !filtered.length}<div class="library-no-results">
+        <h2>No projects found.</h2>
+        <p>Try a different project name or device.</p>
+        <button class="library-button" onclick={() => (search = "")}
+          >Clear search</button
+        >
+      </div>
+    {:else}<div class="project-grid">
+        {#each filtered as entry (entry.key)}
+          <article class="project-card" data-project-id={entry.project.id}>
+            <a
+              class="project-preview"
+              href={`/platform/project/${encodeURIComponent(entry.project.id)}`}
+              aria-label={`Open ${entry.project.name}`}
+            >
+              {#if thumbnail(entry)}<img
+                  src={thumbnail(entry)!}
+                  alt={`Preview of ${entry.project.name}`}
+                  loading="lazy"
+                />{:else}<div class="project-placeholder">
+                  <Smartphone size={48} strokeWidth={1} /><span
+                    >{entry.project.model?.name ?? "Device mockup"}</span
+                  ><small>Save in the studio to add a preview</small>
+                </div>{/if}
+              <span class="project-duration"
+                >{Number(entry.project.timeline?.endTime ?? 0).toFixed(
+                  1,
+                )}s</span
+              ><span class="project-open" aria-hidden="true"
+                ><ArrowUpRight size={18} /></span
+              >
+            </a>
+            <div class="project-card-title">
+              <a
+                href={`/platform/project/${encodeURIComponent(entry.project.id)}`}
+                title={entry.project.name}
+                >{entry.project.name || "Untitled project"}</a
+              >
+              <div class="project-actions">
+                <button
+                  type="button"
+                  aria-label={`Rename ${entry.project.name}`}
+                  title="Rename project"
+                  onclick={(e) => startAction(entry, e, "rename")}
+                  ><Pencil size={15} /></button
+                ><button
+                  type="button"
+                  aria-label={`Delete ${entry.project.name}`}
+                  title="Delete project"
+                  onclick={(e) => startAction(entry, e, "delete")}
+                  ><Trash2 size={15} /></button
                 >
-                    Retry
-                </Button>
+              </div>
             </div>
-        {/if}
+            <p class="project-meta">
+              {entry.project.model?.name ?? "Device mockup"}<span>·</span>{entry
+                .project.tracks?.length ?? 0}
+              {entry.project.tracks?.length === 1 ? "track" : "tracks"}
+            </p>
+            <p class="project-date">{savedDate(entry.metadata?.savedAt)}</p>
+          </article>
+        {/each}
+      </div>{/if}
+  {/if}
+  {#if unreadable}<p class="library-notice" role="status">
+      {unreadable} saved {unreadable === 1
+        ? "project couldn't"
+        : "projects couldn't"} be read. The original data is still in this browser.
+    </p>{/if}
+  <p class="library-storage-note">
+    <HardDrive size={15} aria-hidden="true" /><span
+      >Saved in this browser. Your projects and media stay on this device, even
+      when you sign in.</span
+    >
+  </p>
+</LibraryShell>
+<ConfirmDelete
+  bind:open={deleteOpen}
+  title="Delete this project?"
+  description={`“${selected?.project.name ?? "This project"}” and its saved screen media will be removed from this browser. This can't be undone.`}
+  actionLabel="Delete project"
+  busy={deleting}
+  error={actionError}
+  onconfirm={deleteProject}
+  returnFocus={actionTrigger}
+/>
+<Dialog bind:open={renameOpen}>
+  <DialogContent
+    class="app-dialog"
+    onOpenAutoFocus={(e) => {
+      e.preventDefault();
+      renameInput?.focus();
+      renameInput?.select();
+    }}
+    onCloseAutoFocus={(e) => {
+      e.preventDefault();
+      actionTrigger?.focus();
+    }}
+  >
+    <DialogHeader
+      ><DialogTitle>Give it a name.</DialogTitle><DialogDescription
+        >A useful name makes your next visit easier.</DialogDescription
+      ></DialogHeader
+    >
+    <form onsubmit={renameProject} class="app-dialog-form">
+      <label for="rename-project">Project name</label><input
+        id="rename-project"
+        bind:this={renameInput}
+        bind:value={name}
+        maxlength="120"
+        required
+        aria-describedby={actionError ? "rename-error" : undefined}
+      />{#if actionError}<p
+          id="rename-error"
+          class="app-form-error"
+          role="alert"
+        >
+          {actionError}
+        </p>{/if}<DialogFooter
+        ><Button
+          type="button"
+          variant="outline"
+          onclick={() => (renameOpen = false)}>Cancel</Button
+        ><Button type="submit" disabled={!name.trim()}>Save name</Button
+        ></DialogFooter
+      >
+    </form>
+  </DialogContent>
+</Dialog>
 
-        <!-- Loading State -->
-        {#if loading}
-            <div class="grid h-[60vh] place-items-center">
-                <div class="flex flex-col items-center gap-4">
-                    <Spinner class="w-8 h-8"/>
-                    <p class="text-muted-foreground animate-pulse">Loading projects...</p>
-                </div>
-            </div>
-        {:else if allProjects.length === 0}
-            <!-- Empty State -->
-            <div class="grid h-[70vh] place-items-center">
-                <div class="text-center max-w-md p-8 rounded-2xl bg-surface-900/50 border border-border">
-                    <div class="text-7xl mb-6 opacity-70">🎬</div>
-                    <h2 class="text-2xl font-semibold mb-3">No projects yet</h2>
-                    <p class="text-muted-foreground mb-8 leading-relaxed">
-                        Create your first animation project. Projects are saved in this browser.
-                    </p>
-                    <Button onclick={createNewProject} size="lg" class="gap-2">
-                        <Plus class="w-5 h-5"/>
-                        Create Project
-                    </Button>
-                </div>
-            </div>
-        {:else}
-            <!-- Projects Grid -->
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                <!-- New Project Card -->
-                <button type="button"
-                     onclick={createNewProject}
-                     class="group rounded-xl border-2 border-dashed border-border bg-surface-900/50 p-6 hover:bg-surface-800/50 transition-all duration-300 hover:shadow-lg cursor-pointer flex flex-col items-center justify-center">
-                    <Plus class="w-12 h-12 text-muted-foreground mb-4 group-hover:text-surface-50 transition-colors"/>
-                    <h3 class="text-lg font-semibold text-muted-foreground group-hover:text-surface-50 transition-colors">
-                        New Project</h3>
-                </button>
-
-                {#each allProjects as {project, key, isLocal} (key)}
-                    <div class="group rounded-xl border border-border bg-surface-900 p-6 hover:bg-surface-800 transition-all duration-300 hover:shadow-lg">
-                        <!-- Project Header -->
-                        <div class="flex items-start justify-between mb-4">
-                            <h3 class="font-semibold text-lg truncate flex-1 text-surface-50 group-hover:text-white transition-colors pr-2">
-                                {project.name}
-                            </h3>
-                            <div class="flex items-center gap-2 shrink-0">
-                                {#if project.savedOnServer}
-                                    <span title="Saved to cloud"><Cloud class="w-4 h-4 text-primary"/></span>
-                                {/if}
-                                <span class="text-[11px] px-2.5 py-1 rounded-full bg-muted/20 text-muted-foreground font-medium uppercase tracking-wide">
-                                    {isLocal ? 'Local' : 'Cloud'}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Project Stats -->
-                        <div class="flex items-center gap-4 text-sm text-muted-foreground mb-5">
-                            <div class="flex items-center gap-1.5">
-                                <div class="w-1.5 h-1.5 rounded-full bg-muted-foreground/50"></div>
-                                {project.tracks?.length || 0} track{project.tracks?.length === 1 ? '' : 's'}
-                            </div>
-                            {#if project.files?.length}
-                                <div class="flex items-center gap-1.5">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-muted-foreground/50"></div>
-                                    {project.files.length} file{project.files.length === 1 ? '' : 's'}
-                                </div>
-                            {/if}
-                        </div>
-
-                        <!-- Actions -->
-                        <div class="flex items-center justify-between pt-4 border-t border-border/50">
-                            <div class="flex gap-2">
-                                <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onclick={() => deleteLocalProject(key, project)}
-                                        class="gap-1.5 text-destructive hover:text-red-300 hover:bg-destructive/10 h-8 px-3"
-                                        title="Delete local project"
-                                >
-                                    <Trash2 class="w-3.5 h-3.5"/>
-                                    <span class="hidden sm:inline text-xs">Delete</span>
-                                </Button>
-                            </div>
-                            <Button
-                                    variant="default"
-                                    size="sm"
-                                    onclick={() => openProject(project)}
-                                    class="gap-1.5 h-8 px-4"
-                            >
-                                <FolderOpen class="w-3.5 h-3.5"/>
-                                <span class="text-xs font-medium">Open</span>
-                            </Button>
-                        </div>
-                    </div>
-                {/each}
-            </div>
-        {/if}
-    </div>
-</div>
+<style>
+  .project-heading-dot {
+    color: #a3442c;
+  }
+  .project-grid,
+  .project-skeletons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 36px 24px;
+  }
+  .project-card {
+    min-width: 0;
+  }
+  .project-preview {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 4/3;
+    background: #eae9e2;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .project-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .project-duration {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #fffefaed;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    padding: 4px 8px;
+    border-radius: 3px;
+  }
+  .project-open {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    width: 36px;
+    height: 36px;
+    background: #fffefaed;
+    border-radius: 50%;
+    color: #a3442c;
+  }
+  .project-card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+  }
+  .project-card-title > a {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    padding-block: 10px;
+  }
+  .project-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .project-actions button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    color: #6d6d63;
+  }
+  .project-meta,
+  .project-date {
+    font-size: 12px;
+    color: #6d6d63;
+    line-height: 1.7;
+  }
+  .project-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .project-date {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .project-placeholder {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    text-align: center;
+    color: #747367;
+    padding: 24px;
+  }
+  .project-placeholder span {
+    font-size: 13px;
+  }
+  .project-placeholder small {
+    font-size: 11px;
+  }
+  .project-skeletons > div {
+    aspect-ratio: 4/3;
+    border-radius: 5px;
+    background: #eeede7;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .project-card-title a:hover {
+      color: #a3442c;
+    }
+    .project-actions button:hover {
+      background: #e9e5dc;
+      color: #a3442c;
+    }
+    .project-preview:hover .project-open {
+      background: #a3442c;
+      color: #fffefa;
+    }
+  }
+  @media (max-width: 1050px) {
+    .project-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 600px) {
+    .project-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 28px;
+    }
+    .project-skeletons {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

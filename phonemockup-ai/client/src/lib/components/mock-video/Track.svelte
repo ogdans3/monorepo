@@ -21,6 +21,10 @@
     import {onMount, tick} from "svelte";
     import {project} from "$lib/stores/project.svelte";
     import type {Track} from "$lib/components/mock-video/Project";
+    import ConfirmDelete from "$lib/components/library/ConfirmDelete.svelte";
+    let deleteOpen = $state(false);
+    let pendingDelete = $state<Animation | null>(null);
+    let deleteTrigger = $state<HTMLElement>();
 
     let {
         track = $bindable(),
@@ -546,17 +550,27 @@
     }
 
     function deleteAnimation(anim: Animation, e: Event) {
-        const del = confirm("Delete this animation?");
-        if (del) {
+        pendingDelete = anim;
+        deleteTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+        deleteOpen = true;
+    }
+
+    function confirmDeleteAnimation() {
+        const anim = pendingDelete;
+        if (anim) {
             if (get(selectedAnimationStore)?.id === anim.id) {
                 selectedAnimationStore.set(null);
                 selectedAnimationKeyframe.set(null);
             }
             track.animations = track.animations.filter((a) => a.id !== anim.id);
             get(videoController).refreshPose();
+            deleteOpen = false;
+            toast.success("Animation removed");
         }
     }
 </script>
+
+<ConfirmDelete bind:open={deleteOpen} title="Remove this animation?" description={`“${pendingDelete?.name ?? "This animation"}” will be removed from this track. The rest of your project stays as it is.`} actionLabel="Remove animation" onconfirm={confirmDeleteAnimation} returnFocus={deleteTrigger} />
 
 <div
         class="relative h-10 bg-card dark:border-gray-700 rounded-md transition-colors track"
