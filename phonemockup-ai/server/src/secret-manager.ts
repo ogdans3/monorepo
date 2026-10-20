@@ -1,4 +1,8 @@
+import {existsSync} from "node:fs";
 import {SecretManagerServiceClient} from '@google-cloud/secret-manager';
+
+// The service-account key, mounted into the production container.
+const KEYFILE = "./deployment-487315-74d4c09beec7.json";
 
 // The secrets this API pulls from Google Secret Manager, and the variable each
 // one fills. A variable the environment already sets wins, and its secret is
@@ -15,9 +19,7 @@ class SecretManager {
 
     async getSecret(secretName: string) {
         // Ensure the path to your key matches your Docker volume mount point
-        this.client ??= new SecretManagerServiceClient({
-            keyFilename: "./deployment-487315-74d4c09beec7.json"
-        });
+        this.client ??= new SecretManagerServiceClient({keyFilename: KEYFILE});
         const name = `projects/${this.projectKey}/secrets/${secretName}/versions/latest`;
         try {
             const [version] = await this.client.accessSecretVersion({name});
@@ -35,6 +37,12 @@ class SecretManager {
         const missing = SECRETS.filter(({env}) => !process.env[env]);
         if (missing.length === 0) {
             console.log("Secrets already set in the environment.");
+            return;
+        }
+        if (!existsSync(KEYFILE)) {
+            // No keyfile, no Secret Manager (development, CI, another host).
+            // checkConfig then says which settings are still missing.
+            console.log(`No Secret Manager keyfile at ${KEYFILE}; using the environment as it is.`);
             return;
         }
         console.log("Initializing Secrets...");
