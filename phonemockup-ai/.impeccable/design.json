@@ -1,0 +1,818 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T14:17:22+00:00",
+  "title": "Design System: PhoneMockup",
+  "extensions": {
+    "colorMeta": {
+      "rust": {
+        "role": "primary",
+        "displayName": "Rust",
+        "canonical": "#bc3d20",
+        "oklch": "oklch(54.0% 0.168 34.1)",
+        "tonalRamp": [
+          "#1c0200",
+          "#460b01",
+          "#751902",
+          "#a72805",
+          "#d15134",
+          "#f87456",
+          "#ffb19e",
+          "#ffe9e3"
+        ]
+      },
+      "rust-deep": {
+        "role": "primary",
+        "displayName": "Deep Rust",
+        "canonical": "#a63218",
+        "oklch": "oklch(48.9% 0.156 33.9)",
+        "tonalRamp": [
+          "#1d0200",
+          "#470900",
+          "#741a05",
+          "#a32f15",
+          "#cc563c",
+          "#f3785d",
+          "#feb19f",
+          "#ffe9e4"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Graphite Ink",
+        "canonical": "#242421",
+        "oklch": "oklch(25.9% 0.005 106.8)",
+        "tonalRamp": [
+          "#0b0b09",
+          "#242421",
+          "#40403d",
+          "#5e5e5a",
+          "#80807d",
+          "#a2a29e",
+          "#c7c7c3",
+          "#efefeb"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "#777770",
+        "oklch": "oklch(56.7% 0.011 106.7)",
+        "tonalRamp": [
+          "#0c0b07",
+          "#24241f",
+          "#40403a",
+          "#5e5e57",
+          "#81817a",
+          "#a2a29b",
+          "#c8c8c0",
+          "#efefe7"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#696963",
+        "oklch": "oklch(51.9% 0.009 106.7)",
+        "tonalRamp": [
+          "#0c0b07",
+          "#24241f",
+          "#40403b",
+          "#5e5e58",
+          "#81817a",
+          "#a2a29b",
+          "#c8c8c1",
+          "#efefe8"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#faf9f6",
+        "oklch": "oklch(98.2% 0.004 91.4)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#252422",
+          "#40403d",
+          "#5e5d5b",
+          "#81807d",
+          "#a2a19f",
+          "#c8c7c4",
+          "#efeeeb"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d9d8d2",
+        "oklch": "oklch(88.1% 0.008 98.9)",
+        "tonalRamp": [
+          "#0c0b08",
+          "#252420",
+          "#41403b",
+          "#5f5e59",
+          "#81807b",
+          "#a3a29c",
+          "#c8c7c1",
+          "#f0efe8"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Wash",
+        "canonical": "#eeede8",
+        "oklch": "oklch(94.5% 0.007 97.4)",
+        "tonalRamp": [
+          "#0c0b08",
+          "#252420",
+          "#41403c",
+          "#5e5e59",
+          "#81807c",
+          "#a2a19d",
+          "#c8c7c2",
+          "#efeee9"
+        ]
+      },
+      "stone-outline": {
+        "role": "neutral",
+        "displayName": "Stone Outline",
+        "canonical": "#bcbcb4",
+        "oklch": "oklch(79.3% 0.011 106.6)",
+        "tonalRamp": [
+          "#0c0b07",
+          "#24241e",
+          "#40403a",
+          "#5e5e57",
+          "#818179",
+          "#a2a29a",
+          "#c8c8c0",
+          "#efefe7"
+        ]
+      },
+      "editor-ground": {
+        "role": "neutral",
+        "displayName": "Editor Ground",
+        "canonical": "#e5e4df",
+        "oklch": "oklch(91.8% 0.007 97.4)",
+        "tonalRamp": [
+          "#0c0b08",
+          "#252420",
+          "#41403c",
+          "#5e5e59",
+          "#81807c",
+          "#a2a19d",
+          "#c8c7c2",
+          "#f0efe9"
+        ]
+      },
+      "stage-ink": {
+        "role": "stage",
+        "displayName": "Stage Ink",
+        "canonical": "#535a4d",
+        "oklch": "oklch(45.7% 0.022 130.5)",
+        "tonalRamp": [
+          "#080d04",
+          "#20261b",
+          "#3c4236",
+          "#596053",
+          "#7c8375",
+          "#9da596",
+          "#c2cbbb",
+          "#e9f2e2"
+        ]
+      },
+      "stage-selector-ink": {
+        "role": "stage",
+        "displayName": "Stage Selector Ink",
+        "canonical": "#4f5747",
+        "oklch": "oklch(44.5% 0.027 129.2)",
+        "tonalRamp": [
+          "#080d03",
+          "#202718",
+          "#3b4333",
+          "#596151",
+          "#7b8473",
+          "#9ca593",
+          "#c2cbb9",
+          "#e9f2df"
+        ]
+      },
+      "stage-caption-ink": {
+        "role": "stage",
+        "displayName": "Stage Caption Ink",
+        "canonical": "#4a5045",
+        "oklch": "oklch(42.2% 0.019 130.7)",
+        "tonalRamp": [
+          "#080d05",
+          "#21261c",
+          "#3c4237",
+          "#5a6055",
+          "#7c8377",
+          "#9da498",
+          "#c3cabd",
+          "#eaf1e4"
+        ]
+      },
+      "stage-soft-orbit": {
+        "role": "stage",
+        "displayName": "Soft Orbit Ground",
+        "canonical": "#dde7d5",
+        "oklch": "oklch(91.5% 0.026 130.9)",
+        "tonalRamp": [
+          "#070d03",
+          "#202719",
+          "#3b4334",
+          "#586151",
+          "#7b8473",
+          "#9ca594",
+          "#c1cbba",
+          "#e8f2e0"
+        ],
+        "source": "client/src/lib/animations/presets/soft-orbit.json previewBackground"
+      },
+      "stage-edge-reveal": {
+        "role": "stage",
+        "displayName": "Edge Reveal Ground",
+        "canonical": "#e2def0",
+        "oklch": "oklch(90.9% 0.025 296.1)",
+        "tonalRamp": [
+          "#0c0914",
+          "#25222f",
+          "#413d4c",
+          "#5f5b6a",
+          "#817d8e",
+          "#a29fb0",
+          "#c8c4d6",
+          "#f0ebfe"
+        ],
+        "source": "client/src/lib/animations/presets/edge-reveal.json previewBackground"
+      },
+      "stage-macro-rush": {
+        "role": "stage",
+        "displayName": "Macro Rush Ground",
+        "canonical": "#e6ead6",
+        "oklch": "oklch(92.9% 0.027 116.1)",
+        "tonalRamp": [
+          "#0b0c02",
+          "#232617",
+          "#3f4231",
+          "#5c604f",
+          "#7f8270",
+          "#a0a491",
+          "#c6cab6",
+          "#edf1dd"
+        ],
+        "source": "client/src/lib/animations/presets/macro-rush.json previewBackground"
+      },
+      "stage-top-down": {
+        "role": "stage",
+        "displayName": "Top Down Ground",
+        "canonical": "#dde1f0",
+        "oklch": "oklch(91.1% 0.021 274.0)",
+        "tonalRamp": [
+          "#080a14",
+          "#21232e",
+          "#3c3f4b",
+          "#5a5d6a",
+          "#7c808d",
+          "#9da1af",
+          "#c3c7d5",
+          "#eaeefd"
+        ],
+        "source": "client/src/lib/animations/presets/top-down.json previewBackground"
+      },
+      "stage-barrel-roll": {
+        "role": "stage",
+        "displayName": "Barrel Roll Ground",
+        "canonical": "#dae4da",
+        "oklch": "oklch(90.8% 0.017 145.4)",
+        "tonalRamp": [
+          "#070d07",
+          "#1f261f",
+          "#3a423a",
+          "#586058",
+          "#7a837a",
+          "#9ba59b",
+          "#c1cac1",
+          "#e8f2e8"
+        ],
+        "source": "client/src/lib/animations/presets/barrel-roll.json previewBackground"
+      },
+      "stage-detail-study": {
+        "role": "stage",
+        "displayName": "Detail Study Ground",
+        "canonical": "#e9e3d9",
+        "oklch": "oklch(91.8% 0.015 80.7)",
+        "tonalRamp": [
+          "#0e0b05",
+          "#28231c",
+          "#443f37",
+          "#625d54",
+          "#857f76",
+          "#a6a197",
+          "#ccc6bd",
+          "#f4eee4"
+        ],
+        "source": "client/src/lib/animations/presets/detail-study.json previewBackground"
+      },
+      "stage-double-spin": {
+        "role": "stage",
+        "displayName": "Double Spin Ground",
+        "canonical": "#e8dfd2",
+        "oklch": "oklch(90.7% 0.020 77.3)",
+        "tonalRamp": [
+          "#100a03",
+          "#2a2319",
+          "#463f34",
+          "#645c51",
+          "#877f73",
+          "#a9a094",
+          "#cfc6b9",
+          "#f6ede0"
+        ],
+        "source": "client/src/lib/animations/presets/double-spin.json previewBackground"
+      },
+      "stage-flip-cut": {
+        "role": "stage",
+        "displayName": "Flip Cut Ground",
+        "canonical": "#e4dcee",
+        "oklch": "oklch(90.6% 0.026 305.8)",
+        "tonalRamp": [
+          "#0e0814",
+          "#27212e",
+          "#433c4b",
+          "#615a69",
+          "#847d8d",
+          "#a59eaf",
+          "#cbc3d5",
+          "#f3eafd"
+        ],
+        "source": "client/src/lib/animations/presets/flip-cut.json previewBackground"
+      },
+      "stage-lift-off": {
+        "role": "stage",
+        "displayName": "Lift Off Ground",
+        "canonical": "#f1dfd1",
+        "oklch": "oklch(91.4% 0.027 60.4)",
+        "tonalRamp": [
+          "#130802",
+          "#2e2116",
+          "#4b3d31",
+          "#6a5a4e",
+          "#8d7d70",
+          "#af9e91",
+          "#d5c4b6",
+          "#fdebdd"
+        ],
+        "source": "client/src/lib/animations/presets/lift-off.json previewBackground"
+      },
+      "stage-orbit-dive": {
+        "role": "stage",
+        "displayName": "Orbit Dive Ground",
+        "canonical": "#d8e7eb",
+        "oklch": "oklch(91.8% 0.017 215.5)",
+        "tonalRamp": [
+          "#040d10",
+          "#1b2629",
+          "#364245",
+          "#536064",
+          "#758387",
+          "#96a4a8",
+          "#bccace",
+          "#e3f2f6"
+        ],
+        "source": "client/src/lib/animations/presets/orbit-dive.json previewBackground"
+      },
+      "stage-pull-focus": {
+        "role": "stage",
+        "displayName": "Pull Focus Ground",
+        "canonical": "#e3ddeb",
+        "oklch": "oklch(90.6% 0.020 305.2)",
+        "tonalRamp": [
+          "#0d0912",
+          "#26222c",
+          "#423d48",
+          "#605b67",
+          "#837d8a",
+          "#a49fac",
+          "#cac4d2",
+          "#f1ebfa"
+        ],
+        "source": "client/src/lib/animations/presets/pull-focus.json previewBackground"
+      },
+      "stage-side-step": {
+        "role": "stage",
+        "displayName": "Side Step Ground",
+        "canonical": "#dfe7ee",
+        "oklch": "oklch(92.4% 0.013 244.3)",
+        "tonalRamp": [
+          "#070c10",
+          "#1f252a",
+          "#3a4146",
+          "#585f64",
+          "#7a8187",
+          "#9ba3a9",
+          "#c1c8cf",
+          "#e8f0f7"
+        ],
+        "source": "client/src/lib/animations/presets/side-step.json previewBackground"
+      },
+      "stage-slow-spin": {
+        "role": "stage",
+        "displayName": "Slow Spin Ground",
+        "canonical": "#d8e5e9",
+        "oklch": "oklch(91.3% 0.015 218.1)",
+        "tonalRamp": [
+          "#050d0f",
+          "#1c2629",
+          "#374245",
+          "#556063",
+          "#778386",
+          "#98a4a8",
+          "#bdcace",
+          "#e4f1f5"
+        ],
+        "source": "client/src/lib/animations/presets/slow-spin.json previewBackground"
+      },
+      "stage-snap-in": {
+        "role": "stage",
+        "displayName": "Snap In Ground",
+        "canonical": "#e8ded9",
+        "oklch": "oklch(90.7% 0.013 48.6)",
+        "tonalRamp": [
+          "#100a07",
+          "#29221f",
+          "#463e3a",
+          "#645c57",
+          "#877e7a",
+          "#a99f9b",
+          "#cfc5c0",
+          "#f6ece7"
+        ],
+        "source": "client/src/lib/animations/presets/snap-in.json previewBackground"
+      },
+      "stage-tumble-cut": {
+        "role": "stage",
+        "displayName": "Tumble Cut Ground",
+        "canonical": "#e7e3d4",
+        "oklch": "oklch(91.5% 0.021 94.5)",
+        "tonalRamp": [
+          "#0e0b03",
+          "#272419",
+          "#434034",
+          "#615e51",
+          "#848073",
+          "#a5a293",
+          "#cbc7b9",
+          "#f3efdf"
+        ],
+        "source": "client/src/lib/animations/presets/tumble-cut.json previewBackground"
+      },
+      "stage-whip-switch": {
+        "role": "stage",
+        "displayName": "Whip Switch Ground",
+        "canonical": "#dbe5ed",
+        "oklch": "oklch(91.7% 0.015 241.8)",
+        "tonalRamp": [
+          "#060c11",
+          "#1e252b",
+          "#394147",
+          "#565f66",
+          "#798289",
+          "#9aa3aa",
+          "#bfc9d1",
+          "#e6f0f8"
+        ],
+        "source": "client/src/lib/animations/presets/whip-switch.json previewBackground"
+      },
+      "on-rust": {
+        "role": "primary",
+        "displayName": "White on Rust",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#3b3b3b",
+          "#525252",
+          "#6e6e6e",
+          "#8e8e8e",
+          "#adadad",
+          "#d1d1d1",
+          "#ffffff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display-landing": {
+        "displayName": "Display, landing",
+        "purpose": "The landing hero H1 only."
+      },
+      "display-hub": {
+        "displayName": "Display, hub",
+        "purpose": "The three guide hub H1s."
+      },
+      "display-guide": {
+        "displayName": "Display, guide",
+        "purpose": "The fifteen guide page H1s; second half after the first comma in ink-soft."
+      },
+      "close": {
+        "displayName": "Close",
+        "purpose": "The closing \"Let's see it.\" (landing fixes it at 82px)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section H2s on the landing and guide sections."
+      },
+      "headline-compact": {
+        "displayName": "Headline, compact",
+        "purpose": "Guide body H2s and alternatives verdict names."
+      },
+      "faq-heading": {
+        "displayName": "FAQ heading",
+        "purpose": "The FAQ block H2."
+      },
+      "list-name": {
+        "displayName": "List name",
+        "purpose": "Guide list row names; landing device tabs use 20px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Motion card and hub tile names."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Guide lead; the landing lead is 17px."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Guide passages, max 62ch."
+      },
+      "body-small": {
+        "displayName": "Body small",
+        "purpose": "Card descriptions, summaries, notes."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Button labels."
+      },
+      "nav": {
+        "displayName": "Nav",
+        "purpose": "Header links and text links."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Proof lines, selector items, footer links."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "\"phonemockup\" with a rust square; the only weight 600."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Measurements only: loop seconds, counts, ordinals."
+      }
+    },
+    "shadows": [
+      {
+        "name": "screenshot-lift",
+        "value": "0 6px 22px #24242112",
+        "purpose": "The landing's editor screenshot inside its editor-ground panel. Landing only."
+      },
+      {
+        "name": "menu-drop",
+        "value": "0 12px 20px #2424210a",
+        "purpose": "The mobile navigation panel below the header, on both surfaces."
+      },
+      {
+        "name": "nav-current-underline",
+        "value": "inset 0 -2px 0 #242421",
+        "purpose": "Guide header's current hub; an underline drawn with a shadow, not elevation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Transform transitions (press scale, arrow nudge, stage ground)."
+      },
+      {
+        "name": "state-transition",
+        "value": "color 160ms ease, background 160ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Every link and button on both surfaces."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.98)",
+        "purpose": "Buttons and .button links on :active. MotionPreview uses scale(0.96)."
+      },
+      {
+        "name": "stage-ground",
+        "value": "background 320ms cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Guide stage ground change on selection. Guides only."
+      },
+      {
+        "name": "arrow-nudge",
+        "value": "translate(3px, -3px) over 160ms",
+        "purpose": "Guide list and verdict arrows on hover. Guides only."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition: none; no press transform; previews wait for a tap",
+        "purpose": "Under prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "medium",
+        "value": "1100px",
+        "query": "(max-width: 1100px)"
+      },
+      {
+        "name": "header-medium",
+        "value": "761px to 1100px",
+        "query": "(min-width: 761px) and (max-width: 1100px)",
+        "note": "Landing header only; guides fold it into the 1100px block."
+      },
+      {
+        "name": "narrow",
+        "value": "760px",
+        "query": "(max-width: 760px)"
+      },
+      {
+        "name": "tiny",
+        "value": "360px",
+        "query": "(max-width: 360px)"
+      },
+      {
+        "name": "fine-hover",
+        "value": "hover capability",
+        "query": "(hover: hover) and (pointer: fine)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The rust action that opens the studio with the motion on show; one at the top, one at the close.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Make an iPhone 16 Pro mockup <svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/></svg></a><p class=\"ds-proof\">Free during beta. No watermark. No account.</p>",
+      "css": ".ds-btn-primary { font-family: Archivo, Arial, sans-serif; min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 40px; padding: 15px 21px; border: 0; border-radius: 5px; font-size: 14px; font-weight: 500; background: #bc3d20; color: #fff; text-decoration: none; transition: background 160ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); } @media (hover: hover) and (pointer: fine) { .ds-btn-primary:hover { background: #a63218; } } .ds-btn-primary:focus-visible { outline: 2px solid #bc3d20; outline-offset: 5px; } .ds-btn-primary:active { transform: scale(0.98); } .ds-proof { font-family: Archivo, Arial, sans-serif; margin: 14px 0 0; font-size: 12px; color: #696963; } @media (prefers-reduced-motion: reduce) { .ds-btn-primary { transition: none; } .ds-btn-primary:active { transform: none; } }"
+    },
+    {
+      "name": "Secondary Button (landing only)",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Stone-outlined button for the landing gallery expand control.",
+      "html": "<button type=\"button\" class=\"ds-btn-secondary\">View all 16 motions</button>",
+      "css": ".ds-btn-secondary { font-family: Archivo, Arial, sans-serif; min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 40px; padding: 15px 21px; border: 1px solid #bcbcb4; border-radius: 5px; background: transparent; color: #242421; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 160ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); } @media (hover: hover) and (pointer: fine) { .ds-btn-secondary:hover { background: #eeede8; } } .ds-btn-secondary:focus-visible { outline: 2px solid #bc3d20; outline-offset: 5px; } .ds-btn-secondary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Text Link",
+      "kind": "custom",
+      "refersTo": "text-link",
+      "description": "Ink link with an arrow, rust on fine-pointer hover; prose links underline in translucent rust.",
+      "html": "<a class=\"ds-text-link\" href=\"#\">Your projects <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/></svg></a><p class=\"ds-prose\">WebM, GIF and PNG keep a <a class=\"ds-prose-link\" href=\"#\">transparent background</a>.</p>",
+      "css": ".ds-text-link { font-family: Archivo, Arial, sans-serif; display: inline-flex; align-items: center; gap: 22px; min-height: 44px; font-size: 14px; color: #242421; text-decoration: none; transition: color 160ms ease; } .ds-prose { font-family: Archivo, Arial, sans-serif; font-size: 17px; line-height: 1.72; color: #242421; } .ds-prose-link { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: #bc3d2088; transition: color 160ms ease; } @media (hover: hover) and (pointer: fine) { .ds-text-link:hover, .ds-prose-link:hover { color: #bc3d20; } } .ds-text-link:focus-visible, .ds-prose-link:focus-visible { outline: 2px solid #bc3d20; outline-offset: 5px; }"
+    },
+    {
+      "name": "Site Header",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "88px header on a hairline: wordmark, centred hub links with the current one underlined in ink, projects link.",
+      "html": "<header class=\"ds-header\"><a class=\"ds-wordmark\" href=\"#\">phonemockup<span class=\"ds-mark\"></span></a><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"true\">Mockups</a><a href=\"#\">Use cases</a><a href=\"#\">Alternatives</a></nav><a class=\"ds-nav-cta\" href=\"#\">Your projects</a></header>",
+      "css": ".ds-header { font-family: Archivo, Arial, sans-serif; height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #d9d8d2; background: #faf9f6; color: #242421; padding: 0 24px; } .ds-wordmark { display: inline-flex; align-items: baseline; gap: 3px; font-size: 23px; font-weight: 600; letter-spacing: -1.2px; color: #242421; text-decoration: none; } .ds-mark { width: 7px; height: 7px; background: #bc3d20; display: inline-block; } .ds-nav { display: flex; gap: 30px; font-size: 14px; } .ds-nav a, .ds-nav-cta { min-height: 44px; display: inline-flex; align-items: center; color: #242421; text-decoration: none; transition: color 160ms ease; } .ds-nav-cta { font-size: 13px; } .ds-nav a[aria-current] { box-shadow: inset 0 -2px 0 #242421; } @media (hover: hover) and (pointer: fine) { .ds-nav a:hover, .ds-nav-cta:hover { color: #bc3d20; } } .ds-nav a:focus-visible, .ds-nav-cta:focus-visible, .ds-wordmark:focus-visible { outline: 2px solid #bc3d20; outline-offset: 5px; }"
+    },
+    {
+      "name": "Motion Stage",
+      "kind": "custom",
+      "refersTo": "stage",
+      "description": "Pastel field on the preset's previewBackground: label with loop length in mono, footage, and a selector that re-points the CTA on guides.",
+      "html": "<div class=\"ds-stage\"><div class=\"ds-stage-label\"><span>Soft Orbit <span class=\"ds-stage-soft\">/ iPhone 16 Pro</span></span><span class=\"ds-mono\">6s loop</span></div><div class=\"ds-stage-media\"></div><div class=\"ds-stage-bar\"><div class=\"ds-selector\" role=\"group\" aria-label=\"Preview a motion\"><button type=\"button\" aria-pressed=\"true\">Soft Orbit</button><button type=\"button\" aria-pressed=\"false\">Edge Reveal</button><button type=\"button\" aria-pressed=\"false\">Macro Rush</button></div></div></div>",
+      "css": ".ds-stage { font-family: Archivo, Arial, sans-serif; position: relative; min-height: 420px; overflow: hidden; border-radius: 5px; background: rgb(221,231,213); color: #242421; transition: background 320ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-stage-label { position: absolute; left: 25px; right: 25px; top: 23px; display: flex; justify-content: space-between; gap: 12px; font-size: 13px; pointer-events: none; } .ds-stage-soft, .ds-mono { color: #535a4d; } .ds-mono { font-family: 'Courier New', monospace; font-size: 12px; font-variant-numeric: tabular-nums; } .ds-stage-media { position: absolute; inset: 0 0 69px; } .ds-stage-bar { position: absolute; bottom: 0; left: 25px; right: 25px; height: 69px; display: flex; align-items: center; border-top: 1px solid #24242128; font-size: 13px; } .ds-selector { display: flex; gap: 21px; align-items: center; } .ds-selector button { font: inherit; font-size: 12px; border: 0; background: none; padding: 12px 0; min-height: 44px; color: #4f5747; position: relative; cursor: pointer; transition: color 160ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-selector button[aria-pressed='true'] { color: #242421; } .ds-selector button[aria-pressed='true']::after { content: ''; position: absolute; height: 2px; bottom: 8px; left: 0; right: 0; background: currentColor; } @media (hover: hover) and (pointer: fine) { .ds-selector button:hover { color: #242421; } } .ds-selector button:focus-visible { outline: 2px solid #bc3d20; outline-offset: 5px; } .ds-selector button:active { transform: scale(0.98); } @media (prefers-reduced-motion: reduce) { .ds-stage, .ds-selector button { transition: none; } .ds-selector button:active { transform: none; } }"
+    },
+    {
+      "name": "Motion Tile",
+      "kind": "card",
+      "refersTo": "motion-tile-media",
+      "description": "Pastel media with footage, 4px corners, a 44px title-row link and a muted description. No container.",
+      "html": "<div class=\"ds-tile\"><div class=\"ds-tile-media\"></div><a class=\"ds-tile-title\" href=\"#\"><span>iPhone 16 Pro</span><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/></svg></a><p class=\"ds-tile-text\">Dynamic Island on or off, your screen in motion.</p></div>",
+      "css": ".ds-tile { font-family: Archivo, Arial, sans-serif; width: 240px; color: #242421; } .ds-tile-media { aspect-ratio: 1/1.06; border-radius: 4px; overflow: hidden; background: rgb(216,229,233); } .ds-tile-title { display: flex; align-items: center; gap: 13px; min-height: 44px; padding-top: 9px; font-size: 17px; font-weight: 500; letter-spacing: -0.5px; color: #242421; text-decoration: none; transition: color 160ms ease; } .ds-tile-title svg { margin-left: auto; flex-shrink: 0; } .ds-tile-text { margin: 0; font-size: 13px; line-height: 1.6; color: #696963; } @media (hover: hover) and (pointer: fine) { .ds-tile-title:hover { color: #bc3d20; } } .ds-tile-title:focus-visible { outline: 2px solid #bc3d20; outline-offset: 5px; }"
+    },
+    {
+      "name": "Hairline Guide List",
+      "kind": "custom",
+      "refersTo": "list-row",
+      "description": "Rows divided by hairlines: pastel poster thumb, name, summary, meta, arrow that nudges on hover.",
+      "html": "<ul class=\"ds-list\"><li><a href=\"#\"><span class=\"ds-thumb\"></span><span><span class=\"ds-list-name\">Pixel 9 Pro</span><span class=\"ds-list-summary\">The camera bar in detail, the cutout on or off.</span><span class=\"ds-list-meta\">Mockups · Pixel 9 Pro · Detail Study</span></span><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/></svg></a></li><li><a href=\"#\"><span class=\"ds-thumb\" style=\"background: rgb(216,229,233)\"></span><span><span class=\"ds-list-name\">Galaxy S24 Ultra</span><span class=\"ds-list-summary\">A flat display and a squared silhouette, built for spins.</span><span class=\"ds-list-meta\">Mockups · Galaxy S24 Ultra · Slow Spin</span></span><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/></svg></a></li></ul>",
+      "css": ".ds-list { font-family: Archivo, Arial, sans-serif; list-style: none; padding: 0; margin: 0; border-top: 1px solid #d9d8d2; color: #242421; } .ds-list a { display: grid; grid-template-columns: 80px minmax(0, 1fr) auto; gap: 26px; align-items: center; min-height: 112px; padding-block: 10px; border-bottom: 1px solid #d9d8d2; color: inherit; text-decoration: none; } .ds-list li:last-child a { border-bottom: 0; } .ds-thumb { width: 80px; aspect-ratio: 4/5; border-radius: 4px; background: rgb(221,231,213); } .ds-list-name { display: block; font-size: 21px; letter-spacing: -0.65px; transition: color 160ms ease; } .ds-list-summary { display: block; margin-top: 6px; font-size: 13px; line-height: 1.55; color: #696963; } .ds-list-meta { display: block; margin-top: 5px; font-size: 12px; color: #696963; } .ds-list svg { transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1); } @media (hover: hover) and (pointer: fine) { .ds-list a:hover .ds-list-name { color: #bc3d20; } .ds-list a:hover svg { transform: translate(3px, -3px); } } .ds-list a:focus-visible { outline: 2px solid #bc3d20; outline-offset: 5px; } @media (prefers-reduced-motion: reduce) { .ds-list svg { transition: none; } }"
+    },
+    {
+      "name": "Comparison Table",
+      "kind": "custom",
+      "description": "Hairline table with an ink head rule and a rust square on the PhoneMockup column.",
+      "html": "<table class=\"ds-compare\"><thead><tr><th scope=\"col\"></th><th scope=\"col\" class=\"ds-us\">PhoneMockup</th><th scope=\"col\">Rotato</th></tr></thead><tbody><tr><th scope=\"row\">Runs on</th><td>Chrome or Edge, on Windows, Mac or Linux</td><td>A Mac app for macOS 11 or newer. A web version is in public beta.</td></tr><tr><th scope=\"row\">Price</th><td>Free during beta</td><td>One-time plans: Basic, Standard and Premium. Unlimited free trial.</td></tr></tbody></table>",
+      "css": ".ds-compare { font-family: Archivo, Arial, sans-serif; width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.55; color: #242421; } .ds-compare th, .ds-compare td { padding: 17px 28px 17px 0; text-align: left; vertical-align: top; border-bottom: 1px solid #d9d8d2; } .ds-compare thead th { padding-top: 0; font-size: 13px; font-weight: 400; color: #696963; border-bottom-color: #242421; } .ds-compare thead th.ds-us { color: #242421; font-weight: 500; } .ds-compare thead th.ds-us::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 9px; background: #bc3d20; } .ds-compare tbody th { width: 19%; font-weight: 500; }"
+    },
+    {
+      "name": "Playback Control",
+      "kind": "button",
+      "refersTo": "playback-control",
+      "description": "MotionPreview's own 44px pill; belongs to that component only.",
+      "html": "<button type=\"button\" class=\"ds-playback\" aria-label=\"Play Soft Orbit\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3l14 9-14 9V3z\"/></svg><span>Tap to play</span></button>",
+      "css": ".ds-playback { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; padding: 10px; border: 1px solid #ffffff70; border-radius: 50px; background: #faf9f6f2; color: #242421; cursor: pointer; font: 500 12px/1.2 Arial, sans-serif; transition: background 160ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); } @media (hover: hover) and (pointer: fine) { .ds-playback:hover { background: #fff; } } .ds-playback:active { transform: scale(0.96); } .ds-playback:focus-visible { outline: 2px solid #242421; outline-offset: 3px; } @media (prefers-reduced-motion: reduce) { .ds-playback { transition: none; } .ds-playback:active { transform: none; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Paper Showroom",
+    "overview": "A warm sheet of paper with graphite type on it, and a few pastel stages set into it where the real device turns. Everything that is not product footage holds still. The type does the structural work: large Archivo headlines at weight 500, pulled tight, with the second half of the opening line stepping back to a softer grey. Hairlines divide the page. There are no panels, no gradient fields, no icon grids.\n\nThe world was set by the October 2026 landing page (`client/src/routes/+page.svelte`, notes in `docs/landing-2026.md`) and extended unchanged to the eighteen guide pages under `/mockups`, `/use-cases` and `/alternatives` (`client/src/lib/components/guides/`). The two surfaces declare the same custom properties separately: the landing scopes them under `.landing`, the guides under `.guide` in `guides.css`. Neither stylesheet reaches the studio at `/platform`. Where the two surfaces differ, this file says so.\n\nDensity is generous at the top and tightens below. A first viewport holds one headline, one short lead, one rust button with a proof line under it, and a stage. Further down, hairline lists, a two-column FAQ and a closing \"Let's see it.\" carry the rest.",
+    "keyCharacteristics": [
+      "Warm paper (`paper`) and graphite ink (`ink`), one rust accent (`rust`) for the primary action and active marks.",
+      "Archivo only, weights 400 to 600, display tracking between -0.04em and -0.07em.",
+      "Courier New only for measurements: loop seconds, counts, ordinals.",
+      "Pastel stages whose ground is the preset's own `previewBackground`.",
+      "Hairline rules instead of boxed cards. Flat surfaces.",
+      "Only product footage moves. UI motion is 160ms state feedback."
+    ],
+    "rules": [
+      {
+        "name": "The One Rust Rule",
+        "body": "Rust is used for the primary action and active marks only. Never for headings, body text, backgrounds or decoration. A screen carries one or two rust buttons (top and close), never a row of them.",
+        "section": "colors"
+      },
+      {
+        "name": "The Footage Owns The Colour Rule",
+        "body": "The pastels belong to the motion presets. A stage's ground is the preset's `previewBackground`; do not invent a new pastel for a surface, and do not use the pastels on UI chrome.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tight Display Rule",
+        "body": "Headlines are Archivo 500 with negative tracking that grows with size: -0.04em around 30px, -0.055em around 50px, -0.06em to -0.07em at display sizes. Line height drops below 1 at display sizes (0.97 to 0.99). H1 and H2 use `text-wrap: balance`; paragraphs use `text-wrap: pretty`.",
+        "section": "typography"
+      },
+      {
+        "name": "The Measuring Tape Rule",
+        "body": "Courier New appears only for numbers that measure: seconds, pixels, counts, ordinals. Never for prose, labels or headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Step-Back Headline Rule",
+        "body": "On the landing the hero's second line (\"Every angle.\") is set in soft ink. The guide H1s apply this deliberately: everything after the first comma steps back to soft ink (\"Free iPhone 16 Pro mockups, *in motion.*\"). A headline without a comma stays fully ink. Display headlines only.",
+        "section": "typography"
+      },
+      {
+        "name": "The Shared Column Rule",
+        "body": "Everything aligns to the one container and its gutters. Stages and lists run to its edges; nothing bleeds to the viewport except the paper itself.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Paper Rule",
+        "body": "Stages, cards, tiles, lists and buttons have no shadow at rest or on hover. Depth is a change of ground, not a lift.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Only Footage Moves Rule",
+        "body": "Nothing enters, fades in, parallaxes or animates on scroll. The only motion is the product's own footage, plus 160ms state feedback: colour, background, a 0.98 press, the 180° menu arrow, the guides' 3px arrow nudge and their 320ms stage-ground change.",
+        "section": "components"
+      },
+      {
+        "name": "The Reduced Motion Rule",
+        "body": "Under `prefers-reduced-motion: reduce`, every transition is removed, the press scale is removed, and previews wait for a tap.",
+        "section": "components"
+      },
+      {
+        "name": "The 44px Rule",
+        "body": "Every link and button is at least 44px tall or wide: header links, selectors, filters, breadcrumbs, text links, round links, playback. Mobile menu rows are 48px. The guide footer's link columns break this rule (hub links 32px, guide links 30px tall) and are not a precedent.",
+        "section": "components"
+      },
+      {
+        "name": "The Fine-Pointer Hover Rule",
+        "body": "Hover colours and backgrounds are declared only inside `(hover: hover) and (pointer: fine)`. Touch screens get press feedback, not stuck hovers.",
+        "section": "components"
+      },
+      {
+        "name": "The Rust Focus Rule",
+        "body": "Keyboard focus is a 2px rust outline offset 5px on every link and button (`:focus-visible`). MotionPreview's control is the exception: an ink outline 3px out. A skip link (\"Skip to content\") slides in on focus.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** set every new marketing surface on `paper` with `ink` text and `hairline` dividers, scoped under its own root class like `.landing` and `.guide`.",
+      "**Do** keep rust to the primary button, the wordmark square, active marks, link hover and focus.",
+      "**Do** show the product's own footage first, on a stage whose ground is the preset's `previewBackground`, with its loop length in mono.",
+      "**Do** set headlines in Archivo 500 with the tight tracking of the hierarchy above, and let only display headlines step back to `ink-soft`.",
+      "**Do** name what the primary button opens, and point it at `/platform/animation/<motion>` for the motion on show.",
+      "**Do** separate sections and list rows with 1px hairlines, and keep cards to media plus a title row.",
+      "**Do** keep every target at 44px or more, gate hover on `(hover: hover) and (pointer: fine)`, press at scale 0.98 and transition over 160ms.",
+      "**Do** honour `prefers-reduced-motion` by removing transitions and leaving previews on their poster until tapped."
+    ],
+    "donts": [
+      "**Don't** use rust for headings, body text, section backgrounds or decorative fills.",
+      "**Don't** invent pastels; a stage or tile takes its preset's ground.",
+      "**Don't** set prose, labels or headings in Courier New; it is for measurements only.",
+      "**Don't** add entrance, fade-in, parallax or scroll-driven animation; only product footage moves.",
+      "**Don't** box content in bordered or shadowed cards, or lift anything with a shadow on hover.",
+      "**Don't** add icon grids, stock heroes, testimonials, ratings, logos or counts the product does not have.",
+      "**Don't** set a small label above a section heading. The landing's `section-index` lines (\"The motion library / 16\", \"Got something to show?\") predate this file and are not a pattern; the guides ship without them.",
+      "**Don't** copy MotionPreview's pill shape or Arial label into other controls."
+    ]
+  }
+}

@@ -22,6 +22,11 @@ The client is the user-facing app; everything that *makes the mockup* (3D render
 SvelteKit with `@sveltejs/adapter-node`, Svelte 5 runes (`$state`, `$props`), Tailwind v4 via `@tailwindcss/vite`, shadcn-svelte UI in `src/lib/components/ui/`.
 
 - `src/routes/+page.svelte` — marketing landing page
+- `src/routes/{mockups,use-cases,alternatives}/` — the guide pages: three hubs and fifteen pages, each written for one search phrase.
+  - Copy and facts are in `src/lib/guides/guides.ts`; the templates are in `src/lib/components/guides/`.
+  - `src/routes/sitemap.xml/` lists the pages.
+  - Every claim must match PRODUCT.md. Competitor facts are dated in `docs/guides-2026.md`; recheck them before editing a comparison.
+  - Test them with `playwright.guides.config.ts`.
 - `src/routes/platform/animation/[id]/` — the editor (chooses an animation by id)
 - `src/routes/platform/project/` — saved projects list / detail
 - `src/lib/components/mock-video/` — the editor proper

@@ -1,0 +1,1188 @@
+/* The guide pages (/mockups, /use-cases, /alternatives). They live in the
+   landing page's world: the same paper, ink, hairlines, rust accent and
+   Archivo, set out in src/routes/+page.svelte. Everything is scoped under
+   .guide so none of it reaches the studio. */
+
+@font-face {
+  font-family: Archivo;
+  src: url("/fonts/archivo/archivo-latin-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+.guide {
+  --ink: #242421;
+  --muted: #696963;
+  --paper: #faf9f6;
+  --line: #d9d8d2;
+  --accent: #bc3d20;
+  --accent-deep: #a63218;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Archivo, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+.guide ::selection {
+  background: #bc3d2030;
+  color: var(--ink);
+}
+.guide .wrap {
+  width: min(1320px, calc(100% - 96px));
+  margin-inline: auto;
+}
+.guide a {
+  color: inherit;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+.guide button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+.guide a,
+.guide button {
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms var(--ease);
+}
+.guide :is(a, button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+.guide :is(button, .button):active {
+  transform: scale(0.98);
+}
+.guide :is(h1, h2, h3, p, dl, dd, ul, ol) {
+  margin: 0;
+}
+.guide :is(h1, h2) {
+  text-wrap: balance;
+}
+.guide p {
+  text-wrap: pretty;
+}
+.guide .mono {
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+.guide .muted {
+  color: var(--muted);
+}
+.guide .skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  transform: translateY(-160%);
+  z-index: 10;
+  background: var(--ink);
+  color: white;
+  padding: 15px;
+}
+.guide .skip-link:focus {
+  transform: none;
+}
+
+/* ─── Header ──────────────────────────────────────────────────────────── */
+.guide .site-header {
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  gap: 24px;
+  position: relative;
+  z-index: 3;
+}
+.guide .wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -1.2px;
+  white-space: nowrap;
+}
+.guide .brand-mark {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  display: inline-block;
+}
+.guide .site-nav {
+  display: flex;
+  gap: 30px;
+  font-size: 14px;
+}
+.guide .site-nav a,
+.guide .nav-cta {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.guide .site-nav a[aria-current] {
+  box-shadow: inset 0 -2px 0 var(--ink);
+}
+.guide .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.guide .nav-cta {
+  gap: 22px;
+  font-size: 13px;
+}
+.guide .mobile-account,
+.guide .menu-toggle,
+.guide .site-nav .mobile-projects {
+  display: none;
+}
+
+/* ─── Breadcrumbs ─────────────────────────────────────────────────────── */
+.guide .crumbs {
+  padding-top: 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.guide .crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  list-style: none;
+  padding: 0;
+}
+.guide .crumbs li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.guide .crumbs li + li::before {
+  content: "/";
+  color: #a9a8a1;
+}
+.guide .crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.guide .crumbs [aria-current="page"] {
+  color: var(--ink);
+}
+
+/* ─── Buttons and links ───────────────────────────────────────────────── */
+.guide .button {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 15px 21px;
+  border: 0;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.guide .primary {
+  background: var(--accent);
+  color: white;
+}
+.guide .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 14px;
+  min-height: 44px;
+  color: var(--ink);
+}
+.guide .prose-link {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: #bc3d2088;
+}
+
+/* ─── Hero ────────────────────────────────────────────────────────────── */
+.guide .g-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 56px;
+  align-items: start;
+  padding-block: 10px 64px;
+}
+.guide .g-hero h1 {
+  font-size: clamp(46px, 4.7vw, 76px);
+  font-weight: 500;
+  line-height: 0.99;
+  letter-spacing: -0.05em;
+}
+.guide .g-hero h1 .soft {
+  color: #777770;
+}
+.guide .g-lead {
+  margin-top: 26px;
+  max-width: 34em;
+  font-size: 18px;
+  line-height: 1.6;
+  letter-spacing: -0.2px;
+}
+.guide .g-actions {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.guide .g-proof {
+  font-size: 12px;
+  color: var(--muted);
+}
+.guide .g-opens {
+  margin-top: 26px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  max-width: 34em;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.guide .g-opens strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ─── The stage ───────────────────────────────────────────────────────── */
+.guide .g-stage {
+  position: relative;
+  min-height: 600px;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 5px;
+  transition: background 320ms var(--ease);
+}
+.guide .g-stage-label {
+  position: absolute;
+  left: 25px;
+  right: 25px;
+  top: 23px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 2;
+  font-size: 13px;
+  pointer-events: none;
+}
+.guide .g-stage-label :is(.mono, .muted) {
+  color: #535a4d;
+}
+.guide .g-stage-media {
+  position: absolute;
+  inset: 0 0 69px;
+}
+.guide .g-stage-media video {
+  object-fit: contain;
+}
+.guide .g-stage-bar {
+  position: absolute;
+  bottom: 0;
+  left: 25px;
+  right: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  height: 69px;
+  border-top: 1px solid #24242128;
+  font-size: 13px;
+}
+.guide .g-stage-bar p {
+  color: #4a5045;
+}
+.guide .g-selector {
+  display: flex;
+  gap: 21px;
+  align-items: center;
+}
+.guide .g-selector button {
+  border: 0;
+  background: none;
+  padding: 12px 0;
+  min-height: 44px;
+  font-size: 12px;
+  color: #4f5747;
+  position: relative;
+}
+.guide .g-selector button[aria-pressed="true"] {
+  color: var(--ink);
+}
+.guide .g-selector button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  background: currentColor;
+}
+
+/* ─── Short version and passages ──────────────────────────────────────── */
+.guide .g-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 80px;
+  padding-block: 72px 84px;
+  border-top: 1px solid var(--line);
+}
+.guide .g-facts {
+  position: sticky;
+  top: 28px;
+  align-self: start;
+}
+.guide .g-body h2 {
+  font-size: clamp(28px, 2.4vw, 34px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+.guide .g-facts dl {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.guide .g-facts dl > div {
+  display: grid;
+  grid-template-columns: minmax(7.5em, 0.42fr) minmax(0, 1fr);
+  gap: 18px;
+  padding-block: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.guide .g-facts dt {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.guide .g-facts dd {
+  font-size: 14px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+}
+.guide .g-passages {
+  display: grid;
+  gap: 56px;
+}
+.guide .g-body-wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+.guide .g-compare + .g-body {
+  border-top: 0;
+  padding-top: 0;
+}
+.guide .g-body-wide .g-passages {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 48px;
+}
+.guide .g-body-wide .g-passage p {
+  font-size: 16px;
+}
+.guide .g-passage p {
+  margin-top: 18px;
+  max-width: 62ch;
+  font-size: 17px;
+  line-height: 1.72;
+}
+
+/* ─── Side by side (alternatives) ─────────────────────────────────────── */
+.guide .g-compare {
+  border-top: 1px solid var(--line);
+  padding-block: 64px 72px;
+}
+.guide .g-compare-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 40px;
+}
+.guide .g-compare-head h2,
+.guide .g-related h2,
+.guide .g-group h2 {
+  font-size: clamp(37px, 3.6vw, 50px);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+}
+.guide .g-compare-head p {
+  max-width: 365px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.guide .g-compare table {
+  width: 100%;
+  margin-top: 36px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.guide .g-compare :is(th, td) {
+  padding: 17px 28px 17px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.guide .g-compare thead th {
+  padding-top: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  border-bottom-color: var(--ink);
+}
+.guide .g-compare thead th.us {
+  color: var(--ink);
+  font-weight: 500;
+}
+.guide .g-compare thead th.us::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 9px;
+  background: var(--accent);
+}
+.guide .g-compare tbody th {
+  width: 19%;
+  font-weight: 500;
+}
+.guide .g-compare tbody td {
+  width: 40.5%;
+}
+
+/* ─── FAQ ─────────────────────────────────────────────────────────────── */
+.guide .g-faq {
+  border-top: 1px solid var(--line);
+  padding-block: 54px 72px;
+  display: grid;
+  grid-template-columns: 1fr 1.9fr;
+  gap: 90px;
+}
+.guide .g-faq h2 {
+  font-size: 31px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -1.3px;
+}
+.guide .g-faq-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 34px 40px;
+}
+.guide .g-faq-list h3 {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+.guide .g-faq-list p {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+/* ─── Lists of guides (related and hubs) ──────────────────────────────── */
+.guide .g-related {
+  border-top: 1px solid var(--line);
+  padding-block: 64px 72px;
+}
+.guide .g-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 32px;
+  border-top: 1px solid var(--line);
+}
+.guide .g-list a {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+  gap: 26px;
+  align-items: center;
+  min-height: 112px;
+  padding-block: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.guide .g-list li:last-child a {
+  border-bottom: 0;
+}
+.guide .g-thumb {
+  width: 80px;
+  aspect-ratio: 4/5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.guide .g-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.guide .g-list-name {
+  display: block;
+  font-size: 21px;
+  letter-spacing: -0.65px;
+}
+.guide .g-list-summary {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.guide .g-list-meta {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.guide .g-list svg {
+  transition: transform 160ms var(--ease);
+}
+
+.guide .g-hub-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 50px;
+  padding-block: 10px 56px;
+}
+.guide .g-hub-head h1 {
+  max-width: 11em;
+  font-size: clamp(56px, 6vw, 92px);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+}
+.guide .g-hub-head p {
+  max-width: 380px;
+  padding-bottom: 6px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.guide .g-hub-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+  padding-bottom: 56px;
+}
+.guide .g-hub-body.with-stage {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+.guide .g-hub-text {
+  display: grid;
+  gap: 22px;
+}
+.guide .g-stage.compact {
+  min-height: 420px;
+}
+.guide .g-hub-body p {
+  max-width: 60ch;
+  font-size: 17px;
+  line-height: 1.7;
+}
+.guide .g-verdicts {
+  list-style: none;
+  padding: 0;
+  margin-top: 30px;
+  border-top: 1px solid var(--ink);
+}
+.guide .g-verdicts a {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr) minmax(0, 0.5fr) auto;
+  gap: 32px;
+  align-items: baseline;
+  padding-block: 30px;
+  border-bottom: 1px solid var(--line);
+}
+.guide .g-verdicts li:last-child a {
+  border-bottom: 0;
+}
+.guide .g-verdict-name {
+  font-size: clamp(26px, 2.4vw, 34px);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+.guide .g-verdict-text {
+  font-size: 16px;
+  line-height: 1.6;
+}
+.guide .g-verdict-meta {
+  color: var(--muted);
+}
+.guide .g-verdicts svg {
+  align-self: center;
+  transition: transform 160ms var(--ease);
+}
+.guide .g-group {
+  border-top: 1px solid var(--line);
+  padding-block: 56px 64px;
+}
+.guide .g-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 40px;
+}
+.guide .g-group-head p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.guide .g-tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: 35px 24px;
+  margin-top: 34px;
+  list-style: none;
+  padding: 0;
+}
+.guide .g-tile {
+  min-width: 0;
+}
+.guide .g-tile-media {
+  position: relative;
+  aspect-ratio: var(--tile-ratio, 1/1.06);
+  overflow: hidden;
+  border-radius: 4px;
+}
+.guide .g-tile-media video {
+  object-fit: contain;
+}
+.guide .g-tile-title {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 44px;
+  padding-top: 9px;
+}
+.guide .g-tile-title h3 {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+}
+.guide .g-tile-title svg {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.guide .g-tile > p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ─── Close and footer ────────────────────────────────────────────────── */
+.guide .g-final {
+  border-top: 1px solid var(--line);
+  padding-block: 58px 65px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+}
+.guide .g-final h2 {
+  font-size: clamp(54px, 5.6vw, 82px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+.guide .g-final-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+.guide .site-footer {
+  border-top: 1px solid var(--line);
+  padding-block: 44px 34px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr);
+  gap: 24px 40px;
+}
+.guide .site-footer .wordmark {
+  font-size: 21px;
+}
+.guide .footer-brand p {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.guide .footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+}
+.guide .footer-hub {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.guide .footer-links ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 4px;
+}
+.guide .footer-links li a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.guide .footer-bottom {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.guide .footer-bottom a {
+  display: inline-flex;
+  align-items: center;
+  gap: 15px;
+  min-height: 44px;
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .guide .site-nav a:hover,
+  .guide .nav-cta:hover,
+  .guide .text-link:hover,
+  .guide .crumbs a:hover,
+  .guide .prose-link:hover,
+  .guide .g-tile-title:hover,
+  .guide .footer-links a:hover,
+  .guide .footer-bottom a:hover {
+    color: var(--accent);
+  }
+  .guide .primary:hover {
+    background: var(--accent-deep);
+  }
+  .guide .g-selector button:hover {
+    color: var(--ink);
+  }
+  .guide .g-list a:hover .g-list-name {
+    color: var(--accent);
+  }
+  .guide .g-list a:hover svg,
+  .guide .g-verdicts a:hover svg {
+    transform: translate(3px, -3px);
+  }
+  .guide .g-verdicts a:hover .g-verdict-name {
+    color: var(--accent);
+  }
+}
+
+@media (max-width: 1100px) {
+  .guide .wrap {
+    width: calc(100% - 56px);
+  }
+  .guide .site-nav {
+    gap: 18px;
+  }
+  .guide .header-actions .nav-cta {
+    display: none;
+  }
+  .guide .g-hero {
+    gap: 36px;
+  }
+  .guide .g-stage {
+    min-height: 520px;
+  }
+  .guide .g-selector {
+    gap: 13px;
+  }
+  .guide .g-selector button {
+    font-size: 11px;
+  }
+  .guide .g-body {
+    gap: 48px;
+  }
+  .guide .g-body-wide .g-passages {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 44px;
+  }
+  .guide .g-faq {
+    gap: 45px;
+  }
+  .guide .g-tiles {
+    grid-template-columns: repeat(min(var(--cols, 4), 3), minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .guide .wrap {
+    width: calc(100% - 40px);
+  }
+  .guide .site-header {
+    height: 72px;
+    gap: 15px;
+  }
+  .guide .wordmark {
+    font-size: 20px;
+  }
+  .guide .brand-mark {
+    width: 6px;
+    height: 6px;
+  }
+  .guide .header-actions {
+    display: none;
+  }
+  .guide .site-nav {
+    display: none;
+    position: absolute;
+    top: 71px;
+    left: 0;
+    right: 0;
+    padding: 12px 20px 18px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 12px 20px #2424210a;
+    gap: 0;
+  }
+  .guide .site-nav.open {
+    display: flex;
+    flex-direction: column;
+  }
+  .guide .site-nav a {
+    min-height: 48px;
+    border-bottom: 1px solid var(--line);
+    font-size: 15px;
+  }
+  .guide .site-nav a[aria-current] {
+    box-shadow: none;
+    color: var(--accent);
+  }
+  .guide .site-nav .mobile-projects {
+    display: flex;
+    justify-content: space-between;
+    border: 0;
+  }
+  .guide .mobile-account {
+    display: block;
+    padding-top: 10px;
+  }
+  .guide .menu-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 10px 0 10px 15px;
+    background: none;
+    border: 0;
+    font-size: 13px;
+  }
+  .guide .menu-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+  .guide .crumbs {
+    padding-top: 8px;
+    font-size: 12px;
+  }
+  .guide .g-hero {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding-block: 4px 44px;
+  }
+  .guide .g-hero h1 {
+    font-size: clamp(40px, 10.6vw, 56px);
+    letter-spacing: -0.055em;
+    line-height: 1;
+  }
+  .guide .g-lead {
+    margin-top: 20px;
+    font-size: 16px;
+  }
+  .guide .g-actions {
+    margin-top: 24px;
+    gap: 12px;
+  }
+  .guide .button {
+    min-height: 50px;
+    padding: 14px 18px;
+    gap: 36px;
+  }
+  .guide .g-opens {
+    margin-top: 20px;
+  }
+  .guide .g-stage {
+    min-height: 450px;
+  }
+  .guide .g-stage-label {
+    top: 18px;
+    left: 18px;
+    right: 18px;
+    font-size: 12px;
+  }
+  .guide .g-stage-media {
+    inset-block-end: 64px;
+  }
+  .guide .g-stage-bar {
+    left: 18px;
+    right: 18px;
+    height: 64px;
+  }
+  .guide .g-stage-bar p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .guide .g-selector {
+    gap: 16px;
+  }
+  .guide .g-body {
+    grid-template-columns: 1fr;
+    gap: 50px;
+    padding-block: 46px 52px;
+  }
+  .guide .g-facts {
+    position: static;
+  }
+  .guide .g-body h2 {
+    font-size: 28px;
+  }
+  .guide .g-passages {
+    gap: 40px;
+  }
+  .guide .g-passage p {
+    margin-top: 14px;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .guide .g-compare {
+    padding-block: 44px 50px;
+  }
+  .guide .g-compare-head,
+  .guide .g-group-head {
+    display: block;
+  }
+  .guide .g-compare-head p {
+    margin-top: 16px;
+  }
+  .guide .g-compare-head h2,
+  .guide .g-related h2,
+  .guide .g-group h2 {
+    font-size: 34px;
+    letter-spacing: -0.05em;
+  }
+  .guide .g-compare table,
+  .guide .g-compare tbody,
+  .guide .g-compare tr,
+  .guide .g-compare :is(th, td) {
+    display: block;
+    width: auto;
+  }
+  .guide .g-compare thead {
+    display: none;
+  }
+  .guide .g-compare table {
+    margin-top: 24px;
+    border-top: 1px solid var(--ink);
+  }
+  .guide .g-compare tr {
+    padding-block: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .guide .g-compare :is(th, td) {
+    padding: 0;
+    border: 0;
+  }
+  .guide .g-compare tbody th {
+    width: auto;
+    margin-bottom: 8px;
+  }
+  .guide .g-compare tbody td {
+    width: auto;
+    display: grid;
+    grid-template-columns: 7.2em minmax(0, 1fr);
+    gap: 12px;
+    padding-block: 3px;
+  }
+  .guide .g-compare tbody td::before {
+    content: attr(data-label);
+    font-size: 12px;
+    color: var(--muted);
+    padding-top: 1px;
+  }
+  .guide .g-faq {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding-block: 38px 46px;
+  }
+  .guide .g-faq h2 {
+    font-size: 30px;
+  }
+  .guide .g-faq-list {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .guide .g-related {
+    padding-block: 44px 50px;
+  }
+  .guide .g-list a {
+    grid-template-columns: 60px minmax(0, 1fr) auto;
+    gap: 16px;
+    min-height: 92px;
+  }
+  .guide .g-thumb {
+    width: 60px;
+  }
+  .guide .g-list-name {
+    font-size: 17px;
+    letter-spacing: -0.4px;
+  }
+  .guide .g-hub-head {
+    display: block;
+    padding-block: 4px 40px;
+  }
+  .guide .g-hub-head h1 {
+    font-size: clamp(46px, 12vw, 64px);
+  }
+  .guide .g-hub-head p {
+    margin-top: 20px;
+    font-size: 15px;
+  }
+  .guide .g-hub-body,
+  .guide .g-hub-body.with-stage {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding-bottom: 40px;
+  }
+  .guide .g-hub-text {
+    gap: 16px;
+  }
+  .guide .g-stage.compact {
+    min-height: 380px;
+  }
+  .guide .g-hub-body p {
+    font-size: 16px;
+  }
+  .guide .g-verdicts a {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 16px;
+    padding-block: 22px;
+  }
+  .guide .g-verdict-name {
+    font-size: 26px;
+  }
+  .guide .g-verdict-text,
+  .guide .g-verdict-meta {
+    grid-column: 1;
+  }
+  .guide .g-verdicts svg {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .guide .g-group {
+    padding-block: 40px 46px;
+  }
+  .guide .g-group-head p {
+    margin-top: 12px;
+  }
+  .guide .g-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 25px 14px;
+    margin-top: 24px;
+  }
+  .guide .g-tile-media {
+    aspect-ratio: 4/5;
+  }
+  .guide .g-tile-title {
+    gap: 7px;
+    padding-top: 6px;
+  }
+  .guide .g-tile-title h3 {
+    font-size: 14px;
+    letter-spacing: -0.4px;
+  }
+  .guide .g-tile-title svg {
+    width: 15px;
+  }
+  .guide .g-tile > p {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .guide .g-final {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-block: 37px 42px;
+    gap: 25px;
+  }
+  .guide .g-final h2 {
+    font-size: 58px;
+  }
+  .guide .g-final-actions {
+    align-items: flex-start;
+  }
+  .guide .site-footer {
+    grid-template-columns: 1fr;
+    padding-block: 30px 24px;
+  }
+  .guide .footer-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 16px;
+  }
+  .guide .footer-bottom {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .guide .wrap {
+    width: calc(100% - 32px);
+  }
+  .guide .wordmark {
+    font-size: 18px;
+  }
+  .guide .g-hero h1 {
+    font-size: 38px;
+  }
+  .guide .g-stage {
+    min-height: 410px;
+  }
+  .guide .g-selector {
+    gap: 12px;
+  }
+  .guide .g-selector button {
+    font-size: 11px;
+  }
+  .guide .g-hub-head h1 {
+    font-size: 44px;
+  }
+  .guide .footer-links {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide a,
+  .guide button,
+  .guide .g-stage,
+  .guide .g-stage,
+  .guide .g-list svg,
+  .guide .g-verdicts svg {
+    transition: none;
+  }
+  .guide :is(button, .button):active {
+    transform: none;
+  }
+}

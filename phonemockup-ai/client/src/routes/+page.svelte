@@ -10,6 +10,7 @@
   import animationGroups from "$lib/animations/animations.svelte";
   import MotionPreview from "$lib/components/marketing/MotionPreview.svelte";
   import AuthControls from "$lib/components/auth/AuthControls.svelte";
+  import { hubs } from "$lib/guides/guides";
 
   const motions = animationGroups;
   const heroOptions = ["soft-orbit", "edge-reveal", "top-down"].map((id) =>
@@ -497,6 +498,10 @@
       >phonemockup<span class="brand-mark" aria-hidden="true"></span></a
     >
     <p>A browser. A screen. A different angle.</p>
+    <!-- A div, not a <nav>: this page's nav rules turn every nav into the mobile menu. -->
+    <div class="footer-guides" role="navigation" aria-label="Guides">
+      {#each hubs as hub}<a href={`/${hub.section}`}>{hub.name}</a>{/each}
+    </div>
     <a href="/platform/project">Your projects <ArrowUpRight size={16} /></a>
   </footer>
 </div>
@@ -1164,7 +1169,18 @@
     gap: 15px;
     min-height: 44px;
   }
+  .footer-guides {
+    display: flex;
+    gap: 22px;
+    font-size: 12px;
+  }
+  .footer-guides a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
   @media (hover: hover) and (pointer: fine) {
+    .footer-guides a:hover,
     nav a:hover,
     .nav-cta:hover,
     .text-link:hover,
@@ -1579,6 +1595,12 @@
     .site-footer > a:last-child {
       font-size: 11px;
       gap: 8px;
+    }
+    .footer-guides {
+      order: 4;
+      flex-basis: 100%;
+      gap: 18px;
+      font-size: 12px;
     }
   }
   @media (max-width: 360px) {

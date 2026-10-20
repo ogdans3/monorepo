@@ -43,6 +43,10 @@ they do not add duplicate entries to the app.
 [Pixel asset details](docs/models/pixel-9-pro-full-screen.md) ·
 [Catalogue selection](docs/models/catalogue.md).
 
+## Guide pages
+
+`/mockups`, `/use-cases` and `/alternatives` hold fifteen search landing pages and their three hubs. Each page is written for one search phrase. All of their copy and facts are in `client/src/lib/guides/guides.ts`. `/sitemap.xml` lists them. See [the guide notes](docs/guides-2026.md) for how to add a page, and for the dated sources behind the comparisons.
+
 ## Import provenance
 
 Imported from the previously maintained `ogdans3/phonemockup-ai` project at
