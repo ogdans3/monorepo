@@ -52,10 +52,20 @@ async function getSession(): Promise<RenderSession> {
  * size and screen while each reported its own.
  */
 let queue: Promise<unknown> = Promise.resolve();
-function serial<T>(task: () => Promise<T>): Promise<T> {
-    const turn = queue.then(task, task);
+function serial<T>(task: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    const run = () => {
+        // A call cancelled while it waited for its turn doesn't run at all.
+        if (signal?.aborted) return Promise.reject(new Error("Cancelled before it started."));
+        return task();
+    };
+    const turn = queue.then(run, run);
     queue = turn.catch(() => undefined);
     return turn;
+}
+
+/** The lists only read the catalog; once it's cached they needn't wait. */
+function catalogRead<T>(task: () => Promise<T>): Promise<T> {
+    return catalogCache ? task() : serial(task);
 }
 
 /** Work directories still on disk, removed on shutdown if a call is cut off. */
@@ -126,7 +136,7 @@ server.registerTool(
             "Lists the 3D phone models available for mockups, with the id to pass as `model`.",
         inputSchema: {}
     },
-    async () => serial(async () => {
+    async () => catalogRead(async () => {
         const staticDir = resolveStaticDir();
         const {models} = await getCatalog();
         const lines = models.map((m) => {
@@ -151,7 +161,7 @@ server.registerTool(
             "and each one's natural duration in seconds.",
         inputSchema: {}
     },
-    async () => serial(async () => {
+    async () => catalogRead(async () => {
         const {animations} = await getCatalog();
         const sorted = [...animations].sort((a, b) => a.priority - b.priority);
         const lines = sorted.map(
@@ -189,7 +199,7 @@ server.registerTool(
             ...sceneSchema
         }
     },
-    async (args) => serial(async () => {
+    async (args, extra) => serial(async () => {
         const screenshot = await requireFile(args.screenshot, "Screenshot");
         if (!/\.(png|jpe?g)$/i.test(args.output)) {
             throw new Error("Write the image to a .png or .jpg file; other extensions would hold PNG bytes.");
@@ -223,7 +233,7 @@ server.registerTool(
         return text(
             `Rendered ${scene.width}x${scene.height} mockup on ${scene.modelId}\n${output}`
         );
-    })
+    }, extra.signal)
 );
 
 server.registerTool(
@@ -365,7 +375,7 @@ server.registerTool(
             await rm(workDir, {recursive: true, force: true});
             workDirs.delete(workDir);
         }
-    })
+    }, extra.signal)
 );
 
 /** Both tools take the same ids: the presets list_animations shows. */

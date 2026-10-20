@@ -82,7 +82,14 @@ export class RenderSession {
         private readonly staticDir: string,
         /** The exact files the page may fetch as screen content, per call. */
         private readonly mediaFiles: Set<string>
-    ) {}
+    ) {
+        // The page's renderer can die (out of memory, killed) while the
+        // browser stays up. Close the browser then, so the session counts as
+        // gone and the next call starts a new one instead of "Target crashed".
+        page.on("crash", () => {
+            void browser.close().catch(() => undefined);
+        });
+    }
 
     static async launch(): Promise<RenderSession> {
         if (!existsSync(harnessBundle)) {
@@ -156,9 +163,9 @@ export class RenderSession {
         return new RenderSession(browser, page, staticDir, mediaFiles);
     }
 
-    /** False once the browser has crashed, been killed or closed. */
+    /** False once the browser or its page has crashed, been killed or closed. */
     isConnected(): boolean {
-        return this.browser.isConnected();
+        return this.browser.isConnected() && !this.page.isClosed();
     }
 
     /** Calls when the browser goes away, so the caller can start a new one. */
