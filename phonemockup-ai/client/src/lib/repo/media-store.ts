@@ -48,17 +48,45 @@ async function withStore<T>(
     }
 }
 
+// Safari's private windows refuse File and Blob values ("Error preparing
+// Blob/File data to be stored in object store") but take ArrayBuffers.
+// Files are stored as files where the browser allows it, which keeps a long
+// recording out of memory, and as bytes where it doesn't.
+type InlineFile = {name: string; type: string; lastModified: number; data: ArrayBuffer};
+type StoredFile = File | InlineFile;
+type StoredMedia = {screen: StoredFile | null; bulk?: StoredFile[]};
+
+async function inline(file: File): Promise<InlineFile> {
+    return {name: file.name, type: file.type, lastModified: file.lastModified, data: await file.arrayBuffer()};
+}
+
+function revive(file: StoredFile): File {
+    if (file instanceof Blob) return file;
+    return new File([file.data], file.name, {type: file.type, lastModified: file.lastModified});
+}
+
 export async function saveProjectMedia(projectId: string, media: ProjectMedia): Promise<void> {
     if (!media.screen && media.bulk.length === 0) {
         await deleteProjectMedia(projectId);
         return;
     }
-    await withStore("readwrite", (store) => store.put(media, projectId));
+    try {
+        await withStore("readwrite", (store) => store.put(media, projectId));
+    } catch (error) {
+        // Bytes take the same room as the file, so a full quota stays full.
+        if (error instanceof DOMException && error.name === "QuotaExceededError") throw error;
+        const stored: StoredMedia = {
+            screen: media.screen && await inline(media.screen),
+            bulk: await Promise.all(media.bulk.map(inline)),
+        };
+        await withStore("readwrite", (store) => store.put(stored, projectId));
+    }
 }
 
 export async function loadProjectMedia(projectId: string): Promise<ProjectMedia | null> {
-    const media = await withStore<ProjectMedia | undefined>("readonly", (store) => store.get(projectId));
-    return media ?? null;
+    const media = await withStore<StoredMedia | undefined>("readonly", (store) => store.get(projectId));
+    if (!media) return null;
+    return {screen: media.screen && revive(media.screen), bulk: (media.bulk ?? []).map(revive)};
 }
 
 export async function deleteProjectMedia(projectId: string): Promise<void> {
