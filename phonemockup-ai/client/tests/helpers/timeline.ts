@@ -153,7 +153,11 @@ export async function clickToolClearTimelineWithConfirm(page: Page) {
     const button = page.getByTestId("timeline-tool-clear-timeline");
     await expect(button, "Clear timeline tool not visible").toBeVisible();
     await button.click();
-    await page.getByRole("alertdialog").getByRole("button", {name: "Clear timeline", exact: true}).click();
+    const dialog = page.getByRole("alertdialog");
+    await dialog.getByRole("button", {name: "Clear timeline", exact: true}).click();
+    // The dialog stays over the timeline while it closes, and takes the next
+    // click: a playhead move straight after this would be lost.
+    await expect(dialog).toHaveCount(0);
 }
 
 export async function getAnimationCount(page: Page): Promise<number> {

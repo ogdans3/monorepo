@@ -193,7 +193,8 @@ test("Zoom, Spin and Flip filters expose the additional collection", async ({
   ).toHaveAttribute("data-visible", "true");
   for (const [name, count] of [
     ["Zoom", 2],
-    ["Spin", 2],
+    // Slow Spin is a Spin as well as Cinematic since the library redesign.
+    ["Spin", 3],
     ["Flip", 3],
   ] as const) {
     await page.getByRole("button", { name, exact: true }).click();
