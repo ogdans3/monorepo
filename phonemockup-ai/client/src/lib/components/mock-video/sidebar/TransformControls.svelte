@@ -115,8 +115,6 @@
                             () => rot[axis],
                             (v) => setRot(axis, v)
                         }
-                        min={-360}
-                        max={360}
                         step={0.01}
                         precision={2}
                         pixelsPerStep={4}

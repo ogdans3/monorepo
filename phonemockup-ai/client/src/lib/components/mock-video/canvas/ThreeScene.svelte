@@ -5,6 +5,7 @@
     import {
         currentPlayheadTime,
         imageElement,
+        mediaKind,
         videoController as mediaController,
         videoElement
     } from "$lib/stores/video.svelte.js";
@@ -91,12 +92,14 @@
         scene?.setGlassReflections(project.sceneSettings.glassReflections);
     });
 
+    // Bind the element that is on the screen now. Both elements outlive a
+    // change of media, so a canvas mounted later (the export dialog's, a new
+    // project's) must not bind whichever effect happened to run last: that
+    // put an earlier picture on a video export.
     $effect(() => {
-        if (scene && $videoElement) setMedia({kind: "video", el: $videoElement});
-    });
-
-    $effect(() => {
-        if (scene && $imageElement) setMedia({kind: "image", el: $imageElement});
+        if (!scene) return;
+        if ($mediaKind === "video" && $videoElement) setMedia({kind: "video", el: $videoElement});
+        else if ($mediaKind === "image" && $imageElement) setMedia({kind: "image", el: $imageElement});
     });
 
     $effect(() => {

@@ -8,7 +8,7 @@ import type {
 } from "../core/types";
 import {SingleImageRecorder} from "./SingleImageRecorder";
 import {SingleVideoRecorder} from "./SingleVideoRecorder";
-import {renderAtTime} from "../core/settle";
+import {renderAtTime, renderControls} from "../core/settle";
 import {extFromBlobType} from "../util/naming";
 import {UserCancelledRendering} from "../VideoRecorder";
 import {detectIsImage} from "$lib/repo/uploadFile.svelte";
@@ -81,7 +81,15 @@ export class BulkRecorder {
                 ? tSec!
                 : this.videoCtx.getPlayheadAnimateFromSec();
 
-            await renderAtTime(settleT, this.scenes, this.videoCtx.getVideoEl());
+            // Settling from the timeline would write its pose into the shared
+            // transform stores, and a still taken with the live controls would
+            // then lose the angle set by hand. Settle the way the capture will
+            // render.
+            if (mode === "image" && useLiveControls) {
+                await renderControls(settleT, this.scenes, this.videoCtx.getVideoEl());
+            } else {
+                await renderAtTime(settleT, this.scenes, this.videoCtx.getVideoEl());
+            }
 
             let out: Blob | null = null;
 

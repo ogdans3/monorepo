@@ -30,7 +30,7 @@
     import {SingleImageRecorder} from "$lib/components/mock-video/recording/recorders/SingleImageRecorder";
     import {SingleVideoRecorder} from "$lib/components/mock-video/recording/recorders/SingleVideoRecorder";
     import {BulkRecorder} from "$lib/components/mock-video/recording/recorders/BulkRecorder";
-    import {renderAtTime} from "$lib/components/mock-video/recording/core/settle";
+    import {renderAtTime, renderControls} from "$lib/components/mock-video/recording/core/settle";
     import type {ProjectFile} from "$lib/components/mock-video/Project";
     import {saveEditorState} from "$lib/components/mock-video/recording/core/editor-state";
     import {UserCancelledRendering} from "$lib/components/mock-video/recording/VideoRecorder";
@@ -148,6 +148,11 @@
             get(transformControlRotation).origin === ChangeOrigin.User
         );
     }
+    // Decided once, now: settling the first file from the timeline (below)
+    // writes the timeline's pose with a System origin, after which the
+    // hand-set angle could no longer be told apart and every still came out
+    // in the timeline pose.
+    const liveControls = downloadAsImage && getUseLiveControls();
 
     function setActiveBulkSync(i: number) {
         const max = bulkList.length - 1;
@@ -161,7 +166,8 @@
         if (!isBulk) return;
         setActiveBulkSync(i);
         const tSec = get(currentPlayheadTime) ?? 0;
-        await renderAtTime(tSec, scenes, $videoController.video);
+        if (liveControls) await renderControls(tSec, scenes, $videoController.video);
+        else await renderAtTime(tSec, scenes, $videoController.video);
     }
 
     onMount(() => {
@@ -254,7 +260,7 @@
             const zipBlob = await bulk.recordAll(bulkList.map(f => f.fileBlob), {
                 mode,
                 tSec: videoCtx.getPlayheadAnimateFromSec(),
-                useLiveControls: downloadAsImage && getUseLiveControls(),
+                useLiveControls: liveControls,
                 getFilename,
                 abortSignal: signal,
                 callbacks: {

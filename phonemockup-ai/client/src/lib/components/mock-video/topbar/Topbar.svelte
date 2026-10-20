@@ -3,6 +3,7 @@
   import { project } from "$lib/stores/project.svelte";
   import { saveProjectToLocalStorage } from "$lib/repo/localstorage.svelte";
   import { saveProjectMedia } from "$lib/repo/media-store";
+  import { whenMediaRestored } from "$lib/stores/session.svelte";
   import { videoController } from "$lib/stores/video.svelte";
   import { goto, replaceState } from "$app/navigation";
   import { toast } from "svelte-sonner";
@@ -51,6 +52,8 @@
     savingProject = true;
     justSaved = false;
     try {
+      // A project opened a moment ago may still be reading its screen back.
+      await whenMediaRestored();
       const screen = get(get(videoController).currentFile);
       const saved = {
         ...project.toProject(),

@@ -80,7 +80,20 @@ export function openSavedProject(saved: Project) {
         // Blank until the stored file is read, rather than flashing the demo.
         controller.setMediaSource(null, false);
     }
-    restoreMedia(saved);
+    const reading = restoreMedia(saved).finally(() => {
+        if (restoring === reading) restoring = null;
+    });
+    restoring = reading;
+}
+
+let restoring: Promise<void> | null = null;
+
+/**
+ * Resolves once a just-opened project's screen media is back from IndexedDB.
+ * Saving before that would store "no screen" and delete the stored file.
+ */
+export function whenMediaRestored(): Promise<void> {
+    return restoring ?? Promise.resolve();
 }
 
 async function restoreMedia(saved: Project) {

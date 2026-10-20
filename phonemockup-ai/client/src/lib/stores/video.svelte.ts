@@ -313,4 +313,13 @@ export const imageElement: Readable<HTMLImageElement | null> = derived(
     }
 );
 
+/** Which of the two elements is on the screen now. Both outlive a change. */
+export const mediaKind: Readable<MediaKind> = derived(
+    videoController,
+    ($c, set) => {
+        const unsub = $c.mediaKind.subscribe(set);
+        return () => unsub();
+    }
+);
+
 export const currentPlayheadTime = writable<number>(0);

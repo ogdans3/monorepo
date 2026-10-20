@@ -249,7 +249,7 @@
   });
 
   function handleCurrentTimeInput(e: Event) {
-    const val = parseFloat((e.target as HTMLInputElement).value);
+    const val = parseFloat((e.target as HTMLInputElement).value.replace(",", "."));
     if (!Number.isFinite(val)) {
       // Not a number: put back the time the playhead is at.
       currentTimeField = get(currentPlayheadTime).toFixed(2);
@@ -261,7 +261,7 @@
   }
 
   function handleEndInput(e: Event) {
-    const val = parseFloat((e.target as HTMLInputElement).value);
+    const val = parseFloat((e.target as HTMLInputElement).value.replace(",", "."));
     if (Number.isFinite(val)) {
       // setEndTime clamps to the lengths the timeline can draw.
       get(videoController).setEndTime(val);
@@ -335,7 +335,7 @@
     }
     // Keys in a dialog belong to it; an export in progress especially
     // must not have its playhead moved underneath it.
-    if (document.querySelector('[role="dialog"][data-state="open"]')) {
+    if (document.querySelector(':is([role="dialog"], [role="alertdialog"])[data-state="open"]')) {
       return;
     }
 

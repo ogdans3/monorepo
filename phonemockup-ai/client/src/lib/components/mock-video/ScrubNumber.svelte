@@ -23,6 +23,8 @@
     let startVal = $state(0);
     let inputElement: HTMLInputElement | null = $state(null);
     let isFocused = $state(false);
+    /** Whether the field was typed in since it got focus. */
+    let typed = false;
     let committedValue = $state<number>(value);
     let inputText = $state<string>(String(value.toFixed(precision)));
 
@@ -41,12 +43,6 @@
         if (!Number.isFinite(step) || step <= 0) return v;
         return Math.round(v / step) * step;
     };
-
-    $effect(() => {
-        if (inputElement) {
-            inputElement.value = value.toFixed(precision);
-        }
-    });
 
     function onPointerDown(e: PointerEvent) {
         if (disabled || e.button !== 0) return;
@@ -82,7 +78,10 @@
     }
 
     function onWheel(e: WheelEvent) {
-        if (!wheel || disabled) return;
+        // Only a focused field scrubs with the wheel. Otherwise the wheel
+        // scrolls the panel, rather than quietly moving the phone or the
+        // selected keyframe as the pointer passes over the field.
+        if (!wheel || disabled || !isFocused) return;
         e.preventDefault();
         const dir = Math.sign(e.deltaY);
         let mult = 1;
@@ -110,16 +109,23 @@
 
     function onFocus() {
         isFocused = true;
+        typed = false;
         committedValue = value;
         // Show raw current text; do not reformat
     }
 
     function onBlur() {
         isFocused = false;
+        // Finalize what was typed: snap/round/clamp and format. Tabbing
+        // through a field changes nothing, so it must not rewrite the value.
+        if (typed) setVal(snap(value));
         committedValue = value;
-        // Finalize: snap/round/clamp and format
-        setVal(snap(value));
         syncDisplayFromValue();
+    }
+
+    /** A comma is a decimal point too: iOS keypads in Norwegian only offer ",". */
+    function parse(raw: string): number {
+        return Number(raw.trim().replace(",", "."));
     }
 
     function onInput(e: Event) {
@@ -127,12 +133,13 @@
         const t = e.target as HTMLInputElement;
         const raw = t.value;
         inputText = raw; // keep what the user typed
+        typed = true;
 
-        // Allow transient states like "-", ".", "-."
-        const transient = raw === "" || raw === "-" || raw === "." || raw === "-.";
+        // Allow transient states like "-", ".", "-.", "," and "-,"
+        const transient = /^-?[.,]?$/.test(raw);
         if (transient) return;
 
-        const v = Number(raw);
+        const v = parse(raw);
         if (Number.isFinite(v)) {
             // Update the numeric model, but DO NOT reformat the field while focused
             value = clamp(v);
@@ -144,7 +151,7 @@
         if (disabled) return;
 
         if (e.key === "Enter") {
-            const v = Number(inputText);
+            const v = parse(inputText);
             if (Number.isFinite(v)) {
                 setVal(snap(v));
                 committedValue = value; // update snapshot on commit
@@ -167,10 +174,7 @@
 
 <div
         class="relative select-none touch-none flex flex-col items-center gap-1 w-full"
-        onwheel={(e) => {
-    e.preventDefault();
-    onWheel(e);
-  }}
+        onwheel={onWheel}
         aria-label={label}
         role="spinbutton"
         aria-valuemin={minAttr}

@@ -14,7 +14,15 @@
 
     let imageInputEl: HTMLInputElement | null = null;
     let videoInputEl: HTMLInputElement | null = null;
-    let selectedIndex = $state(-1);
+    // Start from the file that is on the phone now. Below 900 px this panel is
+    // built again each time the inspector opens, and starting at -1 put file 1
+    // back on the screen every time.
+    let selectedIndex = $state(currentIndex());
+
+    function currentIndex() {
+        const current = get(get(videoController).currentFile);
+        return current ? project.files.findIndex((f) => f.fileBlob === current) : -1;
+    }
 
     // Sync selection when files change
     $effect(() => {
