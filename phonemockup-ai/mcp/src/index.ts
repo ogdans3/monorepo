@@ -19,14 +19,47 @@ import {existsSync} from "node:fs";
 import {encodeVideo, extractFrames, type VideoFormat} from "./video.js";
 import {DEFAULT_MODEL, isTransparent, resolveScene, sceneSchema, type SceneInput} from "./scene.js";
 
-/** Chromium is expensive to start, so one session is shared across calls. */
-let session: RenderSession | null = null;
+/**
+ * Chromium is expensive to start, so one session is shared across calls. The
+ * launch itself is shared too, so two first calls start one browser, and a
+ * browser that crashed or was killed is replaced on the next call.
+ */
+let session: Promise<RenderSession> | null = null;
 let catalogCache: Catalog | null = null;
 
 async function getSession(): Promise<RenderSession> {
-    if (!session) session = await RenderSession.launch();
-    return session;
+    if (session) {
+        const live = await session.catch(() => null);
+        if (live?.isConnected()) return live;
+        session = null;
+    }
+    const launching = RenderSession.launch().then((s) => {
+        s.onDisconnected(() => {
+            if (session === launching) session = null;
+        });
+        return s;
+    });
+    session = launching;
+    launching.catch(() => {
+        if (session === launching) session = null;
+    });
+    return launching;
 }
+
+/**
+ * The page and its one renderer hold a single scene, so tool calls take turns:
+ * calls that ran at the same time would otherwise render each other's model,
+ * size and screen while each reported its own.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+function serial<T>(task: () => Promise<T>): Promise<T> {
+    const turn = queue.then(task, task);
+    queue = turn.catch(() => undefined);
+    return turn;
+}
+
+/** Work directories still on disk, removed on shutdown if a call is cut off. */
+const workDirs = new Set<string>();
 
 async function getCatalog(): Promise<Catalog> {
     if (!catalogCache) catalogCache = await (await getSession()).catalog();
@@ -93,7 +126,7 @@ server.registerTool(
             "Lists the 3D phone models available for mockups, with the id to pass as `model`.",
         inputSchema: {}
     },
-    async () => {
+    async () => serial(async () => {
         const staticDir = resolveStaticDir();
         const {models} = await getCatalog();
         const lines = models.map((m) => {
@@ -106,7 +139,7 @@ server.registerTool(
         return text(
             `${models.length} models (default: ${DEFAULT_MODEL}):\n\n${lines.join("\n")}`
         );
-    }
+    })
 );
 
 server.registerTool(
@@ -118,7 +151,7 @@ server.registerTool(
             "and each one's natural duration in seconds.",
         inputSchema: {}
     },
-    async () => {
+    async () => serial(async () => {
         const {animations} = await getCatalog();
         const sorted = [...animations].sort((a, b) => a.priority - b.priority);
         const lines = sorted.map(
@@ -128,7 +161,7 @@ server.registerTool(
                 ")"
         );
         return text(`${animations.length} animations:\n\n${lines.join("\n")}`);
-    }
+    })
 );
 
 server.registerTool(
@@ -156,10 +189,14 @@ server.registerTool(
             ...sceneSchema
         }
     },
-    async (args) => {
+    async (args) => serial(async () => {
         const screenshot = await requireFile(args.screenshot, "Screenshot");
+        if (!/\.(png|jpe?g)$/i.test(args.output)) {
+            throw new Error("Write the image to a .png or .jpg file; other extensions would hold PNG bytes.");
+        }
         const output = await prepareOutput(args.output);
         const scene = resolveScene(args as SceneInput, {width: 3840, height: 2160});
+        if (args.animation) await requireAnimation(args.animation);
 
         const asJpeg = /\.jpe?g$/i.test(output);
         if (asJpeg && isTransparent(scene.background)) {
@@ -169,6 +206,7 @@ server.registerTool(
         }
 
         const s = await getSession();
+        s.resetMedia();
         await s.initScene(scene);
         await s.setScreenSource(screenshot);
 
@@ -185,7 +223,7 @@ server.registerTool(
         return text(
             `Rendered ${scene.width}x${scene.height} mockup on ${scene.modelId}\n${output}`
         );
-    }
+    })
 );
 
 server.registerTool(
@@ -226,18 +264,27 @@ server.registerTool(
             ...sceneSchema
         }
     },
-    async (args, extra) => {
+    async (args, extra) => serial(async () => {
         if (!args.screenshot && !args.screenRecording) {
             throw new Error("Pass either `screenshot` or `screenRecording`.");
         }
 
-        const output = await prepareOutput(args.output);
-        const format = (args.format ?? extname(output).slice(1).toLowerCase()) as VideoFormat;
+        // ffmpeg picks the container from the extension, so the two must agree
+        // or a "webm" would come out as VP9 in an MP4.
+        const extension = extname(args.output).slice(1).toLowerCase();
+        const format = (args.format ?? extension) as VideoFormat;
         if (!["mp4", "webm", "gif"].includes(format)) {
             throw new Error(
-                `Unsupported video format "${format}". Use mp4, webm or gif.`
+                `Unsupported video format "${format || "(none)"}". Use mp4, webm or gif.`
             );
         }
+        if (extension !== format) {
+            throw new Error(
+                `The output ends in "${extension ? "." + extension : "no extension"}" but the format is ${format}. ` +
+                `Name the file .${format}.`
+            );
+        }
+        const output = await prepareOutput(args.output);
 
         const scene = resolveScene(args as SceneInput, {width: 1080, height: 1920});
         const transparent = isTransparent(scene.background);
@@ -247,21 +294,16 @@ server.registerTool(
             );
         }
 
-        const {animations} = await getCatalog();
-        const preset = animations.find((a) => a.id === args.animation);
-        if (!preset) {
-            throw new Error(
-                `Unknown animation "${args.animation}". Available: ` +
-                animations.map((a) => a.id).join(", ")
-            );
-        }
+        const preset = await requireAnimation(args.animation);
 
         const duration = args.duration ?? preset.duration;
         const frameCount = Math.max(1, Math.round(duration * args.fps));
 
         const workDir = await mkdtemp(join(tmpdir(), "phonemockup-"));
+        workDirs.add(workDir);
         try {
             const s = await getSession();
+            s.resetMedia();
             await s.initScene(scene);
 
             // Screen content: either one still for every frame, or a decoded
@@ -269,7 +311,7 @@ server.registerTool(
             let screenFrames: string[] | null = null;
             if (args.screenRecording) {
                 const input = await requireFile(args.screenRecording, "Screen recording");
-                screenFrames = await extractFrames(input, workDir, args.fps);
+                screenFrames = await extractFrames(input, workDir, args.fps, duration, extra.signal);
                 await s.setScreenSource(screenFrames[0]);
             } else {
                 await s.setScreenSource(await requireFile(args.screenshot!, "Screenshot"));
@@ -311,7 +353,8 @@ server.registerTool(
                 fps: args.fps,
                 format,
                 output,
-                transparent
+                transparent,
+                signal: extra.signal
             });
 
             return text(
@@ -320,23 +363,41 @@ server.registerTool(
             );
         } finally {
             await rm(workDir, {recursive: true, force: true});
+            workDirs.delete(workDir);
         }
-    }
+    })
 );
 
-async function shutdown() {
-    await session?.close().catch(() => undefined);
-    session = null;
+/** Both tools take the same ids: the presets list_animations shows. */
+async function requireAnimation(id: string) {
+    const {animations} = await getCatalog();
+    const preset = animations.find((a) => a.id === id);
+    if (!preset) {
+        throw new Error(
+            `Unknown animation "${id}". Available: ` + animations.map((a) => a.id).join(", ")
+        );
+    }
+    return preset;
 }
 
-process.on("SIGINT", async () => {
+async function shutdown() {
+    const current = session;
+    session = null;
+    await current?.then((s) => s.close()).catch(() => undefined);
+    await Promise.all([...workDirs].map((dir) => rm(dir, {recursive: true, force: true}).catch(() => undefined)));
+}
+
+async function exit() {
     await shutdown();
     process.exit(0);
-});
-process.on("SIGTERM", async () => {
-    await shutdown();
-    process.exit(0);
-});
+}
+
+process.on("SIGINT", exit);
+process.on("SIGTERM", exit);
+// A client that goes away without a signal closes our stdin: stop with it,
+// rather than keeping Chromium alive with nobody to answer.
+process.stdin.on("end", exit);
+process.stdin.on("close", exit);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

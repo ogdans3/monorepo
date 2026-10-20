@@ -5,19 +5,22 @@ import ffmpegPath from "ffmpeg-static";
 
 export type VideoFormat = "mp4" | "webm" | "gif";
 
+/** FFMPEG_PATH wins, so a platform without a bundled binary can still run. */
 function ffmpegBinary(): string {
-    if (!ffmpegPath) {
+    const binary = process.env.FFMPEG_PATH || ffmpegPath;
+    if (!binary) {
         throw new Error(
             "ffmpeg-static did not provide a binary for this platform. " +
             "Install ffmpeg and set FFMPEG_PATH."
         );
     }
-    return process.env.FFMPEG_PATH || ffmpegPath;
+    return binary;
 }
 
-function run(args: string[]): Promise<void> {
+/** Runs ffmpeg. Aborting the signal kills it, as when the caller cancels. */
+function run(args: string[], signal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
-        const proc = spawn(ffmpegBinary(), args, {stdio: ["ignore", "ignore", "pipe"]});
+        const proc = spawn(ffmpegBinary(), args, {stdio: ["ignore", "ignore", "pipe"], signal});
         let stderr = "";
         proc.stderr.on("data", (chunk) => {
             stderr += chunk.toString();
@@ -42,15 +45,19 @@ function run(args: string[]): Promise<void> {
 export async function extractFrames(
     input: string,
     outDir: string,
-    fps: number
+    fps: number,
+    /** Seconds the render needs; nothing past it is decoded. */
+    duration: number,
+    signal?: AbortSignal
 ): Promise<string[]> {
     await run([
         "-y",
         "-i", input,
+        "-t", String(duration),
         "-vf", `fps=${fps}`,
         "-start_number", "0",
         join(outDir, "src-%06d.png")
-    ]);
+    ], signal);
 
     const files = (await readdir(outDir))
         .filter((f) => f.startsWith("src-") && f.endsWith(".png"))
@@ -70,6 +77,7 @@ export type EncodeOptions = {
     output: string;
     /** Keep alpha. Ignored for mp4, which has no usable alpha support. */
     transparent: boolean;
+    signal?: AbortSignal;
 };
 
 export async function encodeVideo(opts: EncodeOptions): Promise<void> {
@@ -86,7 +94,7 @@ export async function encodeVideo(opts: EncodeOptions): Promise<void> {
             "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
             "-movflags", "+faststart",
             opts.output
-        ]);
+        ], opts.signal);
         return;
     }
 
@@ -98,7 +106,7 @@ export async function encodeVideo(opts: EncodeOptions): Promise<void> {
             "-b:v", "0",
             "-pix_fmt", opts.transparent ? "yuva420p" : "yuv420p",
             opts.output
-        ]);
+        ], opts.signal);
         return;
     }
 
@@ -109,5 +117,5 @@ export async function encodeVideo(opts: EncodeOptions): Promise<void> {
         "split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3",
         "-loop", "0",
         opts.output
-    ]);
+    ], opts.signal);
 }

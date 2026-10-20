@@ -63,7 +63,7 @@ Both render tools accept the same scene options: `model`, `preset` or
 // A 6-second TikTok-shaped clip of your app spinning, on a Pixel 10
 {
   "screenRecording": "/tmp/app-demo.mp4",
-  "animation": "group-ball-turn",
+  "animation": "soft-orbit",
   "output": "/tmp/promo.mp4",
   "width": 1080, "height": 1920,
   "fps": 30,

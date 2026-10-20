@@ -80,8 +80,8 @@ export class RenderSession {
         private readonly browser: Browser,
         private readonly page: Page,
         private readonly staticDir: string,
-        /** Extra directories that may be served, added per render. */
-        private readonly mediaDirs: Set<string>
+        /** The exact files the page may fetch as screen content, per call. */
+        private readonly mediaFiles: Set<string>
     ) {}
 
     static async launch(): Promise<RenderSession> {
@@ -93,10 +93,19 @@ export class RenderSession {
         }
 
         const staticDir = resolveStaticDir();
-        const mediaDirs = new Set<string>();
+        const mediaFiles = new Set<string>();
 
         const browser = await chromium.launch({args: launchArgs()});
+        try {
+            return await RenderSession.open(browser, staticDir, mediaFiles);
+        } catch (error) {
+            // A harness that fails to load must not leave its browser running.
+            await browser.close().catch(() => undefined);
+            throw error;
+        }
+    }
 
+    private static async open(browser: Browser, staticDir: string, mediaFiles: Set<string>): Promise<RenderSession> {
         const page = await browser.newPage();
         const harness = await readFile(harnessBundle, "utf8");
 
@@ -115,7 +124,7 @@ export class RenderSession {
 
             const file =
                 url.pathname === "/media"
-                    ? resolveMediaRequest(url, mediaDirs)
+                    ? resolveMediaRequest(url, mediaFiles)
                     : resolveStaticFile(url.pathname, staticDir);
             if (!file) return route.fulfill({status: 404, body: "Not found"});
 
@@ -130,26 +139,41 @@ export class RenderSession {
 
         await page.goto(`${ORIGIN}/index.html`);
         await page.addScriptTag({content: harness});
-        await page.waitForFunction(() => Boolean((window as any).mockupHarness), null, {
-            timeout: 30_000
-        });
+        try {
+            await page.waitForFunction(() => Boolean((window as any).mockupHarness), null, {
+                timeout: 30_000
+            });
+        } catch (error) {
+            // Say why, rather than reporting a bare 30 s timeout.
+            if (errors.length) throw new Error(`Harness failed to load: ${errors.join("; ")}`);
+            throw error;
+        }
 
         if (errors.length) {
-            await browser.close();
             throw new Error(`Harness failed to load: ${errors.join("; ")}`);
         }
 
-        return new RenderSession(browser, page, staticDir, mediaDirs);
+        return new RenderSession(browser, page, staticDir, mediaFiles);
     }
 
-    /** Allow the page to fetch screen content out of `dir`. */
-    allowMediaDir(dir: string) {
-        this.mediaDirs.add(resolve(dir));
+    /** False once the browser has crashed, been killed or closed. */
+    isConnected(): boolean {
+        return this.browser.isConnected();
     }
 
-    /** Allow the page to fetch this one file, by opting in to its directory. */
+    /** Calls when the browser goes away, so the caller can start a new one. */
+    onDisconnected(listener: () => void) {
+        this.browser.on("disconnected", listener);
+    }
+
+    /** Allow the page to fetch exactly this file as screen content. */
     allowMediaFile(file: string) {
-        this.allowMediaDir(dirname(resolve(file)));
+        this.mediaFiles.add(resolve(file));
+    }
+
+    /** Forget every allowed file; each tool call allows its own. */
+    resetMedia() {
+        this.mediaFiles.clear();
     }
 
     /** URL the page should use to fetch a file from an allowed media dir. */
@@ -263,14 +287,9 @@ function resolveStaticFile(pathname: string, staticDir: string): string | null {
  * directory the caller opted in to, so a crafted path cannot read arbitrary
  * files off the machine.
  */
-function resolveMediaRequest(url: URL, mediaDirs: Set<string>): string | null {
+function resolveMediaRequest(url: URL, mediaFiles: Set<string>): string | null {
     const requested = url.searchParams.get("path");
     if (!requested) return null;
     const file = resolve(requested);
-    for (const dir of mediaDirs) {
-        if (file === dir || file.startsWith(dir + sep)) {
-            return existsSync(file) ? file : null;
-        }
-    }
-    return null;
+    return mediaFiles.has(file) && existsSync(file) ? file : null;
 }
