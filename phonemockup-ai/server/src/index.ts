@@ -50,12 +50,23 @@ async function bootstrap() {
         app.use(errorHandler);
 
         // 7. Start Server
-        app.listen(config.port, () => {
+        const server = app.listen(config.port, () => {
             logger.info("🚀 Server started", {
                 port: config.port,
                 env: config.nodeEnv,
             });
         });
+
+        // A redeploy sends SIGTERM. Finish the saves and uploads in flight
+        // before exiting, but give up after 30 seconds.
+        const shutdown = () => {
+            server.closeIdleConnections();
+            const timeout = setTimeout(() => server.closeAllConnections(), 30_000);
+            timeout.unref();
+            server.close(() => process.exit(0));
+        };
+        process.once("SIGTERM", shutdown);
+        process.once("SIGINT", shutdown);
 
     } catch (error) {
         console.error("❌ Fatal error during bootstrap:", error);
