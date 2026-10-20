@@ -74,7 +74,9 @@ export function listProjectsFromLocalStorage(): Array<{
                 key,
                 project,
                 metadata: project._metadata || {
-                    savedAt: new Date().toISOString(),
+                    // Unknown, not now: "now" dated an old save today and
+                    // sorted it first. The list shows "Saved in this browser".
+                    savedAt: "",
                     isLocalOnly: true,
                     storageKey: key
                 }

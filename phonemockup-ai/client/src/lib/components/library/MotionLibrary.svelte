@@ -70,11 +70,11 @@
         `${group.name} ${group.description ?? ""} ${group.categories?.join(" ") ?? ""}`.toLowerCase();
       const matchesCategory =
         category === "All" ||
+        // Loop is a group of motions (Side Step), as on the landing page. Every
+        // preset has the `loop` flag, so filtering on it showed all sixteen.
         (category === "Screen switch"
           ? !!group.screenCut
-          : category === "Loop"
-            ? !!group.loop
-            : group.categories?.some((c) => c === category));
+          : group.categories?.some((c) => c === category));
       return text.includes(search.trim().toLowerCase()) && matchesCategory;
     }),
   );

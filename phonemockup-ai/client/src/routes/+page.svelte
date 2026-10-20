@@ -345,7 +345,9 @@
               size={17}
             /></button
           >{:else}<span
-            >{filtered.length} motions. Every keyframe is yours to edit.</span
+            >{filtered.length}
+            {filtered.length === 1 ? "motion" : "motions"}. Every keyframe is yours to
+            edit.</span
           >{/if}
         <a class="text-link" href="/platform/animation/still"
           >Start from scratch <ArrowUpRight size={17} /></a
