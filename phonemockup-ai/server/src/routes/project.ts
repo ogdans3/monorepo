@@ -2,40 +2,22 @@ import {Router, type NextFunction, type Request, type Response} from "express";
 import fileRoutes from "./file.js";
 import {currentUser, withAuth} from "../middleware/auth.js";
 import {
-    createProject,
+    createProjectWithFiles,
     getProject,
     getProjects,
-    updateProject,
+    updateProjectWithFiles,
 } from "../db/queries.js";
-import {db} from "../db/client.js";
-import {file as fileTable} from "../db/schema.js";
+import {describeError} from "../errors.js";
 
 const router = Router();
 
-/** More placeholders than one save could ever fill is a malformed request. */
-const MAX_FILES_PER_SAVE = 50;
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function createFilePlaceholders(
-    projectId: string,
-    count: number
-): Promise<string[]> {
-    const n = Math.min(MAX_FILES_PER_SAVE, Math.max(0, Math.floor(Number(count) || 0)));
-    if (!n) return [];
-    const values = Array.from({length: n}).map(() => ({
-        projectId,
-        fileType: "application/octet-stream",
-        url: "",
-        sizeBytes: 0,
-        fileName: "placeholder",
-        storageProvider: "backblaze_b2",
-    }));
-    const rows = await db
-        .insert(fileTable)
-        .values(values)
-        .returning({id: fileTable.id});
-    return rows.map((r) => r.id);
+/** Longest project name the API keeps. */
+const MAX_NAME_LENGTH = 200;
+
+function validName(value: unknown): value is string {
+    return typeof value === "string" && value.trim().length > 0 && value.length <= MAX_NAME_LENGTH;
 }
 
 /**
@@ -49,7 +31,7 @@ function parseProjectJson(value: unknown): unknown {
 
 function fail(res: Response, status: number, message: string, err?: unknown) {
     // Details go to the log; the client gets a message that leaks nothing.
-    console.error(status, message, (err as Error)?.message ?? "");
+    console.error(status, message, err === undefined ? "" : describeError(err));
     return res.status(status).json({error: message});
 }
 
@@ -68,7 +50,10 @@ export async function requireOwnedProject(req: Request, res: Response, next: Nex
 
 router.get("/", withAuth, async (req, res) => {
     try {
-        const limit = req.query.limit ? Number(req.query.limit) : undefined;
+        const limit = req.query.limit === undefined ? undefined : Number(req.query.limit);
+        if (limit !== undefined && !(Number.isInteger(limit) && limit >= 1 && limit <= 200)) {
+            return fail(res, 400, "limit must be a whole number from 1 to 200");
+        }
         // Cursor: the createdAt and id of the last project on the previous page.
         const afterCreatedAt = req.query.afterCreatedAt ? new Date(String(req.query.afterCreatedAt)) : null;
         const afterId = req.query.afterId ? String(req.query.afterId) : null;
@@ -98,8 +83,8 @@ router.get("/:id", withAuth, async (req, res) => {
 
 router.post("/", withAuth, async (req, res) => {
     const {name, projectJson, fileCount} = req.body ?? {};
-    if (!name || typeof name !== "string") {
-        return fail(res, 400, "Missing required field: name");
+    if (!validName(name)) {
+        return fail(res, 400, `name is required, at most ${MAX_NAME_LENGTH} characters`);
     }
     let json: unknown;
     try {
@@ -108,13 +93,13 @@ router.post("/", withAuth, async (req, res) => {
         return fail(res, 400, "projectJson is not valid JSON", err);
     }
     try {
-        const created = await createProject({
+        const {project, fileKeys} = await createProjectWithFiles({
             owner: currentUser(res).id,
             name,
             projectJson: json,
+            fileCount: Number(fileCount || 0),
         });
-        const fileKeys = await createFilePlaceholders(created.id, Number(fileCount || 0));
-        return res.status(201).json({project: created, fileKeys});
+        return res.status(201).json({project, fileKeys});
     } catch (err) {
         return fail(res, 500, "Failed to create project", err);
     }
@@ -124,6 +109,9 @@ router.post("/:id", withAuth, async (req, res) => {
     const id = req.params.id;
     if (!UUID.test(id)) return fail(res, 404, "Project not found");
     const {name, projectJson, fileCount} = req.body ?? {};
+    if (name !== undefined && !validName(name)) {
+        return fail(res, 400, `name must not be empty, and at most ${MAX_NAME_LENGTH} characters`);
+    }
     let json: unknown;
     try {
         json = parseProjectJson(projectJson);
@@ -131,17 +119,17 @@ router.post("/:id", withAuth, async (req, res) => {
         return fail(res, 400, "projectJson is not valid JSON", err);
     }
     try {
-        const updated = await updateProject({
+        const saved = await updateProjectWithFiles({
             id,
             owner: currentUser(res).id,
-            name: typeof name === "string" ? name : undefined,
+            name,
             projectJson: json,
+            fileCount: Number(fileCount || 0),
         });
-        if (!updated) {
+        if (!saved) {
             return fail(res, 404, "Project not found");
         }
-        const fileKeys = await createFilePlaceholders(id, Number(fileCount || 0));
-        return res.status(200).json({project: updated, fileKeys});
+        return res.status(200).json(saved);
     } catch (err) {
         return fail(res, 500, "Failed to update project", err);
     }

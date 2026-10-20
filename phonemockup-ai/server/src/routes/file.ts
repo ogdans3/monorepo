@@ -3,6 +3,7 @@ import multer from "multer";
 import {db} from "../db/client.js";
 import {file as fileTable} from "../db/schema.js";
 import {and, eq} from "drizzle-orm";
+import {describeError} from "../errors.js";
 
 const router = express.Router({mergeParams: true});
 
@@ -91,12 +92,15 @@ router.get("/", async (req, res) => {
             .where(eq(fileTable.projectId, projectId));
         return res.status(200).json(rows);
     } catch (err: any) {
-        console.error(500, req.method, req.originalUrl, err?.message);
+        console.error(500, req.method, req.originalUrl, describeError(err));
         return res.status(500).json({error: "Failed to list files"});
     }
 });
 
-/** multer's own errors (too big, too many) are the client's fault, not a 500. */
+/**
+ * Parsing the upload is all this step does, so any error in it is the
+ * request's: too big, too many files, or a body that was cut off or malformed.
+ */
 function receiveFile(req: express.Request, res: express.Response, next: express.NextFunction) {
     upload.single("file")(req, res, (err: unknown) => {
         if (err instanceof multer.MulterError) {
@@ -105,9 +109,37 @@ function receiveFile(req: express.Request, res: express.Response, next: express.
                 error: tooBig ? "File is too large" : "Send one file in the \"file\" field",
             });
         }
-        if (err) return next(err);
+        if (err) {
+            console.error(400, req.method, req.originalUrl, describeError(err));
+            return res.status(400).json({error: "The upload was cut off or malformed"});
+        }
         next();
     });
+}
+
+/**
+ * Browsers send the file name as raw UTF-8, and multer reads it as latin1, so
+ * "skjermbilde-æøå.png" arrives as "skjermbilde-Ã¦Ã¸Ã¥.png". A name with
+ * characters beyond latin1 was decoded already and is kept as it is.
+ */
+export function utf8FileName(name: string): string {
+    if (!/^[\x00-\xff]*$/.test(name)) return name;
+    const decoded = Buffer.from(name, "latin1").toString("utf8");
+    return decoded.includes("\uFFFD") ? name : decoded;
+}
+
+/** Best effort: a file B2 holds that no row points to is only a cost. */
+async function b2DeleteFileVersion(apiUrl: string, authorizationToken: string, fileName: string, fileId: string) {
+    try {
+        const res = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
+            method: "POST",
+            headers: {Authorization: authorizationToken, "Content-Type": "application/json"},
+            body: JSON.stringify({fileName, fileId}),
+        });
+        if (!res.ok) console.error("b2_delete_file_version failed", res.status, await res.text().catch(() => ""));
+    } catch (err) {
+        console.error("b2_delete_file_version failed", describeError(err));
+    }
 }
 
 router.post("/", receiveFile, async (req, res) => {
@@ -138,7 +170,8 @@ router.post("/", receiveFile, async (req, res) => {
             console.error(404, req.method, req.originalUrl, "Invalid fileKey");
             return res.status(404).json({error: "Invalid fileKey"});
         }
-        const {originalname, mimetype, size, buffer} = req.file;
+        const {mimetype, size, buffer} = req.file;
+        const originalname = utf8FileName(req.file.originalname);
         const safeContentType = mimetype || "application/octet-stream";
         let apiUrl: string;
         let authorizationToken: string;
@@ -211,16 +244,22 @@ router.post("/", receiveFile, async (req, res) => {
         const urlForApp = B2_BUCKET_NAME
             ? `${downloadUrl}/file/${encodeURIComponent(B2_BUCKET_NAME)}/${encodeURIComponent(fileKey)}`
             : `b2://${b2Result.fileId}`;
-        await db
-            .update(fileTable)
-            .set({
-                url: urlForApp,
-                fileType: safeContentType,
-                sizeBytes: size,
-                fileName: originalname,
-                storageProvider: "backblaze_b2",
-            })
-            .where(eq(fileTable.id, fileKey));
+        try {
+            await db
+                .update(fileTable)
+                .set({
+                    url: urlForApp,
+                    fileType: safeContentType,
+                    sizeBytes: size,
+                    fileName: originalname,
+                    storageProvider: "backblaze_b2",
+                })
+                .where(eq(fileTable.id, fileKey));
+        } catch (err) {
+            // B2 has the file but no row will point to it: remove it again.
+            await b2DeleteFileVersion(apiUrl, authorizationToken, b2Result.fileName, b2Result.fileId);
+            throw err;
+        }
         const finalRow = {
             id: fileKey,
             projectId,
@@ -243,7 +282,7 @@ router.post("/", receiveFile, async (req, res) => {
             publicUrl: B2_BUCKET_NAME ? urlForApp : undefined,
         });
     } catch (err: any) {
-        console.error(500, req.method, req.originalUrl, err?.message);
+        console.error(500, req.method, req.originalUrl, describeError(err));
         return res.status(500).json({error: "Upload failed"});
     }
 });

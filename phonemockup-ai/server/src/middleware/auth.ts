@@ -8,14 +8,20 @@ export function currentUser(res: Response): AppIdentity {
     return res.locals.user as AppIdentity;
 }
 
+const SESSION_BEARER = /^Bearer [A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
 export function createAuthMiddleware(
     options: ClerkMiddlewareOptions,
     resolveIdentity: (clerkUserId: string) => Promise<AppIdentity>,
 ): RequestHandler {
     const authenticate = clerkMiddleware({ ...options, acceptsToken: 'session_token' });
     return (req, res, next) => {
-        // Bearer tokens only: ambient cookies cannot authorize cross-site writes.
-        if (!/^Bearer\s+\S+$/i.test(req.headers.authorization ?? '')) {
+        // A session token is a JWT, sent as "Bearer <jwt>". Anything else stops
+        // here, before Clerk sees it: its middleware verifies machine tokens
+        // (ak_, mt_, oat_) against the Backend API with our secret key, and a
+        // header it does not read (such as "bearer …") makes it fall back to the
+        // browser's cookies. Ambient cookies must never authorize a request.
+        if (!SESSION_BEARER.test(req.headers.authorization ?? '')) {
             res.status(401).json({ error: 'Not signed in' });
             return;
         }

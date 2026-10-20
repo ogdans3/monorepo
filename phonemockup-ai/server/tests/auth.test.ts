@@ -8,6 +8,7 @@ import { resolveIdentity, type AppIdentity, type IdentityStore } from '../src/au
 
 const queries = vi.hoisted(() => ({
     getProject: vi.fn(), getProjects: vi.fn(), createProject: vi.fn(), updateProject: vi.fn(),
+    createProjectWithFiles: vi.fn(), updateProjectWithFiles: vi.fn(),
 }));
 vi.mock('../src/db/queries.js', () => queries);
 vi.mock('../src/db/client.js', () => ({ db: {} }));
@@ -86,6 +87,48 @@ describe('real Clerk signature verification and existing project routes', () => 
         expect(resolve).not.toHaveBeenCalled();
         expect(queries.getProjects).not.toHaveBeenCalled();
     });
+    it.each(['ak_attacker', 'mt_attacker', 'oat_attacker', 'opaque-session'])(
+        'turns away a non-JWT bearer (%s) without calling Clerk', async (bearer) => {
+            const clerkCalls: string[] = [];
+            const realFetch = globalThis.fetch;
+            const spy = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+                const target = input instanceof Request ? input.url : String(input);
+                if (!target.startsWith(url)) clerkCalls.push(target);
+                return realFetch(input, init);
+            });
+            try {
+                expect((await request('/api/project', bearer)).status).toBe(401);
+            } finally {
+                spy.mockRestore();
+            }
+            expect(clerkCalls).toEqual([]);
+            expect(resolve).not.toHaveBeenCalled();
+        });
+    it('reads the header case-sensitively, so "bearer" cannot fall back to cookies', async () => {
+        queries.getProjects.mockResolvedValue([]);
+        const response = await fetch(`${url}/api/project`, {
+            headers: { authorization: `bearer ${token()}`, cookie: `__session=${token()}` },
+        });
+        expect(response.status).toBe(401);
+        expect(queries.getProjects).not.toHaveBeenCalled();
+    });
+    it('refuses a fractional or out-of-range limit before the database sees it', async () => {
+        for (const limit of ['1.5', '0', '500', 'many']) {
+            expect((await request(`/api/project?limit=${limit}`, token())).status).toBe(400);
+        }
+        expect(queries.getProjects).not.toHaveBeenCalled();
+    });
+    it('refuses an empty or overlong name on create and update', async () => {
+        const send = (path: string, name: string) => request(path, token(), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+        });
+        for (const name of ['', '   ', 'x'.repeat(201)]) {
+            expect((await send('/api/project', name)).status).toBe(400);
+            expect((await send(`/api/project/${id}`, name)).status).toBe(400);
+        }
+        expect(queries.createProjectWithFiles).not.toHaveBeenCalled();
+        expect(queries.updateProjectWithFiles).not.toHaveBeenCalled();
+    });
     it('lists only the stable, mapped owner and ignores query-supplied owner IDs', async () => {
         queries.getProjects.mockResolvedValue([]);
         expect((await request('/api/project?owner=legacy-user_bob', token())).status).toBe(200);
@@ -105,13 +148,13 @@ describe('real Clerk signature verification and existing project routes', () => 
         expect((await response.json()).name).toBe('Existing project');
     });
     it('creates and updates using the verified owner, never a body-supplied owner', async () => {
-        queries.createProject.mockResolvedValue({ id, owner: 'legacy-user_alice' });
+        queries.createProjectWithFiles.mockResolvedValue({ project: { id, owner: 'legacy-user_alice' }, fileKeys: [] });
         const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Mockup', owner: 'legacy-user_bob' }) };
         expect((await request('/api/project', token(), options)).status).toBe(201);
-        expect(queries.createProject).toHaveBeenCalledWith(expect.objectContaining({ owner: 'legacy-user_alice' }));
-        queries.updateProject.mockResolvedValue(null);
+        expect(queries.createProjectWithFiles).toHaveBeenCalledWith(expect.objectContaining({ owner: 'legacy-user_alice' }));
+        queries.updateProjectWithFiles.mockResolvedValue(null);
         expect((await request(`/api/project/${id}`, token(), options)).status).toBe(404);
-        expect(queries.updateProject).toHaveBeenCalledWith(expect.objectContaining({ owner: 'legacy-user_alice' }));
+        expect(queries.updateProjectWithFiles).toHaveBeenCalledWith(expect.objectContaining({ owner: 'legacy-user_alice' }));
     });
 });
 

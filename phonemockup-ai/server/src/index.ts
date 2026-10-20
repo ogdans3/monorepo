@@ -6,7 +6,7 @@ import helmet from "helmet";
 import compression from "compression";
 import cookieParser from 'cookie-parser';
 import {secretManager} from "./secret-manager.js";
-import {config} from "./config.js";
+import {config, checkConfig} from "./config.js";
 import {errorHandler} from "./middleware/errorHandler.js";
 
 const app = express();
@@ -16,6 +16,9 @@ async function bootstrap() {
         // 1. Initialize Secret Manager FIRST
         await secretManager.initialize();
         console.log("🔐 Secrets loaded and environment variables set.");
+        const {errors, warnings} = checkConfig();
+        for (const warning of warnings) console.warn(`⚠️ ${warning}`);
+        if (errors.length) throw new Error(`Missing configuration: ${errors.join("; ")}`);
 
         // 2. Dynamically import routes AFTER secrets are ready
         // This prevents routes from using undefined config values

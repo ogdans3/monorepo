@@ -1,5 +1,6 @@
+import {randomUUID} from 'node:crypto';
 import {db} from './client.js';
-import {user, project} from './schema.js';
+import {user, project, file} from './schema.js';
 import {
     and,
     desc,
@@ -207,4 +208,108 @@ export async function updateProject(
         });
 
     return rows[0] ?? null;
+}
+
+const projectColumns = {
+    id: project.id,
+    owner: project.owner,
+    name: project.name,
+    fileUrl: project.fileUrl,
+    fileName: project.fileName,
+    projectJson: project.projectJson,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+};
+
+/** More placeholders than one save could ever fill is a malformed request. */
+export const MAX_FILES_PER_SAVE = 50;
+
+/** Empty file rows a save asks for, each a fileKey to upload into later. */
+function placeholderRows(projectId: string, count: number) {
+    const n = Math.min(MAX_FILES_PER_SAVE, Math.max(0, Math.floor(Number(count) || 0)));
+    return Array.from({length: n}, () => ({
+        projectId,
+        fileType: "application/octet-stream",
+        url: "",
+        sizeBytes: 0,
+        fileName: "placeholder",
+        storageProvider: "backblaze_b2",
+    }));
+}
+
+/**
+ * Creates the project and its upload placeholders together. The Neon HTTP
+ * driver has no interactive transactions, but a batch runs as one: both
+ * inserts land or neither does, so a failed save never leaves a project behind
+ * for the client's retry to duplicate. The id is made here so the placeholders
+ * can point at it inside the same batch.
+ */
+export async function createProjectWithFiles(
+    input: CreateProjectInput & {fileCount?: number},
+): Promise<{project: DBProject; fileKeys: string[]}> {
+    const id = randomUUID();
+    const insertProject = db
+        .insert(project)
+        .values({
+            id,
+            owner: input.owner,
+            name: input.name,
+            fileUrl: input.fileUrl ?? null,
+            fileName: input.fileName ?? null,
+            projectJson: input.projectJson ?? null,
+        })
+        .returning(projectColumns);
+    const rows = placeholderRows(id, input.fileCount ?? 0);
+    if (!rows.length) {
+        const [created] = await insertProject;
+        return {project: created, fileKeys: []};
+    }
+    const [[created], files] = await db.batch([
+        insertProject,
+        db.insert(file).values(rows).returning({id: file.id}),
+    ]);
+    return {project: created, fileKeys: files.map((f) => f.id)};
+}
+
+/**
+ * Saves over a project its owner holds, with any new placeholders, in one
+ * batch for the same reason. Null when the project isn't the owner's.
+ */
+export async function updateProjectWithFiles(
+    input: UpdateProjectInput & {fileCount?: number},
+): Promise<{project: DBProject; fileKeys: string[]} | null> {
+    const existing = await getProject(input.id);
+    if (!existing || existing.owner !== input.owner) return null;
+
+    const values: Partial<{
+        name: string;
+        fileUrl: string | null;
+        fileName: string | null;
+        projectJson: unknown | null;
+        updatedAt: Date;
+    }> = {};
+    if (input.name !== undefined) values.name = input.name;
+    if (input.fileUrl !== undefined) values.fileUrl = input.fileUrl;
+    if (input.fileName !== undefined) values.fileName = input.fileName;
+    if (input.projectJson !== undefined) values.projectJson = input.projectJson;
+    const rows = placeholderRows(input.id, input.fileCount ?? 0);
+    const insertFiles = rows.length ? db.insert(file).values(rows).returning({id: file.id}) : null;
+
+    if (Object.keys(values).length === 0) {
+        // Nothing to change: no new updatedAt, only the placeholders if any.
+        const files = insertFiles ? await insertFiles : [];
+        return {project: existing, fileKeys: files.map((f) => f.id)};
+    }
+    values.updatedAt = new Date();
+    const update = db
+        .update(project)
+        .set(values)
+        .where(and(eq(project.id, input.id), eq(project.owner, input.owner)))
+        .returning(projectColumns);
+    if (!insertFiles) {
+        const [updated] = await update;
+        return updated ? {project: updated, fileKeys: []} : null;
+    }
+    const [[updated], files] = await db.batch([update, insertFiles]);
+    return updated ? {project: updated, fileKeys: files.map((f) => f.id)} : null;
 }
