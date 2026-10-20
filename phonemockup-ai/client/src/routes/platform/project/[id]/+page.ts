@@ -6,5 +6,7 @@ export const ssr = false;
 
 export const load: PageLoad = async ({params}) => {
     const project = getProjectFromLocalStorage(params.id);
-    return {project};
+    // Stored but unreadable is not the same as never saved here.
+    const damaged = !project && localStorage.getItem(`project:local:${params.id}`) !== null;
+    return {project, damaged};
 };

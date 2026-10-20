@@ -3,7 +3,10 @@
   import { project } from "$lib/stores/project.svelte";
   import { saveProjectToLocalStorage } from "$lib/repo/localstorage.svelte";
   import { saveProjectMedia } from "$lib/repo/media-store";
-  import { whenMediaRestored } from "$lib/stores/session.svelte";
+  import {
+    unreadMediaFor,
+    whenMediaRestored,
+  } from "$lib/stores/session.svelte";
   import { videoController } from "$lib/stores/video.svelte";
   import { goto, replaceState } from "$app/navigation";
   import { toast } from "svelte-sonner";
@@ -55,12 +58,19 @@
       // A project opened a moment ago may still be reading its screen back.
       await whenMediaRestored();
       const screen = get(get(videoController).currentFile);
+      const bulk = project.files
+        .map((f) => f.fileBlob)
+        .filter((f) => f instanceof File);
+      // The sample is standing in for media that couldn't be read: leave
+      // the stored file alone until the user puts something else on screen.
+      const kept =
+        !screen && bulk.length === 0 ? unreadMediaFor(project.id) : null;
       const saved = {
         ...project.toProject(),
         thumbnail: captureProjectThumbnail(),
         screenMedia: screen
           ? { fileName: screen.name, fileType: screen.type }
-          : null,
+          : (kept?.screenMedia ?? null),
       };
       try {
         saveProjectToLocalStorage(saved);
@@ -75,12 +85,7 @@
       // with its own quota, so a failure there shouldn't undo the save.
       let mediaSaved = true;
       try {
-        await saveProjectMedia(saved.id, {
-          screen,
-          bulk: project.files
-            .map((f) => f.fileBlob)
-            .filter((f) => f instanceof File),
-        });
+        if (!kept) await saveProjectMedia(saved.id, { screen, bulk });
       } catch (e) {
         mediaSaved = false;
         console.error("Failed to store project media", e);

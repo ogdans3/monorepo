@@ -11,6 +11,7 @@
     import {v4 as uuid} from 'uuid';
     import {videoController} from "$lib/stores/video.svelte";
     import {get} from "svelte/store";
+    import {applyDemoMedia} from "$lib/stores/session.svelte";
 
     let imageInputEl: HTMLInputElement | null = null;
     let videoInputEl: HTMLInputElement | null = null;
@@ -29,8 +30,11 @@
         if (project.files.length === 0) {
             selectedIndex = -1;
         } else if (selectedIndex < 0) {
-            selectedIndex = 0;
-            applySelection();
+            // A reopened project has already put its saved file on the
+            // phone; only a fresh list starts from its first file.
+            const onPhone = currentIndex();
+            selectedIndex = onPhone >= 0 ? onPhone : 0;
+            if (onPhone < 0) applySelection();
         } else if (selectedIndex >= project.files.length) {
             selectedIndex = project.files.length - 1;
             applySelection();
@@ -105,7 +109,9 @@
     function clearAll() {
         project.files = [];
         selectedIndex = -1;
-        get(videoController).setMediaSource(null, false);
+        // Back to the sample, as the screen label then says. Nothing at all
+        // left the last file on the phone here but a black screen in exports.
+        applyDemoMedia();
         unfocusElement();
     }
 </script>

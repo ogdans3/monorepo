@@ -14,7 +14,7 @@ test.describe("Timeline: render and basics", () => {
 
     test("start time input exists", async ({page}) => {
         await goToTimeline(page);
-        await expect(page.getByLabel("Start time in seconds")).toBeVisible();
+        await expect(page.getByLabel("Playhead time in seconds")).toBeVisible();
     });
 
     test("end time input exists", async ({page}) => {

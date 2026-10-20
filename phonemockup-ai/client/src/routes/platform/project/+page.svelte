@@ -23,6 +23,7 @@
   import { Button } from "$lib/components/ui/button";
   import {
     listProjectsFromLocalStorage,
+    getProjectFromLocalStorage,
     saveProjectToLocalStorage,
     deleteProjectFromLocalStorage,
   } from "$lib/repo/localstorage.svelte";
@@ -105,7 +106,16 @@
     event.preventDefault();
     if (!selected || !name.trim()) return;
     try {
-      saveProjectToLocalStorage({ ...selected.project, name: name.trim() });
+      // Rename what is stored now; another tab may have saved since the
+      // list was read, and the copy here would put its old edits back.
+      const current = getProjectFromLocalStorage(selected.key);
+      if (!current) {
+        renameOpen = false;
+        loadProjects();
+        toast.warning("That project is no longer saved in this browser.");
+        return;
+      }
+      saveProjectToLocalStorage({ ...current, name: name.trim() });
       loadProjects();
       renameOpen = false;
       toast.success("Project renamed");

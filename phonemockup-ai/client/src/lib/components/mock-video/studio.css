@@ -519,6 +519,9 @@ body.studio-theme {
   height: 40px;
   border-radius: 4px;
   background: #efeee8;
+  /* A clip past a shortened end time stops at the ruler's end instead of
+     running off the screen. */
+  overflow-x: clip;
 }
 .studio-timeline-lanes .animation {
   background: var(--studio-clip);
@@ -533,6 +536,11 @@ body.studio-theme {
   transform: rotate(45deg);
   border: 1px solid #9f7766;
   border-radius: 1px;
+}
+/* The clip clips its contents, so a ring drawn outside a keyframe button
+   showed as two short lines. Draw it inside. */
+.studio-theme .studio-clip button:focus-visible {
+  outline-offset: -3px;
 }
 .studio-keyframe.selected {
   background: #b83c22;
@@ -950,4 +958,30 @@ body.studio-theme {
   .studio-mobile-brand { display: inline; font-size: 21px; }
   .studio-mobile-brand > span { color: var(--primary); }
   .studio-wordmark { min-width: 44px; justify-content: center; }
+}
+
+/* Phones on their side are too short for a list scrolling inside a dialog:
+   the dialog scrolls as a whole instead, so nothing ends up under its
+   footer or below the bottom of the screen. */
+@media (max-height: 500px) {
+  .studio-theme .studio-motion-dialog {
+    height: auto;
+    max-height: calc(100dvh - 24px);
+    padding: 20px;
+    gap: 14px;
+  }
+  .studio-theme .studio-motion-dialog [data-slot="dialog-description"] {
+    display: none;
+  }
+  .studio-export-dialog {
+    overflow-y: auto !important;
+  }
+}
+
+/* iOS Safari zooms the page into a focused field set under 16px, and the
+   studio doesn't zoom back out on its own. */
+@media (pointer: coarse) {
+  .studio-time-fields input {
+    font-size: 16px !important;
+  }
 }

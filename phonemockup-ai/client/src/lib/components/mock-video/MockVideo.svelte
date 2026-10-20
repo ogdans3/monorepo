@@ -18,6 +18,7 @@
   } from "$lib/components/ui/dialog";
 
   import VideoRecorder from "$lib/components/mock-video/recording/VideoRecorder.svelte";
+  import { exportState } from "$lib/components/mock-video/recording/export-state.svelte";
   import animationGroups from "$lib/animations/animations.svelte";
   import type { AnimationGroup } from "$lib/components/mock-video/Animation";
   import DropzoneOverlay from "$lib/components/mock-video/DropzoneOverlay.svelte";
@@ -281,6 +282,7 @@
       sm:max-w-none gap-0 duration-0
     "
     interactOutsideBehavior="ignore"
+    escapeKeydownBehavior={exportState.running ? "ignore" : "close"}
     onCloseAutoFocus={(event) => {
       event.preventDefault();
       if (exportTrigger?.isConnected && exportTrigger !== document.body)

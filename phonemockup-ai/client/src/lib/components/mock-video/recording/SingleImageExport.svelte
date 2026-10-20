@@ -26,6 +26,7 @@
         VideoContext,
     } from "$lib/components/mock-video/recording/core/types";
     import {toKebabCase, extFromBlobType} from "$lib/components/mock-video/recording/util/naming";
+    import {exportState} from "$lib/components/mock-video/recording/export-state.svelte";
     import {downloadBlob} from "$lib/components/mock-video/recording/util/blob";
     import {SingleImageRecorder} from "$lib/components/mock-video/recording/recorders/SingleImageRecorder";
     import {saveEditorState} from "$lib/components/mock-video/recording/core/editor-state";
@@ -37,6 +38,10 @@
 
     let progress = $state(0);
     let inProgress = $state(true);
+    $effect(() => {
+        exportState.running = inProgress;
+        return () => (exportState.running = false);
+    });
     let status = $state("Preparing…");
     let renderPaused: boolean = $state(false); // present but disabled
 

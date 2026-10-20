@@ -19,6 +19,11 @@
     import {unfocusElement} from "$lib/components/mock-video/unfocus";
 
     const axes: readonly ("x" | "y" | "z")[] = ["x", "y", "z"];
+    // Far past any real pose (positions are fractions of the frame, presets
+    // turn up to two full turns), but short of where the maths overflows:
+    // 1e308 became Infinity, then NaN, and froze the page.
+    const POSITION_LIMIT = 1000;
+    const ROTATION_LIMIT = 36000;
     const curveTriggerText = $derived($transformCurve || "Select curve");
     const isDisabled = $derived($selectedAnimationStore === null);
 
@@ -98,6 +103,8 @@
                         }
                         step={0.01}
                         precision={2}
+                        min={-POSITION_LIMIT}
+                        max={POSITION_LIMIT}
                         pixelsPerStep={8}
                         label={axis}
                 />
@@ -117,6 +124,8 @@
                         }
                         step={0.01}
                         precision={2}
+                        min={-ROTATION_LIMIT}
+                        max={ROTATION_LIMIT}
                         pixelsPerStep={4}
                         label={axis}
                         units="°"

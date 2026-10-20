@@ -44,6 +44,9 @@ export class VideoController {
     public mediaError = writable<string | null>(null);
 
     private _currentFileUrl: string | null = null;
+    /** What setMediaSource was last given, and the last of those that loaded. */
+    private source: {src: File | string; isImage: boolean} | null = null;
+    private lastGood: {src: File | string; isImage: boolean} | null = null;
 
     constructor() {
     }
@@ -179,6 +182,7 @@ export class VideoController {
     ): Promise<void> {
         const image = isImage ?? (src instanceof File ? detectIsImage(src) : false);
         const kind: MediaKind = src ? (image ? "image" : "video") : null;
+        this.source = src ? {src, isImage: image} : null;
         this.mediaError.set(null);
         this.currentFile.set(src instanceof File ? src : null);
 
@@ -251,6 +255,9 @@ export class VideoController {
             video.addEventListener("error", () => {
                 if (video.getAttribute("src")) this.reportMediaError();
             });
+            video.addEventListener("loadeddata", () => {
+                if (video.getAttribute("src") && this.source && !this.source.isImage) this.lastGood = this.source;
+            });
         }
         this._video.set(video);
         if (video) {
@@ -266,17 +273,27 @@ export class VideoController {
             image.addEventListener("error", () => {
                 if (image.getAttribute("src")) this.reportMediaError();
             });
+            image.addEventListener("load", () => {
+                if (image.getAttribute("src") && this.source?.isImage) this.lastGood = this.source;
+            });
         }
         this._image.set(image);
     }
 
     private reportMediaError() {
         const file = get(this.currentFile);
-        this.mediaError.set(
-            file
-                ? `Your browser can't open "${file.name}". Try a PNG, JPG, MP4 or WebM file.`
-                : "The screen content couldn't be loaded."
-        );
+        const message = file
+            ? `Your browser can't open "${file.name}". Try a PNG, JPG, MP4 or WebM file.`
+            : "The screen content couldn't be loaded.";
+        // Put back the screen that worked, rather than leave a black phone
+        // that a save would then store. setMediaSource clears the error, so
+        // it is set again once the old screen is back.
+        const previous = this.lastGood;
+        if (file && previous && previous.src !== file) {
+            void this.setMediaSource(previous.src, previous.isImage).finally(() => this.mediaError.set(message));
+            return;
+        }
+        this.mediaError.set(message);
     }
 
     toggle() {

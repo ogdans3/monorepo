@@ -33,10 +33,16 @@
     import {renderAtTime, renderControls} from "$lib/components/mock-video/recording/core/settle";
     import type {ProjectFile} from "$lib/components/mock-video/Project";
     import {saveEditorState} from "$lib/components/mock-video/recording/core/editor-state";
+    import {exportState} from "$lib/components/mock-video/recording/export-state.svelte";
     import {UserCancelledRendering} from "$lib/components/mock-video/recording/VideoRecorder";
     import {detectIsImage} from "$lib/repo/uploadFile.svelte";
     import {transformControlPosition, transformControlRotation} from "$lib/stores/transform.svelte";
     import {ChangeOrigin} from "$lib/components/mock-video/Animation";
+    import {
+        cannotEncodeMessage,
+        encodableAlternative,
+        formatsThatCannotEncode,
+    } from "$lib/components/mock-video/recording/util/encodable";
 
     let {onFinished, autoClose, downloadAsImage = false} = $props();
 
@@ -45,6 +51,10 @@
 
     let progress = $state(0);
     let inProgress = $state(true);
+    $effect(() => {
+        exportState.running = inProgress;
+        return () => (exportState.running = false);
+    });
     let status = $state("Preparing…");
     let renderPaused: boolean = $state(false); // disabled in bulk
 
@@ -58,6 +68,12 @@
             ? "image-sequence"
             : "mp4") as ExportFormat
     );
+
+    const exportWidth = Math.round(project.sceneResolution.x);
+    const exportHeight = Math.round(project.sceneResolution.y);
+    /** Formats this browser can't encode at the export size, once checked. */
+    let cannotEncode = $state<ExportFormat[]>([]);
+    const unencodable = $derived(!downloadAsImage && cannotEncode.includes(selectedFormat));
 
     const formatOptions = [
         {value: "image-sequence", label: "Image sequence (ZIP of PNGs)"},
@@ -189,13 +205,24 @@
             return;
         }
 
-        setActiveBulk(0);
+        // Start on the file that's on the phone, not always file 1.
+        const onPhone = get(get(videoController).currentFile);
+        setActiveBulk(Math.max(0, bulkList.findIndex((f) => f.fileBlob === onPhone)));
         inProgress = false;
         status = downloadAsImage
             ? "Ready to export images"
             : "Ready for bulk export";
         progress = 0;
         if (downloadAsImage || autoClose) exportAll();
+        if (downloadAsImage) return;
+        const initial = selectedFormat;
+        void formatsThatCannotEncode(exportWidth, exportHeight).then((list) => {
+            cannotEncode = list;
+            // Start on one that works, unless the user has already picked.
+            if (!autoClose && selectedFormat === initial && list.includes(initial)) {
+                selectedFormat = encodableAlternative(list);
+            }
+        });
     });
 
     onDestroy(() => {
@@ -218,7 +245,7 @@
 
     // Bulk export
     async function exportAll() {
-        if (!isBulk) return;
+        if (!isBulk || inProgress) return;
 
         inProgress = true;
         status = downloadAsImage
@@ -240,11 +267,12 @@
             } catch {
                 // ignore
             }
-            return `${base}-${pad3(index)}.${ext}`;
+            return `${base || "mockup"}-${pad3(index)}.${ext}`;
         };
 
         const signal = abortController.signal;
         const failedItems: number[] = [];
+        let lastError: unknown = null;
         try {
             const mode = downloadAsImage ? "image" : "video";
 
@@ -274,6 +302,7 @@
                     onError: (i, e) => {
                         console.error("Render error on item", i + 1, e);
                         failedItems.push(i + 1);
+                        lastError = e;
                     },
                 },
             });
@@ -281,7 +310,13 @@
 
             if (!zipBlob) {
                 status = "Failed";
-                toast.error("Bulk export failed: none of the files could be exported.");
+                const message = lastError instanceof Error ? lastError.message : "";
+                const format = selectedFormat;
+                toast.error(
+                    !downloadAsImage && (format === "mp4" || format === "webm") && /not supported/i.test(message)
+                        ? cannotEncodeMessage(format, exportWidth, exportHeight)
+                        : "Bulk export failed: none of the files could be exported.",
+                );
                 return;
             }
 
@@ -402,6 +437,11 @@
             <Button variant="outline" onclick={closeDialog}>Close</Button>
         {/if}
     </div>
+    {#if unencodable}
+        <p class="text-xs text-muted-foreground -mt-2">
+            {cannotEncodeMessage(selectedFormat, exportWidth, exportHeight)}
+        </p>
+    {/if}
 
     <!-- Main -->
     <div class="studio-export-progress flex flex-1 h-full gap-4 max-h-[200px]">

@@ -13,6 +13,13 @@
         console.log("[Dropzone]", ...args);
     }
 
+    /** A dialog is up (an export may be running behind it): drops wait. */
+    function dialogOpen() {
+        return !!document.querySelector(
+            ':is([role="dialog"], [role="alertdialog"])[data-state="open"]'
+        );
+    }
+
     function onDragEnter(e: DragEvent) {
         log("dragenter", {
             itemsLen: e.dataTransfer?.items?.length,
@@ -23,6 +30,7 @@
         e.stopPropagation();
         // Only files can be dropped here; don't cover the page for a dragged selection.
         if (!Array.from(e.dataTransfer.types ?? []).includes("Files")) return;
+        if (dialogOpen()) return;
 
         dragCounter += 1;
         isDragging = true;
@@ -69,6 +77,12 @@
         const dt = e.dataTransfer;
         if (!dt) {
             log("no dataTransfer");
+            return;
+        }
+        // Swapping the screen under an open dialog, or under a running
+        // export, would change what it is showing or rendering.
+        if (dialogOpen()) {
+            toast.error("Close the dialog first, then drop the file.");
             return;
         }
 

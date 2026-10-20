@@ -319,7 +319,11 @@ export default class FrameStepperRecorder {
         encoder: IFrameEncoder | null
     ) {
         if (this.video) {
-            await seekVideo(this.video, tSec);
+            // Mid-frame, not on the boundary: a recording's frame times are
+            // rounded (often to the millisecond), and a seek to exactly
+            // frame/fps lands just before the frame and shows the one before
+            // it, which dropped or doubled every few frames.
+            await seekVideo(this.video, tSec + dtSec / 2);
         }
         this.animateFunction(tSec);
         this.previewAnimateFunction(tSec);

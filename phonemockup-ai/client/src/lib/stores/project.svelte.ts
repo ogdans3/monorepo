@@ -54,6 +54,24 @@ function resolveModel(saved: Model | undefined, formatVersion: number | undefine
             lidOpenDuration: saved?.lidOpenDuration ?? current.lidOpenDuration} : {})};
 }
 
+/**
+ * JSON has no Infinity or NaN: a keyframe saved with one comes back as null,
+ * and the editor's number fields and pose maths can't take that. Put 0 in.
+ */
+function repairKeyframes(track: Track) {
+    for (const animation of track?.animations ?? []) {
+        for (const keyframe of [animation.startKeyframe, animation.endKeyframe]) {
+            if (!keyframe) continue;
+            for (const vector of [keyframe.position, keyframe.rotation]) {
+                if (!vector) continue;
+                for (const axis of ["x", "y", "z"] as const) {
+                    if (!Number.isFinite(vector[axis])) vector[axis] = 0;
+                }
+            }
+        }
+    }
+}
+
 export class ProjectState {
     // Core properties
     id = $state(uuid());
@@ -137,12 +155,17 @@ export class ProjectState {
         this.tracks.forEach((track) =>
             track.animations.splice(0, track.animations.length)
         );
-        this.tracks.splice(0, this.tracks.length, ...(project.tracks as Track[]));
+        // A save edited or damaged by hand mustn't leave a blank page.
+        const tracks = Array.isArray(project.tracks) ? project.tracks as Track[] : [];
+        tracks.forEach(repairKeyframes);
+        this.tracks.splice(0, this.tracks.length, ...tracks);
 
         this.model = resolveModel(project.model, project.formatVersion);
         this.demoMediaId = project.demoMediaId === "focus" || project.demoMediaId === "workspace" ? project.demoMediaId : undefined;
 
         this.timeline = {...this.timeline, ...(project?.timeline ?? {})}
+        const endTime = Number(this.timeline.endTime);
+        this.timeline.endTime = Number.isFinite(endTime) && endTime > 0 ? endTime : new ProjectState().timeline.endTime;
         this.settings = {
             ...this.settings,
             ...(project.settings ?? {}),
@@ -152,6 +175,9 @@ export class ProjectState {
             ...this.sceneSettings,
             ...(project.sceneSettings ?? {}),
         };
+        if (!(this.sceneSettings.selectedPreset in presets)) {
+            this.sceneSettings.selectedPreset = new ProjectState().sceneSettings.selectedPreset;
+        }
     }
 
     /** Forget the open project and start an empty one with default settings. */

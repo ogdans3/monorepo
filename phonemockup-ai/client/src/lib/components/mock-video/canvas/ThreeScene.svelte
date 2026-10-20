@@ -34,6 +34,8 @@
     let container: HTMLDivElement;
     let scene: SceneRenderer;
     let raf: number | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let resizeFrame: number | null = null;
 
     let isLoading = $state(true);
 
@@ -53,6 +55,8 @@
 
     onDestroy(() => {
         if (raf) cancelAnimationFrame(raf);
+        resizeObserver?.disconnect();
+        if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
         if (browser) {
             window.removeEventListener("resize", resizeCanvas);
             window.removeEventListener("resize", handleResize);
@@ -147,6 +151,17 @@
         if (resizable) {
             window.addEventListener("resize", handleResize);
             window.addEventListener("resize", resizeCanvas);
+            // The stage also changes size while the window doesn't: a row
+            // appearing in the timeline, the layout switching at 900 px, a
+            // tablet turned round. Follow the container itself, once a frame.
+            resizeObserver = new ResizeObserver(() => {
+                if (resizeFrame !== null) return;
+                resizeFrame = requestAnimationFrame(() => {
+                    resizeFrame = null;
+                    resizeCanvas();
+                });
+            });
+            resizeObserver.observe(container);
         }
         resizeCanvas();
     }
@@ -304,9 +319,18 @@
             })
             .catch((err) => {
                 console.error("Failed to load model", config.modelPath, err);
-                toast.error("No model was loaded, unable to render.");
                 settleReady?.reject(err);
                 isLoading = false;
+                // The phone on screen is still the last one that loaded. Put
+                // the picker back to it, so the panel matches the phone and
+                // picking the new one again tries the download again.
+                const shown = scene.modelConfig;
+                if (!passive && shown && shown.id !== config.id && project.model?.id === config.id) {
+                    toast.error(`The ${config.name} couldn't be loaded. Check your connection and pick it again.`);
+                    project.model = {...shown};
+                    return;
+                }
+                toast.error("No model was loaded, unable to render.");
             });
     }
 
@@ -331,6 +355,13 @@
 
         onPointerDownRef = (e: PointerEvent) => {
             e.preventDefault();
+            if (e.pointerType === "touch" && !e.isPrimary) {
+                // A second finger: a pinch or a two-finger pan is no rotation,
+                // and with a keyframe selected it would be written into it.
+                // Stop the drag; the next one-finger touch starts afresh.
+                endDrag();
+                return;
+            }
             canvas.setPointerCapture?.(e.pointerId);
             isPointerDown = true;
             activePointerId = e.pointerId;

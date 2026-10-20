@@ -44,7 +44,7 @@ function resetEditorState() {
 }
 
 /** Restore a built-in sample with the correct media element type. */
-function applyDemoMedia() {
+export function applyDemoMedia() {
     const id = project.demoMediaId;
     const image = id === "focus" || id === "workspace";
     get(videoController).setMediaSource(image ? `/media/studio/${id}.png` : DEMO_MEDIA, image);
@@ -53,6 +53,7 @@ function applyDemoMedia() {
 /** A fresh project; the editor's timeline fills in the chosen animation. */
 export function startNewProject(group?: AnimationGroup) {
     resetEditorState();
+    unreadMedia = null;
     project.startNew();
     project.name = group?.name && group.id !== "still" ? group.name : "Untitled project";
     if (group?.previewModelId) {
@@ -71,6 +72,7 @@ export function startNewProject(group?: AnimationGroup) {
 /** Load a saved project, then bring back its screen media from IndexedDB. */
 export function openSavedProject(saved: Project) {
     resetEditorState();
+    unreadMedia = null;
     project.fromProject(saved);
 
     const controller = get(videoController);
@@ -89,6 +91,17 @@ export function openSavedProject(saved: Project) {
 let restoring: Promise<void> | null = null;
 
 /**
+ * A saved project whose screen media couldn't be read when it opened. The
+ * file may well still be in IndexedDB, so saving while the sample stands in
+ * for it must not store "no screen" and delete the file.
+ */
+let unreadMedia: {projectId: string; screenMedia: Project["screenMedia"]} | null = null;
+
+export function unreadMediaFor(projectId: string) {
+    return unreadMedia?.projectId === projectId ? unreadMedia : null;
+}
+
+/**
  * Resolves once a just-opened project's screen media is back from IndexedDB.
  * Saving before that would store "no screen" and delete the stored file.
  */
@@ -99,13 +112,21 @@ export function whenMediaRestored(): Promise<void> {
 async function restoreMedia(saved: Project) {
     const hadMedia = !!saved.screenMedia || (saved.files?.length ?? 0) > 0;
     let media;
+    let unreadable = false;
     try {
         media = await loadProjectMedia(saved.id);
     } catch (e) {
+        unreadable = true;
         console.warn("Couldn't read the project's media", e);
     }
     // The user may have opened something else while we were reading.
     if (project.id !== saved.id) return;
+    if (unreadable) {
+        unreadMedia = {projectId: saved.id, screenMedia: saved.screenMedia ?? null};
+        toast.warning("This project's screen image or video couldn't be read. Reload the page to try again.");
+        applyDemoMedia();
+        return;
+    }
 
     const controller = get(videoController);
     if (media?.bulk.length) {
@@ -118,7 +139,10 @@ async function restoreMedia(saved: Project) {
             sizeBytes: file.size,
             storageProvider: "local"
         }));
-        await controller.setMediaSource(media.bulk[0]);
+        // The file that was on the phone when it was saved, not always the first.
+        const same = (a: File, b: File | null) =>
+            !!b && (a === b || (a.name === b.name && a.size === b.size && a.lastModified === b.lastModified));
+        await controller.setMediaSource(media.bulk.find((file) => same(file, media.screen)) ?? media.bulk[0]);
         return;
     }
     if (media?.screen) {

@@ -2,6 +2,8 @@
   import { Upload, Image as ImageIcon, Film } from "@lucide/svelte";
   import { videoController } from "$lib/stores/video.svelte";
   import { project } from "$lib/stores/project.svelte";
+  import { isScreenMedia } from "$lib/repo/uploadFile.svelte";
+  import { toast } from "svelte-sonner";
   const file = $derived($videoController.currentFile);
   let input: HTMLInputElement;
   function onFileChange(event: Event) {
@@ -9,6 +11,11 @@
     const picked = field.files?.[0];
     field.value = "";
     if (!picked) return;
+    // As for a drop: the picker's filter is only a suggestion.
+    if (!isScreenMedia(picked)) {
+      toast.error("Choose an image or a video to put it on the phone.");
+      return;
+    }
     project.files = [];
     $videoController.setMediaSource(picked);
   }

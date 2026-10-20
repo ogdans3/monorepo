@@ -353,6 +353,16 @@
     padding: 4px;
     scrollbar-gutter: stable;
   }
+  /* A phone on its side: the chooser's dialog scrolls as a whole instead
+     (studio.css), as an inner list would be a few pixels tall. */
+  @media (max-height: 500px) {
+    .compact {
+      flex: none;
+    }
+    .compact .motion-results {
+      overflow-y: visible;
+    }
+  }
   .compact .motion-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 24px 18px;

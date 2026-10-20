@@ -601,7 +601,7 @@
                     >
                         <div
                                 role="button"
-                                tabindex="0"
+                                tabindex="-1"
                                 aria-label="Click and drag to extend"
                                 class="marked-area-left w-2 cursor-ew-resize"
                                 onmousedown={(e) => startDrag(e, anim.id, "resize-left")}
@@ -613,6 +613,7 @@
                                 aria-pressed={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.startKeyframe.id}
                                 title="Set start keyframe"
                                 onclick={(e) => toggleKeyframe(e, anim.id, 0)}
+                                onmouseup={(e) => e.stopPropagation()}
                         >
                             <span
                                     class="studio-keyframe"
@@ -621,7 +622,7 @@
                         </button>
 
                         <div
-                                tabindex="0"
+                                tabindex="-1"
                                 aria-label="Click and drag to move"
                                 role="button"
                                 class="flex-1 flex items-center justify-center cursor-grab active:cursor-grabbing select-none text-xs text-surface-100 overflow-hidden"
@@ -636,6 +637,7 @@
                                 aria-pressed={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.endKeyframe.id}
                                 title="Set end keyframe"
                                 onclick={(e) => toggleKeyframe(e, anim.id, 1)}
+                                onmouseup={(e) => e.stopPropagation()}
                         >
                             <span
                                     class="studio-keyframe"
@@ -644,7 +646,7 @@
                         </button>
 
                         <div
-                                tabindex="0"
+                                tabindex="-1"
                                 aria-label="Click and drag to extend"
                                 role="button"
                                 class="marked-area-right w-2 cursor-ew-resize transition-colors"

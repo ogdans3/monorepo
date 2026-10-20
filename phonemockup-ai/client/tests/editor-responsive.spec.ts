@@ -55,10 +55,10 @@ test.describe('touch editing', () => {
         await expect(page.getByTestId('canvas').locator('canvas')).toBeVisible();
         const ruler = await page.getByTestId('timeline-ruler').boundingBox();
         await page.touchscreen.tap(ruler!.x + ruler!.width / 2, ruler!.y + 5);
-        await expect(page.getByLabel('Start time in seconds')).toHaveValue('3.00');
+        await expect(page.getByLabel('Playhead time in seconds')).toHaveValue('3.00');
         await page.getByRole('button', {name: 'Play', exact: true}).tap();
         await expect(page.getByRole('button', {name: 'Pause', exact: true})).toBeVisible();
-        await expect.poll(async () => Number(await page.getByLabel('Start time in seconds').inputValue())).toBeGreaterThan(3.1);
+        await expect.poll(async () => Number(await page.getByLabel('Playhead time in seconds').inputValue())).toBeGreaterThan(3.1);
         await page.getByRole('button', {name: 'Pause', exact: true}).tap();
         await page.getByRole('button', {name: 'Add animation', exact: true}).tap();
         const dialog = page.getByRole('dialog');

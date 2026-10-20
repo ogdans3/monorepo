@@ -26,7 +26,9 @@
     /** Whether the field was typed in since it got focus. */
     let typed = false;
     let committedValue = $state<number>(value);
-    let inputText = $state<string>(String(value.toFixed(precision)));
+    /** The value as shown; a damaged save can hold null instead of a number. */
+    const format = (v: number) => (Number.isFinite(v) ? v.toFixed(precision) : "");
+    let inputText = $state<string>(format(value));
 
     const minAttr = $derived(Number.isFinite(min) ? min : undefined);
     const maxAttr = $derived(Number.isFinite(max) ? max : undefined);
@@ -63,7 +65,7 @@
         if (e.shiftKey) mult = 1;
         else if (e.altKey || e.ctrlKey) mult = 0.1;
         const delta = (dx / pixelsPerStep) * step * mult;
-        setVal(snap(startVal + delta));
+        scrubTo(snap(startVal + delta));
     }
 
     function endDrag(e: PointerEvent) {
@@ -87,11 +89,11 @@
         let mult = 1;
         if (e.shiftKey) mult = 10;
         else if (e.altKey || e.ctrlKey) mult = 0.1;
-        setVal(snap(value - dir * step * mult));
+        scrubTo(snap(value - dir * step * mult));
     }
 
     function syncDisplayFromValue() {
-        inputText = value.toFixed(precision);
+        inputText = format(value);
         if (inputElement) inputElement.value = inputText;
     }
 
@@ -103,8 +105,26 @@
     });
 
     function setVal(v: number) {
-        value = roundTo(clamp(v), precision);
+        const next = roundTo(clamp(v), precision);
+        // Rounding a huge number can overflow; keep the last good value.
+        if (!Number.isFinite(next)) {
+            syncDisplayFromValue();
+            return;
+        }
+        value = next;
         if (!isFocused) syncDisplayFromValue();
+    }
+
+    /**
+     * A wheel or drag change. It replaces whatever the field showed, even
+     * while it has focus, so the text never trails the phone and Enter or
+     * leaving the field doesn't put the old number back.
+     */
+    function scrubTo(v: number) {
+        const next = roundTo(clamp(v), precision);
+        if (Number.isFinite(next)) value = next;
+        typed = false;
+        syncDisplayFromValue();
     }
 
     function onFocus() {
@@ -151,20 +171,30 @@
         if (disabled) return;
 
         if (e.key === "Enter") {
+            if (!typed) {
+                // Nothing typed (perhaps scrubbed): what's shown is the value.
+                committedValue = value;
+                e.preventDefault();
+                return;
+            }
             const v = parse(inputText);
             if (Number.isFinite(v)) {
                 setVal(snap(v));
                 committedValue = value; // update snapshot on commit
+                typed = false;
+                syncDisplayFromValue();
             } else {
                 // revert to snapshot
                 value = committedValue;
+                typed = false;
                 syncDisplayFromValue();
             }
             e.preventDefault();
             return;
         } else if (e.key === "Escape") {
-            // revert to snapshot
+            // revert to snapshot; leaving the field then changes nothing
             value = committedValue;
+            typed = false;
             syncDisplayFromValue();
             e.preventDefault();
             return;
@@ -173,14 +203,14 @@
 </script>
 
 <div
-        class="relative select-none touch-none flex flex-col items-center gap-1 w-full"
+        class="relative select-none flex flex-col items-center gap-1 w-full"
         onwheel={onWheel}
         aria-label={label}
         role="spinbutton"
         aria-valuemin={minAttr}
         aria-valuemax={maxAttr}
         aria-valuenow={value}
-        aria-valuetext={`${value.toFixed(precision)}${units ? " " + units : ""}`}
+        aria-valuetext={`${format(value)}${units ? " " + units : ""}`}
         aria-disabled={disabled}
 >
     {#if label}
@@ -209,7 +239,7 @@
 
     {#if label}
         <div
-                class="w-full h-6 flex items-center justify-center rounded-md bg-muted text-xs font-semibold uppercase cursor-ew-resize select-none hover:bg-muted/80 active:bg-muted/60 transition-colors"
+                class="w-full h-6 flex items-center justify-center rounded-md bg-muted text-xs font-semibold uppercase cursor-ew-resize select-none touch-pan-y hover:bg-muted/80 active:bg-muted/60 transition-colors"
                 onpointerdown={onPointerDown}
                 onpointermove={onPointerMove}
                 onpointerup={endDrag}
@@ -222,7 +252,7 @@
 
     {#if dragging}
         <div class="absolute -top-8 right-2.5 px-2 py-1 rounded bg-popover text-popover-foreground text-xs shadow">
-            {value.toFixed(precision)}{units}
+            {format(value)}{units}
         </div>
     {/if}
 </div>

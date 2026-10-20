@@ -33,6 +33,12 @@
     import {downloadBlob} from "$lib/components/mock-video/recording/util/blob";
     import {SingleVideoRecorder} from "$lib/components/mock-video/recording/recorders/SingleVideoRecorder";
     import {saveEditorState} from "$lib/components/mock-video/recording/core/editor-state";
+    import {exportState} from "$lib/components/mock-video/recording/export-state.svelte";
+    import {
+        cannotEncodeMessage,
+        encodableAlternative,
+        formatsThatCannotEncode,
+    } from "$lib/components/mock-video/recording/util/encodable";
 
     // Props
     let {onFinished, autoClose} = $props();
@@ -43,6 +49,10 @@
 
     let progress = $state(0);
     let inProgress = $state(false);
+    $effect(() => {
+        exportState.running = inProgress;
+        return () => (exportState.running = false);
+    });
     let status = $state("Ready to export");
     let failure = $state<string | null>(null);
     let renderPaused: boolean = $state(false);
@@ -57,6 +67,10 @@
     // with one starts on a lossless one that keeps it.
     const transparent = project.sceneSettings.backgroundColor?.[3] === 0;
     let selectedFormat: ExportFormat = $state<ExportFormat>(transparent ? "image-sequence" : "mp4");
+    const exportWidth = Math.round(project.sceneResolution.x);
+    const exportHeight = Math.round(project.sceneResolution.y);
+    /** Formats this browser can't encode at the export size, once checked. */
+    let cannotEncode = $state<ExportFormat[]>([]);
 
     const formatOptions = [
         {value: "image-sequence", label: "Image sequence (ZIP of PNGs)"},
@@ -69,6 +83,7 @@
         formatOptions.find((o) => o.value === selectedFormat)?.label ?? "Format"
     );
     const losesTransparency = $derived(transparent && selectedFormat === "mp4");
+    const unencodable = $derived(cannotEncode.includes(selectedFormat));
 
     $effect(() => {
         const blob = finalBlob;
@@ -153,6 +168,8 @@
 
     /** One export at a time: starting another ends the current one first. */
     let run: {abort: AbortController; done: Promise<void>} | null = null;
+    /** Counts calls to startExport, so only the newest one goes ahead. */
+    let starts = 0;
 
     onMount(() => {
         // Nothing survives a closed dialog; a leftover recorder is stale.
@@ -167,6 +184,14 @@
         // Automated preview generation still starts immediately. In the
         // editor, let the user choose a format before doing expensive work.
         if (autoClose) startExport();
+        const initial = selectedFormat;
+        void formatsThatCannotEncode(exportWidth, exportHeight).then((list) => {
+            cannotEncode = list;
+            // Start on one that works, unless the user has already picked.
+            if (!autoClose && selectedFormat === initial && list.includes(initial)) {
+                selectedFormat = encodableAlternative(list);
+            }
+        });
     });
 
     onDestroy(() => {
@@ -196,12 +221,15 @@
     }
 
     async function startExport() {
+        const mine = ++starts;
         const previous = run;
         if (previous) {
             previous.abort.abort();
             videoRecorder.stop();
             await previous.done;
         }
+        // A second click on Restart while the first waited: that one wins.
+        if (mine !== starts) return;
 
         const abort = new AbortController();
         let finished!: () => void;
@@ -241,7 +269,11 @@
         } catch (e) {
             if (abort.signal.aborted || e instanceof UserCancelledRendering) return;
             console.error(e);
-            failure = e instanceof Error && e.message ? e.message : "Unknown error";
+            const message = e instanceof Error && e.message ? e.message : "Unknown error";
+            // WebCodecs explains a missing encoder in its own terms.
+            failure = (format === "mp4" || format === "webm") && /not supported/i.test(message)
+                ? cannotEncodeMessage(format, exportWidth, exportHeight)
+                : message;
             status = "Failed";
             toast.error("Failed to export video");
         } finally {
@@ -298,7 +330,11 @@
             <Button variant="outline" onclick={closeDialog}>Close</Button>
         {/if}
     </div>
-    {#if losesTransparency}
+    {#if unencodable}
+        <p class="text-xs text-muted-foreground -mt-2">
+            {cannotEncodeMessage(selectedFormat, exportWidth, exportHeight)}
+        </p>
+    {:else if losesTransparency}
         <p class="text-xs text-muted-foreground -mt-2">
             MP4 can't store a transparent background, so it will be black. WebM, GIF and
             the image sequence keep it.

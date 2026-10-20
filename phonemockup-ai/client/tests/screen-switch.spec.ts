@@ -60,8 +60,8 @@ async function centre(page: Page): Promise<number[]> {
   });
 }
 async function seek(page: Page, time: number) {
-  await page.getByLabel("Start time in seconds").fill(String(time));
-  await page.getByLabel("Start time in seconds").blur();
+  await page.getByLabel("Playhead time in seconds").fill(String(time));
+  await page.getByLabel("Playhead time in seconds").blur();
 }
 
 test("two uploaded screens switch during the flip and survive saving and reopening", async ({
@@ -74,7 +74,7 @@ test("two uploaded screens switch during the flip and survive saving and reopeni
   await waitForAppReady(page);
   await expect(page.getByTestId("screen-switch-bar")).toContainText("2.50s");
   await page.getByRole("button", { name: "Go to cut", exact: true }).click();
-  await expect(page.getByLabel("Start time in seconds")).toHaveValue("2.50");
+  await expect(page.getByLabel("Playhead time in seconds")).toHaveValue("2.50");
   await page
     .getByRole("button", { name: "Switch screens", exact: true })
     .click();

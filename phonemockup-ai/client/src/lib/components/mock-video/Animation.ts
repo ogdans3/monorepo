@@ -124,5 +124,7 @@ export function vectorsAreEquals(vec1: Vec3, vec2: Vec3): boolean {
     if (vec2 == null && vec1 != null) {
         return false;
     }
-    return vec1!.x === vec2!.x && vec1!.y === vec2!.y && vec1!.z === vec2!.z;
+    // Object.is, so a NaN that got in compares equal to itself; with === an
+    // effect syncing two vectors kept rewriting them and froze the page.
+    return Object.is(vec1!.x, vec2!.x) && Object.is(vec1!.y, vec2!.y) && Object.is(vec1!.z, vec2!.z);
 }

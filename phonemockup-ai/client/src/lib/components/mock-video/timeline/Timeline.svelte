@@ -187,6 +187,16 @@
   }
 
   let rulerContainerWidth = $state(0);
+  /** The finger scrubbing the ruler, if one is. */
+  let touchScrub: number | null = null;
+  function seekToPointer(event: PointerEvent) {
+    if (!timelineElementContainer || !pxPerSecond) return;
+    const x =
+      event.clientX - timelineElementContainer.getBoundingClientRect().left;
+    $videoController.setPlayheadPosition(
+      Math.max(0, Math.min(endTime, x / pxPerSecond)),
+    );
+  }
   const totalSeconds = $derived(Math.max(0, endTime - startTime));
   // Half-second ticks, widening on long timelines so labels don't pile up.
   const step = $derived(
@@ -407,7 +417,7 @@
           bind:value={currentTimeField}
           onblur={handleCurrentTimeInput}
           onkeydown={commitOnEnter}
-          aria-label="Start time in seconds"
+          aria-label="Playhead time in seconds"
         />
         <span>/</span>
         <Input
@@ -458,8 +468,9 @@
     ><span>{project.settings.fps} fps</span>
   </div>
 
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_interactive_supports_focus -->
+  <!-- The lanes take mouse and touch on top of the controls inside them;
+       the keyboard has the time fields, so they are no button themselves. -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="studio-timeline-lanes"
     onpointerdown={(event) => {
@@ -472,16 +483,23 @@
         !pxPerSecond
       )
         return;
-      const x =
-        event.clientX - timelineElementContainer.getBoundingClientRect().left;
-      $videoController.setPlayheadPosition(
-        Math.max(0, Math.min(endTime, x / pxPerSecond)),
-      );
+      seekToPointer(event);
+      // Keep following the finger along the ruler, as a mouse drag does.
+      touchScrub = event.pointerId;
+      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    }}
+    onpointermove={(event) => {
+      if (event.pointerId === touchScrub) seekToPointer(event);
+    }}
+    onpointerup={(event) => {
+      if (event.pointerId === touchScrub) touchScrub = null;
+    }}
+    onpointercancel={(event) => {
+      if (event.pointerId === touchScrub) touchScrub = null;
     }}
     onmouseup={clickTimeline}
     onmousemove={handleMouseMove}
     onmouseleave={handleMouseLeave}
-    role="button"
   >
     <!-- Ruler / ticks -->
     <div class="relative pb-4" bind:this={timelineElementContainer}>
@@ -489,6 +507,7 @@
         <div class="flex items-stretch">
           <div
             class="w-full"
+            style="touch-action: pan-y"
             bind:clientWidth={rulerContainerWidth}
             data-testid="timeline-ruler"
           >

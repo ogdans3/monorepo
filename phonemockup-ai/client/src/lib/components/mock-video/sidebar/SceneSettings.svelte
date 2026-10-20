@@ -52,6 +52,9 @@
         const rgb = hexToRgb(normalized);
         if (rgb) {
             backgroundHex = normalized;
+            // Picking a colour means showing it: with the background still
+            // transparent the pick changed nothing anyone could see.
+            backgroundAlpha = 1;
             const [r, g, b] = rgb;
             const rgba: [number, number, number, number] = [r, g, b, backgroundAlpha];
             project.sceneSettings.backgroundColor = rgba;

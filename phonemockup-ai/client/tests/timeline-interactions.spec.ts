@@ -180,7 +180,7 @@ test.describe("Timeline: keyframes and animation interactions", () => {
         await expect(startButton).toHaveAttribute("aria-pressed", "true");
         await expect(endButton).toHaveAttribute("aria-pressed", "false");
         // Selection moves the playhead to the editable keyframe.
-        await expect(page.getByLabel("Start time in seconds")).toHaveValue("2.00");
+        await expect(page.getByLabel("Playhead time in seconds")).toHaveValue("2.00");
 
     });
 

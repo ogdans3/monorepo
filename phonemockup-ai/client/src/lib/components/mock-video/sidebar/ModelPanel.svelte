@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Label } from "$lib/components/ui/label";
   import { Input } from "$lib/components/ui/input";
+  import { Button } from "$lib/components/ui/button";
   import * as Select from "$lib/components/ui/select";
   import { models } from "$lib/models/3d-models/3d-models-spec";
   import { unfocusElement } from "$lib/components/mock-video/unfocus";
@@ -154,6 +155,17 @@
             if (Number.isFinite(value) && value >= 0.1 && value <= 60)
               project.model = { ...project.model, lidOpenDuration: value };
           }}
+          onchange={(event) => {
+            // Leaving the field shows the duration the project really uses.
+            const field = event.currentTarget;
+            const value = Number(field.value);
+            const used =
+              field.value.trim() !== "" && Number.isFinite(value)
+                ? Math.min(60, Math.max(0.1, value))
+                : (project.model.lidOpenDuration ?? 2.5);
+            project.model = { ...project.model, lidOpenDuration: used };
+            field.value = String(used);
+          }}
         />
       {/if}
     </div>
@@ -172,7 +184,16 @@
         onchange={(e) => onColorInput(e.currentTarget.value)}
         aria-label="Case color"
       />
-      <span>{project.model?.caseColor ?? "#cccccc"}</span>
+      <span>{project.model?.caseColor ?? "Original finish"}</span>
+      {#if project.model?.caseColor}
+        <Button
+          variant="secondary"
+          size="sm"
+          class="h-7 px-2 ml-auto text-xs"
+          onclick={() => (project.model = { ...project.model, caseColor: null })}
+          >Original finish</Button
+        >
+      {/if}
     </div>
   </div>
 </section>

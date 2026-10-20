@@ -41,7 +41,7 @@ export async function getTrackBoundingBox(page: Page) {
 }
 
 export function getStartTimeInput(page: Page): Locator {
-    return page.getByLabel("Start time in seconds");
+    return page.getByLabel("Playhead time in seconds");
 }
 
 export function getEndTimeInput(page: Page): Locator {

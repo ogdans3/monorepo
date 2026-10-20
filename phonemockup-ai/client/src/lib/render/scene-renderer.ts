@@ -278,7 +278,10 @@ export class SceneRenderer {
         this.requestedModel = config;
 
         const current = this.modelConfig;
-        if (this.model && current && sameModel(current, config)) {
+        // Painting is one way: going back to the device's own finish needs
+        // its materials fresh from the file, so that case reloads it.
+        const finishRestored = !!current?.caseColor && !config.caseColor;
+        if (this.model && current && sameModel(current, config) && !finishRestored) {
             this.pendingLoad = null;
             if (config.caseColor && config.caseColor !== current.caseColor) {
                 this.setModelColor(new THREE.Color(config.caseColor));

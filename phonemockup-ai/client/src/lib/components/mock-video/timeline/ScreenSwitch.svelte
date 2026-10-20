@@ -134,7 +134,7 @@
   }}
 >
   <DialogContent
-    class="max-w-lg"
+    class="app-dialog max-w-lg"
     interactOutsideBehavior={busy ? "ignore" : "close"}
     escapeKeydownBehavior={busy ? "ignore" : "close"}
   >
