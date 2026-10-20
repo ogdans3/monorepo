@@ -189,7 +189,7 @@
 
 <svelte:head
   ><title>{project.name || "Untitled project"} — PhoneMockup Studio</title
-  ></svelte:head
+  ><meta name="robots" content="noindex" /></svelte:head
 >
 
 <div class="studio-shell studio-theme">

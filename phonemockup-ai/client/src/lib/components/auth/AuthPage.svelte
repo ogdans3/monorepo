@@ -9,6 +9,8 @@
     safeReturnPath(page.url.searchParams.get("returnTo")),
   );
   const signingUp = $derived(mode === "sign-up");
+  // Sign-in is reached from the guides and the landing page too.
+  const toStudio = $derived(returnPath.startsWith("/platform"));
 
   $effect(() => {
     if (auth.status !== "ready" || auth.userId || !mount) return;
@@ -32,14 +34,20 @@
 
 <svelte:head
   ><title>{signingUp ? "Create an account" : "Sign in"} — PhoneMockup</title
-  ><meta name="robots" content="noindex" /></svelte:head
+  ><meta name="robots" content="noindex" /><link
+    rel="preload"
+    href="/fonts/archivo/archivo-latin-variable.woff2"
+    as="font"
+    type="font/woff2"
+    crossorigin="anonymous"
+  /></svelte:head
 >
 
 <div class="auth-page">
   <header>
     <a class="wordmark" href="/">phonemockup<span></span></a><a
       class="back"
-      href={returnPath}>Back to studio ↗</a
+      href={returnPath}>{toStudio ? "Back to studio" : "Back"} ↗</a
     >
   </header>
   <main>
@@ -52,7 +60,9 @@
       <section class="notice">
         <h2>You’re signed in.</h2>
         <p>Ready when you are.</p>
-        <a class="primary" href={returnPath}>Continue to studio ↗</a><button
+        <a class="primary" href={returnPath}
+          >{toStudio ? "Continue to studio" : "Continue"} ↗</a
+        ><button
           type="button"
           onclick={() => getClerk()?.signOut()}>Sign out</button
         >
@@ -68,7 +78,9 @@
             type="button"
             onclick={() => initializeAuth()}>Try again</button
           >{/if}
-        <a href={returnPath}>Continue to studio ↗</a>
+        <a href={returnPath}
+          >{toStudio ? "Continue to studio" : "Continue"} ↗</a
+        >
       </section>
     {:else}
       <div class="clerk-mount" bind:this={mount}></div>
@@ -82,6 +94,14 @@
 </div>
 
 <style>
+  /* Declared here too: a direct visit to /sign-in loads no other page's CSS. */
+  @font-face {
+    font-family: Archivo;
+    src: url("/fonts/archivo/archivo-latin-variable.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+  }
   .auth-page {
     min-height: 100dvh;
     color: #282923;

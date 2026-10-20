@@ -572,6 +572,13 @@
   line-height: 1.65;
   color: var(--muted);
 }
+/* ─── Error page ──────────────────────────────────────────────────────── */
+.guide .g-error {
+  padding-block: 72px 140px;
+}
+.guide .g-error .g-actions {
+  margin-top: 26px;
+}
 .guide .g-hub-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1053,6 +1060,9 @@
   .guide .g-hub-head {
     display: block;
     padding-block: 4px 40px;
+  }
+  .guide .g-error {
+    padding-block: 40px 88px;
   }
   .guide .g-hub-head h1 {
     font-size: clamp(46px, 12vw, 64px);

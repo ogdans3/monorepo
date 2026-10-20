@@ -31,7 +31,7 @@ All copy, facts, comparisons, FAQs and links live in one file, `client/src/lib/g
    - The screen switch takes two images, not a video.
    - MP4 drops transparency.
    - WebM export needs Chrome or Edge.
-   - GIFs render at the full canvas size.
+   - GIFs are written at up to 960 px on the long side (`MAX_GIF_SIDE` in `GifEncoder.ts`).
    - Batch export is "coming soon".
    - There are no PSD or Figma files.
 4. Link to the closest pages inside the copy, as `[text](/section/slug)`, and in `related`.

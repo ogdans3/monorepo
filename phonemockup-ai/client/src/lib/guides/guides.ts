@@ -354,18 +354,18 @@ export const guides: Guide[] = [
     slug: "macbook-opening-animation",
     keyword: "macbook opening animation mockup",
     name: "MacBook opening animation",
-    summary: "A MacBook Pro 14″ whose lid opens as the film plays.",
+    summary: "A MacBook Pro 14″ whose lid can open as the film plays.",
     title: "MacBook Opening Animation Mockup, Free | PhoneMockup",
     description:
       "Make a MacBook opening animation mockup with your website or app on screen. Set the lid angle or animate it opening, then export MP4, GIF or PNG. Free during beta.",
     h1: "Free MacBook opening animation mockups.",
-    lead: "Make a MacBook opening animation mockup with your website or desktop app on screen. The lid of a detailed MacBook Pro 14″ opens as the motion plays, or stays at the angle you set.",
+    lead: "Make a MacBook opening animation mockup with your website or desktop app on screen. The lid of a detailed MacBook Pro 14″ can open as the motion plays, or stay at the angle you set.",
     cta: "Make a MacBook mockup",
     motions: ["top-down"],
     facts: [
       { label: "Device", value: "MacBook Pro 14″ (M4)" },
       { label: "Lid angle", value: "0° to 130°, starting at 105°" },
-      { label: "Opening", value: "During the animation, 2.5 s unless you change it" },
+      { label: "Opening", value: "Optional, over 2.5 s unless you change it" },
       { label: "Screen", value: "Any image or video, such as a site recording" },
       { label: "Export", value: "MP4, WebM, GIF or PNG" },
       { label: "Price", value: FREE },
@@ -648,7 +648,7 @@ export const guides: Guide[] = [
       { label: "Format", value: "GIF, up to 25 frames a second" },
       { label: "Loop", value: "4 to 6 seconds" },
       { label: "Shortest", value: "Whip Switch, 4 s. Snap In, 4.4 s." },
-      { label: "Size", value: "The full canvas, 2160 px wide and up" },
+      { label: "Size", value: "Up to 960 px on the long side" },
       { label: "Transparent", value: "Yes" },
       { label: "Price", value: FREE },
     ],
@@ -662,7 +662,7 @@ export const guides: Guide[] = [
       {
         heading: "Mind the file size.",
         body: [
-          "GIFs render at the full canvas size, 2160 pixels wide or more, and GIF is an old format that grows quickly with length and size. Where a site sets a limit, shrink the file afterwards in a GIF tool, or use MP4 or WebM wherever video can play. They look better at a fraction of the size.",
+          "GIFs are written at up to 960 pixels on the long side, 768×960 from the 4:5 canvas, because GIF is an old format that grows quickly with length and size. Where a site sets a limit, keep the loop short, or use MP4 or WebM wherever video can play. They look better at a fraction of the size.",
         ],
       },
       {
@@ -1016,7 +1016,7 @@ export const guides: Guide[] = [
       {
         heading: "Fit the gallery.",
         body: [
-          "Product Hunt recommends 1270×760 for gallery images and limits each one to 3 MB, GIFs included. Export a 16:9 still and crop it to size. PhoneMockup’s GIFs render at the full canvas size, so a [mockup GIF](/mockups/phone-mockup-gif) needs shrinking before it fits under 3 MB.",
+          "Product Hunt recommends 1270×760 for gallery images and limits each one to 3 MB, GIFs included. Export a 16:9 still and crop it to size. A 16:9 [mockup GIF](/mockups/phone-mockup-gif) comes out at 960×540, and a loop of a few seconds can still pass 3 MB, so check the file size before you upload it.",
         ],
       },
       {
@@ -1047,7 +1047,7 @@ export const guides: Guide[] = [
       },
       {
         q: "Can the gallery include a GIF?",
-        a: "Yes. Product Hunt accepts GIFs in the gallery as long as each file is under 3 MB. PhoneMockup’s GIFs render at the full canvas size, so shrink one before you upload it.",
+        a: "Yes. Product Hunt accepts GIFs in the gallery as long as each file is under 3 MB. PhoneMockup writes GIFs at up to 960 pixels on the long side, but a long loop can still pass 3 MB, so check the size before you upload it.",
       },
     ],
     related: [

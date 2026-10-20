@@ -2,6 +2,7 @@
   import "./guides.css";
   import type { Snippet } from "svelte";
   import { onMount } from "svelte";
+  import { afterNavigate } from "$app/navigation";
   import { ArrowUpRight, ArrowDown } from "@lucide/svelte";
   import AuthControls from "$lib/components/auth/AuthControls.svelte";
   import {
@@ -15,13 +16,18 @@
     section,
     isHub = false,
     children,
-  }: { section: GuideSection; isHub?: boolean; children: Snippet } = $props();
+  }: { section?: GuideSection; isHub?: boolean; children: Snippet } = $props();
 
   let menuOpen = $state(false);
   let interactive = $state(false);
   let menuButton: HTMLButtonElement;
+  let header: HTMLElement;
   onMount(() => {
     interactive = true;
+  });
+  // The shell stays mounted from one guide to the next, and so would the menu.
+  afterNavigate(() => {
+    menuOpen = false;
   });
 </script>
 
@@ -31,6 +37,9 @@
       menuOpen = false;
       menuButton?.focus();
     }
+  }}
+  onpointerdown={(event) => {
+    if (menuOpen && !header.contains(event.target as Node)) menuOpen = false;
   }}
 />
 
@@ -47,9 +56,20 @@
 
 <div class="guide">
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header wrap">
+  <header class="site-header wrap" bind:this={header}>
     <a class="wordmark" href="/" aria-label="PhoneMockup home"
       >phonemockup<span class="brand-mark" aria-hidden="true"></span></a
+    >
+    <!-- Before the menu in the DOM, so Tab goes from the toggle into it. -->
+    <button
+      class="menu-toggle"
+      type="button"
+      disabled={!interactive}
+      aria-expanded={menuOpen}
+      aria-controls="guide-navigation"
+      bind:this={menuButton}
+      onclick={() => (menuOpen = !menuOpen)}
+      >Menu <ArrowDown size={16} /></button
     >
     <nav
       id="guide-navigation"
@@ -76,16 +96,6 @@
         >Your projects <ArrowUpRight size={16} /></a
       ><AuthControls />
     </div>
-    <button
-      class="menu-toggle"
-      type="button"
-      disabled={!interactive}
-      aria-expanded={menuOpen}
-      aria-controls="guide-navigation"
-      bind:this={menuButton}
-      onclick={() => (menuOpen = !menuOpen)}
-      >Menu <ArrowDown size={16} /></button
-    >
   </header>
 
   <main id="main">

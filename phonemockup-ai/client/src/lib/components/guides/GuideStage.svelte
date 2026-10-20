@@ -1,7 +1,12 @@
 <script lang="ts">
   import MotionPreview from "$lib/components/marketing/MotionPreview.svelte";
   import type { AnimationGroup } from "$lib/components/mock-video/Animation";
-  import { background, deviceOf, loopSeconds } from "$lib/guides/motions";
+  import {
+    background,
+    deviceOf,
+    formatSeconds,
+    loopSeconds,
+  } from "$lib/guides/motions";
 
   let {
     motions,
@@ -19,7 +24,7 @@
 <div class="g-stage" class:compact style:background={background(selected)}>
   <div class="g-stage-label">
     <span>{selected.name} <span class="muted">/ {deviceOf(selected)}</span></span
-    ><span class="mono">{loopSeconds(selected).toFixed(0)}s loop</span>
+    ><span class="mono">{formatSeconds(loopSeconds(selected))}s loop</span>
   </div>
   <div class="g-stage-media">
     {#key selected.id}<MotionPreview

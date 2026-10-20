@@ -20,6 +20,11 @@ export function loopSeconds(group: AnimationGroup): number {
   return Math.max(...group.animations.map((a) => a.end));
 }
 
+/** "6" for a whole number of seconds and "5.4" otherwise, never rounded away. */
+export function formatSeconds(seconds: number): string {
+  return Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(1);
+}
+
 export function deviceOf(group: AnimationGroup): string {
   return deviceNames[group.previewModelId ?? ""] ?? "iPhone 16 Pro";
 }

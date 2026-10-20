@@ -20,7 +20,7 @@
   });
 </script>
 
-<div class="account-controls" class:compact aria-label="Account">
+<div class="account-controls" class:compact role="group" aria-label="Account">
   {#if auth.userId}
     <div class="user-button" bind:this={userButton}></div>
   {:else}

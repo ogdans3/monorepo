@@ -11,6 +11,7 @@
   import MotionPreview from "$lib/components/marketing/MotionPreview.svelte";
   import AuthControls from "$lib/components/auth/AuthControls.svelte";
   import { hubs } from "$lib/guides/guides";
+  import { formatSeconds } from "$lib/guides/motions";
 
   const motions = animationGroups;
   const heroOptions = ["soft-orbit", "edge-reveal", "top-down"].map((id) =>
@@ -27,6 +28,7 @@
     interactive = true;
   });
   let menuButton: HTMLButtonElement;
+  let header: HTMLElement;
   const categories = [
     "All motions",
     "Zoom",
@@ -120,6 +122,9 @@
       menuButton?.focus();
     }
   }}
+  onpointerdown={(event) => {
+    if (menuOpen && !header.contains(event.target as Node)) menuOpen = false;
+  }}
 />
 
 <svelte:head>
@@ -134,6 +139,7 @@
     content="Your screenshots and screen recordings, in a whole new dimension. Create animated device mockups in your browser."
   />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://phonemockup.app/" />
   <meta property="og:image" content="https://phonemockup.app/og-cover.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="theme-color" content="#faf9f6" />
@@ -149,9 +155,20 @@
 
 <div class="landing">
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header wrap">
+  <header class="site-header wrap" bind:this={header}>
     <a class="wordmark" href="/" aria-label="PhoneMockup home"
       >phonemockup<span class="brand-mark" aria-hidden="true"></span></a
+    >
+    <!-- Before the menu in the DOM, so Tab goes from the toggle into it. -->
+    <button
+      class="menu-toggle"
+      type="button"
+      disabled={!interactive}
+      aria-expanded={menuOpen}
+      aria-controls="site-navigation"
+      bind:this={menuButton}
+      onclick={() => (menuOpen = !menuOpen)}
+      >Menu <ArrowDown size={16} /></button
     >
     <nav
       id="site-navigation"
@@ -172,16 +189,6 @@
         >Your projects <ArrowUpRight size={16} /></a
       ><AuthControls />
     </div>
-    <button
-      class="menu-toggle"
-      type="button"
-      disabled={!interactive}
-      aria-expanded={menuOpen}
-      aria-controls="site-navigation"
-      bind:this={menuButton}
-      onclick={() => (menuOpen = !menuOpen)}
-      >Menu <ArrowDown size={16} /></button
-    >
   </header>
 
   <main id="main">
@@ -208,7 +215,7 @@
         >
           <div class="stage-label">
             <span>Make it move.</span><span class="mono"
-              >{duration(featured).toFixed(0)}s loop</span
+              >{formatSeconds(duration(featured))}s loop</span
             >
           </div>
           <div class="hero-media">
@@ -221,7 +228,11 @@
               />{/key}
           </div>
           <div class="stage-bottom">
-            <div class="hero-selector" aria-label="Featured animation">
+            <div
+              class="hero-selector"
+              role="group"
+              aria-label="Featured animation"
+            >
               {#each heroOptions as group, i}<button
                   type="button"
                   aria-label={`0${i + 1} ${group.name}`}
@@ -323,7 +334,7 @@
             <a class="card-title" href={`/platform/animation/${group.id}`}
               ><h3>{group.name}</h3>
               <span class="card-duration mono"
-                >{duration(group).toFixed(0)}s</span
+                >{formatSeconds(duration(group))}s</span
               ><ArrowUpRight size={19} /><span class="sr-only">
                 — use this animation</span
               ></a
