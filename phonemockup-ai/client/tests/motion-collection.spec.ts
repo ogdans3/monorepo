@@ -182,7 +182,7 @@ test("featured choices and gallery filters use the new collection", async ({
   await page.getByRole("button", { name: "View all 16 motions" }).click();
   await expect(page.locator(".motion-card")).toHaveCount(16);
   await go(page, "/platform/animation");
-  await expect(page.locator("a .preset-preview")).toHaveCount(16);
+  await expect(page.locator(".motion-library a.motion-choice")).toHaveCount(16);
   await expect(
     page.getByRole("button", { name: "Fancy", exact: true }),
   ).toHaveCount(0);
