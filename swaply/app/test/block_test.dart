@@ -211,6 +211,29 @@ void main() {
       expect(find.text('Opphev blokkeringen'), findsOneWidget);
     });
 
+    testWidgets('5b. across the block there is no «Send melding», and no «… · 0» of things',
+        (tester) async {
+      // «Send melding» stood on, and pressed said she had nothing out, under
+      // «Kari sine gjenstander · 0»: her things were only hidden by the block.
+      blocked = true;
+      await mount(tester, const OtherProfileScreen(userId: 'kari-1'));
+
+      expect(find.textContaining('Du har blokkert Kari.'), findsOneWidget);
+      expect(find.text('Send melding'), findsNothing);
+      expect(find.textContaining('sine gjenstander'), findsNothing);
+      expect(find.text('Ingen ting ute akkurat nå.'), findsNothing);
+
+      // Taken back, it is the profile it was.
+      server.overrides['DELETE /blocks/kari-1'] = <String, Object?>{};
+      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.pumpAndSettle();
+      blocked = false;
+      await tester.tap(find.text('Opphev blokkeringen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Send melding'), findsOneWidget);
+      expect(find.text('Kari sine gjenstander · 1'), findsOneWidget);
+    });
+
     testWidgets('6. a report without a block asks for nothing', (tester) async {
       await mount(tester, const OtherProfileScreen(userId: 'kari-1'));
       final asked = server.asked('GET /users/kari-1');

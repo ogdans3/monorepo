@@ -649,59 +649,63 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                   .toList(),
             ),
           ],
-          const SizedBox(height: 12),
-          // A 44-tall «Send melding» between the chips and the things.
-          SizedBox(
-            height: 44,
-            // Every conversation belongs to a trade and every trade starts on a
-            // listing, so this opens one of theirs rather than a chat window
-            // there is nothing to put in. A grey button that explains nothing
-            // is worse than the sentence.
-            child: PrimaryButton('Send melding', onPressed: () {
-              if (user.items.isEmpty) {
-                showNote(
-                    context,
-                    '${user.displayName.split(' ').first} har ingenting ute '
-                    'akkurat nå. En samtale starter alltid på en gjenstand.');
-                return;
-              }
-              _openListing(user.items.first.id);
-            }),
-          ),
-          const SizedBox(height: 12),
-          Text('${user.displayName.split(' ').first} sine gjenstander · ${user.items.length}',
-              style: Type.section),
-          const SizedBox(height: 12),
-          if (user.items.isEmpty)
-            const Text('Ingen ting ute akkurat nå.', style: Type.secondary)
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 166 / 146,
-              ),
-              itemCount: user.items.length,
-              itemBuilder: (context, i) {
-                final item = user.items[i];
-                // The whole cell, to the foot of the caption row.
-                return TapArea(
-                  onTap: () => _openListing(item.id),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: ItemThumb(item, size: 400, radius: 16)),
-                      // Title and value on one line under a 166-wide picture, as 13 and
-          // 13b draw it.
-          ListingCaption(item, maxLines: 2),
-                    ],
-                  ),
-                );
-              },
+          // Across a block there is nothing to write about and no things to
+          // show: the server sends none of theirs, and the line above says
+          // they are hidden. «Send melding» stood on, and said they had
+          // nothing out, over «… sine gjenstander · 0».
+          if (!user.blockedByYou) ...[
+            const SizedBox(height: 12),
+            // A 44-tall «Send melding» between the chips and the things.
+            SizedBox(
+              height: 44,
+              // Every conversation belongs to a trade and every trade starts on a
+              // listing, so this opens one of theirs rather than a chat window
+              // there is nothing to put in. A grey button that explains nothing
+              // is worse than the sentence.
+              child: PrimaryButton('Send melding', onPressed: () {
+                if (user.items.isEmpty) {
+                  showNote(
+                      context,
+                      '${user.displayName.split(' ').first} har ingenting ute '
+                      'akkurat nå. En samtale starter alltid på en gjenstand.');
+                  return;
+                }
+                _openListing(user.items.first.id);
+              }),
             ),
+            const SizedBox(height: 12),
+            Text('${user.displayName.split(' ').first} sine gjenstander · ${user.items.length}',
+                style: Type.section),
+            const SizedBox(height: 12),
+            if (user.items.isEmpty)
+              const Text('Ingen ting ute akkurat nå.', style: Type.secondary)
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 166 / 146,
+                ),
+                itemCount: user.items.length,
+                itemBuilder: (context, i) {
+                  final item = user.items[i];
+                  // The whole cell, to the foot of the caption row.
+                  return TapArea(
+                    onTap: () => _openListing(item.id),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: ItemThumb(item, size: 400, radius: 16)),
+                        ListingCaption(item, maxLines: 2),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
           const SizedBox(height: Insets.xl),
         ],
       ),
