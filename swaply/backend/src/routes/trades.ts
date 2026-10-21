@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { blocked, blockedBetween } from '../lib/blocks.js'
-import { TERMS_VERSION } from '../lib/constants.js'
+import { MAX_VALUE_NOK, TERMS_VERSION } from '../lib/constants.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import {
@@ -154,7 +154,13 @@ export default async function tradeRoutes(app: FastifyInstance) {
           .object({
             payerPosition: z.number().int().min(0),
             payeePosition: z.number().int().min(0),
-            amountNok: z.number().int().positive(),
+            // No more than a listing may be worth, which keeps it well inside
+            // the column's `int`: past it the insert was a 500.
+            amountNok: z
+              .number()
+              .int()
+              .positive()
+              .max(MAX_VALUE_NOK, 'Mellomlegget kan være høyst 10 000 000 kr.'),
           })
           .nullish(),
         // The version the proposal answers. Absent, it answers whatever is on
