@@ -257,6 +257,24 @@ describe('searching the collage', () => {
     expect(res.body!['owner']['email']).toBeUndefined()
   })
 
+  test('13b. and on Oppdag too, so the long-press can offer to block them by name', async () => {
+    // «Rapporter» from a card offers «Blokkér Kari N.», and a block is of a
+    // person. Oppdag sent the owner's id and not the owner, so the sheet
+    // never offered it.
+    for (const url of ['/discover', '/discover?sort=nearest', '/discover?sort=value']) {
+      const items = (await call('GET', url, { token: ola })).body!['items'] as Json[]
+      expect(items.length, url).toBeGreaterThan(0)
+      for (const item of items) {
+        expect(item['owner'], url).toEqual({ id: kariId, displayName: 'Kari N.' })
+      }
+    }
+
+    await call('PUT', '/me/interests', { token: ola, body: { interests: ['hjem'] } })
+    const rows = (await call('GET', '/discover/rows', { token: ola })).body!['rows'] as Json[]
+    expect(rows[0]!['items'][0]['owner']).toEqual({ id: kariId, displayName: 'Kari N.' })
+    await call('PUT', '/me/interests', { token: ola, body: { interests: [] } })
+  })
+
   test('14. paging through Oppdag shows every listing once, in every order', async () => {
     // Listings that tie on everything a sort looks at — the same moment, the
     // same value, the same town — are where a page used to repeat one listing
