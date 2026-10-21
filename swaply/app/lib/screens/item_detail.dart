@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -263,20 +264,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       // Name and price share a line, and the price is grey:
                       // this is a barter app, so the number is a fact about the
                       // thing and not the point of it.
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: Text(item.title, style: Type.display)),
-                          if (item.estimatedValueNok != null) ...[
-                            const SizedBox(width: 10),
-                            Padding(
-                              padding: const EdgeInsets.only(top: 9),
-                              child: Text('Verdi ${kr(item.estimatedValueNok)}',
-                                  style: Type.value),
-                            ),
-                          ],
-                        ],
-                      ),
+                      _titleAndValue(item),
                       const SizedBox(height: 11),
                       Wrap(
                         spacing: 7,
@@ -715,6 +703,48 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
     if (mounted) Navigator.of(context).maybePop();
     showDoneOn(messenger, 'Annonsen er fjernet.');
+  }
+
+  /// The name and the value on one line, as drawn — while the name's longest
+  /// word fits beside the value. Otherwise the value goes under the name, as
+  /// it does on a card on 05 ([ListingCaption]): beside it at 200 % the name
+  /// broke inside a word, «Retro spillkonsol / l».
+  Widget _titleAndValue(Item item) {
+    final value = item.estimatedValueNok;
+    final name = Text(item.title, style: Type.display);
+    if (value == null) return Row(children: [Expanded(child: name)]);
+    final words = Text('Verdi ${kr(value)}', style: Type.value);
+    return LayoutBuilder(builder: (context, box) {
+      double width(String text, TextStyle style) {
+        final painter = TextPainter(
+          text: TextSpan(text: text, style: DefaultTextStyle.of(context).style.merge(style)),
+          textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: 1,
+        )..layout();
+        final wide = painter.width;
+        painter.dispose();
+        return wide;
+      }
+
+      final longest = item.title
+          .split(RegExp(r'\s+'))
+          .fold<double>(0, (most, word) => math.max(most, width(word, Type.display)));
+      if (longest + 10 + width('Verdi ${kr(value)}', Type.value) + 1 > box.maxWidth) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [name, const SizedBox(height: 4), words],
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: name),
+          const SizedBox(width: 10),
+          Padding(padding: const EdgeInsets.only(top: 9), child: words),
+        ],
+      );
+    });
   }
 
   /// Round, 38 across, over the photograph. The ripple stays the circle; the

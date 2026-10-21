@@ -213,7 +213,13 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                               ],
                             ),
                             const SizedBox(height: 4),
+                            // Wraps rather than «★★★★★ 4,9 · 12 vurderin…» on a
+                            // 320 phone, and is read as words, not five stars.
                             Text.rich(
+                              semanticsLabel: me.ratingCount == 0
+                                  ? null
+                                  : '${_ratingWords(me.ratingAvg)}, '
+                                      '${counted(me.ratingCount, 'vurdering', 'vurderinger')}',
                               TextSpan(children: [
                                 if (me.ratingCount == 0)
                                   const TextSpan(text: 'Ingen vurderinger ennå')
@@ -228,8 +234,6 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                                 ],
                               ]),
                               style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(_whereAndSince(me.town, me.memberSince), style: Type.secondary),
@@ -428,6 +432,11 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
   }
 }
 
+/// «4,9 av 5 stjerner», what a screen reader says for [_stars] and the
+/// number beside them: the glyphs were read one by one.
+String _ratingWords(double? rating) =>
+    '${(rating ?? 0).toStringAsFixed(1).replaceAll('.', ',')} av 5 stjerner';
+
 /// «★★★★★» for 4,6 and up, «★★★★☆» below: the export writes the stars as
 /// text and puts the number beside them.
 String _stars(double? rating) {
@@ -600,6 +609,14 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                         overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 4),
                     Text.rich(
+                      // Read as words, not five stars, as on 13.
+                      semanticsLabel: user.ratingAvg == null
+                          ? null
+                          : [
+                              _ratingWords(user.ratingAvg),
+                              if (user.tradeCount case final trades?)
+                                counted(trades, 'bytte', 'bytter'),
+                            ].join(', '),
                       TextSpan(children: [
                         // Five empty stars would say «rated badly»; no rating
                         // yet says so in words.

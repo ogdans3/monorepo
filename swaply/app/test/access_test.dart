@@ -284,6 +284,18 @@ void main() {
     });
   });
 
+  testWidgets('13 and 13b read a rating as words, not five stars', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await mount(tester, const ProfileScreen());
+    expect(tester.getSemantics(find.textContaining('vurderinger')).label,
+        contains('4,9 av 5 stjerner, 12 vurderinger'));
+
+    await mount(tester, const OtherProfileScreen(userId: 'kari-1'));
+    expect(tester.getSemantics(find.textContaining('bytter')).label,
+        contains('4,8 av 5 stjerner, 23 bytter'));
+    semantics.dispose();
+  });
+
   group('the sheets behind the chips say what is chosen', () {
     // A green mark and a green fill, and nothing said: round 1 gave 06c, 09a
     // and 06i their selected state and left these out.

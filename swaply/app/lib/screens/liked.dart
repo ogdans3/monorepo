@@ -249,12 +249,13 @@ class _LikedScreenState extends State<LikedScreen> {
                 ],
               ),
             ),
-            // Half the row at most. With the text set large it took all of
-            // it and more, the name had none left, and the row ran past the
-            // card; now it wraps under itself.
+            // Two fifths of the row at most. With the text set large it took
+            // all of it and more, the name had none left, and the row ran
+            // past the card; now it wraps under itself. At half, the name's
+            // column broke «gjenstander» in the middle at 130 % on a 320.
             if (!liker.anonymous)
               ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: box.maxWidth / 2),
+                constraints: BoxConstraints(maxWidth: box.maxWidth * 0.4),
                 child: const Text('Se tingene deres ›', style: Type.link),
               ),
           ],

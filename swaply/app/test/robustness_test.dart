@@ -14,7 +14,11 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/api/models.dart';
+import 'package:swaply_app/design/tokens.dart';
 import 'package:swaply_app/screens/agreement.dart';
+import 'package:swaply_app/screens/counter_offer.dart';
+import 'package:swaply_app/screens/item_detail.dart';
+import 'package:swaply_app/screens/liked.dart';
 import 'package:swaply_app/screens/post_item.dart';
 import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
@@ -266,6 +270,89 @@ void main() {
         expect(tester.renderObject<RenderParagraph>(words).didExceedMaxLines, isFalse,
             reason: label);
       }
+    });
+  });
+
+  group('words that were cut short or broken inside', () {
+    /// Every word of [text] in [finder]'s paragraph is on one line.
+    void whole(WidgetTester tester, Finder finder, String text) {
+      final paragraph = tester.renderObject<RenderParagraph>(finder);
+      final all = paragraph.text.toPlainText();
+      var at = 0;
+      for (final word in text.split(' ')) {
+        at = all.indexOf(word, at);
+        final boxes = paragraph.getBoxesForSelection(
+            TextSelection(baseOffset: at, extentOffset: at + word.length));
+        expect(boxes.map((b) => b.top).toSet(), hasLength(1), reason: '«$word» in «$all»');
+        at += word.length;
+      }
+    }
+
+    testWidgets('13: the rating line wraps rather than «… 12 vurderin…» on a 320',
+        (tester) async {
+      await hold(tester, narrow, const ProfileScreen());
+      final line = find.descendant(
+          of: find.textContaining('vurderinger'), matching: find.byType(RichText));
+      expect(tester.renderObject<RenderParagraph>(line).didExceedMaxLines, isFalse);
+      whole(tester, line, '12 vurderinger');
+    });
+
+    for (final (cash, scale) in [(350, 1.3), (1050, 1.0), (12500, 1.0)]) {
+      testWidgets('09a: the mellomlegg $cash kr is one line at ${(scale * 100).round()} %',
+          (tester) async {
+        final trade = Trade.fromJson({
+          ...FakeServer.trade,
+          'cash': {...FakeServer.trade['cash'] as Map<String, Object?>, 'amountNok': cash},
+        });
+        await hold(tester, narrow, CounterOfferScreen(trade: trade), scale: scale);
+        await tester.scrollUntilVisible(find.text(kr(cash)), 200,
+            scrollable: find.byType(Scrollable).first);
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        final paragraph = tester.renderObject<RenderParagraph>(find.text(kr(cash)));
+        final boxes = paragraph.getBoxesForSelection(
+            TextSelection(baseOffset: 0, extentOffset: kr(cash).length));
+        expect(boxes.map((b) => b.top).toSet(), hasLength(1));
+      });
+    }
+
+    testWidgets('12: «gjenstander» under a liker is whole at 130 % on a 320', (tester) async {
+      server.overrides['GET /me/liked-by'] = {
+        'items': [
+          {
+            'item': FakeServer.drill,
+            'likers': [
+              {...FakeServer.kari, 'itemCount': 6, 'town': 'Bergen'},
+            ],
+          },
+        ],
+      };
+      // The first thing with likes opens by itself.
+      await hold(tester, narrow, const LikedScreen(), scale: 1.3);
+
+      whole(tester, find.text('6 gjenstander · Bergen'), '6 gjenstander');
+    });
+
+    testWidgets('04: at 200 % the value goes under the name, which breaks between words',
+        (tester) async {
+      await hold(tester, (name: '412×915', size: const Size(412, 915), statusBar: 24),
+          const ItemDetailScreen(itemId: 'item-console'),
+          scale: 2);
+
+      whole(tester, find.text('Retro spillkonsoll'), 'Retro spillkonsoll');
+      expect(tester.getRect(find.text('Verdi 1\u00A0200\u00A0kr')).top,
+          greaterThan(tester.getRect(find.text('Retro spillkonsoll')).bottom));
+    });
+
+    testWidgets('…and at the export\'s size it is beside the name, as drawn', (tester) async {
+      await hold(tester, (name: '390×844', size: const Size(390, 844), statusBar: 46),
+          const ItemDetailScreen(itemId: 'item-console'));
+
+      final name = tester.getRect(find.text('Retro spillkonsoll'));
+      final value = tester.getRect(find.text('Verdi 1\u00A0200\u00A0kr'));
+      expect(value.left, greaterThan(name.left + 100));
+      expect(value.top, lessThan(name.bottom));
     });
   });
 }
