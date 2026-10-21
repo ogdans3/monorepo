@@ -31,6 +31,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/main.dart';
+import 'package:swaply_app/screens/chat.dart';
 import 'package:swaply_app/screens/discover.dart';
 import 'package:swaply_app/screens/onboarding.dart';
 import 'package:swaply_app/screens/profile.dart';
@@ -450,6 +451,256 @@ void main() {
       expect(server.bearers['POST /auth/anonymous'], isNull);
       expect(session.anonymous, isTrue);
       expect(find.byType(SwaplyToast), findsNothing);
+    });
+  });
+
+  // The admin's own token is parked behind a session the switcher minted,
+  // and `../docs/ADMIN.md` promises that nothing strands them as somebody
+  // else. A test account's session ended — the account deleted from
+  // Testverktøy on another phone — made a stranger instead, with the admin's
+  // token still parked where nothing on screen could reach it: no floor, no
+  // way back, and the password the only door.
+  group('a test account\'s session ended under the admin', () {
+    /// Acting as the test account, with the admin's token parked.
+    Future<void> bootActing(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(430, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      SharedPreferences.setMockInitialValues({'token': 'tok-test-1', 'adminToken': 'tok'});
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(value: session, child: SwaplyApp(api: api)),
+      );
+      unawaited(session.restore());
+      await tester.pumpAndSettle();
+    }
+
+    /// `GET /me` by whose token asks: the test account's dead once [ended].
+    void meBy({required bool ended}) => server.overrides['GET /me'] = (http.Request request) =>
+        switch (request.headers['authorization']) {
+          'Bearer tok-test-1' => ended ? 401 : FakeServer.actingAsTest,
+          'Bearer tok' => FakeServer.admin,
+          _ => 401,
+        };
+
+    testWidgets('17. coming back to the app goes back to the admin, not to a stranger',
+        (tester) async {
+      meBy(ended: false);
+      await bootActing(tester);
+      expect(session.actingAs, isTrue);
+
+      meBy(ended: true);
+      clock = clock.add(const Duration(hours: 3));
+      await backFromTheBackground(tester);
+
+      expect(asked('POST /auth/anonymous'), 0);
+      expect(session.isAdmin, isTrue);
+      expect(session.actingAs, isFalse);
+      expect(session.canReturnToAdmin, isFalse);
+      expect(api.token, 'tok');
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('token'), 'tok');
+      expect(prefs.getString('adminToken'), isNull);
+    });
+
+    testWidgets('18. and so does a cold start', (tester) async {
+      meBy(ended: true);
+      await bootActing(tester);
+
+      expect(asked('POST /auth/anonymous'), 0);
+      expect(session.isAdmin, isTrue);
+      expect(session.actingAs, isFalse);
+      expect(api.token, 'tok');
+    });
+
+    testWidgets('19. with the admin\'s own token dead as well, it is a stranger after all',
+        (tester) async {
+      server.overrides['GET /me'] = (http.Request request) =>
+          request.headers['authorization'] == 'Bearer ${FakeServer.deviceToken}'
+              ? FakeServer.lookingAround
+              : 401;
+      await bootActing(tester);
+
+      expect(asked('POST /auth/anonymous'), 1);
+      expect(session.anonymous, isTrue);
+      expect(session.canReturnToAdmin, isFalse);
+    });
+  });
+
+  // And with the app in front. The account deleted from a browser on
+  // another machine while the phone sat open on it: no return from the
+  // background to ask, and every screen that asked who this is was refused —
+  // «Du må logge inn.» under every tap, the last person's things on every
+  // tab, until the app was put away for a minute and brought back.
+  group('a token the server stops knowing while the app is open', () {
+    Future<void> tapTab(WidgetTester tester, String label) async {
+      await tester.tap(find.descendant(of: find.byType(SwaplyNavBar), matching: find.text(label)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('20. the next screen to ask who this is takes it as a cold start would',
+        (tester) async {
+      server.overrides['GET /me'] = FakeServer.me;
+      await boot(tester, token: 'tok');
+      await tapTab(tester, 'Chats');
+      await tapTab(tester, 'Profil');
+      expect(asked('POST /auth/anonymous'), 0);
+
+      // Deleted elsewhere, with nobody leaving the app.
+      server.overrides['GET /me'] = 401;
+      await tapTab(tester, 'Chats');
+
+      expect(asked('POST /auth/anonymous'), 1);
+      expect(server.bearers['POST /auth/anonymous'], isNull);
+      expect(session.anonymous, isTrue);
+      expect(find.byType(InterestsScreen), findsOneWidget);
+      expect(find.text('Du må logge inn.'), findsNothing);
+    });
+
+    testWidgets('21. not while a sign-in is on its way: it is the sign-in that retires the token',
+        (tester) async {
+      await boot(tester);
+      final signing = Completer<Object?>();
+      server.overrides['POST /auth/login'] = (http.Request _) => signing.future;
+      final signedIn = session.login('ola@epost.no', 'passord');
+      await tester.pump();
+
+      server.overrides['GET /me'] = 401;
+      await expectLater(session.refresh(), throwsA(isA<ApiException>()));
+      await tester.pumpAndSettle();
+      expect(asked('POST /auth/anonymous'), 0);
+
+      server.overrides['GET /me'] = FakeServer.me;
+      signing.complete({'token': 'tok', 'user': FakeServer.profileOnly(FakeServer.me)});
+      await signedIn;
+      await tester.pumpAndSettle();
+      expect(session.anonymous, isFalse);
+      expect(session.me?.id, 'me-1');
+      expect(asked('POST /auth/anonymous'), 0);
+    });
+
+    testWidgets('22. and so does any request refused for its token: «Send» in a conversation',
+        (tester) async {
+      server.overrides['GET /me'] = FakeServer.me;
+      await boot(tester, token: 'tok');
+      await tapTab(tester, 'Chats');
+      await tester.tap(find.text('Kari'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ThreadScreen), findsOneWidget);
+
+      // Only the message hears it: nothing else asks who this is meanwhile.
+      server.overrides['POST /threads/thread-1/messages'] = 401;
+      server.overrides['GET /me'] = (http.Request request) =>
+          switch (request.headers['authorization']) {
+            'Bearer tok' => FakeServer.me,
+            'Bearer ${FakeServer.deviceToken}' => FakeServer.lookingAround,
+            _ => 401,
+          };
+      await tester.enterText(find.byType(TextField).last, 'Er du der?');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ThreadScreen, skipOffstage: false), findsNothing);
+      expect(asked('POST /auth/anonymous'), 1);
+      expect(session.anonymous, isTrue);
+      expect(find.byType(InterestsScreen), findsOneWidget);
+      // The gate is the news, and «Du må logge inn.» over 02 was not.
+      expect(find.byType(SwaplyToast), findsNothing);
+    });
+
+    testWidgets('23. a heart refused for a test account\'s token goes back to the admin',
+        (tester) async {
+      tester.view.physicalSize = const Size(430, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      SharedPreferences.setMockInitialValues({'token': 'tok-test-1', 'adminToken': 'tok'});
+      var ended = false;
+      server.overrides['GET /me'] = (http.Request request) =>
+          switch (request.headers['authorization']) {
+            'Bearer tok-test-1' => ended ? 401 : FakeServer.actingAsTest,
+            'Bearer tok' => FakeServer.admin,
+            _ => 401,
+          };
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(value: session, child: SwaplyApp(api: api)),
+      );
+      unawaited(session.restore());
+      await tester.pumpAndSettle();
+      expect(session.actingAs, isTrue);
+
+      // Deleted from Testverktøy on another phone.
+      ended = true;
+      server.overrides['POST /items/item-console/like'] = 401;
+      await tester.tap(find.bySemanticsLabel('Jeg vil ha').last);
+      await tester.pumpAndSettle();
+
+      expect(asked('POST /auth/anonymous'), 0);
+      expect(session.isAdmin, isTrue);
+      expect(session.actingAs, isFalse);
+      expect(api.token, 'tok');
+      expect(find.byType(SwaplyToast), findsNothing);
+    });
+
+    testWidgets('24. Oppdag asked again with a dead token: the server says 401 there too now',
+        (tester) async {
+      // The server answers a token it does not know with 401 on every route
+      // but the sign-ins, Oppdag's included, where it used to answer as to
+      // nobody in particular.
+      server.overrides['GET /me'] = (http.Request request) =>
+          switch (request.headers['authorization']) {
+            'Bearer tok' => FakeServer.me,
+            'Bearer ${FakeServer.deviceToken}' => FakeServer.lookingAround,
+            _ => 401,
+          };
+      await boot(tester, token: 'tok');
+      expect(find.byType(DiscoverScreen), findsOneWidget);
+
+      server.overrides['GET /discover'] = (http.Request request) =>
+          request.headers['authorization'] == 'Bearer tok' ? 401 : asUsual;
+      unawaited(tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator).first).show());
+      await tester.pumpAndSettle();
+
+      expect(asked('POST /auth/anonymous'), 1);
+      expect(session.anonymous, isTrue);
+      expect(find.byType(InterestsScreen), findsOneWidget);
+      expect(find.byType(SwaplyToast), findsNothing);
+    });
+
+    testWidgets('25. a request on the device\'s token refused while its profile is being made is not the end',
+        (tester) async {
+      // Making the profile ends every session the device's account had, and
+      // the answer's token is the way in from then on. A request that went
+      // on the device's token meanwhile is refused for it, and that is the
+      // profile being made, not the account gone.
+      await boot(tester);
+      final making = Completer<Object?>();
+      server.overrides['POST /auth/register'] = (http.Request _) => making.future;
+      final made = session.register(
+          displayName: 'Ola N.', email: 'ola@epost.no', password: 'drillbits123');
+      await tester.pump();
+
+      server.overrides['POST /me/hidden'] = 401;
+      await expectLater(api.hide('item-console'), throwsA(isA<ApiException>()));
+      await tester.pumpAndSettle();
+      expect(asked('POST /auth/anonymous'), 0);
+
+      server.overrides['GET /me'] = {...FakeServer.me, 'id': FakeServer.lookingAround['id']};
+      making.complete({
+        'token': 'tok',
+        'user': FakeServer.profileOnly({...FakeServer.me, 'id': FakeServer.lookingAround['id']}),
+      });
+      await made;
+      await tester.pumpAndSettle();
+
+      expect(api.token, 'tok');
+      expect(session.anonymous, isFalse);
+      expect(session.me?.id, FakeServer.lookingAround['id']);
+      expect(asked('POST /auth/anonymous'), 0);
     });
   });
 }

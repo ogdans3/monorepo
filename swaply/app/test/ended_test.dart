@@ -224,6 +224,38 @@ void main() {
       expect(find.text(refusal.message), findsOneWidget);
     });
 
+    // A block ends what is still being negotiated, and nothing that has
+    // finished: a completed trade's conversation kept its field, and «Send»
+    // there said «Dette er ikke mulig mellom dere.» each time it was pressed.
+    const acrossABlock = Refusal(403, 'blocked', 'Dette er ikke mulig mellom dere.');
+
+    testWidgets('6f. «Send» refused across a block gives the field way to why', (tester) async {
+      server.overrides['GET /trades/trade-1'] = {...FakeServer.trade, 'state': 'completed'};
+      server.overrides['GET /threads/thread-1'] = {...FakeServer.thread, 'state': 'completed'};
+      server.overrides['POST /threads/thread-1/messages'] = acrossABlock;
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      await tester.enterText(find.byType(TextField), 'Er du der?');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Samtalen er stengt etter en blokkering.'), findsOneWidget);
+    });
+
+    testWidgets('6g. …and on the trade page\'s card the same', (tester) async {
+      server.overrides['GET /trades/trade-1'] = {...FakeServer.trade, 'state': 'completed'};
+      server.overrides['POST /threads/thread-1/messages'] = acrossABlock;
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      await tester.enterText(find.byType(TextField), 'Er du der?');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Samtalen er stengt etter en blokkering.'), findsOneWidget);
+    });
+
     for (final code in ['declined', 'listing_removed']) {
       testWidgets('7. ended by $code, the conversation stays open', (tester) async {
         endedWith(code);

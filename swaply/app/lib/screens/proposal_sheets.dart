@@ -108,13 +108,31 @@ class _ProposalSheetState extends State<_ProposalSheet> {
         _mine = result.yours.where(offerable).toList();
         _theirs = result.theirs.where(offerable).toList();
         _loading = false;
+        _error = null;
       });
     } on ApiException catch (e) {
       if (mounted) {
-        showError(context, e);
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _error = e;
+        });
       }
     }
+  }
+
+  /// Why the things to pick from did not come, until they do. The list used
+  /// to be drawn empty instead, and said «Du har ingen ledige ting å
+  /// foreslå» or «Kari har ingenting annet ute» about things that were only
+  /// not fetched, with no way to ask again but closing the sheet.
+  ApiException? _error;
+
+  /// «Prøv igjen»: the spinner while it asks.
+  void _retry() {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    _load();
   }
 
   Future<void> _send() async {
@@ -222,7 +240,17 @@ class _ProposalSheetState extends State<_ProposalSheet> {
                   const SizedBox(height: Insets.lg),
                   if (widget.kind == ProposalKind.cash)
                     _cashBody()
-                  else
+                  else if (_error case final error?) ...[
+                    // In the sheet, where the list would be, in coral: the
+                    // server's words, or that there was no answer and the
+                    // way to ask again.
+                    Text(error.message,
+                        style: const TextStyle(color: SwaplyColors.coral, fontSize: 13.5)),
+                    if (error.isNoContact) ...[
+                      const SizedBox(height: Insets.md),
+                      SecondaryButton('Prøv igjen', onPressed: _retry),
+                    ],
+                  ] else
                     ..._pickList(
                         widget.kind == ProposalKind.offerMine ? _mine : _theirs),
                   const SizedBox(height: Insets.lg),

@@ -48,7 +48,9 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
         _threads = result.threads;
         _error = null;
       });
-      await context.read<Session>().refresh();
+      // The bar's badge, quietly: the list came, and a pull that brought it
+      // said «Vi får ikke kontakt» when only this asking after it did not.
+      unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
     } on ApiException catch (e) {
       if (!mounted) return;
       if (_threads == null) {
@@ -334,7 +336,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   }
 
   Future<void> _send() async {
-    final text = _input.text.trim();
+    final typed = _input.text;
+    final text = typed.trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
@@ -342,7 +345,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
       // Closed while it was on its way: the field went with the screen,
       // and there is no conversation on screen to ask for again.
       if (!mounted) return;
-      _input.clear();
+      // What went, and not what has been typed since; see [takeSent].
+      takeSent(_input, typed);
       await _load(toEnd: true);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -350,6 +354,11 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
         // Nobody left to read it: the field gives way to the server's
         // words, which say why, rather than staying to be refused again.
         setState(() => _closedByServer = e.message);
+      } else if (e.code == ApiException.blocked) {
+        // Across a block, in a conversation the block did not end: a trade
+        // that had finished keeps its thread, and nothing on it said the two
+        // could no longer write. The field stayed, refused at every «Send».
+        setState(() => _closedByServer = closedAfterBlock);
       } else {
         showError(context, e);
       }
@@ -621,8 +630,7 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
     if (_closedByServer case final words?) return words;
     final trade = _trade;
     if (trade?.state == 'cancelled' && trade?.closeCode == Trade.closedByBlock) {
-      // Not who blocked whom: the one blocked reads it too.
-      return 'Samtalen er stengt etter en blokkering.';
+      return closedAfterBlock;
     }
     final me = context.read<Session>().me?.id;
     final others = thread.participants.where((p) => p.id != me).toList();
@@ -896,6 +904,10 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   }
 
 }
+
+/// Where the field was, in a conversation nobody can write in across a
+/// block. Not who blocked whom: the one blocked reads it too.
+const closedAfterBlock = 'Samtalen er stengt etter en blokkering.';
 
 /// A small sheet with the people in a ring, for something that is about one
 /// of them. Null when it is closed without a choice.

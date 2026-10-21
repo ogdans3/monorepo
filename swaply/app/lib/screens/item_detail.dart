@@ -204,10 +204,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       if (!mounted || context.read<Session>().anonymous) return;
     }
     setState(() => _sending = true);
+    // The field as it is sent, which is what is taken out of it once it has
+    // landed; see [takeSent].
+    final typed = _message.text;
     try {
-      final said = await context.read<SwaplyApi>().messageAboutItem(widget.itemId, text);
-      _message.clear();
+      final said = await context.read<SwaplyApi>().messageAboutItem(widget.itemId, typed.trim());
       if (mounted) {
+        takeSent(_message, typed);
         // An API from before the answer carried the message still says where
         // it went, and the words are the ones just typed.
         final me = context.read<Session>().me;
@@ -216,7 +219,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             : ItemConversation(
                 tradeId: said.tradeId,
                 threadId: said.threadId,
-                lastMessage: MessagePreview(body: text, senderName: me?.displayName, mine: true),
+                lastMessage:
+                    MessagePreview(body: typed.trim(), senderName: me?.displayName, mine: true),
               ));
       }
     } on ApiException catch (e) {

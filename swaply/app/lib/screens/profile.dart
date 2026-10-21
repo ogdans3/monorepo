@@ -1444,8 +1444,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await api.updateMe({...patch}..remove('town'));
       }
       if (!mounted) return;
-      await context.read<Session>().refresh();
-      if (mounted) Navigator.of(context).pop();
+      // Saved, and that is the answer. Who this is is asked again for 13,
+      // quietly and not waited for: inside the change's `try`, no answer to
+      // it said «Vi får ikke kontakt» about a change the server had kept,
+      // and left the screen up to be saved again.
+      unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
+      Navigator.of(context).pop();
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
     } finally {

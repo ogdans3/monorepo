@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -38,13 +40,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final api = context.read<SwaplyApi>();
     try {
       final result = await api.notifications();
-      await api.markNotificationsRead();
       if (mounted) {
         setState(() {
           _items = result.notifications;
           _error = null;
         });
       }
+      // Read, as far as the server is told, and quietly: they came, and
+      // marking them used to share their `try`, so no answer to it put
+      // «Fikk ikke kontakt» where the list it had just fetched should be.
+      unawaited(api.markNotificationsRead().then((_) {}, onError: (Object _) {}));
     } on ApiException catch (e) {
       if (!mounted) return;
       if (_items == null) {

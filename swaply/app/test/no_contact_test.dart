@@ -25,7 +25,9 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/api/models.dart';
 import 'package:swaply_app/screens/chat.dart';
+import 'package:swaply_app/screens/counter_offer.dart';
 import 'package:swaply_app/screens/discover.dart';
 import 'package:swaply_app/screens/item_detail.dart';
 import 'package:swaply_app/screens/liked.dart';
@@ -418,6 +420,65 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.textContaining('Underkategori i'), findsNothing);
       expect(find.text('Vis 2 treff'), findsOneWidget);
+    });
+
+    testWidgets('10. 09a: no answer about the things is not «Ingenting å velge mellom»',
+        (tester) async {
+      // Drawn with both sides empty, it said there was nothing on either,
+      // greyed «Send motbytte», and had no way to ask again but leaving.
+      server.overrides['GET /trades/trade-1/candidates'] = unreachable;
+      await mount(tester, CounterOfferScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      expect(find.text('Ingenting å velge mellom.'), findsNothing);
+      expect(find.text('Fikk ikke kontakt'), findsOneWidget);
+      expect(find.text(noContact), findsOneWidget);
+
+      server.overrides.remove('GET /trades/trade-1/candidates');
+      await tester.tap(find.text('Prøv igjen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fikk ikke kontakt'), findsNothing);
+      expect(find.text('Retro spillkonsoll'), findsOneWidget);
+      expect(find.text('Bosch drill 18V'), findsOneWidget);
+    });
+
+    testWidgets('11. 09c: nor is it «Du har ingen ledige ting å foreslå»', (tester) async {
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      server.overrides['GET /trades/trade-1/candidates'] = unreachable;
+      await tester.tap(find.text('Foreslå ting'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Du har ingen ledige ting å foreslå. Legg ut noe først.'), findsNothing);
+      expect(find.text(noContact), findsOneWidget);
+
+      server.overrides.remove('GET /trades/trade-1/candidates');
+      await tester.tap(find.text('Prøv igjen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(noContact), findsNothing);
+      expect(find.text('Bosch drill 18V'), findsOneWidget);
+    });
+
+    testWidgets('12. 09c2: nor «Kari har ingenting annet ute»', (tester) async {
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      server.overrides['GET /trades/trade-1/candidates'] = unreachable;
+      await tester.tap(find.text('♥ Jeg vil ha'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kari har ingenting annet ute akkurat nå.'), findsNothing);
+      expect(find.text(noContact), findsOneWidget);
+      expect(find.text('Prøv igjen'), findsOneWidget);
+    });
+
+    testWidgets('13. a refusal in the title\'s own words is said once', (tester) async {
+      // «Fant ikke gjenstanden» over «Fant ikke gjenstanden.» said one thing
+      // twice.
+      server.overrides['GET /items/item-console'] =
+          const Refusal(404, 'not_found', 'Fant ikke gjenstanden.');
+      await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
+
+      expect(find.text('Fant ikke gjenstanden'), findsOneWidget);
+      expect(find.text('Fant ikke gjenstanden.'), findsNothing);
     });
 
     for (final page in pages) {

@@ -1107,6 +1107,22 @@ class StatePill extends StatelessWidget {
       );
 }
 
+/// A message field once its message has landed: [sent] — the field as it
+/// stood when «Send» was pressed — taken out of it, and anything typed after
+/// it while it was on its way left there. «Send» is greyed while a message is
+/// on its way and the field is not, so on a slow line the next message is
+/// written meanwhile, and clearing the field whole threw it away. A field
+/// changed anywhere but at its end since is the person's, and is left alone.
+void takeSent(TextEditingController field, String sent) {
+  final now = field.text;
+  if (!now.startsWith(sent)) return;
+  final rest = now.substring(sent.length).trimLeft();
+  field.value = TextEditingValue(
+    text: rest,
+    selection: TextSelection.collapsed(offset: rest.length),
+  );
+}
+
 /// What was said last in a conversation, as the card on 06b draws it and the
 /// box on 04 does too: a face and a soft bubble, two lines at most. It is a
 /// glimpse of the thread and not the thread, which «Åpne ›» beside it opens.
@@ -1274,8 +1290,11 @@ class EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: Insets.lg),
           Text(title, style: Type.title, textAlign: TextAlign.center),
-          const SizedBox(height: Insets.sm),
-          Text(body, style: Type.secondary, textAlign: TextAlign.center),
+          // Nothing to add to the title is no line under it.
+          if (body.isNotEmpty) ...[
+            const SizedBox(height: Insets.sm),
+            Text(body, style: Type.secondary, textAlign: TextAlign.center),
+          ],
           if (actionLabel != null) ...[
             const SizedBox(height: Insets.lg),
             SizedBox(width: 230, child: PrimaryButton(actionLabel!, onPressed: onAction)),
@@ -1326,5 +1345,16 @@ class LoadFailure extends StatelessWidget {
           body: error.message,
           actionLabel: 'Prøv igjen',
           onAction: onRetry)
-      : EmptyState(icon: Icons.error_outline, title: missing, body: error.message);
+      : EmptyState(
+          icon: Icons.error_outline,
+          title: missing,
+          // The server's own sentence, unless it is the title over again:
+          // «Fant ikke gjenstanden» over «Fant ikke gjenstanden.» said one
+          // thing twice.
+          body: _sameWords(error.message, missing) ? '' : error.message);
+
+  static bool _sameWords(String a, String b) {
+    String bare(String s) => s.trim().replaceFirst(RegExp(r'[.!]$'), '').toLowerCase();
+    return bare(a) == bare(b);
+  }
 }

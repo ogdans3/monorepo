@@ -102,6 +102,11 @@ class _AdminScreenState extends State<AdminScreen> {
   /// answer to it, «✕ Vi får ikke kontakt …» went up over the line saying
   /// the lever had worked. The overview says its own failure in a toast, and
   /// the session's is quiet, as it is everywhere else.
+  ///
+  /// And said where it was pressed, in a toast, as the rest of the app says
+  /// what a button did: the log is at the foot of a tool taller than a phone,
+  /// so a refusal, or the sweep's answer, went there and nowhere the person
+  /// was looking, and the button looked dead.
   Future<void> _run(String key, Future<String> Function(SwaplyApi api) action) async {
     setState(() => _busy = key);
     try {
@@ -109,10 +114,16 @@ class _AdminScreenState extends State<AdminScreen> {
       try {
         said = await action(context.read<SwaplyApi>());
       } on ApiException catch (e) {
-        if (mounted) setState(() => _said.insert(0, '✕ ${e.message}'));
+        if (mounted) {
+          setState(() => _said.insert(0, '✕ ${e.message}'));
+          showError(context, e);
+        }
         return;
       }
-      if (mounted) setState(() => _said.insert(0, said));
+      if (mounted) {
+        setState(() => _said.insert(0, said));
+        showDone(context, said);
+      }
       await _load();
       if (mounted) {
         try {

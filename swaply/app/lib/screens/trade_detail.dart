@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -482,13 +483,60 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // Newer than any asking still on its way.
       _asking++;
       setState(() => _trade = trade);
-      await context.read<Session>().refresh();
+      // The bar's counts, quietly and not waited for. Inside the action's
+      // `try` it was the action's failure: a decline that had gone through
+      // said «Vi får ikke kontakt» over the trade it had just ended, after
+      // the button had spun for the whole of the asking's patience.
+      _askSessionAgain();
     } on ApiException catch (e) {
-      if (mounted) showError(context, e);
+      if (!mounted) return;
+      showError(context, e);
+      // A refusal is the server saying the trade is not what this page
+      // shows — a yes already taken back on another phone, an offer changed,
+      // a trade ended — so the page asks for it again, quietly, under the
+      // server's words. It went on offering what had just been refused, and
+      // «Trekk deg» on the strength of a yes that was no longer there. No
+      // answer says nothing about the trade, and asks for nothing.
+      if (!e.isNoContact) unawaited(_load(quiet: true));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  /// «Kari vil trekke seg» refused because something had been sent: the
+  /// server answers her question with 08c, for her, and nothing on this side
+  /// of the trade changes, so the chip did nothing anybody could see. Said,
+  /// since this side is where it was pressed.
+  void _refusedTheOther(Trade after, UserRef person) {
+    final w = after.withdrawal;
+    if (w == null || w.requestedBy != person.id || w.state != 'rejected' || !w.blockedBySent) {
+      return;
+    }
+    if (!mounted) return;
+    final name = _firstName(person);
+    showNote(context,
+        '$name får ikke trekke seg, for noe er allerede sendt. $name ser 08c, og byttet fortsetter.');
+  }
+
+  /// The trade as it stands after a lever of the tooling's, or [before] when
+  /// there is no answer: the lever worked, and reading back is not the
+  /// lever. Sharing its `try`, no answer said «Vi får ikke kontakt» over a
+  /// move the server had made, and pressed again it was made twice. The next
+  /// asking shows it.
+  Future<Trade> _readBack(SwaplyApi api, Trade before) async {
+    try {
+      return await api.trade(before.id);
+    } on ApiException catch (e) {
+      if (!e.isNoContact) rethrow;
+      return before;
+    }
+  }
+
+  /// Who this is, asked again for the bar's badges, and nothing said either
+  /// way: what the screen did is what the screen says, and no answer here is
+  /// the next asking's to put right.
+  void _askSessionAgain() =>
+      unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
 
   @override
   Widget build(BuildContext context) {
@@ -715,7 +763,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                       busy: _busy,
                       onPressed: () => _run((api) async {
                             await api.adminExpireWithdrawal(trade.id);
-                            return api.trade(trade.id);
+                            return _readBack(api, trade);
                           })),
                 ),
               ],
@@ -733,7 +781,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                               : () => _run((api) async {
                                     await api.adminAct(trade.id,
                                         as: person.id, action: action.$1);
-                                    return api.trade(trade.id);
+                                    final after = await _readBack(api, trade);
+                                    if (action.$1 == 'request-withdrawal') {
+                                      _refusedTheOther(after, person);
+                                    }
+                                    return after;
                                   }),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
@@ -1491,13 +1543,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     // the return key and then «Send», while the first was on its way sent
     // the same words twice.
     Future<void> send() async {
-      final text = _message.text.trim();
+      final typed = _message.text;
+      final text = typed.trim();
       if (text.isEmpty || trade.threadId == null || _sending) return;
       setState(() => _sending = true);
       try {
         await context.read<SwaplyApi>().sendMessage(trade.threadId!, text);
         if (!mounted) return;
-        _message.clear();
+        // What went, and not what has been typed since; see [takeSent].
+        takeSent(_message, typed);
         await _load();
       } on ApiException catch (e) {
         if (!mounted) return;
@@ -1505,6 +1559,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           // Nobody left to read it, as the server says: the field gives way
           // to its words rather than staying to be refused again.
           setState(() => _closedByServer = e.message);
+        } else if (e.code == ApiException.blocked) {
+          // Across a block the trade did not end, having finished: as 06g.
+          setState(() => _closedByServer = closedAfterBlock);
         } else {
           showError(context, e);
         }
@@ -1698,7 +1755,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                     // may still have reached the server, and only the
                     // server can say. Quietly then, as there is no news.
                     if (mounted) await _load(quiet: accepted != true);
-                    await session.refresh();
+                    // The badges too, as quietly: waited for with nothing
+                    // round it, no answer was an error nobody caught.
+                    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
                   }),
             ),
           ],
@@ -1918,7 +1977,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         );
       }
     } on ApiException catch (e) {
-      if (mounted) showError(context, e);
+      if (!mounted) return;
+      showError(context, e);
+      // Refused because the trade has moved on — asked already on another
+      // phone, or no longer agreed: the page asks for it again, as [_run]
+      // does.
+      if (!e.isNoContact) unawaited(_load(quiet: true));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

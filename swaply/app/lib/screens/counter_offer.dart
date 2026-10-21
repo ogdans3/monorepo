@@ -33,6 +33,12 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
   bool _loading = true;
   bool _busy = false;
 
+  /// Why the things to choose from did not come, until they do. The sides
+  /// used to be drawn empty instead — «Ingenting å velge mellom» on both,
+  /// which says there is nothing, about things that were only not fetched —
+  /// with no way to ask again but leaving.
+  ApiException? _error;
+
   int get _theirPosition {
     final p = widget.trade.receivingFrom.position;
     return p ?? (widget.trade.youPosition == 0 ? 1 : 0);
@@ -56,13 +62,25 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
         _mine = result.yours;
         _theirs = result.theirs;
         _loading = false;
+        _error = null;
       });
     } on ApiException catch (e) {
       if (mounted) {
-        showError(context, e);
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _error = e;
+        });
       }
     }
+  }
+
+  /// «Prøv igjen»: the spinner while it asks, not the failure it asks past.
+  void _retry() {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    _load();
   }
 
   /// «Each side of a hop is a list of 1–3 items» — docs/DESIGN.md. At three the
@@ -137,7 +155,11 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
       appBar: swaplyAppBar(context, 'Motbytte', subtitle: 'Til $other'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
+          : _error != null
+              // The app's own failed page: «Fikk ikke kontakt» and «Prøv
+              // igjen» for no answer, and the server's words for a refusal.
+              ? LoadFailure(_error!, missing: 'Fant ikke tingene', onRetry: _retry)
+              : SafeArea(
               child: Column(
                 children: [
                   Expanded(
