@@ -76,7 +76,10 @@ export async function buildApp(
       try {
         done(null, JSON.parse(body))
       } catch (err) {
-        done(err as Error, undefined)
+        // A body that is not JSON is the caller's to fix, as Fastify's own
+        // parser said before this one replaced it. Without a status the
+        // handler below took the SyntaxError for our failure, a 500.
+        done(Object.assign(err as Error, { statusCode: 400 }), undefined)
       }
     },
   )
