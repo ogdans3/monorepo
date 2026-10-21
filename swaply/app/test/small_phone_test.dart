@@ -10,6 +10,8 @@
 //
 // The counts on 11's «Venter · Aktive · Fullført» faded out at 320 across,
 // where each label had 58 points between its paddings.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +28,7 @@ import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/common.dart';
+import 'package:swaply_app/widgets/share_sheet.dart';
 
 import 'fake_server.dart';
 import 'phone.dart';
@@ -222,6 +225,24 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('the share sheet at 200 % scrolls, and «Kopier lenke» can be reached',
+        (tester) async {
+      late BuildContext under;
+      await hold(tester, phones.last, Builder(builder: (context) {
+        under = context;
+        return const Scaffold(body: SizedBox.expand());
+      }), textScale: 2);
+      unawaited(showShareSheet(under,
+          title: 'Del Bosch drill 18V', mint: (api) => api.shareItem('item-drill')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Kopier lenke'));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.text('Kopier lenke')).bottom,
+          lessThanOrEqualTo(phones.last.size.height));
+    });
 
     testWidgets('and at the export\'s size a card\'s value is still beside its name',
         (tester) async {
