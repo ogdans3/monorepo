@@ -143,6 +143,25 @@ describe('deleting your own account', () => {
     expect(login.status).toBe(401)
   })
 
+  test('4b. and the dead token is told so everywhere, not answered as somebody looking around', async () => {
+    // Oppdag, a listing and a profile can be read without a session, and a
+    // token that opened nothing any more was answered on them as if nobody
+    // had sent one: a phone with the account gone underneath it went on
+    // browsing, and learnt the session was over only at its next move.
+    for (const url of ['/discover', '/discover/rows', `/items/${tent}`, `/users/${olaId}`]) {
+      const res = await call('GET', url, { token: ola })
+      expect(res.status, url).toBe(401)
+      expect(res.body!['code'], url).toBe('unauthorized')
+    }
+    // Signing in and out, and starting as a stranger, still take one: a
+    // token that opens nothing there is just nobody to fold in or forget.
+    expect((await call('POST', '/auth/logout', { token: ola })).status).toBe(204)
+    const stranger = await call('POST', '/auth/anonymous', {
+      token: ola, body: { deviceId: 'device-after-deletion-0123456789' },
+    })
+    expect(stranger.status).toBe(201)
+  })
+
   test('5. Kari’s trade has ended, with a reason she can read', async () => {
     const res = await call('GET', `/trades/${trade}`, { token: kari })
 
