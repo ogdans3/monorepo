@@ -228,12 +228,19 @@ export async function respondToWithdrawal(
       throw badRequest('own_request', 'Du kan ikke svare på din egen forespørsel.')
     }
 
-    const [mine] = await tx.execute<Row>(
-      sql`select sent_at from trade_participants where trade_id = ${tradeId} and user_id = ${userId}`,
+    // Saying yes once something has been sent is not a thing you can do — the
+    // screen says as much, and the answer flips to no with the reason
+    // recorded. Sent by anybody but the one who asked, as when the question
+    // was asked (`requestWithdrawal`), and since: handover goes on while it
+    // waits. Asked only of the one answering, a ring of three ended on one
+    // yes with the third person's thing already on its way.
+    const [sent] = await tx.execute<Row>(
+      sql`select 1 from trade_participants
+          where trade_id = ${tradeId} and user_id <> ${req['requested_by']}
+            and sent_at is not null
+          limit 1`,
     )
-    // Saying yes after you have sent is not a thing you can do — the screen says
-    // as much, and the answer flips to no with the reason recorded.
-    if (approve && mine?.['sent_at']) {
+    if (approve && sent) {
       await tx.execute(
         sql`update trade_withdrawals set state = 'rejected', resolved_at = now(),
                    blocked_by_sent = true where id = ${req['id']}`,
