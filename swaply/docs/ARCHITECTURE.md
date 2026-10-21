@@ -335,7 +335,9 @@ that keeps it true if that ever changes.
 **Making a profile claims the row**, rather than creating a second one, so every
 like survives. The session is reissued at the same moment: the account has just
 gained a password, and the token that belonged to a device should not outlive
-that change.
+that change. Every token the device had goes, not only the one the profile was
+made with: an unclaimed device id opens a session each time it is sent, and one
+minted before the claim used to go on opening the account afterwards.
 
 **The app starts as one without asking.** With no saved session and no
 invitation link, the gate in `app/lib/main.dart` makes the device an account
