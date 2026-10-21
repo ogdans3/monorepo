@@ -172,6 +172,11 @@ class Session extends ChangeNotifier {
       }
       // A token that no longer resolves is the same as no token at all.
       stalled = false;
+      // Unless the admin's own is parked behind it: see [_backToParked].
+      if (await _backToParked(token)) {
+        await _check(takeUp: takeUp);
+        return;
+      }
       await _letGo(token);
     } catch (_) {
       // No answer within [patience]. The token may well be good, and dropping
@@ -1023,9 +1028,37 @@ class Session extends ChangeNotifier {
   Future<void> _turnedAway(String? token) async {
     _decided++;
     _forgetWhoThisWas();
+    if (await _backToParked(token)) {
+      // Asked about behind the splash, as a cold start with that token is:
+      // the admin, a stranger if theirs is dead too, or «Prøv igjen».
+      loading = true;
+      notifyListeners();
+      _sendBack();
+      await _once(_check);
+      loading = false;
+      notifyListeners();
+      return;
+    }
     await _letGo(token);
     notifyListeners();
     _sendBack();
+  }
+
+  /// Whether [token], which opens nothing any more, was a session the
+  /// account switcher minted with the admin's own token parked behind it —
+  /// and if so, the parked one is this phone's token now, kept so, and is
+  /// what is asked about next. The test account was deleted from Testverktøy
+  /// on another phone, say. `../docs/ADMIN.md` promises that nothing strands
+  /// the admin as somebody else, and a stranger made here instead kept the
+  /// admin's token parked where nothing on screen could reach it: no floor,
+  /// no way back, and the password the only door.
+  Future<bool> _backToParked(String? token) async {
+    final parked = _adminToken;
+    if (parked == null || parked == token) return false;
+    _adminToken = null;
+    api.token = parked;
+    await _persist();
+    return true;
   }
 
   void _become(Me found) {

@@ -452,4 +452,79 @@ void main() {
       expect(find.byType(SwaplyToast), findsNothing);
     });
   });
+
+  // The admin's own token is parked behind a session the switcher minted,
+  // and `../docs/ADMIN.md` promises that nothing strands them as somebody
+  // else. A test account's session ended — the account deleted from
+  // Testverktøy on another phone — made a stranger instead, with the admin's
+  // token still parked where nothing on screen could reach it: no floor, no
+  // way back, and the password the only door.
+  group('a test account\'s session ended under the admin', () {
+    /// Acting as the test account, with the admin's token parked.
+    Future<void> bootActing(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(430, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      SharedPreferences.setMockInitialValues({'token': 'tok-test-1', 'adminToken': 'tok'});
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(value: session, child: SwaplyApp(api: api)),
+      );
+      unawaited(session.restore());
+      await tester.pumpAndSettle();
+    }
+
+    /// `GET /me` by whose token asks: the test account's dead once [ended].
+    void meBy({required bool ended}) => server.overrides['GET /me'] = (http.Request request) =>
+        switch (request.headers['authorization']) {
+          'Bearer tok-test-1' => ended ? 401 : FakeServer.actingAsTest,
+          'Bearer tok' => FakeServer.admin,
+          _ => 401,
+        };
+
+    testWidgets('17. coming back to the app goes back to the admin, not to a stranger',
+        (tester) async {
+      meBy(ended: false);
+      await bootActing(tester);
+      expect(session.actingAs, isTrue);
+
+      meBy(ended: true);
+      clock = clock.add(const Duration(hours: 3));
+      await backFromTheBackground(tester);
+
+      expect(asked('POST /auth/anonymous'), 0);
+      expect(session.isAdmin, isTrue);
+      expect(session.actingAs, isFalse);
+      expect(session.canReturnToAdmin, isFalse);
+      expect(api.token, 'tok');
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('token'), 'tok');
+      expect(prefs.getString('adminToken'), isNull);
+    });
+
+    testWidgets('18. and so does a cold start', (tester) async {
+      meBy(ended: true);
+      await bootActing(tester);
+
+      expect(asked('POST /auth/anonymous'), 0);
+      expect(session.isAdmin, isTrue);
+      expect(session.actingAs, isFalse);
+      expect(api.token, 'tok');
+    });
+
+    testWidgets('19. with the admin\'s own token dead as well, it is a stranger after all',
+        (tester) async {
+      server.overrides['GET /me'] = (http.Request request) =>
+          request.headers['authorization'] == 'Bearer ${FakeServer.deviceToken}'
+              ? FakeServer.lookingAround
+              : 401;
+      await bootActing(tester);
+
+      expect(asked('POST /auth/anonymous'), 1);
+      expect(session.anonymous, isTrue);
+      expect(session.canReturnToAdmin, isFalse);
+    });
+  });
 }
