@@ -8,6 +8,7 @@ import 'dart:ui' show Color;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:swaply_app/design/tokens.dart';
+import 'package:swaply_app/widgets/shell.dart';
 
 double _channel(double c) =>
     c <= 0.04045 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
@@ -72,6 +73,12 @@ void main() {
     expect(contrast(SwaplyColors.coralOnDark, SwaplyColors.greenDeep), greaterThanOrEqualTo(4.5));
     expect(contrast(AdminColors.accent, AdminColors.surface), greaterThanOrEqualTo(4.5));
     expect(contrast(SwaplyColors.coral, AdminColors.surface), greaterThanOrEqualTo(4.5));
+  });
+
+  test('every status pill on the trade page reads on its own ground', () {
+    for (final tone in PillTone.values) {
+      expect(contrast(tone.ink, tone.ground), greaterThanOrEqualTo(4.5), reason: tone.name);
+    }
   });
 
   test('the two reds stay two values, as words too', () {
