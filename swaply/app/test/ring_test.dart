@@ -269,4 +269,27 @@ void main() {
     expect(find.text('betales når alle har godtatt'), findsOneWidget);
     expect(find.textContaining('betaler deg'), findsNothing);
   });
+
+  testWidgets('10. 07i says what you get and from whom, and what you give and to whom',
+      (tester) async {
+    // Three lines of «… gir …» never said who gets what in a ring of three.
+    server.overrides['GET /trades/trade-chain'] = {
+      ...chainTrade(),
+      'receivingFrom': {...FakeServer.kari, 'position': 1},
+      'givingTo': {'id': 'per-1', 'displayName': 'Per H.', 'town': 'Stjørdal', 'position': 2},
+    };
+    // The confetti holds still, as for somebody who asked for less motion.
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await open(tester, const MatchScreen(tradeId: 'trade-chain'));
+
+    expect(find.text('DU FÅR'), findsOneWidget);
+    expect(find.text('Retro spillkonsoll'), findsOneWidget);
+    expect(find.text('fra Kari i Bergen'), findsOneWidget);
+    expect(find.text('DU GIR'), findsOneWidget);
+    expect(find.text('Bosch drill 18V'), findsOneWidget);
+    expect(find.text('til Per i Stjørdal'), findsOneWidget);
+    expect(find.textContaining(' gir '), findsNothing);
+  });
 }

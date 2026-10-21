@@ -113,10 +113,12 @@ class _MatchScreenState extends State<MatchScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, box) => SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 30),
+                        // 30 at the sides on 06a, 28 on 07i.
+                        padding: EdgeInsets.symmetric(horizontal: chain ? 28 : 30),
                         child: ConstrainedBox(
                           constraints: BoxConstraints(minHeight: box.maxHeight),
-                          child: IntrinsicHeight(child: _moment(trade, width: box.maxWidth - 60)),
+                          child: IntrinsicHeight(
+                              child: _moment(trade, width: box.maxWidth - (chain ? 56 : 60))),
                         ),
                       ),
                     ),
@@ -180,18 +182,19 @@ class _MatchScreenState extends State<MatchScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Up to 153 as laid out, and nothing as an intrinsic height, so
-        // it gives way before anything has to scroll.
+        // Up to 153 as laid out — 126 on 07i, whose title is two lines —
+        // and nothing as an intrinsic height, so it gives way before
+        // anything has to scroll.
         Flexible(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 153),
+            constraints: BoxConstraints(maxHeight: chain ? 126 : 153),
             child: const SizedBox.expand(),
           ),
         ),
         Text(
           chain ? 'Dere kan gjøre en treveis-swap!' : 'Dere kan swappe!',
-          style: const TextStyle(
-              fontSize: 36,
+          style: TextStyle(
+              fontSize: chain ? 32 : 36,
               height: 1.14,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.8,
@@ -206,35 +209,76 @@ class _MatchScreenState extends State<MatchScreen> {
           style: const TextStyle(fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 51),
-        if (chain) _chainList(trade) else _table(trade, other, width: width),
-        if (chain) ...[
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(Insets.md),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(Radii.card),
-            ),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.info_outline, size: 18, color: Colors.white70),
-                SizedBox(width: Insets.sm),
-                Expanded(
-                  child: Text(
-                    'Dette byttet kan ikke Swaply fasilitere, men vi kan '
-                    'starte en chat så dere avtaler det selv.',
-                    style: TextStyle(fontSize: 13, height: 1.4, color: Colors.white70),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        SizedBox(height: chain ? 35 : 51),
+        if (chain) ..._ring(trade) else _table(trade, other, width: width),
       ],
     );
   }
+
+  /// 07i: what you get and from whom, what you give and to whom, each in a
+  /// card, and under them that the three of them arrange it. It used to be
+  /// three lines of who gives what — «Kari gir …», «Per gir …» — which in a
+  /// ring of three never said who gets it.
+  List<Widget> _ring(Trade trade) {
+    String whereabouts(String word, UserRef person) {
+      final town = person.town?.trim() ?? '';
+      final name = person.displayName.split(' ').first;
+      return town.isEmpty ? '$word $name' : '$word $name i $town';
+    }
+
+    return [
+      _ringCard('Du får', const Color(0xFF9BD9BE), trade.youGet,
+          whereabouts('fra', trade.receivingFrom)),
+      const SizedBox(height: 12),
+      _ringCard('Du gir', const Color(0xFFF5B5AF), trade.youGive,
+          whereabouts('til', trade.givingTo)),
+      const SizedBox(height: 20),
+      const Text(
+        'Dette byttet kan ikke Swaply fasilitere, men vi kan starte en chat så dere avtaler '
+        'det selv.',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
+      ),
+    ];
+  }
+
+  /// One of 07i's two cards: a 60 picture, the kicker in its colour, the
+  /// things and who they come from or go to.
+  Widget _ringCard(String kicker, Color colour, List<Item> items, String who) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        ),
+        child: Row(
+          children: [
+            if (items.isNotEmpty) ...[
+              ItemThumb(items.first, size: 60, radius: 16),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(kicker.toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.69,
+                          color: colour)),
+                  const SizedBox(height: 2),
+                  Text(items.isEmpty ? 'ingenting ennå' : andList([for (final i in items) i.title]),
+                      style: const TextStyle(
+                          fontSize: 16.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Text(who,
+                      style: const TextStyle(fontSize: 12.5, color: Color(0xA6FFFFFF))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 
   /// The table is drawn 330 across, the export's 390 less its margins.
   static const _tableWidth = 330.0, _tableHeight = 251.0;
@@ -367,30 +411,6 @@ class _MatchScreenState extends State<MatchScreen> {
                       fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
           ],
         ),
-      );
-
-  /// The three-way loop: who gives what, one line each.
-  Widget _chainList(Trade trade) => Column(
-        children: [
-          for (final p in trade.participants)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Insets.sm),
-              child: Row(
-                children: [
-                  Avatar(p.position == trade.youPosition ? 'Du' : p.displayName,
-                      size: 28, color: SwaplyColors.greenPressed),
-                  const SizedBox(width: Insets.sm),
-                  Expanded(
-                    child: Text(
-                      '${p.position == trade.youPosition ? 'Du' : p.displayName.split(' ').first} '
-                      'gir ${p.gives.map((i) => i.title).join(' og ')}',
-                      style: const TextStyle(fontSize: 14, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
       );
 }
 

@@ -122,6 +122,9 @@ void main() {
               query: 'sykkel')));
   testWidgets('06a-match',
       (t) => shoot(t, '06a-match', const MatchScreen(tradeId: 'trade-1'), light: true));
+  // The ring the export's 11 draws: Kari's rod to you, your drill to Per.
+  testWidgets('07i-match',
+      (t) => shoot(t, '07i-match', const MatchScreen(tradeId: 'trade-chain'), light: true));
   testWidgets('06b-byttedetalj',
       (t) => shoot(t, '06b-byttedetalj', const TradeDetailScreen(tradeId: 'trade-1')));
   testWidgets('06c-avtale',
