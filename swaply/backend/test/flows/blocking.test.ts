@@ -331,6 +331,23 @@ describe('a block made while the two are already negotiating', () => {
     expect(blocked.body!['message']).toBe('Fant ikke brukeren.')
   })
 
+  test('15d. nor is a report whose words the database cannot keep, block and all', async () => {
+    // A character Postgres keeps no text with (U+0000) in the words was found
+    // only when the report was written, after the ticked block had ended the
+    // ring Una and Tor are in: a block and no report, as in 15b.
+    const before = await reports()
+    const res = await call('POST', '/reports', {
+      token: una.token,
+      body: { targetUser: tor.id, reason: 'fraud', detail: 'Han\u0000svarer ikke', block: true },
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body!['code']).toBe('invalid_text')
+    expect(await reports()).toBe(before)
+    expect(await blocks()).toBe(0)
+    expect(await tradeState(ring)).toBe('pending')
+  })
+
   test('16. once the swap is done, Siri blocks Tor, and both negotiations they share end', async () => {
     for (const who of [siri, tor]) {
       expect((await call('POST', `/trades/${agreed}/complete`, { token: who.token })).status).toBe(200)
