@@ -8,6 +8,7 @@
 // whether a word fits is the question and the test font draws every letter a
 // full em wide.
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -119,6 +120,42 @@ void main() {
           expect(find.text(confirm), findsNothing);
         });
       }
+    }
+  });
+
+  group('a button says its whole label', () {
+    // Cut to one line, «Godta endringen» beside «Avslå» read «Godta endri…»
+    // on a 320 phone at the ordinary text size, and «Marker byttet som
+    // gjennomført» «Marker byttet som gjennomf…».
+    final buttons = <(String, Map<String, Object?>, String, double)>[
+      ('09e', {'state': 'countered', 'counterOfferBy': 'kari-1'}, 'Godta endringen', 1.0),
+      ('06b', {'state': 'pending'}, 'Godta byttet', 1.3),
+      ('06b', {'state': 'pending'}, 'Godta byttet', 2.0),
+      ('07j', {...chainTrade(), 'state': 'accepted'}, 'Marker byttet som gjennomført', 1.0),
+      ('06f', {'state': 'accepted'}, 'Marker som mottatt', 2.0),
+    ];
+    for (final (name, state, label, scale) in buttons) {
+      testWidgets('$name: «$label» on 320×568 at ${(scale * 100).round()} %', (tester) async {
+        server.overrides['GET /trades/trade-1'] = {...FakeServer.trade, ...state};
+        await hold(tester, narrow, const TradeDetailScreen(tradeId: 'trade-1'), scale: scale);
+        if (find.text(label).evaluate().isEmpty) {
+          await tester.scrollUntilVisible(find.text(label), 200,
+              scrollable: find.byType(Scrollable).first);
+        }
+        final words = find.text(label).last;
+        await tester.ensureVisible(words);
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(tester.renderObject<RenderParagraph>(words).didExceedMaxLines, isFalse);
+        // Inside its button, all of it.
+        final button = tester.getRect(find
+            .ancestor(of: words, matching: find.byWidgetPredicate((w) => w is ButtonStyleButton))
+            .first);
+        final text = tester.getRect(words);
+        expect(button.contains(text.topLeft) && button.contains(text.bottomRight), isTrue,
+            reason: '$text in $button');
+      });
     }
   });
 }
