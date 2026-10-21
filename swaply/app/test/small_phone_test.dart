@@ -270,6 +270,37 @@ void main() {
       expect(server.requests, isNot(contains('DELETE /items/item-mine')));
     });
 
+    testWidgets('Testverktøy\'s «Hvem vil ha den?» scrolls to the last account of a big ring',
+        (tester) async {
+      final ring = [
+        for (var i = 1; i <= 12; i++)
+          {...FakeServer.testAccount, 'id': 'test-$i', 'displayName': 'Testbruker $i'},
+      ];
+      final admin = {...FakeServer.admin};
+      server.overrides['POST /auth/login'] = {'token': 'tok', 'user': admin};
+      server.overrides['GET /me'] = admin;
+      server.overrides['GET /admin/overview'] = {
+        'you': {'id': 'me-1', 'displayName': 'Ola N.'},
+        'accounts': ring,
+      };
+      server.overrides['GET /items/item-mine'] = {
+        ...FakeServer.drill,
+        'id': 'item-mine',
+        'owner': {'id': 'me-1', 'displayName': 'Ola N.'},
+      };
+      await hold(tester, phones.last, const ItemDetailScreen(itemId: 'item-mine'));
+      await tester.ensureVisible(find.text('Velg konto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Velg konto'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Testbruker 12'));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.text('Testbruker 12')).bottom,
+          lessThanOrEqualTo(phones.last.size.height));
+    });
+
     testWidgets('and at the export\'s size a card\'s value is still beside its name',
         (tester) async {
       server.overrides['GET /discover'] = {
