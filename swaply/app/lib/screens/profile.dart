@@ -244,8 +244,14 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
               room: const EdgeInsets.symmetric(vertical: 2),
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const LikedScreen())),
+                // Asked again on the way back, as from a listing below: a
+                // liker blocked from 12 no longer counts, and the line went
+                // on counting them until the tab was left.
+                onTap: () async {
+                  await Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => const LikedScreen()));
+                  _askAgain();
+                },
                 child: SectionCard(
                   radius: 16,
                   child: Row(
