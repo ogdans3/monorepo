@@ -101,8 +101,7 @@ export async function anonymiseUser(
       (
         await lockItems(
           tx,
-          sql`i.active_trade_id = any(${uuidArray(live)})
-              or (i.owner_id = ${userId} and i.status <> 'traded')`,
+          sql`i.active_trade_id = any(${uuidArray(live)}) or i.owner_id = ${userId}`,
         )
       ).map((row) => [row['id'] as string, row['owner_id'] as string]),
     )
@@ -189,6 +188,15 @@ export async function anonymiseUser(
     await tx.execute(
       sql`update items set status = 'withdrawn', deleted_at = now(), description = null
           where owner_id = ${userId} and status <> 'traded'`,
+    )
+    // What was traded away stays `traded`, so it can never come back on the
+    // market, but it is taken down and its words go like the rest. The
+    // counterparty's history is the snapshot, which has the title and never
+    // had the description; left up, the listing answered anybody holding its
+    // id with whatever address or number the person had written in it.
+    await tx.execute(
+      sql`update items set deleted_at = coalesce(deleted_at, now()), description = null
+          where owner_id = ${userId} and status = 'traded'`,
     )
 
     // The tombstone. The row lives so the counterparty's trade history still
