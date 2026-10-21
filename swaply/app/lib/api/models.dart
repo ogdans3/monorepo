@@ -435,6 +435,10 @@ class Trade {
         threadId = j['threadId'] as String?,
         lastMessage =
             j['lastMessage'] == null ? null : MessagePreview.fromJson(j['lastMessage']),
+        saysConversationClosed = j.containsKey('conversationClosed'),
+        conversationClosedWhy = j.containsKey('conversationClosed')
+            ? j['conversationClosed'] as String?
+            : _closedByEnding(j),
         withdrawal = j['withdrawal'] == null ? null : Withdrawal.fromJson(j['withdrawal']),
         snapshots =
             ((j['snapshots'] as List?) ?? const []).map((e) => TradeSnapshot.fromJson(e)).toList(),
@@ -462,16 +466,35 @@ class Trade {
   /// An owner took down a listing that was on the table.
   static const closedByListingRemoved = 'listing_removed';
 
-  /// Ended in a way that leaves nobody to write to: the other one in a pair
-  /// deleted their account, or somebody blocked another. A trade that ended
-  /// any other way keeps its conversation, since how long an ordinary
-  /// conversation lives is an open question. A ring one of whose two others
-  /// deleted theirs still has the third to write to, and the server takes
-  /// messages there: it is closed once both have gone, which only the
-  /// conversation's people say (see [UserRef.gone]).
-  bool get conversationClosed =>
-      state == 'cancelled' &&
-      (closeCode == closedByBlock || (closeCode == closedByErasure && !isChain && participants.length <= 2));
+  /// A thing on the table went to another trade: held there by its owner's
+  /// yes, or given away when that one was completed.
+  static const closedByDisplacement = 'displaced';
+
+  /// Why nobody can write in this trade's conversation any more —
+  /// [Thread.closedByBlock] or [Thread.closedByErasure] — or null while
+  /// «Send» works. The server's word (`conversationClosed`), by the rule it
+  /// refuses a message by, so the card on the trade page gives way to a line
+  /// before «Send» is pressed and never disagrees with the refusal behind
+  /// it: a block leaves a finished trade standing, and its card kept the
+  /// field until the first «Send» was refused.
+  ///
+  /// A server from before it said so says nothing, and the trade's ending is
+  /// read instead: a block, or the other one in a pair deleting their
+  /// account. A trade that ended any other way keeps its conversation, since
+  /// how long an ordinary conversation lives is an open question.
+  final String? conversationClosedWhy;
+  final bool saysConversationClosed;
+
+  bool get conversationClosed => conversationClosedWhy != null;
+
+  /// [conversationClosedWhy] where the server does not say it.
+  static String? _closedByEnding(Map<String, dynamic> j) {
+    if (j['state'] != 'cancelled') return null;
+    final code = j['closeCode'];
+    if (code == closedByBlock) return Thread.closedByBlock;
+    final pair = j['kind'] != 'chain' && ((j['participants'] as List?)?.length ?? 0) <= 2;
+    return code == closedByErasure && pair ? Thread.closedByErasure : null;
+  }
 
   final int? offerSeq, yourReviewScore;
   final int youPosition, youGiveValue, youGetValue, difference;
@@ -536,6 +559,8 @@ class Thread {
         state = j['state'] as String,
         kind = j['kind'] as String? ?? 'direct',
         banner = j['banner'] as String?,
+        closed = j['closed'] as String?,
+        saysClosed = j.containsKey('closed'),
         participants =
             ((j['participants'] as List?) ?? const []).map((e) => UserRef.fromJson(e)).toList(),
         messages =
@@ -550,6 +575,21 @@ class Thread {
   final String? banner;
   final List<UserRef> participants;
   final List<ChatMessage> messages;
+
+  /// Why nobody can write here any more — [closedByBlock] or
+  /// [closedByErasure] — or null while «Send» works: the server's word, by
+  /// the very rule it refuses a message by. Null as well from a server from
+  /// before it said so, which [saysClosed] tells apart.
+  final String? closed;
+  final bool saysClosed;
+
+  /// The one asking and somebody in the conversation are blocked, either
+  /// way. In a ring the third, who blocked nobody, can still write.
+  static const closedByBlock = 'blocked';
+
+  /// Everybody else in the conversation has deleted their account. In a
+  /// ring one who is left is somebody to write to.
+  static const closedByErasure = 'deleted';
 
   /// How far each person in the conversation has read: the last message
   /// they have seen, by their id, or null for nothing yet. Empty from a

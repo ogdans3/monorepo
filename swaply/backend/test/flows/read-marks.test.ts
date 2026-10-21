@@ -174,4 +174,33 @@ describe('read marks', () => {
     expect((await call('POST', `/threads/${threadId}/read`, { token: ola.token })).status).toBe(204)
     expect(await unread(ola)).toBe(0)
   })
+
+  test('9. 12a marks read what it showed, and a notification that came after stays unread', async () => {
+    // POST /notifications/read marked everything, including whatever arrived
+    // between loading 12a and saying so. It takes the newest one shown, as
+    // a thread does, and with nothing sent reads everything as before.
+    const list = async () => (await call('GET', '/notifications', { token: ola.token })).body!
+    const shown = await list()
+    expect(shown['unread']).toBeGreaterThan(0)
+    await write(threadId, kari, 'Er du der?')
+
+    const res = await call('POST', '/notifications/read', {
+      token: ola.token, body: { upTo: shown['notifications'][0]['id'] },
+    })
+    expect(res.status).toBe(204)
+    const after = await list()
+    expect(after['unread']).toBe(1)
+    expect(after['notifications'][0]['readAt']).toBeNull()
+    expect(after['notifications'].slice(1).every((n: Json) => n['readAt'] !== null)).toBe(true)
+
+    // Somebody else's notification is no place to mark up to.
+    const kari12a = (await call('GET', '/notifications', { token: kari.token })).body!
+    const foreign = await call('POST', '/notifications/read', {
+      token: ola.token, body: { upTo: kari12a['notifications'][0]['id'] },
+    })
+    expect(foreign.status).toBe(404)
+
+    expect((await call('POST', '/notifications/read', { token: ola.token })).status).toBe(204)
+    expect((await list())['unread']).toBe(0)
+  })
 })

@@ -101,8 +101,11 @@ class SwaplyNavBar extends StatelessWidget {
     return Expanded(
       // The tab you are in is said as well as drawn: in green alone, a
       // screen reader had five buttons and no way to tell where it was.
+      // A button as well: an InkWell says nothing of being one, and a tab
+      // was read as a word.
       child: Semantics(
         container: true,
+        button: true,
         selected: selected,
         child: InkWell(
           onTap: onSelect != null
@@ -142,14 +145,18 @@ class SwaplyNavBar extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               // One line, however large the text: «Legg ut» broke in two
-              // under a large text setting and ran out of the bar.
-              Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                      color: colour)),
+              // under a large text setting and ran out of the bar. Smaller
+              // rather than cut short where even that is too wide: at 200 %
+              // on a 320 phone the bar read «Oppd…» and «Legg…».
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(label,
+                    maxLines: 1,
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                        color: colour)),
+              ),
             ],
           ),
         ),
@@ -258,14 +265,22 @@ PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis),
                         ),
+                        // Half the screen at most, and two lines in it: «Med
+                        // Kristoffer og Marianne», a ring on 06c, took the
+                        // title's room and ran off the screen beside it.
                         if (!big && subtitle != null)
                           Container(
+                            constraints: BoxConstraints(
+                                maxWidth: MediaQuery.sizeOf(context).width / 2),
                             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
                             decoration: BoxDecoration(
                               color: SwaplyColors.chip,
                               borderRadius: BorderRadius.circular(Radii.pill),
                             ),
                             child: Text(subtitle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textWidthBasis: TextWidthBasis.longestLine,
                                 style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,

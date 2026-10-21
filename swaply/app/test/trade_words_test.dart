@@ -174,7 +174,7 @@ void main() {
       expect(find.textContaining('ANDREASS'), findsNothing);
     });
 
-    testWidgets('8. 09h says whose the things are by name, and «dine» for several',
+    testWidgets('8. 09h says who got what by name, with no guess at a pronoun or a gender',
         (tester) async {
       await mount(
           tester,
@@ -185,8 +185,8 @@ void main() {
           })));
 
       expect(
-          find.text('Du og Kari har begge bekreftet. Retro spillkonsoll og Kabel er dine, '
-              'Bosch drill 18V er Karis.'),
+          find.text('Du og Kari har begge bekreftet. Du fikk Retro spillkonsoll og Kabel, og '
+              'Kari fikk Bosch drill 18V.'),
           findsOneWidget);
       expect(find.textContaining('hans'), findsNothing);
     });
@@ -202,6 +202,14 @@ void main() {
       await mount(tester, const ThreadScreen(threadId: 'thread-1'));
 
       expect(find.text('Bosch drill 18V ⇄ ingenting ennå · under avtale'), findsOneWidget);
+    });
+
+    testWidgets('9b. …and an ended trade says «ingenting», since nothing is still to come',
+        (tester) async {
+      server.overrides['GET /trades/trade-1'] = {...firstAsk, 'state': 'cancelled'};
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.text('Bosch drill 18V ⇄ ingenting · avsluttet'), findsOneWidget);
     });
 
     testWidgets('10. «Jeg vil ha» asks for the first thing, not one more', (tester) async {
@@ -248,5 +256,133 @@ void main() {
         .toList();
     expect(cells, contains('Du får verdi 1 200 kr'));
     expect(cells, contains('Du gir verdi 600 kr'));
+  });
+
+  group('a thing with no value given', () {
+    // Summed as nought: «Du får verdi 0 kr · differanse 1 100 kr · Du gir
+    // verdi 1 100 kr», as if the other side gave away something worthless.
+    final unvalued = {...FakeServer.console, 'estimatedValueNok': null};
+    final trade = {
+      ...FakeServer.trade,
+      'youGet': [unvalued],
+      'youGetValue': 0,
+      'difference': 600,
+      'cash': null,
+    };
+
+    List<String> lines(WidgetTester tester) => tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.textSpan?.toPlainText() ?? t.data ?? '')
+        .toList();
+
+    testWidgets('13. 06b says its side has no value given, and no difference', (tester) async {
+      server.overrides['GET /trades/trade-1'] = trade;
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      expect(lines(tester), contains('Du får verdi ikke oppgitt'));
+      expect(lines(tester), contains('Du gir verdi ${kr(600)}'));
+      expect(lines(tester).where((l) => l.startsWith('differanse')), isEmpty);
+    });
+
+    testWidgets('14. …and so does 09a', (tester) async {
+      server.overrides['GET /trades/trade-1/candidates'] = {
+        'yours': [FakeServer.drill],
+        'theirs': [unvalued],
+        'counterparty': FakeServer.kari,
+      };
+      await mount(tester, CounterOfferScreen(trade: Trade.fromJson(trade)));
+
+      expect(lines(tester), contains('Du får verdi ikke oppgitt'));
+      expect(lines(tester).where((l) => l.startsWith('differanse')), isEmpty);
+    });
+
+    testWidgets('15. 09d proposes no difference nobody has said', (tester) async {
+      server.overrides['GET /trades/trade-1'] = trade;
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      await openChip(tester, 'Foreslå mellomlegg');
+
+      expect(find.text('Mellomlegget avtales mellom dere og betales utenfor appen.'),
+          findsOneWidget);
+      expect(find.text('Foreslå ingen mellomlegg'), findsOneWidget);
+      expect(find.text(kr(600)), findsNothing);
+    });
+
+    testWidgets('16. 09h says «Ikke oppgitt» for what came in', (tester) async {
+      await mount(tester, TradeCompletedScreen(trade: Trade.fromJson(trade)));
+
+      expect(find.text('Ikke oppgitt'), findsOneWidget);
+      expect(find.text(kr(600)), findsOneWidget);
+    });
+  });
+
+  group('a field with a limit', () {
+    // The limit was told only after «Send», as «Bruk høyst 1000 tegn.», with
+    // nothing in the field to say how far over it was.
+    testWidgets('17. 06h takes no more than the server will, and says so near the end',
+        (tester) async {
+      await mount(tester, ReviewScreen(trade: Trade.fromJson(FakeServer.trade)));
+      final field = find.byType(TextField);
+
+      await tester.enterText(field, 'Rask og hyggelig');
+      await tester.pump();
+      expect(find.textContaining('/1000'), findsNothing);
+
+      await tester.enterText(field, 'a' * 2400);
+      await tester.pump();
+      expect(tester.widget<TextField>(field).controller!.text.length, 1000);
+      expect(find.text('1000/1000'), findsOneWidget);
+    });
+
+    testWidgets('18. so does 06g\'s field, at 2000', (tester) async {
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      final field = find.byType(TextField);
+
+      await tester.enterText(field, 'a' * 2600);
+      await tester.pump();
+      expect(tester.widget<TextField>(field).controller!.text.length, 2000);
+      expect(find.text('2000/2000'), findsOneWidget);
+    });
+  });
+
+  group('sentences the app puts together', () {
+    testWidgets('19. three things are «A, B og C», not «A og B og C»', (tester) async {
+      final three = Trade.fromJson({
+        ...FakeServer.trade,
+        'youGive': [
+          FakeServer.drill,
+          {...FakeServer.drill, 'id': 'd2', 'title': 'Sykkelhjelm'},
+          {...FakeServer.drill, 'id': 'd3', 'title': 'Skateboard'},
+        ],
+      });
+      await mount(tester, TradeCompletedScreen(trade: three));
+
+      expect(find.text('Du og Kari har begge bekreftet. Du fikk Retro spillkonsoll, og Kari fikk '
+          'Bosch drill 18V, Sykkelhjelm og Skateboard.'), findsOneWidget);
+    });
+
+    testWidgets('20. 11a names the two others of a ring «Per og Kari»', (tester) async {
+      server.overrides['GET /threads'] = {
+        'threads': [
+          {
+            'id': 'thread-1',
+            'tradeId': 'trade-chain',
+            'state': 'pending',
+            'kind': 'chain',
+            'others': [
+              {'id': 'per-1', 'displayName': 'Per H.'},
+              {'id': 'kari-1', 'displayName': 'Kari N.'},
+            ],
+            'subject': null,
+            'unread': 0,
+            'lastMessage': null,
+          }
+        ],
+        'unreadTotal': 0,
+      };
+      await mount(tester, const ChatsScreen());
+
+      expect(find.text('Per og Kari'), findsOneWidget);
+      expect(find.text('Per, Kari'), findsNothing);
+    });
   });
 }

@@ -536,5 +536,37 @@ void main() {
       expect(find.text('Trondheim · medlem siden oktober'), findsOneWidget);
     });
   });
-}
 
+  group('a change that was saved', () {
+    testWidgets('«Lagre» on «Rediger profil» goes when the asking after it gets no answer',
+        (tester) async {
+      // The session was asked again inside the change's own `try`: with no
+      // answer to that, the change the server had kept said «Vi får ikke
+      // kontakt», and the screen stayed up to be saved again.
+      await mount(tester, const EditProfileScreen());
+      server.overrides['GET /me'] = unreachable;
+
+      await tester.enterText(find.byType(TextField).first, 'Ola Nordmann');
+      await tester.tap(find.text('Lagre'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['PATCH /me']!['displayName'], 'Ola Nordmann');
+      expect(find.text(noContact), findsNothing);
+      expect(find.byType(EditProfileScreen), findsNothing);
+    });
+  });
+
+  testWidgets('5. somebody who joined in another year is a member since the month and the year',
+      (tester) async {
+    // «medlem siden mai» about a May a year ago read as this spring.
+    now = () => DateTime(2027, 3, 2, 15);
+    addTearDown(() => now = DateTime.now);
+    server.overrides['GET /me'] = {
+      ...FakeServer.me,
+      'memberSince': DateTime(2026, 5, 2, 9).toUtc().toIso8601String(),
+    };
+    await mount(tester, const ProfileScreen());
+
+    expect(find.text('Trondheim · medlem siden mai 2026'), findsOneWidget);
+  });
+}

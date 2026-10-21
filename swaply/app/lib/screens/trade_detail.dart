@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -113,10 +114,12 @@ class _MatchScreenState extends State<MatchScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, box) => SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 30),
+                        // 30 at the sides on 06a, 28 on 07i.
+                        padding: EdgeInsets.symmetric(horizontal: chain ? 28 : 30),
                         child: ConstrainedBox(
                           constraints: BoxConstraints(minHeight: box.maxHeight),
-                          child: IntrinsicHeight(child: _moment(trade, width: box.maxWidth - 60)),
+                          child: IntrinsicHeight(
+                              child: _moment(trade, width: box.maxWidth - (chain ? 56 : 60))),
                         ),
                       ),
                     ),
@@ -174,24 +177,26 @@ class _MatchScreenState extends State<MatchScreen> {
   Widget _moment(Trade trade, {required double width}) {
     final chain = trade.isChain;
     final other = trade.receivingFrom.displayName.split(' ').first;
-    final theyGive = trade.youGet.map((i) => i.title).join(' og ');
-    final youGive = trade.youGive.map((i) => i.title).join(' og ');
+    // «A, B og C», as a sentence lists three things, not «A og B og C».
+    final theyGive = andList([for (final i in trade.youGet) i.title]);
+    final youGive = andList([for (final i in trade.youGive) i.title]);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Up to 153 as laid out, and nothing as an intrinsic height, so
-        // it gives way before anything has to scroll.
+        // Up to 153 as laid out — 126 on 07i, whose title is two lines —
+        // and nothing as an intrinsic height, so it gives way before
+        // anything has to scroll.
         Flexible(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 153),
+            constraints: BoxConstraints(maxHeight: chain ? 126 : 153),
             child: const SizedBox.expand(),
           ),
         ),
         Text(
           chain ? 'Dere kan gjøre en treveis-swap!' : 'Dere kan swappe!',
-          style: const TextStyle(
-              fontSize: 36,
+          style: TextStyle(
+              fontSize: chain ? 32 : 36,
               height: 1.14,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.8,
@@ -206,35 +211,76 @@ class _MatchScreenState extends State<MatchScreen> {
           style: const TextStyle(fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 51),
-        if (chain) _chainList(trade) else _table(trade, other, width: width),
-        if (chain) ...[
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(Insets.md),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(Radii.card),
-            ),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.info_outline, size: 18, color: Colors.white70),
-                SizedBox(width: Insets.sm),
-                Expanded(
-                  child: Text(
-                    'Dette byttet kan ikke Swaply fasilitere, men vi kan '
-                    'starte en chat så dere avtaler det selv.',
-                    style: TextStyle(fontSize: 13, height: 1.4, color: Colors.white70),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        SizedBox(height: chain ? 35 : 51),
+        if (chain) ..._ring(trade) else _table(trade, other, width: width),
       ],
     );
   }
+
+  /// 07i: what you get and from whom, what you give and to whom, each in a
+  /// card, and under them that the three of them arrange it. It used to be
+  /// three lines of who gives what — «Kari gir …», «Per gir …» — which in a
+  /// ring of three never said who gets it.
+  List<Widget> _ring(Trade trade) {
+    String whereabouts(String word, UserRef person) {
+      final town = person.town?.trim() ?? '';
+      final name = person.displayName.split(' ').first;
+      return town.isEmpty ? '$word $name' : '$word $name i $town';
+    }
+
+    return [
+      _ringCard('Du får', const Color(0xFF9BD9BE), trade.youGet,
+          whereabouts('fra', trade.receivingFrom)),
+      const SizedBox(height: 12),
+      _ringCard('Du gir', const Color(0xFFF5B5AF), trade.youGive,
+          whereabouts('til', trade.givingTo)),
+      const SizedBox(height: 20),
+      const Text(
+        'Dette byttet kan ikke Swaply fasilitere, men vi kan starte en chat så dere avtaler '
+        'det selv.',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 15, height: 1.45, color: Color(0xBFFFFFFF)),
+      ),
+    ];
+  }
+
+  /// One of 07i's two cards: a 60 picture, the kicker in its colour, the
+  /// things and who they come from or go to.
+  Widget _ringCard(String kicker, Color colour, List<Item> items, String who) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        ),
+        child: Row(
+          children: [
+            if (items.isNotEmpty) ...[
+              ItemThumb(items.first, size: 60, radius: 16),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(kicker.toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.69,
+                          color: colour)),
+                  const SizedBox(height: 2),
+                  Text(items.isEmpty ? 'ingenting ennå' : andList([for (final i in items) i.title]),
+                      style: const TextStyle(
+                          fontSize: 16.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Text(who,
+                      style: const TextStyle(fontSize: 12.5, color: Color(0xA6FFFFFF))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 
   /// The table is drawn 330 across, the export's 390 less its margins.
   static const _tableWidth = 330.0, _tableHeight = 251.0;
@@ -352,35 +398,21 @@ class _MatchScreenState extends State<MatchScreen> {
           children: [
             Avatar(name, size: 24, color: mine ? SwaplyColors.greenPressed : null),
             const SizedBox(width: 6),
-            Text(count > 1 ? '$name · $count ting' : name,
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+            // The name gives way, never the count: a long first name at 130 %
+            // ran the whole label off the screen.
+            Flexible(
+              child: Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+            ),
+            if (count > 1)
+              Text(' · $count ting',
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
           ],
         ),
-      );
-
-  /// The three-way loop: who gives what, one line each.
-  Widget _chainList(Trade trade) => Column(
-        children: [
-          for (final p in trade.participants)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Insets.sm),
-              child: Row(
-                children: [
-                  Avatar(p.position == trade.youPosition ? 'Du' : p.displayName,
-                      size: 28, color: SwaplyColors.greenPressed),
-                  const SizedBox(width: Insets.sm),
-                  Expanded(
-                    child: Text(
-                      '${p.position == trade.youPosition ? 'Du' : p.displayName.split(' ').first} '
-                      'gir ${p.gives.map((i) => i.title).join(' og ')}',
-                      style: const TextStyle(fontSize: 14, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
       );
 }
 
@@ -482,13 +514,60 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // Newer than any asking still on its way.
       _asking++;
       setState(() => _trade = trade);
-      await context.read<Session>().refresh();
+      // The bar's counts, quietly and not waited for. Inside the action's
+      // `try` it was the action's failure: a decline that had gone through
+      // said «Vi får ikke kontakt» over the trade it had just ended, after
+      // the button had spun for the whole of the asking's patience.
+      _askSessionAgain();
     } on ApiException catch (e) {
-      if (mounted) showError(context, e);
+      if (!mounted) return;
+      showError(context, e);
+      // A refusal is the server saying the trade is not what this page
+      // shows — a yes already taken back on another phone, an offer changed,
+      // a trade ended — so the page asks for it again, quietly, under the
+      // server's words. It went on offering what had just been refused, and
+      // «Trekk deg» on the strength of a yes that was no longer there. No
+      // answer says nothing about the trade, and asks for nothing.
+      if (!e.isNoContact) unawaited(_load(quiet: true));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  /// «Kari vil trekke seg» refused because something had been sent: the
+  /// server answers her question with 08c, for her, and nothing on this side
+  /// of the trade changes, so the chip did nothing anybody could see. Said,
+  /// since this side is where it was pressed.
+  void _refusedTheOther(Trade after, UserRef person) {
+    final w = after.withdrawal;
+    if (w == null || w.requestedBy != person.id || w.state != 'rejected' || !w.blockedBySent) {
+      return;
+    }
+    if (!mounted) return;
+    final name = _firstName(person);
+    showNote(context,
+        '$name får ikke trekke seg, for noe er allerede sendt. $name ser 08c, og byttet fortsetter.');
+  }
+
+  /// The trade as it stands after a lever of the tooling's, or [before] when
+  /// there is no answer: the lever worked, and reading back is not the
+  /// lever. Sharing its `try`, no answer said «Vi får ikke kontakt» over a
+  /// move the server had made, and pressed again it was made twice. The next
+  /// asking shows it.
+  Future<Trade> _readBack(SwaplyApi api, Trade before) async {
+    try {
+      return await api.trade(before.id);
+    } on ApiException catch (e) {
+      if (!e.isNoContact) rethrow;
+      return before;
+    }
+  }
+
+  /// Who this is, asked again for the bar's badges, and nothing said either
+  /// way: what the screen did is what the screen says, and no answer here is
+  /// the next asking's to put right.
+  void _askSessionAgain() =>
+      unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
 
   @override
   Widget build(BuildContext context) {
@@ -545,6 +624,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         trade.state == 'accepted' &&
         withdrawal.state == 'rejected' &&
         withdrawal.blockedBySent;
+    // 06f: a pair everybody has agreed to, which is handed over now.
+    final handover = trade.state == 'accepted' && !chain;
     return [
       // 08b: the trade is paused while the question is answered.
       if (trade.state == 'paused' && withdrawal?.state == 'waiting') _withdrawalBanner(trade),
@@ -558,8 +639,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       else if (trade.state == 'accepted')
         _agreedCard(),
       // 09e: a new proposal is on the table.
+      // Named for whoever proposed it, which in a ring is not always the one
+      // you receive from: «Ingrid foreslår» read «Nytt forslag fra Kari».
       if (_counteredByOther(trade))
-        _noticeCard('Nytt forslag fra ${trade.receivingFrom.displayName.split(' ').first}. '
+        _noticeCard('Nytt forslag fra ${_firstName(_proposer(trade))}. '
             'Godta, avslå eller foreslå noe annet.'),
       // Nothing to accept yet: one side of the offer is still empty.
       if (['talking', 'pending', 'countered'].contains(trade.state) &&
@@ -568,7 +651,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             ? 'Du har ikke lagt noe i byttet ennå. Velg hva du vil gi, så kan '
                 '${trade.receivingFrom.displayName.split(' ').first} godta.'
             : '${trade.receivingFrom.displayName.split(' ').first} har ikke lagt noe i '
-                'byttet ennå. Foreslå hva dere skal bytte.'),
+                'byttet ennå. Foreslå hva dere skal bytte.')
+      // In a ring the leg between the other two can be the empty one: a
+      // version with a side still empty is a question, which nobody can say
+      // yes to (DESIGN.md, 02.10.2026), and 07j offered «Godta byttet» on it.
+      else if (_emptyLeg(trade) case final leg?
+          when ['talking', 'pending', 'countered'].contains(trade.state))
+        _noticeCard('${_firstName(leg.giver)} gir ingenting til ${_firstName(leg.receiver)} i '
+            'dette forslaget, så det kan ikke godtas ennå. Avtal resten i chatten.'),
       // 09f: it ended.
       if (trade.state == 'cancelled') _cancelledCard(trade),
       if (trade.state == 'completed') _completedHeader(trade),
@@ -579,6 +669,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // and the totals, as if the trade were still going on.
       if (trade.state == 'cancelled') ...[
         _notTradedCard(trade),
+      ] else if (handover) ...[
+        // 06f: what you send, in the place of what you give, with its button
+        // in it. «DU FÅR» and «DU GIR» over «DU SENDER» and «PÅ VEI TIL DEG»
+        // drew every thing twice, and put the buttons under the fold.
+        _sendCard(trade),
+        const SizedBox(height: 7),
+        _valueSummary(
+            anyUnvalued(trade.youGet) ? null : trade.youGetValue,
+            anyUnvalued(trade.youGive) ? null : trade.youGiveValue),
       ] else ...[
         // One card per leg, the kicker inside it beside the first thing.
         _legCard(
@@ -618,8 +717,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ],
 
         const SizedBox(height: 7),
-        _valueSummary(gotCopy == null ? trade.youGetValue : _sum(got),
-            gaveCopy == null ? trade.youGiveValue : _sum(gave)),
+        _valueSummary(
+            anyUnvalued(got) ? null : gotCopy == null ? trade.youGetValue : _sum(got),
+            anyUnvalued(gave) ? null : gaveCopy == null ? trade.youGiveValue : _sum(gave)),
       ],
       // Not on an ended trade: there is nothing left to pay, and «betales
       // når begge har godtatt» was a promise about a trade that is over.
@@ -627,9 +727,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         const SizedBox(height: 7),
         _cashSection(trade),
       ],
-      if (trade.state == 'accepted' && !chain) ...[
+      if (handover) ...[
         const SizedBox(height: 7),
-        _handoverSection(trade),
+        _receiveCard(trade),
       ],
       const SizedBox(height: 7),
       _conversationSection(trade,
@@ -715,7 +815,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                       busy: _busy,
                       onPressed: () => _run((api) async {
                             await api.adminExpireWithdrawal(trade.id);
-                            return api.trade(trade.id);
+                            return _readBack(api, trade);
                           })),
                 ),
               ],
@@ -733,7 +833,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                               : () => _run((api) async {
                                     await api.adminAct(trade.id,
                                         as: person.id, action: action.$1);
-                                    return api.trade(trade.id);
+                                    final after = await _readBack(api, trade);
+                                    if (action.$1 == 'request-withdrawal') {
+                                      _refusedTheOther(after, person);
+                                    }
+                                    return after;
                                   }),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
@@ -770,6 +874,16 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           trade.participants
               .firstWhere((p) => p.position == trade.youPosition, orElse: () => trade.receivingFrom)
               .id;
+
+  /// The leg of a ring between the other two that has nothing on it, if any.
+  TradeLeg? _emptyLeg(Trade trade) =>
+      trade.otherLegs.where((leg) => leg.items.isEmpty).firstOrNull;
+
+  /// Whoever proposed the version on the table: the participant the server
+  /// names, or the one you receive from where it names nobody it sent.
+  UserRef _proposer(Trade trade) =>
+      trade.participants.where((p) => p.id == trade.counterOfferBy).firstOrNull ??
+      trade.receivingFrom;
 
   Widget _noticeCard(String text) => Padding(
         padding: const EdgeInsets.only(top: Insets.sm),
@@ -864,15 +978,29 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
 
   /// 06f's first two lines: everybody has said yes, and the rest is between
   /// the people in it.
-  Widget _agreedCard() => const Padding(
-        padding: EdgeInsets.only(top: Insets.sm),
-        child: SectionCard(
-          child: Column(
+  Widget _agreedCard() => Padding(
+        padding: const EdgeInsets.only(top: Insets.sm),
+        // Deep green, as the export draws the moment everybody has said yes.
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: SwaplyColors.greenDeep,
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Byttet er godtatt!', style: Type.heading),
+              Text('Byttet er godtatt!',
+                  style: TextStyle(
+                      fontSize: 22,
+                      height: 1.15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                      color: Colors.white)),
               SizedBox(height: 6),
-              Text('Dere kan også avtale å møtes i samtalen.', style: Type.secondary),
+              Text('Dere kan også avtale å møtes i samtalen.',
+                  style: TextStyle(fontSize: 13.5, height: 1.45, color: Color(0xBFFFFFFF))),
             ],
           ),
         ),
@@ -969,6 +1097,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                 Trade.closedByBlock => 'Byttet ble avsluttet etter en blokkering.',
                 // True for the owner too.
                 Trade.closedByListingRemoved => 'En av tingene i byttet ble tatt ned av eieren.',
+                // The server's «… ble reservert av et annet bytte» is said of a
+                // trade that was completed with the thing, too, where it was
+                // given away and not held.
+                Trade.closedByDisplacement => 'En av tingene i byttet er med i et annet bytte nå.',
                 _ => trade.closeReason ?? 'Tingene dine er tilgjengelige for andre igjen.',
               },
               style: Type.secondary,
@@ -1006,10 +1138,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (items.isEmpty)
+            if (items.isEmpty) ...[
               Text(kicker.toUpperCase(),
                   style: TextStyle(
                       fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.66, color: colour)),
+              // Said, not a card with a kicker and nothing under it.
+              Text('ingenting ennå · $from',
+                  style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+            ],
             for (final (i, item) in items.indexed) ...[
               if (i > 0) const SizedBox(height: 9),
               Row(
@@ -1185,8 +1321,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   /// «Du får · verdi 1 200 kr» left, the difference in the middle, «Du gir ·
   /// verdi 850 kr» right — a line, not a card. The server's sums, or a
   /// finished trade's copy's, whichever the cards above it are drawn from.
-  Widget _valueSummary(int getValue, int giveValue) {
-    final difference = (getValue - giveValue).abs();
+  /// Null is a side with a thing on it whose value nobody gave: «verdi ikke
+  /// oppgitt», and no difference, since nobody has said what it is worth.
+  Widget _valueSummary(int? getValue, int? giveValue) {
+    final difference =
+        getValue == null || giveValue == null ? 0 : (getValue - giveValue).abs();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
@@ -1202,12 +1341,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     );
   }
 
-  Widget _valueCell(String label, Color colour, int value, {bool end = false}) => Text.rich(
+  Widget _valueCell(String label, Color colour, int? value, {bool end = false}) => Text.rich(
         TextSpan(children: [
           TextSpan(
               text: '$label ',
               style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
-          TextSpan(text: 'verdi ${kr(value)}'),
+          TextSpan(text: value == null ? 'verdi ikke oppgitt' : 'verdi ${kr(value)}'),
         ]),
         textAlign: end ? TextAlign.end : TextAlign.start,
         style: const TextStyle(fontSize: 12, color: SwaplyColors.inkMuted),
@@ -1225,6 +1364,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     final payer = cash.payer.displayName.split(' ').first;
     final payee = cash.payee.displayName.split(' ').first;
     final amount = kr(cash.amountNok);
+    // In a ring the mellomlegg may be between the other two: «Kari betaler
+    // deg» said it was yours when it was Ingrid's.
+    final paidToYou = cash.payee.position == null
+        ? !cash.youPay && !trade.isChain
+        : cash.payee.position == trade.youPosition;
+    final to = paidToYou ? 'deg' : payee;
 
     // The kicker lives inside the card, with the note to its right.
     return SectionCard(
@@ -1254,9 +1399,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                         (true, true, true) => 'Du betalte $amount til $payee',
                         (true, true, false) => 'Du skulle betale $amount til $payee',
                         (true, false, _) => 'Du betaler $amount til $payee',
-                        (false, true, true) => '$payer betalte deg $amount',
-                        (false, true, false) => '$payer skulle betale deg $amount',
-                        (false, false, _) => '$payer betaler deg $amount',
+                        (false, true, true) => '$payer betalte $to $amount',
+                        (false, true, false) => '$payer skulle betale $to $amount',
+                        (false, false, _) => '$payer betaler $to $amount',
                       },
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
@@ -1276,7 +1421,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                           // a question about getting out is answered.
                           : trade.state == 'accepted' || trade.state == 'paused'
                               ? 'betales direkte mellom dere, før noe sendes'
-                              : 'betales når begge har godtatt',
+                              : trade.isChain || trade.participants.length > 2
+                                  ? 'betales når alle har godtatt'
+                                  : 'betales når begge har godtatt',
                   style: const TextStyle(fontSize: 11.5, height: 1.4, color: SwaplyColors.grey),
                 ),
               ),
@@ -1307,8 +1454,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                   ],
                 ),
                 const SizedBox(height: Insets.sm),
+                // Green-edged, as the export draws it beside «Marker som
+                // mottatt», and a finger's 44 where it draws 40.
                 SecondaryButton(
                   settled ? 'Marker som ikke betalt' : 'Marker som betalt',
+                  accent: true,
+                  height: kTapTarget,
                   onPressed: _busy
                       ? null
                       : () => _run((api) async =>
@@ -1320,64 +1471,95 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     );
   }
 
-  /// 06f. Shipping is a link out and a checkbox: we do not carry anything.
-  Widget _handoverSection(Trade trade) {
+  /// 06f's «DU SENDER»: what you send and to whom, that the sending is
+  /// arranged outside the app, and the mark for it, in one card as drawn.
+  /// Shipping is a link out and a checkbox: we do not carry anything.
+  Widget _sendCard(Trade trade) {
     final sent = trade.youSentAt != null;
+    return _handoverCard(
+      kicker: 'Du sender',
+      colour: SwaplyColors.amberText,
+      items: trade.youGive,
+      line: 'til ${_firstName(trade.givingTo)} · frakt avtales utenfor appen, f.eks. PostNord',
+      button: sent
+          ? SecondaryButton('Marker som ikke sendt',
+              height: kTapTarget,
+              onPressed: _busy ? null : () => _run((api) => _mark(api, trade, 'sent', false)))
+          : PrimaryButton('Marker som sendt',
+              height: kTapTarget,
+              busy: _busy,
+              onPressed: () => _run((api) => _mark(api, trade, 'sent', true))),
+    );
+  }
+
+  /// 06f's «PÅ VEI TIL DEG», and the mark for it.
+  Widget _receiveCard(Trade trade) {
     final received = trade.youReceivedAt != null;
     final theirSent =
         trade.participants.where((p) => p.id == trade.receivingFrom.id).firstOrNull?.sentAt;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Kicker('Du sender'),
-        const SizedBox(height: Insets.sm),
-        SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(trade.youGive.map((i) => i.title).join(' + '), style: Type.heading),
-              const SizedBox(height: 4),
-              Text(
-                'til ${trade.givingTo.displayName.split(' ').first} · frakt avtales utenfor '
-                'appen, f.eks. PostNord',
-                style: Type.small,
-              ),
-              const SizedBox(height: Insets.md),
-              SecondaryButton(sent ? 'Marker som ikke sendt' : 'Marker som sendt',
-                  onPressed: _busy ? null : () => _run((api) => _mark(api, trade, 'sent', !sent))),
-            ],
-          ),
-        ),
-        const SizedBox(height: Insets.lg),
-        const Kicker('På vei til deg'),
-        const SizedBox(height: Insets.sm),
-        SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(trade.youGet.map((i) => i.title).join(' + '), style: Type.heading),
-              const SizedBox(height: 4),
-              // Sent, once the one you receive from has marked it so: «sendt
-              // av Ola i går», as 08c draws it. It said «avtal detaljer i
-              // samtalen» whatever they had marked, and the one waiting
-              // learnt it only by being refused a withdrawal.
-              Text(
-                  theirSent == null
-                      ? 'fra ${_firstName(trade.receivingFrom)} · avtal detaljer i samtalen'
-                      : 'sendt av ${_firstName(trade.receivingFrom)} ${_day(theirSent)}',
-                  style: Type.small),
-              const SizedBox(height: Insets.md),
-              SecondaryButton(received ? 'Marker som ikke mottatt' : 'Marker som mottatt',
-                  onPressed: _busy
-                      ? null
-                      : () => _run((api) => _mark(api, trade, 'received', !received))),
-            ],
-          ),
-        ),
-      ],
+    return _handoverCard(
+      kicker: 'På vei til deg',
+      colour: SwaplyColors.greenText,
+      items: trade.youGet,
+      // Sent, once the one you receive from has marked it so: «sendt av Ola
+      // i går», as 08c draws it. It said «avtal detaljer i samtalen»
+      // whatever they had marked, and the one waiting learnt it only by
+      // being refused a withdrawal.
+      line: theirSent == null
+          ? 'fra ${_firstName(trade.receivingFrom)} · avtal detaljer i samtalen'
+          : 'sendt av ${_firstName(trade.receivingFrom)} ${_day(theirSent)}',
+      button: SecondaryButton(received ? 'Marker som ikke mottatt' : 'Marker som mottatt',
+          accent: true,
+          height: kTapTarget,
+          onPressed: _busy ? null : () => _run((api) => _mark(api, trade, 'received', !received))),
     );
   }
+
+  /// A card of 06f: the first thing's picture, the kicker, the things, a
+  /// line under them, and the card's button.
+  Widget _handoverCard({
+    required String kicker,
+    required Color colour,
+    required List<Item> items,
+    required String line,
+    required Widget button,
+  }) =>
+      SectionCard(
+        radius: 18,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                if (items.isNotEmpty) ...[
+                  ItemThumb(items.first, size: 48, radius: 12),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(kicker.toUpperCase(),
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.66,
+                              color: colour)),
+                      const SizedBox(height: 2),
+                      Text(items.map((i) => i.title).join(' + '),
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                      Text(line, style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 9),
+            button,
+          ],
+        ),
+      );
 
   /// Sets or clears a handover mark. Whichever mark is the last one finishes
   /// the trade, and then 09h comes up: «Marker som sendt» used to leave that
@@ -1475,7 +1657,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       if (p.ratingAvg != null) '★ ${p.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
       if (p.town?.trim().isNotEmpty ?? false) p.town!.trim(),
     ];
-    return parts.isEmpty ? 'gir ${p.gives.map((i) => i.title).join(' og ')}' : parts.join(' · ');
+    return parts.isEmpty ? 'gir ${andList([for (final i in p.gives) i.title])}' : parts.join(' · ');
   }
 
   /// The conversation is available at every stage, including while you wait.
@@ -1491,13 +1673,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     // the return key and then «Send», while the first was on its way sent
     // the same words twice.
     Future<void> send() async {
-      final text = _message.text.trim();
+      final typed = _message.text;
+      final text = typed.trim();
       if (text.isEmpty || trade.threadId == null || _sending) return;
       setState(() => _sending = true);
       try {
         await context.read<SwaplyApi>().sendMessage(trade.threadId!, text);
         if (!mounted) return;
-        _message.clear();
+        // What went, and not what has been typed since; see [takeSent].
+        takeSent(_message, typed);
         await _load();
       } on ApiException catch (e) {
         if (!mounted) return;
@@ -1505,6 +1689,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           // Nobody left to read it, as the server says: the field gives way
           // to its words rather than staying to be refused again.
           setState(() => _closedByServer = e.message);
+        } else if (e.code == ApiException.blocked) {
+          // Across a block the trade did not end, having finished: as 06g.
+          setState(() => _closedByServer = closedAfterBlock);
         } else {
           showError(context, e);
         }
@@ -1560,12 +1747,20 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             LastMessage(trade.lastMessage!),
             const SizedBox(height: 8),
           ],
-          // Nobody left to write to; the card above says why, or the
-          // server did when «Send» was refused.
+          // Nobody left to write to, or nobody to write to across a block,
+          // as the server says with the trade: said in 06g's words, before
+          // «Send» is pressed. Or the server did when «Send» was refused. A
+          // server from before it said so is read from how the trade ended,
+          // and the card above says why.
           if (_closedByServer case final words?)
             Text(words, style: Type.small)
           else if (trade.conversationClosed)
-            const Text('Samtalen er stengt.', style: Type.small)
+            Text(
+                trade.saysConversationClosed
+                    ? closedLine(trade.conversationClosedWhy,
+                        others: trade.participants.length - 1)!
+                    : 'Samtalen er stengt.',
+                style: Type.small)
           else
             Row(
               children: [
@@ -1573,6 +1768,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                   child: TapArea(
                     child: TextField(
                       controller: _message,
+                      maxLength: maxMessageLength,
+                      buildCounter: nearLimit,
                       style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
                       onSubmitted: (_) => send(),
                       decoration: InputDecoration(
@@ -1666,7 +1863,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // nothing back. There is nothing to accept there yet — offering it as
       // one tap was offering to give a thing away for nothing — so the whole
       // action is «Foreslå motbytte» until both sides have something in it.
-      final halfFilled = trade.youGive.isEmpty || trade.youGet.isEmpty;
+      final halfFilled =
+          trade.youGive.isEmpty || trade.youGet.isEmpty || _emptyLeg(trade) != null;
       // On every negotiation you have not said yes to. It was only beside
       // «Godta byttet», so a conversation, or an offer with a side still
       // empty, could not be closed from here at all; the server declines a
@@ -1698,7 +1896,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                     // may still have reached the server, and only the
                     // server can say. Quietly then, as there is no news.
                     if (mounted) await _load(quiet: accepted != true);
-                    await session.refresh();
+                    // The badges too, as quietly: waited for with nothing
+                    // round it, no answer was an error nobody caught.
+                    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
                   }),
             ),
           ],
@@ -1845,6 +2045,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           ? 'Byttet avsluttes, og $other får beskjed.'
           : 'Tingene deres blir tilgjengelige for andre igjen, og $other får beskjed.',
       confirm: 'Avslå byttet',
+      destructive: true,
     );
     if (yes == true) await _run((api) => api.decline(trade.id));
   }
@@ -1865,6 +2066,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         '${_firstNames(others)} får beskjed, samtalen beholdes',
       ],
       confirm: 'Trekk meg fra byttet',
+      destructive: true,
     );
     if (yes == true) await _run((api) => api.withdrawEarly(trade.id));
   }
@@ -1893,13 +2095,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         // half of them; the answer is what the sentence is about anyway.
         if (ring) ...[
           'Har ingen av dem sendt noe, avbrytes byttet når en av dem svarer ja',
-          'Har en av dem allerede sendt, kan du ikke trekke deg',
+          '✕Har en av dem allerede sendt, kan du ikke trekke deg',
         ] else ...[
           'Har $other ikke sendt noe, avbrytes byttet når svaret er ja',
-          'Har $other allerede sendt, kan du ikke trekke deg',
+          '✕Har $other allerede sendt, kan du ikke trekke deg',
         ],
       ],
       confirm: 'Spør om å trekke meg',
+      destructive: true,
     );
     if (yes != true) return;
 
@@ -1918,28 +2121,49 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         );
       }
     } on ApiException catch (e) {
-      if (mounted) showError(context, e);
+      if (!mounted) return;
+      showError(context, e);
+      // Refused because the trade has moved on — asked already on another
+      // phone, or no longer agreed: the page asks for it again, as [_run]
+      // does.
+      if (!e.isNoContact) unawaited(_load(quiet: true));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  /// A sheet that asks before something is done to the trade. A bullet that
+  /// starts with «✕» is something that cannot be done, and is marked so in
+  /// red rather than ticked: 08a's «Har Kari allerede sendt, kan du ikke
+  /// trekke deg» wore a green tick, as if it were one more thing granted.
+  ///
+  /// [destructive] is for leaving or declining, which is the app's
+  /// destructive button and never the green way on, as «Avslå» and «Trekk
+  /// deg fra byttet» are on the page under it, and «Fjern annonsen» and
+  /// «Slett kontoen» are where they are asked.
   Future<bool?> _confirm({
     required String title,
     required String body,
     required String confirm,
     String? cancel = 'Avbryt',
     List<String> bullets = const [],
+    bool destructive = false,
   }) =>
       showModalBottomSheet<bool>(
         context: context,
         // Over the bar, not inside the tab under it; see `pushOverBar`.
         useRootNavigator: true,
+        // As tall as what is in it, and scrolling past that. Held to nine
+        // sixteenths of the screen and not scrolling, 08a ran 31 points past
+        // its foot on a 360×640 phone at the ordinary text size, and «Avbryt»
+        // was cut off — at 130 % «Spør om å trekke meg» went with it.
+        isScrollControlled: true,
+        useSafeArea: true,
         backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
         builder: (sheet) => SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(Insets.lg),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1956,15 +2180,27 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.check, size: 16, color: SwaplyColors.greenPressed),
+                          // ✓ and ✕ in the export's green and red, which a
+                          // screen reader has in the words that follow.
+                          ExcludeSemantics(
+                            child: line.startsWith('✕')
+                                ? const Icon(Icons.close, size: 16, color: SwaplyColors.redText)
+                                : const Icon(Icons.check,
+                                    size: 16, color: SwaplyColors.greenPressed),
+                          ),
                           const SizedBox(width: Insets.sm),
-                          Expanded(child: Text(line, style: Type.body)),
+                          Expanded(
+                              child: Text(line.startsWith('✕') ? line.substring(1) : line,
+                                  style: Type.body)),
                         ],
                       ),
                     ),
                 ],
                 const SizedBox(height: Insets.lg),
-                PrimaryButton(confirm, onPressed: () => Navigator.of(sheet).pop(true)),
+                destructive
+                    ? SecondaryButton(confirm,
+                        destructive: true, onPressed: () => Navigator.of(sheet).pop(true))
+                    : PrimaryButton(confirm, onPressed: () => Navigator.of(sheet).pop(true)),
                 if (cancel != null) ...[
                   const SizedBox(height: Insets.sm),
                   SecondaryButton(cancel, onPressed: () => Navigator.of(sheet).pop(false)),

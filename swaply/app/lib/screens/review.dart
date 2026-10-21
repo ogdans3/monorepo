@@ -48,14 +48,16 @@ class TradeCompletedScreen extends StatelessWidget {
                     const Text('Byttet er gjennomført!',
                         style: Type.display, textAlign: TextAlign.center),
                     const SizedBox(height: Insets.sm),
-                    // The export's «… er hans» was written for Ola. Said of
-                    // whoever is on the other side a pronoun is a guess, so
-                    // it is their name: «… er Karis».
+                    // The export's «Konsollen er din, drillen og hjelmen er
+                    // hans» was written for Ola and a console. Said of
+                    // whoever is on the other side a pronoun is a guess, and
+                    // «er din» is a guess at the thing's gender, which a
+                    // title does not tell: «Skateboard er din». Who got what
+                    // says the same with neither.
                     Text(
                       'Du og $other har begge bekreftet. '
-                      '${trade.youGet.map((i) => i.title).join(' og ')} '
-                      'er ${trade.youGet.length > 1 ? 'dine' : 'din'}, '
-                      '${trade.youGive.map((i) => i.title).join(' og ')} er ${possessive(other)}.',
+                      'Du fikk ${andList([for (final i in trade.youGet) i.title])}, og $other '
+                      'fikk ${andList([for (final i in trade.youGive) i.title])}.',
                       style: Type.secondary,
                       textAlign: TextAlign.center,
                     ),
@@ -67,9 +69,17 @@ class TradeCompletedScreen extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _value(kr(trade.youGetValue + cashIn),
+                          // «Ikke oppgitt» where a thing has no value given:
+                          // summed as nought, it was a value nobody said.
+                          _value(
+                              anyUnvalued(trade.youGet)
+                                  ? 'Ikke oppgitt'
+                                  : kr(trade.youGetValue + cashIn),
                               cashIn > 0 ? 'verdi inn, med mellomlegg' : 'verdi inn'),
-                          _value(kr(trade.youGiveValue + cashOut),
+                          _value(
+                              anyUnvalued(trade.youGive)
+                                  ? 'Ikke oppgitt'
+                                  : kr(trade.youGiveValue + cashOut),
                               cashOut > 0 ? 'verdi ut, med mellomlegg' : 'verdi ut'),
                         ],
                       ),
@@ -167,7 +177,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   /// gave to is a leg you were never part of.
   String _withYou(UserRef person) {
     final trade = widget.trade;
-    String things(List<Item> items) => items.map((i) => i.title).join(' og ');
+    String things(List<Item> items) => andList([for (final i in items) i.title]);
     if (person.position == trade.givingTo.position && trade.youGive.isNotEmpty) {
       return 'fikk ${things(trade.youGive)}';
     }
@@ -190,7 +200,21 @@ class _ReviewScreenState extends State<ReviewScreen> {
       describe: _withYou,
     );
     if (person == null || !mounted) return;
-    await showReportSheet(context, userId: person.id, personName: person.displayName);
+    // Opened on «Annet» and on what it is about, so the report says it was
+    // this trade that did not happen. It opened on «Spam», with nothing tying
+    // it to a trade, the same as any report from 13b.
+    final trade = widget.trade;
+    String first(UserRef p) => p.displayName.split(' ').first;
+    String things(List<Item> items) => andList([for (final i in items) i.title]);
+    await showReportSheet(
+      context,
+      userId: person.id,
+      personName: person.displayName,
+      reason: 'other',
+      detail: 'Byttet ble ikke noe av. Treveisbyttet: jeg skulle få '
+          '${things(trade.youGet)} fra ${first(trade.receivingFrom)} og gi '
+          '${things(trade.youGive)} til ${first(trade.givingTo)}.',
+    );
   }
 
   @override
@@ -303,6 +327,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     controller: _comment,
                     minLines: 4,
                     maxLines: 6,
+                    maxLength: maxCommentLength,
+                    buildCounter: nearLimit,
                     style: const TextStyle(fontSize: 14, color: SwaplyColors.ink),
                     decoration: InputDecoration(
                       hintText: 'Si et par ord (valgfritt)…',
@@ -586,6 +612,8 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
                     controller: _comment,
                     minLines: 3,
                     maxLines: 5,
+                    maxLength: maxCommentLength,
+                    buildCounter: nearLimit,
                     decoration: const InputDecoration(
                         hintText: 'Noe mer du vil si oss? (valgfritt)'),
                   ),

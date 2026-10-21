@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../api/client.dart' show ApiException;
 import '../design/tokens.dart';
 import 'common.dart' show TapArea;
 
@@ -402,6 +403,10 @@ _Shown _present(ScaffoldMessengerState messenger, ToastTone tone, String message
     ),
     // A way back needs time to be found as well as read.
     duration: Duration(seconds: action == null ? marks.seconds : math.max(marks.seconds, 5)),
+    // And with a screen reader on, as long as it takes: «Angre» after «Ikke
+    // vis meg slike» is the one way back, and five seconds is not enough to
+    // find it by swiping. It stays until it is pressed or put away.
+    persist: action != null && MediaQuery.accessibleNavigationOf(messenger.context),
     backgroundColor: Colors.transparent,
     elevation: 0,
     padding: EdgeInsets.zero,
@@ -416,8 +421,12 @@ _Shown _present(ScaffoldMessengerState messenger, ToastTone tone, String message
 
 /// An [ApiException] already carries Norwegian a person can read, so the
 /// message is the whole of it; anything else is stringified the same way.
-void showError(BuildContext context, Object error) =>
-    showToastOn(ScaffoldMessenger.maybeOf(context), ToastTone.error, '$error');
+/// Nothing for one whose session has ended: the gate is the news; see
+/// [ApiException.sessionEnded].
+void showError(BuildContext context, Object error) {
+  if (error is ApiException && error.sessionEnded) return;
+  showToastOn(ScaffoldMessenger.maybeOf(context), ToastTone.error, '$error');
+}
 
 void showDone(BuildContext context, String message, {ToastAction? action}) =>
     showToastOn(ScaffoldMessenger.maybeOf(context), ToastTone.done, message, action: action);
@@ -427,8 +436,10 @@ void showNote(BuildContext context, String message) =>
 
 // The same three for a caller that took the messenger before an await: a sheet
 // that pops itself has no context left to look one up with.
-void showErrorOn(ScaffoldMessengerState messenger, Object error) =>
-    showToastOn(messenger, ToastTone.error, '$error');
+void showErrorOn(ScaffoldMessengerState messenger, Object error) {
+  if (error is ApiException && error.sessionEnded) return;
+  showToastOn(messenger, ToastTone.error, '$error');
+}
 
 void showDoneOn(ScaffoldMessengerState messenger, String message, {ToastAction? action}) =>
     showToastOn(messenger, ToastTone.done, message, action: action);

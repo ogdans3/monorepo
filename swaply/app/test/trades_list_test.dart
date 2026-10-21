@@ -101,6 +101,19 @@ void main() {
     expect(edge(tester, 'Endret'), SwaplyColors.cardLine);
   });
 
+  testWidgets('2b. an ended trade with a side never filled says «ingenting», not «… ennå»',
+      (tester) async {
+    list(active: [
+      {...FakeServer.trade, 'state': 'cancelled', 'youGive': const []},
+    ]);
+    await mount(tester);
+    await tester.tap(find.textContaining('Aktive'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ingenting'), findsOneWidget);
+    expect(find.text('ingenting ennå'), findsNothing);
+  });
+
   testWidgets('3. a question somebody else asked is yours to answer: «Svar»', (tester) async {
     list(active: [paused(byYou: false)]);
     await mount(tester);

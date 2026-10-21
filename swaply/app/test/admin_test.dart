@@ -60,6 +60,12 @@ Future<void> mount(WidgetTester tester, Widget screen, {bool signedIn = true}) a
   await tester.pumpAndSettle();
 }
 
+/// [text] in the tool's log at its foot, where every lever writes what it
+/// did. A toast says it as well, where the lever was pressed.
+Finder inLog(String text) => find.descendant(
+    of: find.ancestor(of: find.text('HVA VERKTØYET GJORDE'), matching: find.byType(AdminCard)),
+    matching: find.textContaining(text));
+
 /// Sign in as somebody the server says holds the key.
 void asAdmin() {
   server.overrides['POST /auth/login'] = {'token': 'tok', 'user': FakeServer.admin};
@@ -158,7 +164,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.requests, contains('POST /admin/accounts'));
-      expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
+      expect(inLog('Lagde Testbruker To'), findsOneWidget);
     });
 
     testWidgets('«Nullstill likes» brings 10a back, and nothing else does', (tester) async {
@@ -204,6 +210,34 @@ void main() {
       expect(find.byType(TradeDetailScreen), findsOneWidget);
     });
 
+    testWidgets('what a lever did is said where it was pressed, not only in the log below',
+        (tester) async {
+      // The log is at the foot of a tool taller than the screen, so a
+      // refused scenario, or the sweep's answer, went there and nowhere the
+      // person was looking: the button looked dead.
+      asAdmin();
+      tester.view.physicalSize = const Size(390, 844);
+      await mount(tester, const AdminScreen());
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+      server.overrides['POST /admin/scenarios'] = const Refusal(
+          400, 'not_enough_accounts', 'Et toveis-bytte trenger 2 kontoer. Lag en til først.');
+
+      await tester.ensureVisible(find.text('Samtale'));
+      await tester.tap(find.text('Samtale'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(SwaplyToast),
+              matching: find.text('Et toveis-bytte trenger 2 kontoer. Lag en til først.')),
+          findsOneWidget);
+
+      await tester.ensureVisible(find.text('Kjør sweepen nå'));
+      await tester.tap(find.text('Kjør sweepen nå'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(
+              of: find.byType(SwaplyToast), matching: find.text('Sweepen fant ingen nye sirkler')),
+          findsOneWidget);
+    });
+
     testWidgets('«Som motparten» sits at the foot of the trade screen', (tester) async {
       asAdmin();
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
@@ -216,6 +250,52 @@ void main() {
         'as': FakeServer.kari['id'],
         'action': 'accept',
       });
+    });
+
+    testWidgets('«Som motparten» that worked is not said to have failed by the reading back',
+        (tester) async {
+      // The other side's move and reading the trade back shared one asking:
+      // with no answer to the reading, «Vi får ikke kontakt» went up over a
+      // move the server had made, and pressed again it was made twice.
+      asAdmin();
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+      server.overrides['GET /trades/trade-1'] = unreachable;
+
+      await tester.tap(find.text('Kari godtar'));
+      await tester.pumpAndSettle();
+
+      expect(server.asked('POST /admin/trades/trade-1/act'), 1);
+      expect(find.text(noContact), findsNothing);
+      expect(find.text('Som motparten'), findsOneWidget);
+    });
+
+    testWidgets('«Kari vil trekke seg» refused because something is sent says so', (tester) async {
+      // The server turns her question into 08c for her, and nothing on this
+      // side of the trade changes: the chip did nothing anybody could see.
+      asAdmin();
+      final accepted = {
+        ...FakeServer.trade,
+        'state': 'accepted',
+        'you': {...FakeServer.trade['you'] as Map, 'accepted': true, 'sentAt': '2026-09-09T10:00:00Z'},
+      };
+      server.overrides['GET /trades/trade-1'] = accepted;
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+      server.overrides['GET /trades/trade-1'] = {
+        ...accepted,
+        'withdrawal': {
+          'requestedBy': FakeServer.kari['id'],
+          'byYou': false,
+          'state': 'rejected',
+          'respondsBy': null,
+          'blockedBySent': true,
+        },
+      };
+
+      await tester.tap(find.text('Kari vil trekke seg'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /admin/trades/trade-1/act']!['action'], 'request-withdrawal');
+      expect(find.textContaining('Kari får ikke trekke seg'), findsOneWidget);
     });
 
     testWidgets('«Få noen til å ville ha denne» is offered on your own listing only',
@@ -303,7 +383,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('KONTOER'), findsOneWidget);
-      expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
+      expect(inLog('Lagde Testbruker To'), findsOneWidget);
       expect(find.text(noContact), findsOneWidget);
       expect(find.byType(SwaplyToast), findsOneWidget);
     });
@@ -320,7 +400,7 @@ void main() {
       await tester.tap(find.text('Lag testkonto'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
+      expect(inLog('Lagde Testbruker To'), findsOneWidget);
       expect(find.textContaining('✕'), findsNothing);
       expect(find.text(noContact), findsNothing);
       expect(tester.takeException(), isNull);
@@ -368,7 +448,7 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Slett testkontoen'));
       await tester.pumpAndSettle();
       expect(server.requests, contains('DELETE /admin/accounts/test-1'));
-      expect(find.text('Slettet Testbruker Én'), findsOneWidget);
+      expect(inLog('Slettet Testbruker Én'), findsOneWidget);
     });
 
     testWidgets('a name that ends in a full stop is not given a second', (tester) async {

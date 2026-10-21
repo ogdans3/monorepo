@@ -71,6 +71,7 @@ describe('blocking somebody', () => {
   let ola = '', kari = '', per = ''
   let olaId = '', kariId = ''
   let drill = '', tent = '', bike = ''
+  let sharedBefore = ''
 
   beforeAll(async () => {
     const a = await register('Ola N.', 'ola@epost.no')
@@ -83,6 +84,8 @@ describe('blocking somebody', () => {
     drill = await list(ola, 'Bosch drill 18V')
     tent = await list(kari, 'Telt, 3 personer')
     bike = await list(per, 'Bysykkel, dame')
+    // Before anything, Ola shares Kari's tent with somebody.
+    sharedBefore = (await call('POST', `/items/${tent}/share`, { token: ola })).body!['token']
   })
 
   test('1. before anything, each of them can see the others', async () => {
@@ -131,6 +134,20 @@ describe('blocking somebody', () => {
     }
   })
 
+  test('5c. and a link he shared before the block shows nothing of hers any more', async () => {
+    // Refusing to mint one (5b) left the link minted before the block: the
+    // same public page, her name, her photos and her words, under «Ola
+    // inviterer deg». It is answered as a listing that is gone, and it is
+    // still his invitation.
+    const page = await call('GET', `/invites/${sharedBefore}`)
+
+    expect(page.status).toBe(200)
+    expect(page.body!['item']).toBeNull()
+    expect(page.body!['itemRetired']).toBe(true)
+    expect(page.body!['inviter']['displayName']).toBe('Ola N.')
+    expect(page.body!['shareText']).not.toContain('Telt')
+  })
+
   test('6. no wish of his can reach her', async () => {
     const res = await call('POST', `/items/${tent}/like`, { token: ola })
 
@@ -174,6 +191,8 @@ describe('blocking somebody', () => {
     ])
     expect((await call('GET', `/items/${tent}`, { token: ola })).status).toBe(200)
     expect((await call('GET', `/users/${kariId}`, { token: ola })).body!['items']).toHaveLength(1)
+    // The link he shared before shows the tent again.
+    expect((await call('GET', `/invites/${sharedBefore}`)).body!['item']['title']).toBe('Telt, 3 personer')
   })
 
   test('10. and the ring that was refused while blocked closes now', async () => {
@@ -331,6 +350,23 @@ describe('a block made while the two are already negotiating', () => {
     expect(blocked.body!['message']).toBe('Fant ikke brukeren.')
   })
 
+  test('15d. nor is a report whose words the database cannot keep, block and all', async () => {
+    // A character Postgres keeps no text with (U+0000) in the words was found
+    // only when the report was written, after the ticked block had ended the
+    // ring Una and Tor are in: a block and no report, as in 15b.
+    const before = await reports()
+    const res = await call('POST', '/reports', {
+      token: una.token,
+      body: { targetUser: tor.id, reason: 'fraud', detail: 'Han\u0000svarer ikke', block: true },
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body!['code']).toBe('invalid_text')
+    expect(await reports()).toBe(before)
+    expect(await blocks()).toBe(0)
+    expect(await tradeState(ring)).toBe('pending')
+  })
+
   test('16. once the swap is done, Siri blocks Tor, and both negotiations they share end', async () => {
     for (const who of [siri, tor]) {
       expect((await call('POST', `/trades/${agreed}/complete`, { token: who.token })).status).toBe(200)
@@ -384,6 +420,27 @@ describe('a block made while the two are already negotiating', () => {
     }
     // And so nothing crossed it.
     expect((await messagesTold(siri)) + (await messagesTold(tor))).toBe(before)
+  })
+
+  test('20b. and each conversation says so before anybody presses «Send»', async () => {
+    // The field used to stay until the first «Send» was refused: a block
+    // ends no finished or agreed trade, so nothing about the trade said it.
+    // `closed` is the rule the refusal above comes from, read for whoever
+    // asks: Siri and Tor in both, and Una, who blocked nobody, not at all.
+    for (const tradeId of [talking, ring]) {
+      for (const who of [siri, tor]) {
+        const thread = await threadOf(tradeId, who)
+        expect((await call('GET', `/threads/${thread}`, { token: who.token })).body!['closed']).toBe('blocked')
+        const row = ((await call('GET', '/threads', { token: who.token })).body!['threads'] as Json[])
+          .find((t) => t['id'] === thread)!
+        expect(row['closed']).toBe('blocked')
+        expect((await call('GET', `/trades/${tradeId}`, { token: who.token })).body!['conversationClosed'])
+          .toBe('blocked')
+      }
+    }
+    const unasRing = await threadOf(ring, una)
+    expect((await call('GET', `/threads/${unasRing}`, { token: una.token })).body!['closed']).toBeNull()
+    expect((await call('GET', `/trades/${ring}`, { token: una.token })).body!['conversationClosed']).toBeNull()
   })
 
   test('21. Una, who blocked nobody, still writes in the ring’s conversation, and both are told', async () => {

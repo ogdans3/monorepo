@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -87,7 +89,9 @@ class _TradesScreenState extends State<TradesScreen>
         _data = data;
         _error = null;
       });
-      await context.read<Session>().refresh();
+      // The bar's badge, quietly: the list came, and a pull that brought it
+      // said «Vi får ikke kontakt» when only this asking after it did not.
+      unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
     } on ApiException catch (e) {
       if (!mounted) return;
       if (_data == null) {
@@ -193,7 +197,9 @@ class _TradesScreenState extends State<TradesScreen>
     final canAccept = !trade.youAccepted &&
         ['pending', 'countered'].contains(trade.state) &&
         trade.youGive.isNotEmpty &&
-        trade.youGet.isNotEmpty;
+        trade.youGet.isNotEmpty &&
+        // In a ring, the leg between the other two as well.
+        trade.otherLegs.every((leg) => leg.items.isNotEmpty);
     // Somebody else has asked to be let out, and the answer is yours: the
     // trade waits on it, as the badge counts it.
     final w = trade.withdrawal;
@@ -228,6 +234,7 @@ class _TradesScreenState extends State<TradesScreen>
       // inside it a node of its own.
       child: Semantics(
         container: true,
+        button: true,
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: () => _openTrade(trade),
@@ -244,12 +251,19 @@ class _TradesScreenState extends State<TradesScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Each half the row at most, at its ends: with «Spacer» between
+                // them nothing gave way, and «Venter på Kristoffer» ran off
+                // the card at 130 %, at 200 % «Venter på Anne».
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(trade.isChain ? 'Bytte via kjede' : 'Direkte bytte',
-                        style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
-                    const Spacer(),
-                    Container(
+                    Flexible(
+                      child: Text(trade.isChain ? 'Bytte via kjede' : 'Direkte bytte',
+                          style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: colour == SwaplyColors.amberText
@@ -260,10 +274,12 @@ class _TradesScreenState extends State<TradesScreen>
                         borderRadius: BorderRadius.circular(Radii.pill),
                       ),
                       child: Text(label,
+                          textWidthBasis: TextWidthBasis.longestLine,
                           style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                               color: colour)),
+                    ),
                     ),
                   ],
                 ),
@@ -274,7 +290,7 @@ class _TradesScreenState extends State<TradesScreen>
                   children: [
                     Expanded(
                       child: _leg('${trade.receivingFrom.displayName.split(' ').first} gir',
-                          trade.youGet, SwaplyColors.greenText),
+                          trade.youGet, SwaplyColors.greenText, over: _over(trade)),
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
@@ -298,7 +314,7 @@ class _TradesScreenState extends State<TradesScreen>
                     ),
                     Expanded(
                       child: _leg('${trade.givingTo.displayName.split(' ').first} får',
-                          trade.youGive, SwaplyColors.amberText),
+                          trade.youGive, SwaplyColors.amberText, over: _over(trade)),
                     ),
                   ],
                 ),
@@ -316,7 +332,13 @@ class _TradesScreenState extends State<TradesScreen>
 
   /// One side of the row: whose it is, the picture, and what it is. The name
   /// sits *over* the thing, as the export's caption says it should.
-  Widget _leg(String label, List<Item> items, Color labelColour) => Column(
+  /// An ended trade, where a side with nothing on it will stay so.
+  static bool _over(Trade trade) => trade.state == 'completed' || trade.state == 'cancelled';
+
+  /// [over]: the trade has ended, and an empty side is «ingenting», not
+  /// «ingenting ennå», which promised something would still come.
+  Widget _leg(String label, List<Item> items, Color labelColour, {bool over = false}) =>
+      Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(label,
@@ -338,7 +360,9 @@ class _TradesScreenState extends State<TradesScreen>
             ItemThumb(items.first, size: 86, radius: 16),
           const SizedBox(height: 6),
           Text(
-            items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' + '),
+            items.isEmpty
+                ? (over ? 'ingenting' : 'ingenting ennå')
+                : items.map((i) => i.title).join(' + '),
             style: const TextStyle(
                 fontSize: 11.5, fontWeight: FontWeight.w600, color: SwaplyColors.inkBody),
             textAlign: TextAlign.center,
@@ -430,6 +454,7 @@ class _Segments extends StatelessWidget {
   Widget _segment(int i, String label, TextStyle on, TextStyle off, double at) {
     final chosen = (1 - (at - i).abs()).clamp(0.0, 1.0);
     return TapArea(
+      button: true,
       child: Semantics(
         selected: i == controller.index,
         child: InkWell(

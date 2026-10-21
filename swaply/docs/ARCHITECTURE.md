@@ -151,7 +151,9 @@ the listings they hold are a fixed set one sorted statement can take. An
 acceptance locks its own trade and every trade its yes will push out, then its
 own listings and whatever the pushed-out trades were holding; an ending —
 cancelling, completing, erasure, a yes to a withdrawal — locks the trade, then
-what it holds. Each reads the state again under the lock, so a yes into a trade
+what it holds. Completing also ends the negotiations still going on about what
+it gives away (opened while it was reserved, which a reserved thing allows), so
+it locks those with its own trade, the way an acceptance does. Each reads the state again under the lock, so a yes into a trade
 that ended while it waited is refused in words instead of bringing the trade
 back to `accepted`, and a trade that has ended keeps the reason it ended with.
 
@@ -335,7 +337,9 @@ that keeps it true if that ever changes.
 **Making a profile claims the row**, rather than creating a second one, so every
 like survives. The session is reissued at the same moment: the account has just
 gained a password, and the token that belonged to a device should not outlive
-that change.
+that change. Every token the device had goes, not only the one the profile was
+made with: an unclaimed device id opens a session each time it is sent, and one
+minted before the claim used to go on opening the account afterwards.
 
 **The app starts as one without asking.** With no saved session and no
 invitation link, the gate in `app/lib/main.dart` makes the device an account
@@ -498,7 +502,9 @@ when there was no completed trade.** A trade that went wrong — one side sent,
 the other deleted — never completed, and it is exactly the claim the record is
 kept for. When a claim can no longer be brought the purpose is spent and the
 row goes: `purgeRetained`, in the same daily job, deletes every row whose
-`purge_after` has passed, and the day itself is still inside. Nothing did until
+`purge_after` has passed, and the day itself is still inside. The days are
+Norway's, not the database's UTC: a trade finished at half past midnight is
+finished on that day here. Nothing did until
 27.09.2026. That is not a read of `retained` — it compares a date, deletes and
 returns a count, and a flow test holds that no code under `src/` selects from
 the schema. Messages follow the same window, because
@@ -519,7 +525,10 @@ title, category, value and one cover image. The listing can then be deleted
 freely while the counterparty keeps their own history — and, incidentally, nobody
 can edit an item after a trade and quietly rewrite the record. One image, not
 ten; at the retention horizon the image goes and the text stays, which is what a
-history actually needs.
+history actually needs. The daily job lets go of it the day after the claim
+window over the trade closes (`dropSnapshotCovers`), and the media sweep takes
+the file once no listing shows it either; until 21.10.2026 nothing did, and the
+picture was kept for ever.
 
 **Deleting an account cancels its active trades first**, with a clear reason to
 the other side. You cannot anonymise someone the counterparty is waiting on. The

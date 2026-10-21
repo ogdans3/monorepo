@@ -43,6 +43,15 @@ Future<void> mount(WidgetTester tester, Widget screen) async {
   await tester.pumpAndSettle();
 }
 
+/// Why the server says the conversation is closed after a pair's trade
+/// ended with [code]: a deletion leaves nobody, a block stands between the
+/// two, and any other ending leaves it open.
+String? closedAfter(String code) => switch (code) {
+      'account_deleted' => 'deleted',
+      'blocked' => 'blocked',
+      _ => null,
+    };
+
 /// The pair, ended with [code], as both the trade and its thread say it.
 void endedWith(String code, {String reason = 'Byttet ble avsluttet'}) {
   server.overrides['GET /trades/trade-1'] = {
@@ -51,9 +60,21 @@ void endedWith(String code, {String reason = 'Byttet ble avsluttet'}) {
     'closedAt': '2026-09-09T08:55:00Z',
     'closeCode': code,
     'closeReason': reason,
+    'conversationClosed': closedAfter(code),
   };
-  server.overrides['GET /threads/thread-1'] = {...FakeServer.thread, 'state': 'cancelled'};
+  server.overrides['GET /threads/thread-1'] = {
+    ...FakeServer.thread,
+    'state': 'cancelled',
+    'closed': closedAfter(code),
+  };
 }
+
+/// [answer] as a server from before it said whether a conversation is
+/// closed: no `closed`, no `conversationClosed`.
+Map<String, Object?> unsaid(String route) =>
+    {...server.overrides[route]! as Map<String, Object?>}
+      ..remove('closed')
+      ..remove('conversationClosed');
 
 /// The ring's conversation, its trade in [state].
 void ringIn(String state) {
@@ -97,6 +118,16 @@ void main() {
       expect(find.text('En av tingene i byttet ble tatt ned av eieren.'), findsOneWidget);
     });
 
+    testWidgets('2b. displaced, it says the thing is in another trade, which is true whether '
+        'that one holds it or was completed with it', (tester) async {
+      // The server's words, «… ble reservert av et annet bytte», are said as
+      // well of a trade ended because another was completed with the thing.
+      endedWith('displaced');
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      expect(find.text('En av tingene i byttet er med i et annet bytte nå.'), findsOneWidget);
+    });
+
     testWidgets('3. no ended trade promises a new proposal from the conversation',
         (tester) async {
       for (final code in ['declined', 'withdrawn_early', 'displaced', 'blocked']) {
@@ -129,20 +160,97 @@ void main() {
         await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
         expect(find.byType(TextField), findsNothing);
+        expect(find.text(why), findsOneWidget);
+      });
+
+      testWidgets('5b. ended by $code, from a server that does not say: the same, read off the ending',
+          (tester) async {
+        endedWith(code);
+        server.overrides['GET /trades/trade-1'] = unsaid('GET /trades/trade-1');
+        server.overrides['GET /threads/thread-1'] = unsaid('GET /threads/thread-1');
+        await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+        expect(find.byType(TextField), findsNothing);
+        expect(find.text(why), findsOneWidget);
+
+        await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+        expect(find.byType(TextField), findsNothing);
         expect(find.text('Samtalen er stengt.'), findsOneWidget);
       });
     }
+
+    // A block ends no finished or agreed trade, so nothing about how the
+    // trade stands said the two could no longer write to each other: the
+    // field stayed until the first «Send» was refused. The server says it
+    // with the conversation now, and the field gives way before anything
+    // is typed.
+    testWidgets('5c. a finished trade across a block: no field on 06g, said before «Send»',
+        (tester) async {
+      server.overrides['GET /trades/trade-1'] = {
+        ...FakeServer.trade,
+        'state': 'completed',
+        'conversationClosed': 'blocked',
+      };
+      server.overrides['GET /threads/thread-1'] = {
+        ...FakeServer.thread,
+        'state': 'completed',
+        'closed': 'blocked',
+      };
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Samtalen er stengt etter en blokkering.'), findsOneWidget);
+      expect(server.requests, isNot(contains('POST /threads/thread-1/messages')));
+    });
+
+    testWidgets('5d. …nor on the trade page\'s card', (tester) async {
+      server.overrides['GET /trades/trade-1'] = {
+        ...FakeServer.trade,
+        'state': 'completed',
+        'conversationClosed': 'blocked',
+      };
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Samtalen er stengt etter en blokkering.'), findsOneWidget);
+    });
+
+    testWidgets('5e. a block lifted since leaves the conversation open, whatever ended the trade',
+        (tester) async {
+      endedWith('blocked');
+      server.overrides['GET /trades/trade-1'] = {
+        ...server.overrides['GET /trades/trade-1']! as Map<String, Object?>,
+        'conversationClosed': null,
+      };
+      server.overrides['GET /threads/thread-1'] = {
+        ...server.overrides['GET /threads/thread-1']! as Map<String, Object?>,
+        'closed': null,
+      };
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.textContaining('Samtalen er stengt'), findsNothing);
+    });
 
     // The people in a conversation who have deleted their account come with
     // no name, as `GET /threads/:id` sends them.
     void gone(Set<String> ids) {
       final thread = server.overrides['GET /threads/thread-1']! as Map<String, Object?>;
+      final participants = [
+        for (final p in thread['participants']! as List)
+          ids.contains((p as Map)['id']) ? {...p, 'displayName': null} : p,
+      ];
+      // And closed, as the server says it, once nobody else is left.
+      final nobody = participants
+          .where((p) => p['id'] != 'me-1')
+          .every((p) => p['displayName'] == null);
       server.overrides['GET /threads/thread-1'] = {
         ...thread,
-        'participants': [
-          for (final p in thread['participants']! as List)
-            ids.contains((p as Map)['id']) ? {...p, 'displayName': null} : p,
-        ],
+        'participants': participants,
+        'closed': nobody ? 'deleted' : null,
+      };
+      server.overrides['GET /trades/trade-1'] = {
+        ...server.overrides['GET /trades/trade-1']! as Map<String, Object?>,
+        'conversationClosed': nobody ? 'deleted' : null,
       };
     }
 
@@ -222,6 +330,38 @@ void main() {
 
       expect(find.byType(TextField), findsNothing);
       expect(find.text(refusal.message), findsOneWidget);
+    });
+
+    // A block ends what is still being negotiated, and nothing that has
+    // finished: a completed trade's conversation kept its field, and «Send»
+    // there said «Dette er ikke mulig mellom dere.» each time it was pressed.
+    const acrossABlock = Refusal(403, 'blocked', 'Dette er ikke mulig mellom dere.');
+
+    testWidgets('6f. «Send» refused across a block gives the field way to why', (tester) async {
+      server.overrides['GET /trades/trade-1'] = {...FakeServer.trade, 'state': 'completed'};
+      server.overrides['GET /threads/thread-1'] = {...FakeServer.thread, 'state': 'completed'};
+      server.overrides['POST /threads/thread-1/messages'] = acrossABlock;
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      await tester.enterText(find.byType(TextField), 'Er du der?');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Samtalen er stengt etter en blokkering.'), findsOneWidget);
+    });
+
+    testWidgets('6g. …and on the trade page\'s card the same', (tester) async {
+      server.overrides['GET /trades/trade-1'] = {...FakeServer.trade, 'state': 'completed'};
+      server.overrides['POST /threads/thread-1/messages'] = acrossABlock;
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      await tester.enterText(find.byType(TextField), 'Er du der?');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Samtalen er stengt etter en blokkering.'), findsOneWidget);
     });
 
     for (final code in ['declined', 'listing_removed']) {

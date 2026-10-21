@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
 import '../design/tokens.dart';
-import '../util/clock.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
 import 'chat.dart';
@@ -38,12 +39,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final api = context.read<SwaplyApi>();
     try {
       final result = await api.notifications();
-      await api.markNotificationsRead();
       if (mounted) {
         setState(() {
           _items = result.notifications;
           _error = null;
         });
+      }
+      // Read, as far as the server is told, and quietly: they came, and
+      // marking them used to share their `try`, so no answer to it put
+      // «Fikk ikke kontakt» where the list it had just fetched should be.
+      // Up to the newest one on screen, and no further: marking everything
+      // read one that arrived in between, which nobody had seen. With none
+      // on screen there is nothing to mark.
+      final newest = result.notifications.firstOrNull?.id;
+      if (newest != null) {
+        unawaited(api.markNotificationsRead(upTo: newest).then((_) {}, onError: (Object _) {}));
       }
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -113,7 +123,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       title: Text(title, style: Type.heading),
       subtitle: Text(body, style: Type.secondary),
-      trailing: Text(_ago(n.createdAt), style: Type.small),
+      // As 11a says when: «nå», «12 min», «14:12», «i går», «tirsdag». It
+      // said «5 t» and «2 d» about the same times.
+      trailing: Text(whenSaid(n.createdAt), style: Type.small),
       onTap: () => _open(n),
     );
   }
@@ -122,7 +134,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         // By first name, as the export writes it and every other screen
         // names people: the server sends the whole name, «Kari N.».
         'item_liked' => (
-            '${_firstName(n.actorName)} likte ${n.itemTitle ?? 'noe av ditt'}',
+            '${_firstName(n.actorName)} likte ${n.itemTitle ?? 'en av tingene dine'}',
             'Se tingene deres og lik tilbake, det lukker bytter raskere.',
           ),
         'trade_opened' => (
@@ -183,7 +195,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   static String _whyEnded(Object? reason) => switch (reason) {
         'declined' => 'Noen i byttet avslo det.',
         'withdrawn_early' => 'Noen i byttet trakk seg før det var godtatt.',
-        'displaced' => 'En av tingene i byttet ble reservert i et annet bytte.',
+        // Held there by a yes, or given away when it was completed: the
+        // server says one code for both.
+        'displaced' => 'En av tingene i byttet er med i et annet bytte nå.',
         'withdrawal_approved' => 'Dere ble enige om å avbryte det.',
         'blocked' => 'Det kan ikke fortsette mellom dere.',
         'listing_removed' => 'En av tingene i byttet ble tatt ned.',
@@ -221,12 +235,4 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  String _ago(DateTime? when) {
-    if (when == null) return '';
-    final diff = now().difference(when);
-    if (diff.inMinutes < 1) return 'nå';
-    if (diff.inHours < 1) return '${diff.inMinutes} min';
-    if (diff.inDays < 1) return '${diff.inHours} t';
-    return '${diff.inDays} d';
-  }
 }

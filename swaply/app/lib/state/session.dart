@@ -23,6 +23,7 @@ class Session extends ChangeNotifier {
     final elsewhere = otherTabs ?? tokenChangedElsewhere();
     _shared = elsewhere != null;
     _otherTabs = elsewhere?.listen((_) => unawaited(_followOtherTab()));
+    api.onTokenRefused = _heardRefusal;
   }
 
   final SwaplyApi api;
@@ -172,6 +173,11 @@ class Session extends ChangeNotifier {
       }
       // A token that no longer resolves is the same as no token at all.
       stalled = false;
+      // Unless the admin's own is parked behind it: see [_backToParked].
+      if (await _backToParked(token)) {
+        await _check(takeUp: takeUp);
+        return;
+      }
       await _letGo(token);
     } catch (_) {
       // No answer within [patience]. The token may well be good, and dropping
@@ -480,6 +486,7 @@ class Session extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (api.onTokenRefused == _heardRefusal) api.onTokenRefused = null;
     unawaited(_otherTabs?.cancel());
     unawaited(_gate.close());
     super.dispose();
@@ -494,6 +501,10 @@ class Session extends ChangeNotifier {
       await prefs.setString(_pickerKey, owed);
     }
   }
+
+  /// A switch of account asking who it has become; see [_switch]. A refusal
+  /// heard meanwhile is the switch's to decide, not [_heardRefusal]'s.
+  bool _switching = false;
 
   /// Become one of your test accounts.
   ///
@@ -546,6 +557,7 @@ class Session extends ChangeNotifier {
     _decided++;
     api.token = token;
     final Me found;
+    _switching = true;
     try {
       found = await api.me();
     } catch (e) {
@@ -557,6 +569,8 @@ class Session extends ChangeNotifier {
         undo();
       }
       rethrow;
+    } finally {
+      _switching = false;
     }
     // Their first run, not yours. «Nullstill interesser» is sold as bringing
     // screen 02 back, and emptying the column is only half of that — somebody
@@ -567,6 +581,12 @@ class Session extends ChangeNotifier {
     // asked. Read off the column, an admin who skipped it was shown 02 again
     // after every «Tilbake til …».
     interestsPending = firstRun && found.interests.isEmpty;
+    // A form handed over for 10c is the account's being left, and stays kept
+    // for it on the phone, by its id. Held on to here, the gate opened the
+    // next account's app on Legg ut and its form listed it there: a test
+    // account's words and pictures on the admin's own account, «Tilbake til
+    // …» pressed on 10c.
+    listingToFinish = null;
     _become(found);
     await _persist();
   }
@@ -936,6 +956,30 @@ class Session extends ChangeNotifier {
     if (asked == _decided) _become(found);
   }
 
+  /// The server refused [token] itself, to any request at all; see
+  /// [SwaplyApi.onTokenRefused]. A session that ended with the app in front
+  /// — the account deleted from a browser on another machine, say — is
+  /// taken as [wake] takes one on the way back from the background: the
+  /// screens go, and the gate makes the next start. Heard only there, every
+  /// screen was refused, «Du må logge inn.» under every tap and the last
+  /// person's things on every tab, until the app had been put away for a
+  /// minute and brought back.
+  ///
+  /// Only for the token this phone holds now, and only while nothing else is
+  /// deciding who this is: a sign-in or a profile on its way retires the
+  /// token the request went on as it lets the person in ([wake] has the long
+  /// story, and decides its own refusal once the sign-in has landed); a
+  /// sign-out retires it itself; a start, a check of a kept token or a switch
+  /// of account asks about a token on purpose and says what it heard.
+  bool _heardRefusal(String token) {
+    if (token != api.token) return false;
+    if (_signingIn != null || _loggingOut != null || starting || _waking != null || _switching) {
+      return false;
+    }
+    unawaited(_turnedAway(token));
+    return true;
+  }
+
   /// When the server last answered this phone about who it is — a cold
   /// start, or any [refresh]. Only an answer: an asking that got none may
   /// never have reached it, and counting it kept the next return to the app
@@ -1023,9 +1067,37 @@ class Session extends ChangeNotifier {
   Future<void> _turnedAway(String? token) async {
     _decided++;
     _forgetWhoThisWas();
+    if (await _backToParked(token)) {
+      // Asked about behind the splash, as a cold start with that token is:
+      // the admin, a stranger if theirs is dead too, or «Prøv igjen».
+      loading = true;
+      notifyListeners();
+      _sendBack();
+      await _once(_check);
+      loading = false;
+      notifyListeners();
+      return;
+    }
     await _letGo(token);
     notifyListeners();
     _sendBack();
+  }
+
+  /// Whether [token], which opens nothing any more, was a session the
+  /// account switcher minted with the admin's own token parked behind it —
+  /// and if so, the parked one is this phone's token now, kept so, and is
+  /// what is asked about next. The test account was deleted from Testverktøy
+  /// on another phone, say. `../docs/ADMIN.md` promises that nothing strands
+  /// the admin as somebody else, and a stranger made here instead kept the
+  /// admin's token parked where nothing on screen could reach it: no floor,
+  /// no way back, and the password the only door.
+  Future<bool> _backToParked(String? token) async {
+    final parked = _adminToken;
+    if (parked == null || parked == token) return false;
+    _adminToken = null;
+    api.token = parked;
+    await _persist();
+    return true;
   }
 
   void _become(Me found) {

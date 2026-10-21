@@ -48,7 +48,9 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
         _threads = result.threads;
         _error = null;
       });
-      await context.read<Session>().refresh();
+      // The bar's badge, quietly: the list came, and a pull that brought it
+      // said «Vi får ikke kontakt» when only this asking after it did not.
+      unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
     } on ApiException catch (e) {
       if (!mounted) return;
       if (_threads == null) {
@@ -114,7 +116,8 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
     // «Ola N.» — the full name belongs on a profile.
     final name = thread.others.isEmpty
         ? 'Samtale'
-        : thread.others.map((o) => o.split(' ').first).join(', ');
+        // «Per og Kari» for a ring, as 07k's title says it.
+        : andList([for (final o in thread.others) o.split(' ').first]);
     final subtitle = switch (thread.state) {
       'completed' => 'Fullført bytte',
       'cancelled' => 'Avsluttet bytte',
@@ -149,7 +152,7 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(_relative(thread.lastMessage?.createdAt),
+          Text(whenSaid(thread.lastMessage?.createdAt),
               style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
           const SizedBox(height: 6),
           // A dot, not a count: the number is already on the tab in the nav,
@@ -334,7 +337,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   }
 
   Future<void> _send() async {
-    final text = _input.text.trim();
+    final typed = _input.text;
+    final text = typed.trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
@@ -342,7 +346,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
       // Closed while it was on its way: the field went with the screen,
       // and there is no conversation on screen to ask for again.
       if (!mounted) return;
-      _input.clear();
+      // What went, and not what has been typed since; see [takeSent].
+      takeSent(_input, typed);
       await _load(toEnd: true);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -350,6 +355,11 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
         // Nobody left to read it: the field gives way to the server's
         // words, which say why, rather than staying to be refused again.
         setState(() => _closedByServer = e.message);
+      } else if (e.code == ApiException.blocked) {
+        // Across a block, in a conversation the block did not end: a trade
+        // that had finished keeps its thread, and nothing on it said the two
+        // could no longer write. The field stayed, refused at every «Send».
+        setState(() => _closedByServer = closedAfterBlock);
       } else {
         showError(context, e);
       }
@@ -532,8 +542,11 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   /// things side by side. A ring is agreed in words, so the words of it
   /// stay in view while they are written.
   Widget _ringSummary(Trade trade) {
-    String things(List<Item> items) =>
-        items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' og ');
+    // «ennå» only while something can still come.
+    final over = trade.state == 'completed' || trade.state == 'cancelled';
+    String things(List<Item> items) => items.isEmpty
+        ? (over ? 'ingenting' : 'ingenting ennå')
+        : andList([for (final i in items) i.title]);
     String first(UserRef person) => person.displayName.split(' ').first;
     final pictures = [
       ...trade.youGet.take(1),
@@ -609,30 +622,31 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
 
   /// Why nobody can write here any more, or null while somebody can.
   ///
-  /// A trade ended by a block, or by the other one in a pair deleting their
-  /// account; and, however the trade ended or whether it is finished,
-  /// everybody else in the conversation having deleted theirs, which the
-  /// conversation's people say with no name. A finished trade whose other
-  /// side has gone kept its field, and «Send» wrote to nobody; a ring one of
-  /// whose two others had gone was closed, while the third was still there
-  /// to read it and the server took the message. And the server's own
-  /// refusal, `conversation_closed`, in its words, should it come first.
+  /// As the server says it with the conversation (`closed`), by the very
+  /// rule it refuses a message by: a block between the one reading and
+  /// somebody in it, either way, or everybody else in it having deleted
+  /// their account. A block ends no finished or agreed trade, and the field
+  /// stayed on such a conversation until the first «Send» was refused. And
+  /// the server's own refusal, in its words or ours, should it come first.
+  ///
+  /// A server from before it said so is read the old way: a trade ended by
+  /// a block, or by the other one in a pair deleting their account; and
+  /// everybody else in the conversation having deleted theirs, which its
+  /// people say with no name. In a ring one who is left is somebody to
+  /// write to.
   String? _closedWords(Thread thread) {
     if (_closedByServer case final words?) return words;
-    final trade = _trade;
-    if (trade?.state == 'cancelled' && trade?.closeCode == Trade.closedByBlock) {
-      // Not who blocked whom: the one blocked reads it too.
-      return 'Samtalen er stengt etter en blokkering.';
-    }
     final me = context.read<Session>().me?.id;
     final others = thread.participants.where((p) => p.id != me).toList();
-    final allGone = others.isNotEmpty && others.every((p) => p.gone);
-    if (!allGone && !(trade?.conversationClosed ?? false)) return null;
-    return others.length > 1
-        ? 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.'
-        : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.';
+    final String? why;
+    if (thread.saysClosed) {
+      why = thread.closed;
+    } else {
+      final allGone = others.isNotEmpty && others.every((p) => p.gone);
+      why = allGone ? Thread.closedByErasure : _trade?.conversationClosedWhy;
+    }
+    return closedLine(why, others: others.length);
   }
-
   /// The server's words for a conversation it no longer takes messages in,
   /// once «Send» has been refused with them.
   String? _closedByServer;
@@ -653,8 +667,12 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   String _tradeLine(Trade trade) {
     // A side with nothing on it yet is said, as 11 says it: it was a hole
     // after the ⇄, «Fiskestang med snelle ⇄  · under avtale».
-    String side(List<Item> items) =>
-        items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' + ');
+    // «ennå» only while something can still come: an ended trade said
+    // «ingenting ennå ⇄ Monas lampe · avsluttet».
+    final over = trade.state == 'completed' || trade.state == 'cancelled';
+    String side(List<Item> items) => items.isEmpty
+        ? (over ? 'ingenting' : 'ingenting ennå')
+        : items.map((i) => i.title).join(' + ');
     final give = side(trade.youGive);
     final get = side(trade.youGet);
     final state = switch (trade.state) {
@@ -769,10 +787,10 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   /// The three chips over the field. They are trade actions, not decoration:
   /// this is where a conversation turns into a proposal.
   ///
-  /// Not in a ring. 07k draws them, but each sheet behind them proposes to
-  /// the one person you receive from, which a ring of three has no offer
-  /// for: every tap ended in a toast saying so. A ring is agreed in words,
-  /// which is what the banner over it says.
+  /// Not in a ring. 07k draws them, but each sheet behind them composes an
+  /// offer between you and the one person you receive from, and leaves out
+  /// the leg between the other two. A ring is agreed in words, which is what
+  /// the banner over it says.
   Widget _composer() {
     final trade = _trade;
     final negotiable = trade != null &&
@@ -822,6 +840,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
                       controller: _input,
                       minLines: 1,
                       maxLines: 4,
+                      maxLength: maxMessageLength,
+                      buildCounter: nearLimit,
                       style: const TextStyle(fontSize: 14.5, color: SwaplyColors.ink),
                       decoration: InputDecoration(
                         // 07k as 06g: «Skriv til begge…» is the trade
@@ -897,6 +917,22 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
 
 }
 
+/// Where the field was, in a conversation nobody can write in across a
+/// block. Not who blocked whom: the one blocked reads it too.
+const closedAfterBlock = 'Samtalen er stengt etter en blokkering.';
+
+/// Where the field was, for a conversation closed for [why] —
+/// [Thread.closedByBlock] or [Thread.closedByErasure] — or null for one that
+/// is not. [others] is how many else are in it: one who has gone, or two.
+/// The same lines on 06g and on the trade page's card.
+String? closedLine(String? why, {required int others}) => switch (why) {
+      null => null,
+      Thread.closedByBlock => closedAfterBlock,
+      _ => others > 1
+          ? 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.'
+          : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.',
+    };
+
 /// A small sheet with the people in a ring, for something that is about one
 /// of them. Null when it is closed without a choice.
 Future<UserRef?> choosePerson(
@@ -957,7 +993,7 @@ Future<UserRef?> choosePerson(
 /// last week, a date before that. By the calendar's days, not by hours: a
 /// message from Tuesday evening, read on Thursday morning, was under 48
 /// hours old and said «i går».
-String _relative(DateTime? when) {
+String whenSaid(DateTime? when) {
   if (when == null) return '';
   final diff = now().difference(when);
   if (diff.inMinutes < 1) return 'nå';

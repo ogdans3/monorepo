@@ -72,6 +72,8 @@ export async function acceptTrade(
 
   // Asked again under the lock: a counter-offer may land after the read above.
   const result = await acceptOffer(db, view.offerId, userId, termsVersion)
+  // Nothing happened, so nobody is told and nothing went back on the market.
+  if (result.alreadyAccepted) return result
 
   // Who said yes rides along as an id, never a name (12a: «Ola godtok
   // byttet»), and GET /notifications looks the name up, as it does for a like.

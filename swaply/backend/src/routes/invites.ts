@@ -102,7 +102,7 @@ export default async function inviteRoutes(app: FastifyInstance) {
     // A listing traded away since is as gone as one taken down: the page
     // says there is nothing to show rather than offering a thing somebody
     // else already has.
-    const item = invite['item_id']
+    const listed = invite['item_id']
       ? await one(
           app.db,
           sql`select i.*, u.display_name as owner_name
@@ -111,6 +111,15 @@ export default async function inviteRoutes(app: FastifyInstance) {
                 and i.status <> 'traded'`,
         )
       : null
+    // And so is one whose owner and the one who shared it are blocked, either
+    // way. Sharing across a block is refused (`/items/:id/share`), but a link
+    // shared before it went on showing the owner's name, photographs and
+    // words on a public page made by the one person they had shut out. The
+    // invitation itself still works.
+    const item =
+      listed && !(await blockedBetween(app.db, invite['inviter_id'], listed['owner_id']))
+        ? listed
+        : null
 
     const media = item
       ? await many(

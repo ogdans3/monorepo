@@ -83,7 +83,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Byttevilkår'), findsOneWidget);
-      expect(find.text('Versjon 2026-09-06'), findsOneWidget);
+      expect(find.text('Versjon 6. september 2026'), findsOneWidget);
     });
 
     testWidgets('3. sends the version of the terms with the proposal', (tester) async {

@@ -885,6 +885,11 @@ void main() {
       expect(find.text('Marker som mottatt'), findsOneWidget);
       expect(find.text('Marker som betalt'), findsOneWidget);
       expect(find.textContaining('frakt avtales utenfor appen'), findsOneWidget);
+      // Each thing once: «DU FÅR» and «DU GIR» over these drew them twice.
+      expect(find.text('DU FÅR'), findsNothing);
+      expect(find.text('DU GIR'), findsNothing);
+      expect(find.text('Retro spillkonsoll'), findsOneWidget);
+      expect(find.text('Bosch drill 18V'), findsOneWidget);
     });
 
     testWidgets('09e a counter arrived: it says a new proposal is on the table',
@@ -1575,7 +1580,7 @@ void main() {
           TradeCompletedScreen(trade: Trade.fromJson(FakeServer.trade)));
 
       expect(find.text('Byttet er gjennomført!'), findsOneWidget);
-      expect(find.textContaining('Retro spillkonsoll er din'), findsOneWidget);
+      expect(find.textContaining('Du fikk Retro spillkonsoll'), findsOneWidget);
       expect(find.text('Vurder Kari'), findsOneWidget);
       expect(find.text('Senere'), findsOneWidget);
     });

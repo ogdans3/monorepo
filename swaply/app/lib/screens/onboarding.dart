@@ -344,6 +344,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    // Once: the button takes no second press while it spins, and the return
+    // key on the password field went past it and signed in a second time —
+    // after the first had folded the stranger away, so as nobody's, and an
+    // account with no interests was shown 02 again.
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -683,6 +688,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   }
 
   Future<void> _submit() async {
+    // Once, as on 16c: the return key on the password field went past the
+    // spinning button and made the profile a second time, which the server
+    // could answer with «Det finnes allerede en konto med denne e-posten»
+    // about the profile the first press was making.
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;

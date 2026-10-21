@@ -120,10 +120,17 @@ describe('rating the counterparty', () => {
     })
     expect(outsider.status).toBe(403)
 
+    // Rating somebody who was not in it is a mistake in what was sent, and
+    // it is said about them. It was «Du er ikke med i dette byttet.», 403,
+    // which told Ola he was not in his own trade.
     const absent = await call('POST', `/trades/${tradeId}/reviews`, {
       token: ola, body: { ratee: perId, score: 1 },
     })
-    expect(absent.status).toBe(403)
+    expect(absent.status).toBe(400)
+    expect(absent.body).toEqual({
+      code: 'ratee_not_in_trade',
+      message: 'Den du vurderer var ikke med i dette byttet.',
+    })
   })
 
   test('5. changing your mind replaces the review rather than adding one', async () => {

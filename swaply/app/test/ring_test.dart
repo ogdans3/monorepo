@@ -168,6 +168,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.bodies['POST /reports']?['targetUser'], 'per-1');
+      // Not «Spam»: «Annet», and words that say which trade did not happen.
+      expect(server.bodies['POST /reports']?['reason'], 'other');
+      expect(server.bodies['POST /reports']?['detail'],
+          'Byttet ble ikke noe av. Treveisbyttet: jeg skulle få Retro spillkonsoll fra Kari og '
+          'gi Bosch drill 18V til Kari.');
       // Rating is still there to do, or «Senere».
       expect(find.byType(ReviewScreen), findsOneWidget);
     });
@@ -238,5 +243,81 @@ void main() {
     expect(server.asked('POST /trades/trade-chain/reviews'), 2);
     expect(find.text('Kari og Per har fått hver sin. Et par sekunder fra deg gjør appen bedre.'),
         findsOneWidget);
+  });
+
+  testWidgets('9. a version Per proposed in a ring says Per, and the mellomlegg between the other '
+      'two names them both', (tester) async {
+    // «Ingrid foreslår motbytte» read «Nytt forslag fra Kari», whom you
+    // receive from, and «Kari betaler deg 200 kr» about Ingrid's money.
+    final trade = chainTrade();
+    server.overrides['GET /trades/trade-chain'] = {
+      ...trade,
+      'state': 'countered',
+      'counterOfferBy': 'per-1',
+      'cash': {
+        'amountNok': 200,
+        'youPay': false,
+        'payer': {...FakeServer.kari, 'position': 1},
+        'payee': {'id': 'per-1', 'displayName': 'Per H.', 'position': 2},
+      },
+    };
+    await open(tester, const TradeDetailScreen(tradeId: 'trade-chain'));
+
+    expect(find.text('Nytt forslag fra Per. Godta, avslå eller foreslå noe annet.'),
+        findsOneWidget);
+    expect(find.text('Kari betaler Per 200\u00A0kr'), findsOneWidget);
+    expect(find.text('betales når alle har godtatt'), findsOneWidget);
+    expect(find.textContaining('betaler deg'), findsNothing);
+  });
+
+  testWidgets('10. 07i says what you get and from whom, and what you give and to whom',
+      (tester) async {
+    // Three lines of «… gir …» never said who gets what in a ring of three.
+    server.overrides['GET /trades/trade-chain'] = {
+      ...chainTrade(),
+      'receivingFrom': {...FakeServer.kari, 'position': 1},
+      'givingTo': {'id': 'per-1', 'displayName': 'Per H.', 'town': 'Stjørdal', 'position': 2},
+    };
+    // The confetti holds still, as for somebody who asked for less motion.
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await open(tester, const MatchScreen(tradeId: 'trade-chain'));
+
+    expect(find.text('DU FÅR'), findsOneWidget);
+    expect(find.text('Retro spillkonsoll'), findsOneWidget);
+    expect(find.text('fra Kari i Bergen'), findsOneWidget);
+    expect(find.text('DU GIR'), findsOneWidget);
+    expect(find.text('Bosch drill 18V'), findsOneWidget);
+    expect(find.text('til Per i Stjørdal'), findsOneWidget);
+    expect(find.textContaining(' gir '), findsNothing);
+  });
+
+  testWidgets('11. a version of a ring with the other two\'s leg empty cannot be accepted, '
+      'and says why', (tester) async {
+    // A version with a side still empty is a question, not a deal
+    // (DESIGN.md, 02.10.2026): 07j offered «Godta byttet» on one, and the
+    // leg was a kicker with nothing under it.
+    final trade = chainTrade();
+    server.overrides['GET /trades/trade-chain'] = {
+      ...trade,
+      'state': 'countered',
+      'counterOfferBy': 'per-1',
+      'otherLegs': [
+        {
+          'giver': {'id': 'per-1', 'displayName': 'Per H.', 'position': 2},
+          'receiver': {...FakeServer.kari, 'position': 1},
+          'items': const [],
+        },
+      ],
+    };
+    await open(tester, const TradeDetailScreen(tradeId: 'trade-chain'));
+
+    expect(find.text('Per gir ingenting til Kari i dette forslaget, så det kan ikke godtas '
+        'ennå. Avtal resten i chatten.'), findsOneWidget);
+    expect(find.text('ingenting ennå · til Kari'), findsOneWidget);
+    expect(find.text('Godta byttet'), findsNothing);
+    expect(find.text('Godta endringen'), findsNothing);
+    expect(find.text('Avslå'), findsOneWidget);
   });
 }

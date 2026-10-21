@@ -3,7 +3,7 @@ import type { FastifyBaseLogger } from 'fastify'
 import type { Database } from './db/index.js'
 import { sweepOrphanedMedia } from './lib/media-sweep.js'
 import { expireWithdrawals } from './trades/actions.js'
-import { eraseInactiveDevices, purgeRetained } from './trades/erasure.js'
+import { dropSnapshotCovers, eraseInactiveDevices, purgeRetained } from './trades/erasure.js'
 import { sweepForCycles } from './trades/sweep.js'
 
 const DAY = 24 * 60 * 60_000
@@ -51,7 +51,8 @@ export function startJobs(db: Database, log: FastifyBaseLogger) {
 
 /**
  * What may no longer be kept: device accounts nobody has used for twelve
- * months, and sealed records whose claim window has closed.
+ * months, sealed records whose claim window has closed, and the photograph
+ * a finished trade kept once the window over that trade has.
  *
  * Logged every time, zeros included. Most days both are nothing, and a line
  * that says so is how anybody can tell a job that ran and found nothing from
@@ -69,5 +70,9 @@ async function retention(db: Database, log: FastifyBaseLogger) {
     log.error({ job: 'retention', err }, 'purging sealed records failed')
     return null
   })
-  log.info({ job: 'retention', erasedDevices, purgedRecords }, 'retention ran')
+  const droppedCovers = await dropSnapshotCovers(db).catch((err) => {
+    log.error({ job: 'retention', err }, 'dropping old snapshot photographs failed')
+    return null
+  })
+  log.info({ job: 'retention', erasedDevices, purgedRecords, droppedCovers }, 'retention ran')
 }
