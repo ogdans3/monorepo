@@ -68,6 +68,19 @@ several rows below point at the same file with a different `state` behind it.
 | 13 Profil · 13b Annen profil · 17c Tom · 16a Rapporter · 16b Innstillinger, and the «Juridisk og personvern» screen behind it | `screens/profile.dart` |
 | 06h Vurdering · 07l Vurdering B2 · 06i Tilbakemelding · 09h Fullført | `screens/review.dart` |
 
+**The trade screen's header says where the trade stands**, as the export draws
+it. The title is «Ditt bytte» once you have said yes and the trade is still
+going (06e, 06f, 08b, 08c, and a ring throughout, 07j), and «Bytte med Ola»
+while the yes is yours to give and once it is over (06b, 09e, 09f, 09i). The
+pill at its right says «Venter», «Endret», «Godtatt», «Avtales i chat» for a
+ring everybody has agreed to, «Pauset», «Gjennomført» or «Avslått», in the
+export's colours; 06b has none. The export draws one ending and the server has
+eight: the pill says «Avslått» only for `declined`, and «Avsluttet» for every
+other — the app does not know who declined, so it says no more than the code.
+Where the pill does not fit beside the title — a long name, a 320 phone, large
+text — it goes under it rather than cut either. It is read with the title, as
+the screen's heading. `test/trade_header_test.dart` holds it.
+
 **10a comes at the fifth heart, not at the tenth** the export's title names.
 That is a decision, not a drift, and `../docs/DESIGN.md` has it: while nothing
 is listed it comes at five, then at fifteen, twenty-five and on, so «Senere»

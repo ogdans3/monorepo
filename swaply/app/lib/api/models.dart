@@ -456,6 +456,10 @@ class Trade {
   /// history keeps; a code is what lets the words fit whoever reads them.
   final String? closeCode;
 
+  /// Somebody in it said no with «Avslå» — which of them, the code does not
+  /// say.
+  static const closedByDecline = 'declined';
+
   /// Somebody in the trade deleted their account, and every trade they were
   /// in ended with it.
   static const closedByErasure = 'account_deleted';
