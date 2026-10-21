@@ -331,6 +331,15 @@ describe('deleting your own account', () => {
       expect((await call('DELETE', '/me', { token: vid.token, body: { password: 'byttehandel1' } })).status)
         .toBe(204)
 
+      // Said before anybody writes, by the rule the refusal below comes from.
+      const before = await call('GET', `/threads/${thread['threadId']}`, { token: una.token })
+      expect(before.body!['closed']).toBe('deleted')
+      const row = ((await call('GET', '/threads', { token: una.token })).body!['threads'] as Json[])
+        .find((t) => t['id'] === thread['threadId'])!
+      expect(row['closed']).toBe('deleted')
+      expect((await call('GET', `/trades/${done}`, { token: una.token })).body!['conversationClosed'])
+        .toBe('deleted')
+
       const res = await call('POST', `/threads/${thread['threadId']}/messages`, {
         token: una.token, body: { body: 'Hei, er du der?' },
       })

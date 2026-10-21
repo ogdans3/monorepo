@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { forbidden, notFound } from '../lib/errors.js'
 import { iso, many, one } from '../lib/rows.js'
-import { markReadUpTo, postMessage } from '../trades/conversation.js'
+import { closedReason, markReadUpTo, postMessage } from '../trades/conversation.js'
 import { publicMessage } from './serialize.js'
 
 const idParam = z.object({ id: z.string().uuid() })
@@ -33,6 +33,7 @@ export default async function chatRoutes(app: FastifyInstance) {
               from trade_participants p join users u on u.id = p.user_id
               where p.trade_id = t.id and p.user_id <> ${userId}) as others,
              m.body as last_body, m.created_at as last_at, m.sender_id as last_sender,
+             ${closedReason(sql`th.id`, sql`${userId}::uuid`)} as closed,
              (select count(*) from messages mm
               where mm.thread_id = th.id and mm.sender_id <> ${userId}
                 and (tp.last_read_message_id is null
@@ -66,6 +67,9 @@ export default async function chatRoutes(app: FastifyInstance) {
         kind: Number(r['party_size']) > 2 ? 'chain' : 'direct',
         others: r['others'] ?? [],
         subject: r['subject'],
+        // Why «Send» is gone, or null while it is there: see `closed` on
+        // GET /threads/:id.
+        closed: (r['closed'] as string | null) ?? null,
         unread: Number(r['unread'] ?? 0),
         lastMessage: r['last_body']
           ? { body: r['last_body'], mine: r['last_sender'] === userId, createdAt: iso(r['last_at']) }
@@ -84,7 +88,9 @@ export default async function chatRoutes(app: FastifyInstance) {
 
     const thread = await one(
       app.db,
-      sql`select th.*, t.state, t.id as trade_id from threads th
+      sql`select th.*, t.state, t.id as trade_id,
+                 ${closedReason(sql`th.id`, sql`${userId}::uuid`)} as closed
+          from threads th
           join trades t on t.id = th.trade_id where th.id = ${id}`,
     )
     if (!thread) throw notFound('Fant ikke samtalen.')
@@ -112,6 +118,14 @@ export default async function chatRoutes(app: FastifyInstance) {
       tradeId: thread['trade_id'],
       state: thread['state'],
       kind: participants.length > 2 ? 'chain' : 'direct',
+      // Why nobody can write here any more, or null while «Send» works:
+      // 'deleted' when everybody else in it has deleted their account,
+      // 'blocked' when the one asking and somebody in it are blocked either
+      // way. The very rule a message is refused by (`closedReason`), so the
+      // field and the 409 or 403 behind «Send» never disagree. A block
+      // leaves a finished trade standing, and its conversation used to keep
+      // its field until the first «Send» was refused.
+      closed: (thread['closed'] as string | null) ?? null,
       // Screen 07k, verbatim and not closeable.
       banner:
         participants.length > 2

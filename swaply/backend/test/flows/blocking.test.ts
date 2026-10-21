@@ -422,6 +422,27 @@ describe('a block made while the two are already negotiating', () => {
     expect((await messagesTold(siri)) + (await messagesTold(tor))).toBe(before)
   })
 
+  test('20b. and each conversation says so before anybody presses «Send»', async () => {
+    // The field used to stay until the first «Send» was refused: a block
+    // ends no finished or agreed trade, so nothing about the trade said it.
+    // `closed` is the rule the refusal above comes from, read for whoever
+    // asks: Siri and Tor in both, and Una, who blocked nobody, not at all.
+    for (const tradeId of [talking, ring]) {
+      for (const who of [siri, tor]) {
+        const thread = await threadOf(tradeId, who)
+        expect((await call('GET', `/threads/${thread}`, { token: who.token })).body!['closed']).toBe('blocked')
+        const row = ((await call('GET', '/threads', { token: who.token })).body!['threads'] as Json[])
+          .find((t) => t['id'] === thread)!
+        expect(row['closed']).toBe('blocked')
+        expect((await call('GET', `/trades/${tradeId}`, { token: who.token })).body!['conversationClosed'])
+          .toBe('blocked')
+      }
+    }
+    const unasRing = await threadOf(ring, una)
+    expect((await call('GET', `/threads/${unasRing}`, { token: una.token })).body!['closed']).toBeNull()
+    expect((await call('GET', `/trades/${ring}`, { token: una.token })).body!['conversationClosed']).toBeNull()
+  })
+
   test('21. Una, who blocked nobody, still writes in the ring’s conversation, and both are told', async () => {
     const thread = await threadOf(ring, una)
     const before = [await messagesTold(siri), await messagesTold(tor)]

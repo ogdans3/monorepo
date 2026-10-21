@@ -1,11 +1,43 @@
-import { sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { blocked } from '../lib/blocks.js'
 import { conflict } from '../lib/errors.js'
 import { iso, one, type Executor, type Row } from '../lib/rows.js'
-import { blockedInThread } from './blocking.js'
 import type { Tx } from './trades.js'
+
+/**
+ * Why [user] can no longer write in [thread], as a column: `'deleted'`,
+ * `'blocked'` or null.
+ *
+ * The one definition, read by `postMessage` to refuse a message and by every
+ * answer that draws a conversation, so the field the app hides «Send» on and
+ * the refusal behind «Send» cannot disagree.
+ *
+ * - `'deleted'`: everybody else in it has deleted their account, so nobody is
+ *   left to read it. In a ring, one who is left is somebody to write to.
+ * - `'blocked'`: [user] and somebody else in it are blocked, either way. A
+ *   conversation going on when the block was made is kept, but nobody
+ *   writes across it, and in a ring that is the whole conversation for the
+ *   two of them.
+ */
+export function closedReason(thread: SQL, user: SQL): SQL {
+  return sql`(case
+    when exists (select 1 from thread_participants o
+                 where o.thread_id = ${thread} and o.user_id <> ${user})
+     and not exists (select 1 from thread_participants o join users u on u.id = o.user_id
+                     where o.thread_id = ${thread} and o.user_id <> ${user}
+                       and u.anonymised_at is null)
+    then 'deleted'
+    when exists (select 1 from thread_participants o
+                 join blocks b on (b.blocker = ${user} and b.blocked = o.user_id)
+                               or (b.blocker = o.user_id and b.blocked = ${user})
+                 where o.thread_id = ${thread} and o.user_id <> ${user})
+    then 'blocked'
+  end)`
+}
+
+export type Closed = 'deleted' | 'blocked' | null
 
 /**
  * Move somebody's read mark in a conversation up to and including a message
@@ -55,26 +87,25 @@ export async function postMessage(
   body: string,
 ): Promise<Row> {
   return db.transaction(async (tx) => {
-    // Nobody left to read it: everybody else in the conversation has deleted
-    // their account. A completed trade keeps its conversation, and erasure
+    // Nobody left to read it — everybody else in the conversation has deleted
+    // their account: a completed trade keeps its conversation, and erasure
     // ends nothing that is finished, so «Send» used to answer 201 and write
-    // into a thread only tombstones were in. In a ring, one who is left is
-    // somebody to write to.
-    const [others] = await tx.execute<Row>(
-      sql`select count(*) filter (where u.anonymised_at is null) as left,
-                 count(*) as everybody
-          from thread_participants tp join users u on u.id = tp.user_id
-          where tp.thread_id = ${threadId} and tp.user_id <> ${senderId}`,
+    // into a thread only tombstones were in. Or across a block. Both as
+    // `closedReason` says, which is what GET /threads/:id shows the app.
+    const [why] = await tx.execute<Row>(
+      sql`select ${closedReason(sql`${threadId}::uuid`, sql`${senderId}::uuid`)} as closed,
+                 (select count(*) from thread_participants
+                  where thread_id = ${threadId} and user_id <> ${senderId}) as everybody`,
     )
-    if (Number(others?.['everybody'] ?? 0) > 0 && Number(others?.['left']) === 0) {
+    if (why?.['closed'] === 'deleted') {
       throw conflict(
         'conversation_closed',
-        Number(others!['everybody']) > 1
+        Number(why['everybody']) > 1
           ? 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.'
           : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.',
       )
     }
-    if (await blockedInThread(tx, threadId, senderId)) throw blocked()
+    if (why?.['closed'] === 'blocked') throw blocked()
     const [message] = await tx.execute<Row>(
       sql`insert into messages (thread_id, sender_id, body)
           values (${threadId}, ${senderId}, ${body}) returning *`,
