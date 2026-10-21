@@ -232,7 +232,7 @@ class _AdminScreenState extends State<AdminScreen> {
       if (!account.claimed) 'uten profil',
       if (account.town != null) account.town!,
       '${account.itemCount} ting',
-      if (account.openTrades > 0) '${account.openTrades} åpne bytter',
+      if (account.openTrades > 0) counted(account.openTrades, 'åpent bytte', 'åpne bytter'),
     ].join(' · ');
 
     return Container(
@@ -437,7 +437,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     final opened = await api.adminRunSweep();
                     return opened == 0
                         ? 'Sweepen fant ingen nye sirkler'
-                        : 'Sweepen åpnet $opened bytter';
+                        : 'Sweepen åpnet ${counted(opened, 'bytte', 'bytter')}';
                   })),
         ],
       );
@@ -455,7 +455,8 @@ class _AdminScreenState extends State<AdminScreen> {
                 onPressed: () => _run('state', (api) async {
                       final state = await api.adminState();
                       if (mounted) setState(() => _state = state);
-                      return 'Leste ${state.items.length} gjenstander og ${state.trades.length} bytter';
+                      return 'Leste ${counted(state.items.length, 'gjenstand', 'gjenstander')} og '
+                          '${counted(state.trades.length, 'bytte', 'bytter')}';
                     }))
           else ...[
             for (final item in _state!.items)

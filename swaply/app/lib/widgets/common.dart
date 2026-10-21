@@ -14,6 +14,10 @@ import 'toast.dart' show KeepClear;
 // already imports this file, and the toast itself is its own thing.
 export 'toast.dart';
 
+/// [n] of something, in the singular for one: «1 bytte», «3 bytter». A
+/// count read off the server used to keep the plural for one, «1 bytter».
+String counted(int n, String one, String many) => n == 1 ? '1 $one' : '$n $many';
+
 /// The smallest thing a finger is asked to hit, in logical points: Apple's
 /// 44. The export draws plenty of controls smaller than that — a «Hopp over»
 /// 21 tall, a heart 34 across — and they stay drawn that way. What grows is

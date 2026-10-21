@@ -424,7 +424,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 dense: true,
                 title: Text(account.displayName,
                     style: const TextStyle(fontSize: 14, color: AdminColors.ink)),
-                subtitle: Text('${account.itemCount} ting · ${account.likeCount} likes',
+                subtitle: Text(
+                    '${account.itemCount} ting · ${counted(account.likeCount, 'like', 'likes')}',
                     style: const TextStyle(fontSize: 11.5, color: AdminColors.muted)),
                 onTap: () async {
                   Navigator.of(sheet).pop();
@@ -753,7 +754,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         [
                           if (owner.ratingAvg != null)
                             '★ ${owner.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
-                          if (owner.tradeCount != null) '${owner.tradeCount} bytter',
+                          if (owner.tradeCount case final trades?) counted(trades, 'bytte', 'bytter'),
                         ].join(' · '),
                         style: const TextStyle(
                             fontSize: 12, height: 1.35, color: SwaplyColors.grey),

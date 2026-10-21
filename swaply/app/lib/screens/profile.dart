@@ -219,7 +219,9 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                                   TextSpan(
                                       text: me.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
                                       style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  TextSpan(text: ' · ${me.ratingCount} vurderinger'),
+                                  TextSpan(
+                                      text:
+                                          ' · ${counted(me.ratingCount, 'vurdering', 'vurderinger')}'),
                                 ],
                               ]),
                               style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
@@ -622,8 +624,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               style: const TextStyle(fontWeight: FontWeight.w700)),
                         ] else
                           const TextSpan(text: 'Ingen vurderinger ennå'),
-                        if (user.tradeCount != null)
-                          TextSpan(text: ' · ${user.tradeCount} bytter'),
+                        if (user.tradeCount case final trades?)
+                          TextSpan(text: ' · ${counted(trades, 'bytte', 'bytter')}'),
                       ]),
                       style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
                     ),

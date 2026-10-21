@@ -1434,6 +1434,31 @@ void main() {
       expect(find.text('Tilgjengelig'), findsOneWidget);
     });
 
+    testWidgets('one of something is said in the singular on 04, 13 and 13b', (tester) async {
+      // A count off the server kept its plural for one: «1 bytter»,
+      // «1 vurderinger».
+      final one = {...FakeServer.kari, 'tradeCount': 1};
+      server.overrides['GET /me'] = {...FakeServer.me, 'ratingAvg': 5, 'ratingCount': 1};
+      server.overrides['GET /items/item-console'] = {...FakeServer.console, 'owner': one};
+      server.overrides['GET /users/kari-1'] = {
+        ...one,
+        'items': [FakeServer.console],
+        'interests': const <String>[],
+      };
+
+      await mount(tester, const ProfileScreen());
+      await tester.pumpAndSettle();
+      expect(find.textContaining('5,0 · 1 vurdering'), findsOneWidget);
+      expect(find.textContaining('vurderinger'), findsNothing);
+
+      await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
+      expect(find.text('★ 4,8 · 1 bytte'), findsOneWidget);
+
+      await mount(tester, const OtherProfileScreen(userId: 'kari-1'));
+      expect(find.textContaining('4,8 · 1 bytte'), findsOneWidget);
+      expect(find.textContaining('1 bytter'), findsNothing);
+    });
+
     testWidgets('17c with nothing listed it says so and offers the way out',
         (tester) async {
       server.overrides['GET /me'] = {...FakeServer.me, 'items': const [], 'likedByCount': 0};
