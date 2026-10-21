@@ -263,12 +263,12 @@ class _InviteScreenState extends State<InviteScreen> {
                     inviter == null
                         ? 'Invitasjonen er allerede brukt. Be om en ny lenke.'
                         : 'Invitasjonen er allerede brukt. Be $inviter om en ny lenke.',
-                    style: const TextStyle(color: SwaplyColors.coral, fontSize: 14),
+                    style: const TextStyle(color: SwaplyColors.coralOnDark, fontSize: 14),
                   ),
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: Insets.lg),
-                  Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 14)),
+                  Text(_error!, style: const TextStyle(color: SwaplyColors.coralOnDark, fontSize: 14)),
                 ],
                 const SizedBox(height: Insets.xl),
                 PrimaryButton('Se deg rundt', busy: _busy, onPressed: _lookAround),
@@ -470,7 +470,7 @@ class _LoginScreenState extends State<LoginScreen> {
               if (_error != null) ...[
                 // Coral, the «no» colour: the other red is for reporting and
                 // blocking, and a wrong password is neither.
-                Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+                Text(_error!, style: const TextStyle(color: SwaplyColors.coralText, fontSize: 13)),
                 const SizedBox(height: Insets.sm),
               ],
               PrimaryButton('Logg inn', busy: _busy, onPressed: _submit),
@@ -793,7 +793,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 ),
               ),
               if (_error != null) ...[
-                Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+                Text(_error!, style: const TextStyle(color: SwaplyColors.coralText, fontSize: 13)),
                 const SizedBox(height: Insets.sm),
               ],
               PrimaryButton(

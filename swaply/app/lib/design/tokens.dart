@@ -20,20 +20,38 @@ class SwaplyColors {
   static const bg = Color(0xFFFAFAF9);
   static const surface = Color(0xFFFCFCFB);
   static const ink = Color(0xFF141C18);
-  static const grey = Color(0xFF8A938E);
-  static const greySoft = Color(0xFF6E7B73);
+  // The three greys are words — a value, a time, a hint — so each is as dark
+  // as WCAG AA asks of text on [bg] (4.5:1), and no darker: they were read
+  // off the export at 3.0, 2.5 and 4.2:1 and darkened on 21.10.2026 in their
+  // own hue, so they keep their order and their green cast.
+  static const grey = Color(0xFF68706C);
+  static const greySoft = Color(0xFF606C65);
   static const line = Color(0x14064E3B);
 
-  /// «No», and destructive-but-ordinary.
+  /// «No», and destructive-but-ordinary. A shape's colour — an icon, an edge,
+  /// a ring — because at 2.8:1 on white it is too light to read as words.
   static const coral = Color(0xFFFF6B5E);
 
-  /// Report and block only. Never the same value as [coral].
+  /// [coral] as words: a refusal under a field or a button. The same hue,
+  /// only as dark as AA asks on a light screen.
+  static const coralText = Color(0xFFCF3E36);
+
+  /// [coral] as words on [greenDeep], where it has to go lighter instead.
+  static const coralOnDark = Color(0xFFFF9588);
+
+  /// Report and block only. Never the same value as [coral]. An icon and a
+  /// switch; as words or behind white words it is [reportText].
   static const red = Color(0xFFE5484D);
+
+  /// [red] as words, and the fill behind white ones: «Rapporter», and the
+  /// button that sends a report. Darker in [red]'s own hue, and still not
+  /// [coralText].
+  static const reportText = Color(0xFFD4373F);
 
   /// The unread badge on the Chats tab, and nothing else.
   static const badge = Color(0xFFDC2F26);
 
-  static const amber = Color(0xFFB77B12);
+  static const amber = Color(0xFF9A6501);
   static const amberSoft = Color(0xFFFDF5E4);
 
   // --- read off the round 5 export -----------------------------------------
@@ -52,8 +70,9 @@ class SwaplyColors {
   /// Body copy and section labels. Softer than [ink], darker than [greySoft].
   static const inkBody = Color(0xFF41514A);
 
-  /// Hints, kickers, the placeholder in a message field.
-  static const greyLight = Color(0xFF98A29B);
+  /// Hints, kickers, the placeholder in a message field. Still the lightest of
+  /// the greys, at the 4.5:1 that text has to reach (see [grey]).
+  static const greyLight = Color(0xFF6C756F);
 
   /// A card's edge. Barely there, and not the same as [line], which is a
   /// transparency and goes muddy on tinted backgrounds.
@@ -61,9 +80,11 @@ class SwaplyColors {
 
   /// Somebody else's avatar. Yours is [greenDeep]; the export gives other
   /// people a colour of their own, and these are the ones it uses.
-  static const avatarGold = Color(0xFFC08B2D);
-  static const avatarTeal = Color(0xFF2F9E8F);
-  static const avatarPurple = Color(0xFF7C6FD1);
+  /// A white initial sits on them, so each is as dark as 4.5:1 asks, in the
+  /// export's own hue (it drew #C08B2D, #2F9E8F and #7C6FD1).
+  static const avatarGold = Color(0xFF9C6C07);
+  static const avatarTeal = Color(0xFF038477);
+  static const avatarPurple = Color(0xFF7668CA);
 
   /// The «Tilgjengelig» badge on your own listing.
   static const availableBg = Color(0xFFDEF5E9);
@@ -81,7 +102,8 @@ class SwaplyColors {
   static const chevron = Color(0xFFC9CFCA);
 
   /// The amber the export uses for words: «Ola får», «Din tur», «Reservert».
-  static const amberText = Color(0xFFB25E09);
+  /// A shade under the export's #B25E09, which was 4.3:1 on [amberBg].
+  static const amberText = Color(0xFFAB5A04);
   static const amberBg = Color(0xFFFFF3E2);
 
   /// A chosen tile on 02: not [greenSoft], a touch lighter.
@@ -223,7 +245,10 @@ const conditionLabels = <String, String>{'new': 'Ny', 'good': 'God', 'worn': 'Sl
 class AdminColors {
   static const surface = SwaplyColors.ink;
   static const ink = SwaplyColors.bg;
-  static const accent = SwaplyColors.avatarPurple;
+  /// Words and edges on the dark floor: the export's purple lifted to 4.5:1
+  /// on [surface]. A filled button is [accentFill], under white words.
+  static const accent = Color(0xFF8276D8);
+  static const accentFill = SwaplyColors.avatarPurple;
   /// Flutter values rather than palette values: a fill and a rule *on* the dark.
   static const cardFill = Color(0x14FFFFFF);
   static const hairline = Color(0x24FFFFFF);

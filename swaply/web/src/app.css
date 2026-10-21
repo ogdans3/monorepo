@@ -34,12 +34,20 @@
   --green-pressed: #0a6c4c;
   --bg: #fafaf9;
   --ink: #141c18;
-  --grey: #8a938e;
+  /* Words, so as dark as WCAG AA asks of text on --bg (4.5:1), in the
+     export's own hue; the export drew it at #8a938e, 3.0:1. */
+  --grey: #68706c;
 
   /* Two reds that must never collapse into one value: coral is "no", and the
      stronger red is reserved for report and block. */
   --coral: #ff6b5e;
   --red: #e5484d;
+  /* The same two as words, which the light ones are too pale to be: coral
+     at 2.8:1 and red at 3.9:1 on white. Darker in their own hues, and still
+     not one value. Coral on the deep green goes lighter instead. */
+  --coral-text: #cf3e36;
+  --coral-on-dark: #ff9588;
+  --report-text: #d4373f;
 
   /* Read off the round-5 export, the same values the app's tokens.dart holds,
      for the same jobs: green words on a light ground, the chip and its ink,
@@ -57,8 +65,8 @@
   --line: var(--card-line);
   --ink-soft: #41514a;
   --ink-muted: #5b6862;
-  --grey-light: #98a29b;
-  --amber-text: #b25e09;
+  --grey-light: #6c756f;
+  --amber-text: #ab5a04;
   --amber-bg: #fff3e2;
 
   /* On the deep green. Grey text on a coloured ground goes muddy, so the quiet

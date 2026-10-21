@@ -49,14 +49,22 @@ are in a volume, the name is sixteen random bytes, and the format is sniffed
 rather than believed.
 
 **Two reds, and they must never collapse into one value.** Coral `#FF6B5E` is the
-"no" colour. `#E5484D` is reserved for report and block.
+"no" colour. `#E5484D` is reserved for report and block. As words they are
+`coralText` and `reportText`, darker in their own hues, because **every colour
+that carries words reaches WCAG AA (4.5:1)** — decided 21.10.2026. A new text
+colour is checked against what it sits on before it goes in.
 
 **Three files hold one palette:** `docs/DESIGN.md`, `web/src/app.css` and
 `app/lib/design/tokens.dart`. Change them together.
 
 **The web serves its own font.** Not a font CDN: a stylesheet from one hands
-every visitor's IP to a third party before the page draws, which reopens the
-transfer chapter that choosing OVH closed. `web/static/fonts/` holds the files
+every visitor's IP to a third party before the page draws, which adds a second
+processor to the transfer chapter. Cloudflare in front of all three hostnames is
+the only one there is, and `docs/ARCHITECTURE.md` says why it stays. The app's
+browser build keeps the same rule: it is built with `--no-web-resources-cdn`,
+`app/web/flutter_bootstrap.js` points CanvasKit and the fonts at our own origin,
+and `app/serve.js` relays each font from Google once and serves it from there.
+A visitor's browser never asks Google for anything. `web/static/fonts/` holds the files
 and the licence.
 
 **Every thread belongs to a trade, and the first message creates one.** Writing

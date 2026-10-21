@@ -911,7 +911,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                 if (_said case final said?) ...[
                   // Coral, the «no» colour. Red is report and block, and an
                   // error here is neither.
-                  Text(said, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+                  Text(said, style: const TextStyle(color: SwaplyColors.coralText, fontSize: 13)),
                   const SizedBox(height: Insets.sm),
                 ],
                 PrimaryButton(

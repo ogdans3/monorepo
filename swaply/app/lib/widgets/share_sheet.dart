@@ -143,7 +143,7 @@ class _ShareSheetState extends State<_ShareSheet> {
             Text(widget.title, style: Type.title),
             const SizedBox(height: Insets.md),
             if (_error case final error?) ...[
-              Text(error.message, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13.5)),
+              Text(error.message, style: const TextStyle(color: SwaplyColors.coralText, fontSize: 13.5)),
               if (_wayOn(error) case final way?) ...[
                 const SizedBox(height: Insets.md),
                 way,

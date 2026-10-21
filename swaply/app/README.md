@@ -872,6 +872,17 @@ The error tone is **coral**, which is the «no» colour. Not
 most tempting place in the app to reach for the stronger red, and the two must
 not collapse into one meaning.
 
+Coral is a shape's colour: an icon, an edge, a ring. **Words in it are
+`SwaplyColors.coralText`**, the same hue darkened to the 4.5:1 WCAG AA asks of
+text, and `coralOnDark` on the deep green, where it goes lighter instead; the
+light coral is 2.8:1 on white and was hard to read under a field. The same goes
+for report and block: «Rapporter», and the filled button that sends a report,
+are `reportText`, and `red` stays on the flag icon and the switch. Decided by
+the product owner on 21.10.2026 («fiks all dårlig kontrast, men hold det pent
+slik det er nå»): every text colour in the palette was darkened in its own hue
+only as far as AA asks — the three greys, the ambers and the three avatar
+colours behind a white initial — so the app looks as it did, a shade firmer.
+
 A toast never lies over the screen's primary action. It sits 14 above the foot
 of its screen — the bar, in a tab, whose screens end where the bar begins; the
 keyboard, when it is up — unless that is where the action is, which on a screen
