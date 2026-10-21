@@ -68,6 +68,16 @@ class _ProposalSheetState extends State<_ProposalSheet> {
         ProposalKind.cash => widget.trade.youGive.isNotEmpty && widget.trade.youGet.isNotEmpty,
       };
 
+  /// Whether the mellomlegg proposed differs from the one on the table. The
+  /// same one again is a new version of the same deal, which takes the other
+  /// side's yes away for nothing — and «Foreslå ingen mellomlegg» where there
+  /// was none said «Jeg foreslår at vi dropper mellomlegget» about nothing.
+  bool get _cashChanged {
+    final cash = widget.trade.cash;
+    if (cash == null) return _amount > 0;
+    return _amount != cash.amountNok || (_amount > 0 && _iPay != cash.youPay);
+  }
+
   int get _theirPosition =>
       widget.trade.receivingFrom.position ?? (widget.trade.youPosition == 0 ? 1 : 0);
 
@@ -214,7 +224,7 @@ class _ProposalSheetState extends State<_ProposalSheet> {
                   PrimaryButton(
                     _confirmLabel(),
                     busy: _busy,
-                    enabled: widget.kind == ProposalKind.cash || _chosen != null,
+                    enabled: widget.kind == ProposalKind.cash ? _cashChanged : _chosen != null,
                     onPressed: _send,
                   ),
                   const SizedBox(height: Insets.sm),

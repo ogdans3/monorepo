@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -74,6 +75,21 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
 
   List<Item> get _selectedMine => _mine.where((i) => _chosenMine.contains(i.id)).toList();
   List<Item> get _selectedTheirs => _theirs.where((i) => _chosenTheirs.contains(i.id)).toList();
+
+  /// Whether what is composed differs from the offer on the table. One that
+  /// does not is a new version of the same deal: it takes the other side's
+  /// yes away — and what their yes held — and they have to give it again
+  /// for nothing, where «Godta endringen» would have agreed the trade.
+  bool get _changed {
+    final trade = widget.trade;
+    Set<String> ids(Iterable<Item> items) => items.map((i) => i.id).toSet();
+    final sameThings = setEquals(ids(_selectedMine), ids(trade.youGive)) &&
+        setEquals(ids(_selectedTheirs), ids(trade.youGet));
+    final cash = trade.cash;
+    final sameCash =
+        cash == null ? _cash <= 0 : _cash == cash.amountNok && _iPay == cash.youPay;
+    return !(sameThings && sameCash);
+  }
 
   Future<void> _send() async {
     if (_selectedMine.isEmpty || _selectedTheirs.isEmpty) return;
@@ -168,7 +184,10 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                             busy: _busy,
                             // Both sides, because a deal where one of them
                             // gives nothing is not one the other can accept.
-                            enabled: _selectedMine.isNotEmpty && _selectedTheirs.isNotEmpty,
+                            // And something changed: see [_changed].
+                            enabled: _selectedMine.isNotEmpty &&
+                                _selectedTheirs.isNotEmpty &&
+                                _changed,
                             onPressed: _send),
                         // The 8 over it and the foot under it: 40, which is
                         // all the export leaves between the button and the

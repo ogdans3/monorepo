@@ -99,6 +99,9 @@ void main() {
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
       await tester.tap(find.text('Foreslå motbytte'));
       await tester.pumpAndSettle();
+      // Something changed: the same deal again is not a proposal.
+      await tester.tap(find.text('+'));
+      await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Send motbytte'));
       await tester.pumpAndSettle();
 
@@ -109,7 +112,9 @@ void main() {
         (tester) async {
       await mount(tester, const ThreadScreen(threadId: 'thread-1'));
       await openChip(tester, 'Foreslå mellomlegg');
-      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 350 kr'));
+      await tester.tap(find.byTooltip('50 kr mer'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400 kr'));
       await tester.pumpAndSettle();
 
       expect(server.bodies['POST /trades/trade-1/counter']?['baseOfferId'], 'offer-1');
@@ -137,6 +142,9 @@ void main() {
       await tester.pumpAndSettle();
       server.overrides['GET /trades/trade-1'] = countered;
 
+      // Something changed: the same deal again is not a proposal.
+      await tester.tap(find.text('+'));
+      await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Send motbytte'));
       await tester.pumpAndSettle();
 
@@ -152,7 +160,9 @@ void main() {
       await openChip(tester, 'Foreslå mellomlegg');
       final asked = server.asked('GET /trades/trade-1');
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 350 kr'));
+      await tester.tap(find.byTooltip('50 kr mer'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400 kr'));
       await tester.pumpAndSettle();
 
       expect(find.text('Jeg betaler'), findsNothing);
@@ -168,7 +178,9 @@ void main() {
       server.overrides['POST /threads/thread-1/messages'] = unreachable;
       await openChip(tester, 'Foreslå mellomlegg');
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 350 kr'));
+      await tester.tap(find.byTooltip('50 kr mer'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400 kr'));
       await tester.pumpAndSettle();
 
       // The sheet is gone, so «Foreslå» cannot be pressed a second time over

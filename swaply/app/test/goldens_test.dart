@@ -141,8 +141,18 @@ void main() {
             await t.pump();
             await t.tap(find.text('Send vurdering'));
           }));
+  // Composed as the export draws it: the skateboard for the helmet, and 150
+  // on top. As it opens, 09a holds the offer on the table, and «Send
+  // motbytte» waits for a change, since the same deal again only takes the
+  // other side's yes away.
   testWidgets('09a-motbytte',
-      (t) => shoot(t, '09a-motbytte', CounterOfferScreen(trade: _trade())));
+      (t) => shoot(t, '09a-motbytte', CounterOfferScreen(trade: _trade()), act: (t) async {
+            await t.tap(find.text('Sykkelhjelm'));
+            await t.tap(find.text('Skateboard'));
+            for (var i = 0; i < 4; i++) {
+              await t.tap(find.text('−'));
+            }
+          }));
   // 10a is a sheet and not a screen: it comes up over the collage the fifth
   // heart was pressed on, so that is what is under it — 05 as its golden has
   // it. It says five where the export says ten, because five is when it

@@ -90,6 +90,9 @@ void main() {
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
       await tester.tap(find.text('Foreslå motbytte'));
       await tester.pumpAndSettle();
+      // Something changed: the same deal again is not a proposal.
+      await tester.tap(find.text('+'));
+      await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Send motbytte'));
       await tester.pumpAndSettle();
 
@@ -104,7 +107,10 @@ void main() {
 
       expect(find.text(agrees), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 350 kr'));
+      // Something changed: the 350 on the table again is not a proposal.
+      await tester.tap(find.byTooltip('50 kr mer'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400 kr'));
       await tester.pumpAndSettle();
       expect(server.bodies['POST /trades/trade-1/counter']?['termsVersion'], '2026-09-06');
     });
@@ -134,6 +140,62 @@ void main() {
 
       expect(find.text('Godta byttet'), findsOneWidget);
       expect(find.text('Godta endringen'), findsNothing);
+    });
+  });
+
+  group('a proposal that changes nothing', () {
+    // It is a new version of the same deal: Kari's yes stays on the old one,
+    // and what her yes held is let go, for nothing. «Godta endringen» would
+    // have agreed the trade.
+
+    bool live(WidgetTester tester, String label) =>
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, label)).onPressed != null;
+
+    testWidgets('8. 09a waits for a change before «Send motbytte»', (tester) async {
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+      await tester.tap(find.text('Foreslå motbytte'));
+      await tester.pumpAndSettle();
+
+      // As the offer stands: the drill for the console, 350 from you.
+      expect(live(tester, 'Send motbytte'), isFalse);
+
+      await tester.tap(find.text('+'));
+      await tester.pump();
+      expect(live(tester, 'Send motbytte'), isTrue);
+      await tester.tap(find.text('−'));
+      await tester.pump();
+      expect(live(tester, 'Send motbytte'), isFalse);
+
+      // Who pays is a change too.
+      await tester.tap(find.text('Du betaler Kari'));
+      await tester.pump();
+      expect(live(tester, 'Send motbytte'), isTrue);
+    });
+
+    testWidgets('9. 09d waits for an amount other than the one on the table', (tester) async {
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      await openChip(tester, 'Foreslå mellomlegg');
+
+      expect(live(tester, 'Foreslå 350 kr'), isFalse);
+      await tester.tap(find.text('Kari betaler'));
+      await tester.pump();
+      expect(live(tester, 'Foreslå 350 kr'), isTrue);
+      await tester.tap(find.text('Ingen'));
+      await tester.pump();
+      // Dropping the 350 is a change.
+      expect(live(tester, 'Foreslå ingen mellomlegg'), isTrue);
+    });
+
+    testWidgets('10. …and «Ingen» where there is none proposes nothing', (tester) async {
+      server.overrides['GET /trades/trade-1'] = {...FakeServer.trade, 'cash': null};
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      await openChip(tester, 'Foreslå mellomlegg');
+
+      // The difference, as the export suggests it.
+      expect(live(tester, 'Foreslå 600 kr'), isTrue);
+      await tester.tap(find.text('Ingen'));
+      await tester.pump();
+      expect(live(tester, 'Foreslå ingen mellomlegg'), isFalse);
     });
   });
 }
