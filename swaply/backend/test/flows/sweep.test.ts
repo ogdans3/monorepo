@@ -12,6 +12,10 @@
 // the no, over the listings the no had just freed, or within the hour, with a
 // second «Dere kan swappe!» to the people who had just said no to it. A heart
 // pressed again after the no is a new wish, and opens the ring anew.
+//
+// The test tooling's «Nullstill → bytter» is a no too, where everybody in the
+// ring is inside one admin's test ring — the admin pressing for each of them —
+// and nowhere else (`docs/ADMIN.md`).
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
@@ -165,6 +169,15 @@ describe('a ring somebody said no to', () => {
     return row!.n
   }
 
+  /** What a trade had on its table: a pending one reserves nothing, so nothing is freed. */
+  async function ringListings(tradeId: string): Promise<string[]> {
+    const rows = await db.execute<{ id: string }>(
+      sql`select oi.item_id as id from trade_offer_items oi
+          join trade_offers o on o.id = oi.offer_id where o.trade_id = ${tradeId}`,
+    )
+    return rows.map((r) => r.id)
+  }
+
   /** Two new people who want each other's things, and the trade the heart opens. */
   async function pair(a: string, b: string) {
     const fromA = await makeItem(a, 'Ting')
@@ -285,5 +298,38 @@ describe('a ring somebody said no to', () => {
 
     expect(await sweepForCycles(db)).toEqual([])
     expect(await openBetween(anne, bjorn)).toEqual([agreed])
+  })
+
+  test('13. the tool ending a ring inside one admin’s test ring decides it, as a no does', async () => {
+    // What `pnpm admin grant` does, and a test account born to that admin.
+    const admin = await makeUser('Gro')
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local swaply.admin_grant = 'on'`)
+      await tx.execute(sql`update users set is_admin = true where id = ${admin}`)
+    })
+    const [row] = await db.execute<{ id: string }>(
+      sql`insert into users (display_name, email, test_account_of)
+          values ('Kari T.', 'kari-t@swaply.test', ${admin}) returning id`,
+    )
+    const tester = row!.id
+    const ended = await pair(admin, tester)
+    const freed = await cancelTrade(db, ended, 'ended_by_admin')
+
+    expect(freed).toEqual([])
+    expect(await sweepForCycles(db, await ringListings(ended))).toEqual([])
+    expect(await sweepForCycles(db)).toEqual([])
+    expect(await openBetween(admin, tester)).toEqual([])
+  })
+
+  test('14. and decides nothing where somebody in it is outside every ring', async () => {
+    // Never the tool's to end, so never the tool's to decide. Ended that way
+    // by any route, the ring was not refused by the people in it.
+    const [ida, jon] = [await makeUser('Ida'), await makeUser('Jon')]
+    const ended = await pair(ida, jon)
+    await cancelTrade(db, ended, 'ended_by_admin')
+
+    const opened = await sweepForCycles(db, await ringListings(ended))
+    expect(opened).toHaveLength(1)
+    expect(await openBetween(ida, jon)).toEqual(opened)
   })
 })

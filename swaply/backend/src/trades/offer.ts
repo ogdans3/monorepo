@@ -4,6 +4,7 @@ import type { Database } from '../db/index.js'
 import { MAX_ITEMS_PER_SIDE } from '../lib/constants.js'
 import { badRequest } from '../lib/errors.js'
 import type { Row } from '../lib/rows.js'
+import { listingAcross, testListing } from './ring.js'
 import type { Tx } from './trades.js'
 
 export type OfferItem = { itemId: string; giverPosition: number }
@@ -95,4 +96,18 @@ export async function validateOffer(
       throw badRequest('item_unavailable', 'En av tingene i forslaget er ikke tilgjengelig.')
     }
   }
+
+  // A «[test] …» thing a scenario made goes on the table only among its own
+  // ring (`ring.ts`): everybody in a trade sees everything on it. One that is
+  // on the table already stays offerable — a trade opened over one before
+  // the rule is somebody's, and a counter-offer keeping it is theirs to make.
+  const onTable = await db.execute<Row>(
+    sql`select oi.item_id from trade_offer_items oi
+        join trade_offers o on o.id = oi.offer_id
+        where o.trade_id = ${tradeId}
+          and o.seq = (select max(seq) from trade_offers where trade_id = ${tradeId})`,
+  )
+  const already = new Set(onTable.map((r) => r['item_id'] as string))
+  const added = ids.filter((id) => !already.has(id))
+  if (await listingAcross(db, [...owner.values()], added)) throw testListing()
 }

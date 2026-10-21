@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { many, one, uuidArray } from '../lib/rows.js'
 import { findCyclesThrough, type Cycle } from './cycles.js'
+import { withinOneRing } from './ring.js'
 import { openRingOnce, openTradeOver } from './wish.js'
 
 /**
@@ -16,9 +17,16 @@ import { openRingOnce, openTradeOver } from './wish.js'
  * ones: a heart taken back and pressed again since is a new wish, and opens
  * the ring anew (`closeLoopThrough`, which never asks this).
  *
+ * And «Nullstill → bytter» (`ended_by_admin`), where everybody in the ring is
+ * inside one admin's test ring — which is the only place the tool ends
+ * anything. There the tool is the people in it: the admin pressing for each
+ * of them. Without it the reset's own sweep opened what it had just ended,
+ * in the same second, and the hourly job did it again an hour later, so the
+ * tool said «12 bytter avsluttet» about rings already open.
+ *
  * Nothing else decides a ring. Pushed out by another trade's yes, it was never
- * answered; ended by an erasure, a block or the tool, it was not refused by
- * the people in it.
+ * answered; ended by an erasure or a block, it was not refused by the people
+ * in it.
  */
 async function decidedRing(db: Database, ring: Cycle): Promise<boolean> {
   const n = ring.length
@@ -38,7 +46,8 @@ async function decidedRing(db: Database, ring: Cycle): Promise<boolean> {
         join trades t on t.id = mine.trade_id
         where mine.user_id = ${ring[0]!.userId}
           and t.state = 'cancelled'
-          and t.close_code in ('declined', 'withdrawn_early', 'withdrawal_approved')
+          and (t.close_code in ('declined', 'withdrawn_early', 'withdrawal_approved')
+               or (t.close_code = 'ended_by_admin' and ${withinOneRing(sql`t.id`)}))
           and (select count(*) from trade_participants p where p.trade_id = t.id) = ${n}
           and exists (
             select 1 from trade_offers o
