@@ -6,7 +6,7 @@ import { LIKES_BEFORE_LISTING_PROMPT, LISTING_PROMPT_EVERY } from '../lib/consta
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { one, type Executor } from '../lib/rows.js'
 import { findCyclesThrough, type Cycle } from './cycles.js'
-import { ringsApart, testRing } from './ring.js'
+import { listingApart, ringsApart, testListing, testRing } from './ring.js'
 import { insertTradeFromCycle } from './trades.js'
 
 export type Wish = {
@@ -68,6 +68,9 @@ export async function expressWish(
   // it (`ring.ts`): the like is the edge a trade would close on, and the
   // owner is told about it either way.
   if (await ringsApart(db, userId, item['owner_id'])) throw testRing()
+  // Nor on a «[test] …» thing a scenario made, from outside the ring it was
+  // made in — the admin's own included, whom anybody may otherwise meet.
+  if (await listingApart(db, userId, itemId)) throw testListing()
 
   const heart = await db.transaction(async (tx) => {
     // One heart at a time per person, from the like to the count. Two cards

@@ -119,10 +119,36 @@ Beyond the ring, three things:
    own, because a link or a long-press reaches a listing too, so the product
    refuses the meeting itself (`trades/ring.ts`, 403 `test_ring`): a heart or
    a first message between a test account and somebody outside its ring, and
-   any ring the cycle search would close through both. «Likt» leaves the other
-   side's likers out, and «Nullstill → gjenstander» spares a listing a
-   stranger is negotiating about. The admin is a real person and trades with
+   any ring the cycle search would close through both. «Likt» (12) and the
+   count on 04 leave the other side's likers out, and «Nullstill →
+   gjenstander» spares a listing a stranger is negotiating about. The admin is a real person and trades with
    real people as anybody does.
+
+   **Nor do the things a scenario makes.** The «[test] …» listings
+   «Bygg et bytte» spends are the ring's, on the admin's own account as much
+   as on a test account's: `items.made_by_scenario` marks them when they are
+   made, and `listingOpenTo` (`trades/ring.ts`) puts each in the ring of the
+   admin it was made for. By owner alone the admin's were everybody's — real
+   people saw them on Oppdag and in 09a's «DU FÅR», hearted them, and opened
+   real trades with the admin over things that exist to be spent by the tool.
+   Now nobody outside the ring is shown one: not on Oppdag, in its rows, its
+   search or 05b; not on the admin's 13b, nor in the count of things beside
+   the admin's name there and on 04; not among the pictures on 10a, or in
+   what 09a offers either side of a trade. A like from outside on one, pressed
+   before this, is not shown on 12 or counted on 04. The page behind a
+   shared link never shows one, and sharing one is refused, the admin's own
+   included — that page is for somebody in no ring. A link to the listing
+   itself still opens, as a test account's does, and what would make a
+   meeting of it is refused as `test_ring` in words about the listing («Dette
+   er en testannonse, og den er ikke til bytte.»): the heart, the first
+   message, and a counter-offer that puts one on the table; the cycle search
+   never closes a ring that puts one in front of anybody outside. A trade
+   opened over one before this stands as it is, and what is on its table stays
+   offerable in it. `drizzle/0016` marked the ones made before the column, by
+   the «[test] » catalogue title only `somethingToGive` writes, no idempotency
+   key, and a «Bygg et bytte» press in `admin_actions` the minute before; a
+   scenario from before 20.09.2026 named its listings without the prefix and
+   is not found.
 3. **Every admin change and every write made while acting as somebody leaves a
    row in `admin_actions`**, written by the hook that authorises the request rather
    than by a route, so a route cannot forget it. A wrong tap is only survivable
@@ -136,9 +162,9 @@ Beyond the ring, three things:
   `accepted` scenario reserves what it is given and a `completed` one marks it
   `traded` for good, so reaching for the nearest available listing would spend
   the owner's real inventory — and displace anybody whose open offer happened
-  to hold it. They are titled «[test] …»; Nullstill → gjenstander clears them.
-  Never a service, either: a service is never exclusive, so a scenario built on
-  one silently means something else.
+  to hold it. They are titled «[test] …», are kept inside the ring (bound #2),
+  and Nullstill → gjenstander clears them. Never a service, either: a service
+  is never exclusive, so a scenario built on one silently means something else.
 - **No scenario writes a trade, a like, an offer or an acceptance directly.**
   Everything is built by pressing the product's own buttons in order —
   `expressWish`, `acceptOffer`, `proposeCounterOffer`, `declineTrade`,
@@ -175,6 +201,11 @@ the owner of a ring cannot be deleted out from under it.
 `backend/test/flows/admin-scenarios.test.ts` — every named state, asserted by
 the *consequences* a real journey leaves behind (offers, acceptances,
 reservations, threads) rather than by the state column.
+
+`backend/test/flows/test-ring.test.ts` — bound #2: every meeting between the
+ring and somebody outside it refused, and every place a scenario's «[test]»
+things on the admin's own account are kept from them, with the migration that
+found the old ones.
 
 `app/test/admin_test.dart` — the absence, first: an ordinary account's 16b ends
 exactly where round 5 ends it. Then the floor, the badges, and the switch.

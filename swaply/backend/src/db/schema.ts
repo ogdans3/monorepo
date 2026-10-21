@@ -320,6 +320,12 @@ export const items = pgTable(
     // hours, checked when it is looked up; after that, or once the listing is
     // deleted, the key is let go of and the same draft lists again.
     idempotencyKey: uuid('idempotency_key'),
+    // Made by «Bygg et bytte» (`admin/scenarios.ts`), the «[test] …» things a
+    // scenario spends. One made on the admin's own account belongs to the
+    // admin's test ring as a test account's listings do, and is hidden from,
+    // and refused to, everybody outside it (`trades/ring.ts`). Set when the
+    // row is born and never after: nothing over HTTP makes one (drizzle/0016).
+    madeByScenario: boolean('made_by_scenario').notNull().default(false),
   },
   (t) => [
     check('condition_for_items', sql`${t.kind} = 'service' or ${t.condition} is not null`),

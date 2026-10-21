@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
-import { ringsApart, sameRing } from './ring.js'
+import { listingApart, listingOpenTo, ringsApart, sameRing } from './ring.js'
 
 /** One hop of a cycle: this participant gives this listing to the next one. */
 export type Hop = { userId: string; givesItemId: string }
@@ -52,6 +52,11 @@ export async function findCyclesThrough(
   // every pair is asked. These two are in every cycle below; the third is
   // asked in the query.
   if (await ringsApart(db, liker, owner)) return []
+  // And everybody in a cycle meets every listing in it, so a listing a
+  // scenario made is in one only with its own ring (`ring.ts`). The wanted
+  // one goes to the liker in every cycle below; the rest are asked in the
+  // queries, of everybody they would be put in front of.
+  if (await listingApart(db, liker, wantedItem)) return []
 
   const twoWay = await db.execute<Row>(sql`
     select ours.id as gives_item
@@ -61,6 +66,7 @@ export async function findCyclesThrough(
       and ours.owner_id = ${liker}
       and ${available('ours')}
       and ${notBlocked(sql`${liker}`, sql`${owner}`)}
+      and ${listingOpenTo(sql`${owner}::uuid`, sql`ours.id`)}
   `)
 
   // liker gives one of theirs to owner; owner gives the wanted item back.
@@ -88,6 +94,11 @@ export async function findCyclesThrough(
       and ${notBlocked(sql`${owner}`, sql`third.owner_id`)}
       and ${sameRing(sql`${liker}::uuid`, sql`third.owner_id`)}
       and ${sameRing(sql`${owner}::uuid`, sql`third.owner_id`)}
+      and ${listingOpenTo(sql`third.owner_id`, sql`${wantedItem}::uuid`)}
+      and ${listingOpenTo(sql`${owner}::uuid`, sql`ours.id`)}
+      and ${listingOpenTo(sql`third.owner_id`, sql`ours.id`)}
+      and ${listingOpenTo(sql`${liker}::uuid`, sql`third.id`)}
+      and ${listingOpenTo(sql`${owner}::uuid`, sql`third.id`)}
   `)
 
   for (const row of threeWay) {

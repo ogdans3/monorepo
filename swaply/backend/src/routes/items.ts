@@ -11,6 +11,7 @@ import { townFor, townOf } from '../lib/postcodes.js'
 import { coverSql, many, one, type Executor, type Row } from '../lib/rows.js'
 import { conversationAbout, lastMessageIn } from '../trades/conversation.js'
 import { removeListings } from '../trades/removal.js'
+import { listingOpenTo, sameRing } from '../trades/ring.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import { knownTown, publicItem, publicUser } from './serialize.js'
 
@@ -235,7 +236,9 @@ export default async function itemRoutes(app: FastifyInstance) {
 
     // «3 har likt denne» counts who 12 shows the owner, and 12 leaves out a
     // liker on the other side of a block: neither can see the other's
-    // things, and no trade can open between them.
+    // things, and no trade can open between them. And one across the test
+    // ring (`trades/ring.ts`) — of the owner's, or of the listing's, when a
+    // scenario made it — liked before the heart refused that.
     const item = await one(
       app.db,
       sql`select i.*, ${coverSql('i')} as cover,
@@ -243,7 +246,9 @@ export default async function itemRoutes(app: FastifyInstance) {
                          where l.target_item = i.id and l.from_user = ${viewer ?? null}) as liked_by_me,
                  (select count(*) from likes l
                   where l.target_item = i.id
-                    and not ${blockSeparates(sql`i.owner_id`, sql`l.from_user`)}) as like_count
+                    and not ${blockSeparates(sql`i.owner_id`, sql`l.from_user`)}
+                    and ${sameRing(sql`i.owner_id`, sql`l.from_user`)}
+                    and ${listingOpenTo(sql`l.from_user`, sql`i.id`)}) as like_count
           from items i where i.id = ${id} and i.deleted_at is null`,
     )
     if (!item) throw notFound('Fant ikke gjenstanden.')
@@ -257,10 +262,13 @@ export default async function itemRoutes(app: FastifyInstance) {
       app.db,
       sql`select url from item_media where item_id = ${id} order by position`,
     )
+    // Counted as 13b counts them, which leaves out a scenario's «[test] …»
+    // things for anybody outside their ring.
     const owner = await one(
       app.db,
       sql`select u.*, (select count(*) from items i2
-                       where i2.owner_id = u.id and i2.deleted_at is null) as item_count,
+                       where i2.owner_id = u.id and i2.deleted_at is null
+                         and ${listingOpenTo(sql`${viewer ?? null}::uuid`, sql`i2.id`)}) as item_count,
                  (select count(*) from trade_participants p
                   join trades t on t.id = p.trade_id
                   where p.user_id = u.id and t.state = 'completed') as trade_count

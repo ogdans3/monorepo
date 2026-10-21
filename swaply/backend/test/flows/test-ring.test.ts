@@ -14,11 +14,22 @@
 // that would hold a test account and anybody outside its ring is never found,
 // liked-by does not show likes across the ring, and «Nullstill → gjenstander»
 // leaves a listing a real person is negotiating about where it is.
+//
+// And the same of a listing as of an account: the «[test] …» things «Bygg et
+// bytte» makes on the admin's OWN account are in the admin's ring, though
+// the admin is a real person whose own things everybody sees. By owner alone
+// they were on every real person's Oppdag and in 09a's «DU FÅR», and a real
+// heart on one opened a real trade with the admin over a thing that exists
+// to be spent by the tool. `items.made_by_scenario` marks them.
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
+import { createInvite } from '../../src/lib/invites.js'
 import { sweepForCycles } from '../../src/trades/sweep.js'
 import { close, db, reset, tradeState } from '../helpers.js'
 
@@ -73,6 +84,7 @@ async function list(who: Person, title: string) {
 }
 
 const refusal = { code: 'test_ring', message: 'Testkontoer kan bare bytte med hverandre og med eieren sin.' }
+const testListing = { code: 'test_ring', message: 'Dette er en testannonse, og den er ikke til bytte.' }
 
 async function tradesBetween(a: string, b: string): Promise<number> {
   const [row] = await db.execute<{ n: number }>(
@@ -227,5 +239,226 @@ describe('a test account and a real person', () => {
     // Kari's, inside the ring, ended with the drill, as removing it ends one.
     const ended = (await call('GET', `/trades/${karis.body!['tradeId']}`, { token: kari.token })).body!
     expect(ended['closeCode']).toBe('listing_removed')
+  })
+
+  // What «Bygg et bytte» made: one «[test]» thing on Gabriel's own account
+  // and one on Per's, and the trade between them. Per, because Gabriel's
+  // heart on Kari's canoe (step 7) still stands, and with a scenario's hearts
+  // it closes a pair of its own first.
+  let scenarioTrade = '', mine = '', his = ''
+  const ids = (res: { body: Json | null }) => (res.body!['items'] as Json[]).map((i) => i['id'])
+
+  test('10. a scenario’s «[test]» thing on Gabriel’s own account is on nobody’s Oppdag outside his ring', async () => {
+    const built = await call('POST', '/admin/scenarios', {
+      token: gabriel.token, body: { state: 'pending', with: [per.id] },
+    })
+    expect(built.status, JSON.stringify(built.body)).toBe(200)
+    scenarioTrade = built.body!['tradeId']
+    const view = (await call('GET', `/trades/${scenarioTrade}`, { token: gabriel.token })).body!
+    mine = view['youGive'][0]['id']
+    his = view['youGet'][0]['id']
+    const title = view['youGive'][0]['title'] as string
+    expect(title.startsWith('[test] ')).toBe(true)
+    const category = (await call('GET', `/items/${mine}`, { token: gabriel.token })).body!['category']
+
+    // Tora, Henrik — another admin, whom anybody may meet — and a phone with
+    // no account: not on the page, not found by its name, not in the rows.
+    for (const [who, token] of [['Tora', tora.token], ['Henrik', henrik.token], ['nobody', undefined]] as const) {
+      expect(ids(await call('GET', '/discover', { token })), who).not.toContain(mine)
+      expect(ids(await call('GET', `/discover?q=${encodeURIComponent(title.slice(7))}`, { token })), who)
+        .not.toContain(mine)
+    }
+    const rows = (await call('GET', '/discover/rows', { token: tora.token })).body!['rows'] as Json[]
+    expect(rows.flatMap((r) => (r['items'] as Json[]).map((i) => i['id']))).not.toContain(mine)
+    // Gabriel's own things are everybody's, as they always were.
+    expect(ids(await call('GET', '/discover', { token: tora.token }))).toContain(helmet)
+
+    // Inside the ring it is a listing like any other: Kari, who is not in the
+    // trade, finds it on Oppdag and in its category's row.
+    expect(ids(await call('GET', '/discover', { token: kari.token }))).toContain(mine)
+    await call('PUT', '/me/interests', { token: kari.token, body: { interests: [category] } })
+    const karis = (await call('GET', '/discover/rows', { token: kari.token })).body!['rows'] as Json[]
+    expect(karis.flatMap((r) => (r['items'] as Json[]).map((i) => i['id']))).toContain(mine)
+  })
+
+  test('11. a link still opens it, as it opens a test account’s, and the heart and the first message say no', async () => {
+    expect((await call('GET', `/items/${mine}`, { token: tora.token })).status).toBe(200)
+
+    for (const who of [tora, henrik]) {
+      expect((await call('POST', `/items/${mine}/like`, { token: who.token })).body).toEqual(testListing)
+      const res = await call('POST', `/items/${mine}/message`, {
+        token: who.token, body: { body: 'Hei! Er denne ledig?' },
+      })
+      expect(res.status).toBe(403)
+      expect(res.body).toEqual(testListing)
+    }
+    const [like] = await db.execute(
+      sql`select 1 from likes where target_item = ${mine} and from_user in (${tora.id}, ${henrik.id})`,
+    )
+    expect(like).toBeUndefined()
+    const told = await db.execute(
+      sql`select 1 from notifications where user_id = ${gabriel.id}
+          and payload->>'itemId' = ${mine}
+          and payload->>'byUserId' in (${tora.id}, ${henrik.id})`,
+    )
+    expect(told).toEqual([])
+  })
+
+  test('12. Gabriel’s profile shows Tora his things and not the tool’s, and counts what it shows', async () => {
+    const toTora = (await call('GET', `/users/${gabriel.id}`, { token: tora.token })).body!
+    expect(ids({ body: toTora })).toContain(helmet)
+    expect(ids({ body: toTora })).not.toContain(mine)
+    expect(toTora['itemCount']).toBe(toTora['items'].length)
+    const page = (await call('GET', `/items/${helmet}`, { token: tora.token })).body!
+    expect(page['owner']['itemCount']).toBe(toTora['items'].length)
+
+    const toKari = (await call('GET', `/users/${gabriel.id}`, { token: kari.token })).body!
+    expect(ids({ body: toKari })).toContain(mine)
+    expect(toKari['itemCount']).toBe(toTora['itemCount'] + 1)
+  })
+
+  test('13. it cannot be shared, and a link shared before that shows nothing of it', async () => {
+    // The page behind a link is for somebody with no account, who is in no
+    // ring — whoever shares it, Gabriel included.
+    for (const who of [gabriel, kari, tora]) {
+      const res = await call('POST', `/items/${mine}/share`, { token: who.token })
+      expect(res.status).toBe(403)
+      expect(res.body).toEqual({ code: 'test_ring', message: 'Dette er en testannonse, og den kan ikke deles.' })
+    }
+
+    const before = await createInvite(db, { inviterId: gabriel.id, itemId: mine })
+    const page = (await call('GET', `/invites/${before.token}`)).body!
+    expect(page['item']).toBeNull()
+    expect(page['itemRetired']).toBe(true)
+  })
+
+  test('14. a ring through Gabriel and Tora over it never opens, though both wishes are there', async () => {
+    // Tora's heart on it from before it was hidden; Gabriel already wants
+    // her bike (step 4). Gabriel gives the «[test]» thing, Tora the bike.
+    await db.execute(sql`insert into likes (from_user, target_item) values (${tora.id}, ${mine})`)
+    const before = await tradesBetween(gabriel.id, tora.id)
+
+    await sweepForCycles(db)
+    expect(await tradesBetween(gabriel.id, tora.id)).toBe(before)
+    // Nor when the heart is pressed anew.
+    await call('DELETE', `/items/${bike}/like`, { token: gabriel.token })
+    const again = await call('POST', `/items/${bike}/like`, { token: gabriel.token })
+    expect(again.status).toBe(200)
+    expect(again.body!['tradeId']).toBeNull()
+    expect(await tradesBetween(gabriel.id, tora.id)).toBe(before)
+  })
+
+  test('15. Tora’s like on it from before is shown nowhere and counted nowhere', async () => {
+    const gabriels = (await call('GET', '/me/liked-by', { token: gabriel.token })).body!['items'] as Json[]
+    const ofMine = gabriels.find((row) => row['item']['id'] === mine)!
+    expect(ofMine['likers'].map((u: Json) => u['id'])).not.toContain(tora.id)
+    expect(ofMine['item']['likeCount']).toBe(ofMine['likers'].length)
+    expect((await call('GET', `/items/${mine}`, { token: gabriel.token })).body!['likeCount'])
+      .toBe(ofMine['likers'].length)
+
+    // And not in Tora's own list of what she likes, which is a list of things
+    // she is shown. Tove's scarf is.
+    expect((await call('POST', `/items/${scarf}/like`, { token: tora.token })).status).toBe(200)
+    const likes = (await call('GET', '/me/likes', { token: tora.token })).body!['items'] as Json[]
+    expect(likes.map((i) => i['id'])).toEqual([scarf])
+  })
+
+  test('16. in a real trade with Gabriel, neither side is offered it, and a counter-offer naming it is refused', async () => {
+    // Tora's conversation about the helmet, from step 9.
+    const [row] = await db.execute<{ id: string }>(
+      sql`select t.id from trades t join trade_offers o on o.trade_id = t.id
+          join trade_offer_items oi on oi.offer_id = o.id
+          where oi.item_id = ${helmet} and t.state = 'talking' limit 1`,
+    )
+    const trade = row!.id
+    for (const who of [tora, gabriel]) {
+      const picks = (await call('GET', `/trades/${trade}/candidates`, { token: who.token })).body!
+      const offered = [...picks['yours'], ...picks['theirs']].map((i: Json) => i['id'])
+      expect(offered, who === tora ? 'Tora' : 'Gabriel').toContain(helmet)
+      expect(offered).not.toContain(mine)
+    }
+
+    const view = (await call('GET', `/trades/${trade}`, { token: tora.token })).body!
+    const toras = view['you']['position']
+    const his = view['receivingFrom']['position']
+    for (const who of [tora, gabriel]) {
+      const res = await call('POST', `/trades/${trade}/counter`, {
+        token: who.token,
+        body: { items: [{ itemId: helmet, giverPosition: his }, { itemId: mine, giverPosition: his },
+                        { itemId: lamp, giverPosition: toras }] },
+      })
+      expect(res.status).toBe(403)
+      expect(res.body).toEqual(testListing)
+    }
+    // Without it the same counter-offer is an ordinary one.
+    const fine = await call('POST', `/trades/${trade}/counter`, {
+      token: tora.token,
+      body: { items: [{ itemId: helmet, giverPosition: his }, { itemId: lamp, giverPosition: toras }] },
+    })
+    expect(fine.status).toBe(200)
+  })
+
+  test('17. inside the ring it is offered as any listing is', async () => {
+    // Per, in the scenario's own trade, is offered Gabriel's «[test]» thing
+    // and his own, and a counter-offer that keeps them goes on the table.
+    const picks = (await call('GET', `/trades/${scenarioTrade}/candidates`, { token: per.token })).body!
+    expect(picks['theirs'].map((i: Json) => i['id'])).toContain(mine)
+    expect(picks['yours'].map((i: Json) => i['id'])).toContain(his)
+
+    const view = (await call('GET', `/trades/${scenarioTrade}`, { token: per.token })).body!
+    const res = await call('POST', `/trades/${scenarioTrade}/counter`, {
+      token: per.token,
+      body: { items: [{ itemId: mine, giverPosition: view['receivingFrom']['position'] },
+                      { itemId: his, giverPosition: view['you']['position'] },
+                      { itemId: tent, giverPosition: view['you']['position'] }] },
+    })
+    expect(res.status).toBe(200)
+  })
+
+  test('18. the ones scenarios made before the column existed are found by the migration, and nothing else is', async () => {
+    // As `somethingToGive` wrote them before 0016, a moment after the press
+    // `admin_actions` logs: one on Gabriel's own account, one on Per's.
+    const [action] = await db.execute<{ at: string }>(
+      sql`insert into admin_actions (admin_id, method, path, created_at)
+          values (${gabriel.id}, 'POST', '/admin/scenarios', now() - interval '2 hours')
+          returning created_at::text as at`,
+    )
+    const old = async (owner: string, title: string, at: string) => {
+      const [made] = await db.execute<{ id: string }>(
+        sql`insert into items (owner_id, kind, title, category, condition, created_at)
+            values (${owner}, 'item', ${title}, 'hjem', 'new', ${at}::timestamptz)
+            returning id`,
+      )
+      return made!.id
+    }
+    const ago = action!.at
+    const hisOld = await old(gabriel.id, '[test] Kaffekvern', ago)
+    const persOld = await old(per.id, '[test] Skateboard', ago)
+    // Gabriel's own «[test] Kaffekvern» an hour later, as an old app listed
+    // it, with no key: not in the minute after any press.
+    const later = await old(gabriel.id, '[test] Kaffekvern', `${ago}`)
+    await db.execute(sql`update items set created_at = created_at + interval '1 hour' where id = ${later}`)
+    // Listed with the app's key, a moment after a press: a person's own.
+    const keyed = await old(gabriel.id, '[test] Ullgenser M', ago)
+    await db.execute(sql`update items set idempotency_key = gen_random_uuid() where id = ${keyed}`)
+    // The same words from a real person, and a title that is no catalogue's.
+    const torasOwn = await old(tora.id, '[test] Kaffekvern', ago)
+    const notOurs = await old(gabriel.id, '[test] Kaffekvern med kopp', ago)
+
+    const file = readFileSync(join(process.cwd(), 'drizzle', '0016_scenario_listings.sql'), 'utf8')
+    const backfill = file.split('--> statement-breakpoint').at(-1)!
+    expect(backfill).toContain('UPDATE "items"')
+    await db.execute(sql.raw(backfill))
+
+    const marked = async (id: string) =>
+      (await db.execute<{ m: boolean }>(sql`select made_by_scenario as m from items where id = ${id}`))[0]!.m
+    expect(await marked(hisOld)).toBe(true)
+    expect(await marked(persOld)).toBe(true)
+    for (const id of [later, keyed, torasOwn, notOurs]) expect(await marked(id)).toBe(false)
+    // What a scenario made since is marked when it is made.
+    expect(await marked(mine)).toBe(true)
+    expect(await marked(his)).toBe(true)
+    // And the old one is now as hidden as a new one.
+    expect(ids(await call('GET', '/discover', { token: tora.token }))).not.toContain(hisOld)
   })
 })

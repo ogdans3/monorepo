@@ -68,7 +68,10 @@ const firstName = (row: Row) => String(row['display_name'] ?? 'Testbruker').spli
  * door.
  *
  * The «[test]» in the title is what makes them findable afterwards;
- * Nullstill → gjenstander clears them.
+ * Nullstill → gjenstander clears them. `made_by_scenario` is what keeps them
+ * in the ring: the ones made on the admin's own account were on every real
+ * person's Oppdag, by owner, and a real heart on one opened a real trade
+ * (`trades/ring.ts`).
  */
 async function somethingToGive(db: Database, owner: Row, steps: string[]): Promise<string> {
   const used = await many(db, sql`select title from items where owner_id = ${owner['id']}`)
@@ -85,12 +88,12 @@ async function somethingToGive(db: Database, owner: Row, steps: string[]): Promi
   const made = await one(
     db,
     sql`insert into items (owner_id, kind, title, description, category, subcategory,
-                           condition, estimated_value_nok, town)
+                           condition, estimated_value_nok, town, made_by_scenario)
         values (${owner['id']}, ${fixture.kind ?? 'item'}, ${title},
                 ${fixture.description ?? null}, ${fixture.category}::category,
                 ${fixture.subcategory ?? null},
                 ${fixture.kind === 'service' ? null : (fixture.condition ?? 'good')},
-                ${fixture.valueNok ?? null}, ${owner['town'] ?? null})
+                ${fixture.valueNok ?? null}, ${owner['town'] ?? null}, true)
         returning id, title`,
   )
   steps.push(`${firstName(owner)} la ut «${made!['title']}»`)

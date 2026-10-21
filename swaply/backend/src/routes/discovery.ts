@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { CATEGORIES, CONDITIONS, MAX_VALUE_NOK } from '../lib/constants.js'
 import { notHiddenFrom } from '../lib/hidden.js'
 import { coverSql, many, one } from '../lib/rows.js'
+import { listingOpenTo } from '../trades/ring.js'
 import { discoveredItem } from './serialize.js'
 
 // Typed into 05b's two boxes. Past what any listing can be worth a filter
@@ -50,6 +51,11 @@ const query = z.object({
  * from one on a real person's listing is refused (`test_ring`), so a real
  * listing on its Oppdag is a card whose one button says no. The admin's own
  * Oppdag is everybody's plus their ring, as before.
+ *
+ * And a «[test] …» thing a scenario made is in the ring it was made in, on
+ * the admin's own account too (`listingOpenTo`): the admin is a real person
+ * whose things everybody sees, and these were on everybody's Oppdag, hearted
+ * by real people, and the start of real trades over them.
  */
 function shownTo(viewer: string | null): SQL {
   // The admin a test account was born to, or null for everybody else.
@@ -63,6 +69,7 @@ function shownTo(viewer: string | null): SQL {
     and (case when ${ring} is not null
               then (u.id = ${ring} or u.test_account_of = ${ring})
               else (u.test_account_of is null or u.test_account_of = ${admin}) end)
+    and ${listingOpenTo(sql`${viewer}::uuid`, sql`i.id`)}
     and not exists (
       select 1 from blocks b
       where (b.blocker = ${viewer} and b.blocked = i.owner_id)

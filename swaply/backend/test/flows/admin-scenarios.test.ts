@@ -287,8 +287,11 @@ describe('building a trade in a named state', () => {
   test('13. but never in a trade a real person is standing in', async () => {
     // The tool may move a negotiation without asking. The one thing it must
     // never move without asking is somebody else's.
-    const mine = await call('GET', '/me', { token: gabriel })
-    const item = mine.body!['items'][0]
+    // About a real listing of Gabriel's: a «[test]» one is the tool's, and
+    // the stranger cannot write about it at all (test-ring.test.ts).
+    const item = (await call('POST', '/items', {
+      token: gabriel, body: { title: 'Gabriels drill', category: 'verktoy', condition: 'good' },
+    })).body!
     const opened = await call('POST', `/items/${item['id']}/message`, {
       token: stranger, body: { body: 'Hei, er denne ledig?' },
     })
@@ -435,8 +438,9 @@ describe('building a trade in a named state', () => {
 
   test('14g. «Nullstill → avslutt bytter» leaves a real person’s trade standing',
     async () => {
-      const mine = await call('GET', '/me', { token: gabriel })
-      const item = mine.body!['items'].find((i: Json) => i['status'] === 'available')
+      const item = (await call('POST', '/items', {
+        token: gabriel, body: { title: 'Gabriels høvel', category: 'verktoy', condition: 'good' },
+      })).body!
       const opened = await call('POST', `/items/${item['id']}/message`, {
         token: stranger, body: { body: 'Er denne ledig?' },
       })

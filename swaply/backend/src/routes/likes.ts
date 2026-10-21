@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { sameRing } from '../trades/ring.js'
+import { listingOpenTo, sameRing } from '../trades/ring.js'
 import { expressWish } from '../trades/wish.js'
 import { coverSql, many } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
@@ -33,11 +33,15 @@ export default async function likeRoutes(app: FastifyInstance) {
 
   app.get('/me/likes', async (request) => {
     const userId = app.requireUser(request)
+    // Not a «[test] …» thing a scenario put on an admin's own account, from
+    // outside the admin's ring (`trades/ring.ts`): real people hearted those
+    // before they were hidden, and 10a drew them back as what you wanted.
     const rows = await many(
       app.db,
       sql`select i.*, ${coverSql('i')} as cover, true as liked_by_me
           from likes l join items i on i.id = l.target_item
           where l.from_user = ${userId} and i.deleted_at is null
+            and ${listingOpenTo(sql`${userId}::uuid`, sql`i.id`)}
           order by l.created_at desc`,
     )
     return { items: rows.map(publicItem) }
@@ -53,8 +57,11 @@ export default async function likeRoutes(app: FastifyInstance) {
     // to it (`trades/ring.ts`), and nobody is shown across a block, either
     // way. The heart refuses both now, but likes made before a block — or
     // before the ring rule — are still in the table, and a block hides both
-    // ways on every surface (`lib/blocks.ts`).
+    // ways on every surface (`lib/blocks.ts`). Nor anybody outside the ring
+    // a «[test] …» thing of yours was made in, which is everybody but your
+    // test accounts: real people hearted those before they were hidden.
     const shown = sql`${sameRing(sql`${userId}::uuid`, sql`l.from_user`)}
+      and ${listingOpenTo(sql`l.from_user`, sql`l.target_item`)}
       and not exists (select 1 from blocks b
                       where (b.blocker = ${userId} and b.blocked = l.from_user)
                          or (b.blocker = l.from_user and b.blocked = ${userId}))`
@@ -73,7 +80,8 @@ export default async function likeRoutes(app: FastifyInstance) {
         app.db,
         sql`select u.*, (select count(*) from items i2
                          where i2.owner_id = u.id and i2.deleted_at is null
-                           and i2.status = 'available') as item_count
+                           and i2.status = 'available'
+                           and ${listingOpenTo(sql`${userId}::uuid`, sql`i2.id`)}) as item_count
             from likes l join users u on u.id = l.from_user
             where l.target_item = ${item['id']} and ${shown}
             order by l.created_at desc`,
