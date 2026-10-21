@@ -1848,7 +1848,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             onPressed: () => _report(trade),
             icon: const Icon(Icons.flag_outlined, size: 17, color: SwaplyColors.red),
             label: const Text('Rapporter et problem med byttet',
-                style: TextStyle(color: SwaplyColors.red)),
+                style: TextStyle(color: SwaplyColors.reportText)),
           ),
         ],
       );

@@ -49,7 +49,10 @@ are in a volume, the name is sixteen random bytes, and the format is sniffed
 rather than believed.
 
 **Two reds, and they must never collapse into one value.** Coral `#FF6B5E` is the
-"no" colour. `#E5484D` is reserved for report and block.
+"no" colour. `#E5484D` is reserved for report and block. As words they are
+`coralText` and `reportText`, darker in their own hues, because **every colour
+that carries words reaches WCAG AA (4.5:1)** — decided 21.10.2026. A new text
+colour is checked against what it sits on before it goes in.
 
 **Three files hold one palette:** `docs/DESIGN.md`, `web/src/app.css` and
 `app/lib/design/tokens.dart`. Change them together.

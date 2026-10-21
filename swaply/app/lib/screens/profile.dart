@@ -554,7 +554,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.flag_outlined, color: SwaplyColors.red),
-              title: const Text('Rapporter', style: TextStyle(color: SwaplyColors.red)),
+              title: const Text('Rapporter', style: TextStyle(color: SwaplyColors.reportText)),
               onTap: () {
                 Navigator.of(sheet).pop();
                 showReportSheet(context,
@@ -1327,7 +1327,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                 if (_error != null) ...[
                   // Coral, the «no» colour, as on 16c: a wrong password is
                   // not a report or a block.
-                  Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+                  Text(_error!, style: const TextStyle(color: SwaplyColors.coralText, fontSize: 13)),
                   const SizedBox(height: Insets.sm),
                 ],
                 // The app's destructive button — «Avslå», «Trekk deg fra
@@ -1728,14 +1728,14 @@ class _ReportSheetState extends State<_ReportSheet> {
             if (_error != null) ...[
               // Coral, the «no» colour: the report and block red is for the
               // button, not for what went wrong with it.
-              Text(_error!, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13)),
+              Text(_error!, style: const TextStyle(color: SwaplyColors.coralText, fontSize: 13)),
               const SizedBox(height: Insets.sm),
             ],
             SizedBox(
               height: 54,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: SwaplyColors.red,
+                  backgroundColor: SwaplyColors.reportText,
                   shape:
                       RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
                 ),

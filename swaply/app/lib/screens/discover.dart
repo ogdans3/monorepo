@@ -1039,7 +1039,7 @@ Future<void> _showContextMenu(BuildContext context, Item item,
           ),
           ListTile(
             leading: const Icon(Icons.flag_outlined, color: SwaplyColors.red),
-            title: const Text('Rapporter', style: TextStyle(color: SwaplyColors.red)),
+            title: const Text('Rapporter', style: TextStyle(color: SwaplyColors.reportText)),
             onTap: () async {
               Navigator.of(sheet).pop();
               // Once the report has landed, and only if it blocked: asked for

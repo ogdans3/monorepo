@@ -189,10 +189,10 @@ class AdminButton extends StatelessWidget {
           child: OutlinedButton(
             onPressed: busy ? null : onPressed,
             style: OutlinedButton.styleFrom(
-              backgroundColor: filled ? AdminColors.accent : Colors.transparent,
+              backgroundColor: filled ? AdminColors.accentFill : Colors.transparent,
               foregroundColor: filled ? Colors.white : AdminColors.ink,
               disabledForegroundColor: AdminColors.muted,
-              side: BorderSide(color: filled ? AdminColors.accent : AdminColors.hairline),
+              side: BorderSide(color: filled ? AdminColors.accentFill : AdminColors.hairline),
               padding: const EdgeInsets.symmetric(horizontal: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
             ),

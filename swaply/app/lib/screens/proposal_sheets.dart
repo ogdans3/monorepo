@@ -253,7 +253,7 @@ class _ProposalSheetState extends State<_ProposalSheet> {
                     // server's words, or that there was no answer and the
                     // way to ask again.
                     Text(error.message,
-                        style: const TextStyle(color: SwaplyColors.coral, fontSize: 13.5)),
+                        style: const TextStyle(color: SwaplyColors.coralText, fontSize: 13.5)),
                     if (error.isNoContact) ...[
                       const SizedBox(height: Insets.md),
                       SecondaryButton('Prøv igjen', onPressed: _retry),
