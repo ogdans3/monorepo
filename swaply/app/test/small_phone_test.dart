@@ -244,6 +244,32 @@ void main() {
           lessThanOrEqualTo(phones.last.size.height));
     });
 
+    testWidgets('taking a listing down at 160 % asks in a sheet that scrolls to «Avbryt»',
+        (tester) async {
+      // Held to nine sixteenths of the screen and not scrolling, the question
+      // cut «Avbryt» off from 130 %, and both buttons at 160 %.
+      server.overrides['GET /items/item-mine'] = {
+        ...FakeServer.drill,
+        'id': 'item-mine',
+        'owner': {'id': 'me-1', 'displayName': 'Ola N.'},
+      };
+      await hold(tester, phones.last, const ItemDetailScreen(itemId: 'item-mine'),
+          textScale: 1.6);
+      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Fjern annonsen'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final cancel = find.widgetWithText(SecondaryButton, 'Avbryt');
+      await tester.ensureVisible(cancel);
+      await tester.pumpAndSettle();
+      await tester.tap(cancel);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(SecondaryButton, 'Fjern annonsen'), findsNothing);
+      expect(server.requests, isNot(contains('DELETE /items/item-mine')));
+    });
+
     testWidgets('and at the export\'s size a card\'s value is still beside its name',
         (tester) async {
       server.overrides['GET /discover'] = {

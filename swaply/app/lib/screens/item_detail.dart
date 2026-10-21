@@ -654,11 +654,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final yes = await showModalBottomSheet<bool>(
       context: context,
       useRootNavigator: true,
+      // As tall as what is in it, and scrolling past that. Held to nine
+      // sixteenths of the screen and not scrolling, it cut «Avbryt» off on a
+      // small phone with the text set at 130 %, and both buttons at 160 %.
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
       builder: (sheet) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(Insets.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
