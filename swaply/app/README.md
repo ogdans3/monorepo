@@ -821,7 +821,11 @@ says «Angret du? Du kan sende et nytt forslag fra samtalen.» any more: an ende
 trade takes no new offer, so the line promised something nothing does. After a
 deletion or a block, where nobody is left to answer, the chat field gives way
 to one line saying why; after any other ending the conversation stays open,
-since how long it lives is one of DESIGN.md's open questions.
+since how long it lives is one of DESIGN.md's open questions. Which it is, the
+server says with the conversation (`closed` on a thread, `conversationClosed`
+on a trade), by the rule it refuses a message by: a block ends no finished
+trade, and a finished trade's field used to stay until the first «Send» across
+the block was refused.
 `test/screens_test.dart` and `test/ended_test.dart` hold the words.
 
 Taking your own listing down, from «⋯» on 04, asks the way «Slett kontoen»

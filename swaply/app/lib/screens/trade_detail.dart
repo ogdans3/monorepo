@@ -1617,12 +1617,20 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             LastMessage(trade.lastMessage!),
             const SizedBox(height: 8),
           ],
-          // Nobody left to write to; the card above says why, or the
-          // server did when «Send» was refused.
+          // Nobody left to write to, or nobody to write to across a block,
+          // as the server says with the trade: said in 06g's words, before
+          // «Send» is pressed. Or the server did when «Send» was refused. A
+          // server from before it said so is read from how the trade ended,
+          // and the card above says why.
           if (_closedByServer case final words?)
             Text(words, style: Type.small)
           else if (trade.conversationClosed)
-            const Text('Samtalen er stengt.', style: Type.small)
+            Text(
+                trade.saysConversationClosed
+                    ? closedLine(trade.conversationClosedWhy,
+                        others: trade.participants.length - 1)!
+                    : 'Samtalen er stengt.',
+                style: Type.small)
           else
             Row(
               children: [

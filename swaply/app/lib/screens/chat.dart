@@ -618,29 +618,31 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
 
   /// Why nobody can write here any more, or null while somebody can.
   ///
-  /// A trade ended by a block, or by the other one in a pair deleting their
-  /// account; and, however the trade ended or whether it is finished,
-  /// everybody else in the conversation having deleted theirs, which the
-  /// conversation's people say with no name. A finished trade whose other
-  /// side has gone kept its field, and «Send» wrote to nobody; a ring one of
-  /// whose two others had gone was closed, while the third was still there
-  /// to read it and the server took the message. And the server's own
-  /// refusal, `conversation_closed`, in its words, should it come first.
+  /// As the server says it with the conversation (`closed`), by the very
+  /// rule it refuses a message by: a block between the one reading and
+  /// somebody in it, either way, or everybody else in it having deleted
+  /// their account. A block ends no finished or agreed trade, and the field
+  /// stayed on such a conversation until the first «Send» was refused. And
+  /// the server's own refusal, in its words or ours, should it come first.
+  ///
+  /// A server from before it said so is read the old way: a trade ended by
+  /// a block, or by the other one in a pair deleting their account; and
+  /// everybody else in the conversation having deleted theirs, which its
+  /// people say with no name. In a ring one who is left is somebody to
+  /// write to.
   String? _closedWords(Thread thread) {
     if (_closedByServer case final words?) return words;
-    final trade = _trade;
-    if (trade?.state == 'cancelled' && trade?.closeCode == Trade.closedByBlock) {
-      return closedAfterBlock;
-    }
     final me = context.read<Session>().me?.id;
     final others = thread.participants.where((p) => p.id != me).toList();
-    final allGone = others.isNotEmpty && others.every((p) => p.gone);
-    if (!allGone && !(trade?.conversationClosed ?? false)) return null;
-    return others.length > 1
-        ? 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.'
-        : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.';
+    final String? why;
+    if (thread.saysClosed) {
+      why = thread.closed;
+    } else {
+      final allGone = others.isNotEmpty && others.every((p) => p.gone);
+      why = allGone ? Thread.closedByErasure : _trade?.conversationClosedWhy;
+    }
+    return closedLine(why, others: others.length);
   }
-
   /// The server's words for a conversation it no longer takes messages in,
   /// once «Send» has been refused with them.
   String? _closedByServer;
@@ -908,6 +910,18 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
 /// Where the field was, in a conversation nobody can write in across a
 /// block. Not who blocked whom: the one blocked reads it too.
 const closedAfterBlock = 'Samtalen er stengt etter en blokkering.';
+
+/// Where the field was, for a conversation closed for [why] —
+/// [Thread.closedByBlock] or [Thread.closedByErasure] — or null for one that
+/// is not. [others] is how many else are in it: one who has gone, or two.
+/// The same lines on 06g and on the trade page's card.
+String? closedLine(String? why, {required int others}) => switch (why) {
+      null => null,
+      Thread.closedByBlock => closedAfterBlock,
+      _ => others > 1
+          ? 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.'
+          : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.',
+    };
 
 /// A small sheet with the people in a ring, for something that is about one
 /// of them. Null when it is closed without a choice.
