@@ -66,13 +66,12 @@ export async function createScreenSwitchVideo(
     onProgress?: (value: number) => void;
   },
 ): Promise<File> {
-  if (!(
-    options.at > 0 &&
-    options.at < options.duration &&
-    options.duration <= 60
-  )) {
-    throw new Error("Choose a cut inside a timeline of 60 seconds or less.");
-  }
+  if (!(options.duration <= 60))
+    throw new Error("Screen switches work on timelines of 60 seconds or less.");
+  if (!(options.at > 0 && options.at < options.duration))
+    throw new Error(
+      `The cut at ${options.at.toFixed(2)}s is outside the timeline, which ends at ${options.duration.toFixed(2)}s.`,
+    );
   if (!before.type.startsWith("image/") || !after.type.startsWith("image/"))
     throw new Error("Choose two images for the screen switch.");
   if (typeof VideoEncoder === "undefined")

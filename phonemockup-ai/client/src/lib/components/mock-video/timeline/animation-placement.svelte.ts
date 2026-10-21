@@ -92,6 +92,9 @@ export async function addAnimationGroup(
         .find((clip) => clip.start >= insertEnd - EPSILON);
     const lastNew = newClips[newClips.length - 1];
     if (isEmptyAnimation) {
+        // Before the first clip the phone shows that clip's first pose: hold
+        // it, rather than jumping to the rest pose and moving back.
+        if (!before && after) newClips[0].startKeyframe = {...after.startKeyframe, id: uuid()};
         lastNew.endKeyframe = after
             ? {...after.startKeyframe, id: uuid()}
             : {...newClips[0].startKeyframe, id: uuid()};

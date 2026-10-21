@@ -18,13 +18,20 @@
 
   // These three phone orientations have been checked with contrasting screens.
   const supportedModels = ["iphone-16-pro", "pixel-9-pro", "galaxy-s24-ultra"];
+  // A cut at or after the end time never plays.
   const cues = $derived(
     supportedModels.includes(project.model.id) && project.tracks.length === 1
-      ? screenCutCues(project.tracks)
+      ? screenCutCues(project.tracks).filter(
+          (c) => c.at < project.timeline.endTime,
+        )
       : [],
   );
   let chosen = $state("");
   const cue = $derived(cues.find((c) => c.id === chosen) ?? cues[0]);
+  // The select shows the cut in use, not a blank while the first one is used.
+  $effect(() => {
+    if (cue && chosen !== cue.id) chosen = cue.id;
+  });
   let open = $state(false);
   let before = $state<File>();
   let after = $state<File>();
@@ -34,6 +41,11 @@
   let success = $state("");
   let abort: AbortController | undefined;
   onDestroy(() => abort?.abort());
+  // Closing the dialog stops the encode: finishing out of sight, it replaced
+  // whatever was on the phone by then.
+  $effect(() => {
+    if (!open) abort?.abort();
+  });
 
   function snapshot() {
     return JSON.stringify({
@@ -41,6 +53,7 @@
       model: project.model.id,
       cue,
       duration: project.timeline.endTime,
+      screen: get(get(videoController).mediaSrc),
     });
   }
   async function create(useDemo = false) {
@@ -82,7 +95,7 @@
       if (abort.signal.aborted) return;
       if (snapshot() !== state)
         throw new Error(
-          "The timeline changed. Create the screen switch again with the new timing.",
+          "The timeline or the screen changed. Create the screen switch again.",
         );
       before = a;
       after = b;
@@ -135,6 +148,7 @@
 >
   <DialogContent
     class="app-dialog max-w-lg"
+    showCloseButton={!busy}
     interactOutsideBehavior={busy ? "ignore" : "close"}
     escapeKeydownBehavior={busy ? "ignore" : "close"}
   >
@@ -207,13 +221,14 @@
           onclick={() => create()}>Create screen switch</Button
         >
       </div>
-      <Button
-        variant="ghost"
-        disabled={busy}
-        onclick={() => {
-          open = false;
-        }}>Back to editor</Button
-      >
+      {#if busy}<Button variant="ghost" onclick={() => abort?.abort()}
+          >Cancel</Button
+        >{:else}<Button
+          variant="ghost"
+          onclick={() => {
+            open = false;
+          }}>Back to editor</Button
+        >{/if}
     </div>
   </DialogContent>
 </Dialog>

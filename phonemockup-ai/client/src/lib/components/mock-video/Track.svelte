@@ -43,6 +43,9 @@
     /** The shortest a clip can be, in seconds. */
     const MIN_CLIP_SECONDS = 0.1;
 
+    /** Clip times closer than this are the same instant: the clips are joined. */
+    const JOINED = 1e-6;
+
     // Drag visuals control to prevent hover flicker
     let isDragging = $state(false);
 
@@ -61,7 +64,9 @@
      * Where a clip is drawn. A short clip near the end of the ruler is drawn
      * wider than its span, and the track clips what runs past the end, which
      * hid its end keyframe; it moves left by as much of that extra width as
-     * it needs to fit. A clip whose real span runs past the end isn't moved.
+     * it needs to fit, but only into empty track: drawn over the clip before
+     * it, it covered that clip's end keyframe and resize handle. A clip whose
+     * real span runs past the end isn't moved.
      */
     function drawnLeftFor(animation: Animation) {
         const left = leftFor(animation.start);
@@ -69,7 +74,13 @@
         const extra = Math.max(0, MIN_CLIP_PX - width);
         const trackWidth = (project.timeline.endTime - $startTime) * pxPerSecond;
         const overflow = Math.max(0, left + Math.max(width, MIN_CLIP_PX) - trackWidth);
-        return left - Math.min(extra, overflow);
+        const freeFrom = track.animations.reduce(
+            (end, other) =>
+                other !== animation && other.end <= animation.start + JOINED ? Math.max(end, other.end) : end,
+            $startTime
+        );
+        const room = Math.max(0, left - leftFor(freeFrom));
+        return left - Math.min(extra, overflow, room);
     }
 
     // Magnetic hold types/state
@@ -393,6 +404,12 @@
                 newStart = $startTime;
                 newEnd = newStart + duration;
             }
+        } else if (dragMode === "resize-left") {
+            // Only the dragged edge is bounded. A clip running past a
+            // shortened timeline had its end pulled in to the ruler's end
+            // too, which sped its motion up with nothing on screen to show it.
+            newStart = Math.max($startTime, Math.min(newStart, newEnd - MIN_CLIP_SECONDS));
+            newEnd = Math.max(newEnd, newStart + MIN_CLIP_SECONDS);
         } else {
             newStart = Math.max($startTime, Math.min(newStart, newEnd - MIN_CLIP_SECONDS));
             newEnd = Math.min(timelineEnd, Math.max(newEnd, newStart + MIN_CLIP_SECONDS));
@@ -514,15 +531,18 @@
             if (get(videoController).isPlaying) return;
             const selected = selectedKeyframeHere();
             if (!selected) return;
-            const {index, animation, role} = selected;
+            const {animation, role} = selected;
             const value = {...change.vector};
+            // Only a clip that touches this one: across a gap the two poses
+            // are separate, and writing one into the other made a still
+            // clip before the gap start to move.
             if (role === "start") {
                 animation.startKeyframe[field] = value;
-                const prev = track.animations[index - 1];
+                const prev = track.animations.find((a) => a !== animation && Math.abs(a.end - animation.start) < JOINED);
                 if (prev) prev.endKeyframe[field] = {...value};
             } else {
                 animation.endKeyframe[field] = value;
-                const next = track.animations[index + 1];
+                const next = track.animations.find((a) => a !== animation && Math.abs(a.start - animation.end) < JOINED);
                 if (next) next.startKeyframe[field] = {...value};
             }
         };
