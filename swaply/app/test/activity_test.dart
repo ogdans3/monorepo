@@ -527,4 +527,57 @@ void main() {
       expect(session.canReturnToAdmin, isFalse);
     });
   });
+
+  // And with the app in front. The account deleted from a browser on
+  // another machine while the phone sat open on it: no return from the
+  // background to ask, and every screen that asked who this is was refused —
+  // «Du må logge inn.» under every tap, the last person's things on every
+  // tab, until the app was put away for a minute and brought back.
+  group('a token the server stops knowing while the app is open', () {
+    Future<void> tapTab(WidgetTester tester, String label) async {
+      await tester.tap(find.descendant(of: find.byType(SwaplyNavBar), matching: find.text(label)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('20. the next screen to ask who this is takes it as a cold start would',
+        (tester) async {
+      server.overrides['GET /me'] = FakeServer.me;
+      await boot(tester, token: 'tok');
+      await tapTab(tester, 'Chats');
+      await tapTab(tester, 'Profil');
+      expect(asked('POST /auth/anonymous'), 0);
+
+      // Deleted elsewhere, with nobody leaving the app.
+      server.overrides['GET /me'] = 401;
+      await tapTab(tester, 'Chats');
+
+      expect(asked('POST /auth/anonymous'), 1);
+      expect(server.bearers['POST /auth/anonymous'], isNull);
+      expect(session.anonymous, isTrue);
+      expect(find.byType(InterestsScreen), findsOneWidget);
+      expect(find.text('Du må logge inn.'), findsNothing);
+    });
+
+    testWidgets('21. not while a sign-in is on its way: it is the sign-in that retires the token',
+        (tester) async {
+      await boot(tester);
+      final signing = Completer<Object?>();
+      server.overrides['POST /auth/login'] = (http.Request _) => signing.future;
+      final signedIn = session.login('ola@epost.no', 'passord');
+      await tester.pump();
+
+      server.overrides['GET /me'] = 401;
+      await expectLater(session.refresh(), throwsA(isA<ApiException>()));
+      await tester.pumpAndSettle();
+      expect(asked('POST /auth/anonymous'), 0);
+
+      server.overrides['GET /me'] = FakeServer.me;
+      signing.complete({'token': 'tok', 'user': FakeServer.profileOnly(FakeServer.me)});
+      await signedIn;
+      await tester.pumpAndSettle();
+      expect(session.anonymous, isFalse);
+      expect(session.me?.id, 'me-1');
+      expect(asked('POST /auth/anonymous'), 0);
+    });
+  });
 }

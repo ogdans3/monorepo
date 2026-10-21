@@ -932,13 +932,44 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refresh() async {
+  /// Who this is, asked again: for the bar's badges and 13, by every screen
+  /// that changed something or came back into view.
+  ///
+  /// A refusal of the token itself is a session that has ended with the app
+  /// in front — the account deleted from a browser on another machine, say —
+  /// and it is taken as [wake] takes one on the way back from the
+  /// background: the screens go, and the gate makes the next start. Heard
+  /// only there, every screen that asked was refused, «Du må logge inn.»
+  /// under every tap and the last person's things on every tab, until the
+  /// app had been put away for a minute and brought back. The refusal still
+  /// goes to whoever asked.
+  Future<void> refresh() => _refresh(hearRefusal: true);
+
+  Future<void> _refresh({required bool hearRefusal}) async {
     final asked = _decided;
-    final found = await api.me();
+    final token = api.token;
+    final Me found;
+    try {
+      found = await api.me();
+    } on ApiException catch (e) {
+      if (hearRefusal && e.statusCode == 401) await _refusedWhileOpen(token, asked);
+      rethrow;
+    }
     _lastHeard = now();
     // A screen of the stranger's asking as the sign-in lands: it would put
     // the stranger back, over the account the likes were just folded into.
     if (asked == _decided) _become(found);
+  }
+
+  /// [token], asked about while nothing else was deciding who this is, is
+  /// refused; see [refresh]. Not while a sign-in or a profile is on its way,
+  /// which retires the token the asking went on as it lets the person in
+  /// ([wake] has the long story), nor while signing out, which retires it
+  /// itself, nor once anything has changed who this is since it was asked.
+  Future<void> _refusedWhileOpen(String? token, int asked) async {
+    if (token == null || _signingIn != null || _loggingOut != null || starting) return;
+    if (asked != _decided || api.token != token) return;
+    await _turnedAway(token);
   }
 
   /// When the server last answered this phone about who it is — a cold
@@ -1005,7 +1036,9 @@ class Session extends ChangeNotifier {
     final token = api.token;
     final asked = _decided;
     final signedInAsked = signedIn;
-    final asking = _waking = signedIn ? refresh() : retry();
+    // Its own refusal heard here, below, where a sign-in on its way is
+    // waited out first.
+    final asking = _waking = signedIn ? _refresh(hearRefusal: false) : retry();
     try {
       await asking;
     } on ApiException catch (e) {
