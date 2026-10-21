@@ -175,6 +175,18 @@ export default async function authRoutes(
         //
         // The invitation was spent when this device first looked around, so a
         // second one is neither needed nor asked for.
+        //
+        // Every session the device had goes, not only the one this request
+        // came with: the account has just gained a password, and the tokens
+        // that belonged to a device must not outlive that. A device id opens
+        // a session each time it is sent while nobody has claimed it — two
+        // tabs starting at once make two — and one minted before this moment
+        // went on opening the account afterwards, with no password, which is
+        // the leaked device id `device_claimed` exists to shut out. In the
+        // transaction, so there is no moment in which the account has a
+        // password and a device's token still works. The one issued below
+        // carries `issued_by` forward for the switcher.
+        await tx.execute(sql`delete from sessions where user_id = ${claiming}`)
         return claiming
       }
 
@@ -189,16 +201,10 @@ export default async function authRoutes(
       return id
     })
 
-    if (claiming) {
-      // Nothing to match yet: the wishes this device made only close a loop once
-      // it has something to give, and listing that is the next screen. The
-      // search runs there.
-      //
-      // The session is reissued: the account has just gained a password, and the
-      // token that belonged to a device should not outlive the change.
-      const header = request.headers.authorization
-      if (header?.startsWith('Bearer ')) await revokeSession(app.db, header.slice(7))
-    }
+    // Claiming, there is nothing to match yet: the wishes this device made only
+    // close a loop once it has something to give, and listing that is the next
+    // screen. The search runs there. The session is reissued below — the
+    // device's own went in the transaction above.
 
     // With the count: a device that hid kinds keeps them when it is claimed.
     const user = await one(app.db, sql`select *, ${hiddenCountColumn} from users where id = ${userId}`)

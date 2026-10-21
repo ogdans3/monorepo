@@ -84,6 +84,22 @@ export async function buildApp(
     },
   )
 
+  // A text with U+0000 in it — in the body, the query string or the path —
+  // is one Postgres will not keep (`text` has no NUL), and every statement
+  // that met one failed as «Noe gikk galt hos oss»: a message, a title, a
+  // name, a search. Refused here, before any route has done anything, so a
+  // report with «Blokkér» ticked is not left as a block with no report, and
+  // in words, because it is the sender's to fix.
+  app.addHook('preValidation', async (request) => {
+    if (holdsNul(request.body) || holdsNul(request.query) || holdsNul(request.params)) {
+      throw new ApiError(
+        400,
+        'invalid_text',
+        'Teksten inneholder et tegn vi ikke kan lagre. Fjern det og prøv igjen.',
+      )
+    }
+  })
+
   /**
    * The unique indexes a person can walk into by typing, and what to say when
    * they do. Norwegian, because it is shown to them.
@@ -167,4 +183,18 @@ export async function buildApp(
   await app.register(adminRoutes)
 
   return app
+}
+
+/**
+ * Whether a parsed body, query or set of path parameters holds U+0000
+ * anywhere, in a value or a key. Bodies are small — Fastify stops reading at
+ * a megabyte — and the walk stops at the first one found.
+ */
+export function holdsNul(value: unknown, depth = 0): boolean {
+  if (typeof value === 'string') return value.includes('\u0000')
+  if (value === null || typeof value !== 'object' || depth > 32) return false
+  if (Array.isArray(value)) return value.some((v) => holdsNul(v, depth + 1))
+  return Object.entries(value).some(
+    ([key, v]) => key.includes('\u0000') || holdsNul(v, depth + 1),
+  )
 }

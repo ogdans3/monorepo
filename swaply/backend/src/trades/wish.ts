@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { blocked, blockedBetween } from '../lib/blocks.js'
 import { LIKES_BEFORE_LISTING_PROMPT, LISTING_PROMPT_EVERY } from '../lib/constants.js'
-import { badRequest, notFound } from '../lib/errors.js'
+import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { one, type Executor } from '../lib/rows.js'
 import { findCyclesThrough, type Cycle } from './cycles.js'
 import { ringsApart, testRing } from './ring.js'
@@ -50,9 +50,19 @@ export async function expressWish(
     searchFailed?: (err: unknown) => void
   } = {},
 ): Promise<Wish> {
-  const item = await one(db, sql`select owner_id from items where id = ${itemId} and deleted_at is null`)
+  const item = await one(
+    db,
+    sql`select owner_id, status from items where id = ${itemId} and deleted_at is null`,
+  )
   if (!item) throw notFound('Fant ikke gjenstanden.')
   if (item['owner_id'] === userId) throw badRequest('own_item', 'Du kan ikke like din egen ting.')
+  // A thing given away is off the market for good: a heart on it can never
+  // close a loop, and it told its owner somebody wanted what she no longer
+  // has. Said in the words the first message about it and sharing it are
+  // refused with (`/items/:id/message`, `/items/:id/share`).
+  if (item['status'] === 'traded') {
+    throw conflict('item_unavailable', 'Denne er allerede byttet bort.')
+  }
   if (await blockedBetween(db, userId, item['owner_id'])) throw blocked()
   // A test account wants nothing outside its ring, and nothing outside wants
   // it (`ring.ts`): the like is the edge a trade would close on, and the

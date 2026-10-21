@@ -61,6 +61,15 @@ export default fp(async function auth(
     const header = request.headers.authorization
     if (!header?.startsWith('Bearer ')) return
     const session = await resolveSession(opts.db, header.slice('Bearer '.length))
+    // A token that opens nothing — the account deleted, the session ended,
+    // a device erased — is said to be one, on every route. Oppdag, a listing
+    // and a profile can be read without a session, and answered as if no
+    // token had been sent, a phone went on browsing with the account gone
+    // underneath it and learnt so only at its next move. Not on the doors
+    // themselves: signing in, signing up, starting as a stranger and
+    // signing out take whatever token the phone still has, and a dead one
+    // there is nobody to fold in or forget.
+    if (!session && !request.url.startsWith('/auth/')) throw unauthorized()
     request.userId = session?.userId ?? null
     request.userClaimed = session?.claimed ?? false
     request.userIsAdmin = session?.isAdmin ?? false

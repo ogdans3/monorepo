@@ -3,6 +3,7 @@
 // Two people sign up on screen 10c, list things on 10b, find each other on 05,
 // like on 04, negotiate on 09a, accept on 06c, hand over on 06f and rate each
 // other on 06h. If this passes, every screen has an endpoint behind it.
+import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
@@ -93,6 +94,33 @@ describe('the whole journey over HTTP', () => {
     })
     expect(res.statusCode).toBe(400)
     expect(res.json()).toEqual({ code: 'invalid_request', message: 'Forespørselen var ikke gyldig.' })
+  })
+
+  test('and a text with a character the database cannot keep is refused in words, wherever it is', async () => {
+    // U+0000 is valid JSON and a valid query string, and Postgres keeps no
+    // text with it in: a message, a title, a name or a search with one was a
+    // 500, «Noe gikk galt hos oss», about something the sender has to fix.
+    const nul = 'Hei\u0000der'
+    const refusal = {
+      code: 'invalid_text',
+      message: 'Teksten inneholder et tegn vi ikke kan lagre. Fjern det og prøv igjen.',
+    }
+    for (const [method, url, body] of [
+      ['POST', '/items', { title: nul, category: 'verktoy', condition: 'good' }],
+      ['POST', '/items', { title: 'Drill', description: nul, category: 'verktoy', condition: 'good' }],
+      ['PATCH', '/me', { displayName: nul }],
+      ['POST', '/feedback', { score: 4, chips: [nul] }],
+      ['GET', `/discover?q=${encodeURIComponent(nul)}`, undefined],
+      ['GET', `/discover?subcategory=${encodeURIComponent(nul)}`, undefined],
+    ] as const) {
+      const res = await call(method, url, { token: ola, ...(body ? { body: body as Json } : {}) })
+      expect(res.status, `${method} ${url}`).toBe(400)
+      expect(res.body, `${method} ${url}`).toEqual(refusal)
+    }
+    const signUp = await call('POST', '/auth/register', {
+      body: { displayName: nul, email: 'nul@epost.no', password: 'drillbits123' },
+    })
+    expect(signUp.body).toEqual(refusal)
   })
 
   test('a route that does not exist is answered in Norwegian, like every refusal', async () => {
@@ -309,6 +337,20 @@ describe('the whole journey over HTTP', () => {
     const titles = res.body!['yours'].map((i: Json) => i['title'])
     expect(titles).toContain('Sykkelhjelm')
     expect(res.body!['yours'].every((i: Json) => i['lockedByOtherTrade'] === false)).toBe(true)
+  })
+
+  test('06c — a yes says which terms it was given for, and it says something', async () => {
+    // The terms version is the record of what was ticked. An empty one, or a
+    // page of text, was stored as it came; the counter-offer's was bounded.
+    for (const termsVersion of ['', 'x'.repeat(41)]) {
+      const res = await call('POST', `/trades/${tradeId}/accept`, { token: ola, body: { termsVersion } })
+      expect(res.status, JSON.stringify(termsVersion.length)).toBe(400)
+    }
+    const yes = await db.execute(
+      sql`select 1 from trade_acceptances a join trade_offers o on o.id = a.offer_id
+          where o.trade_id = ${tradeId}`,
+    )
+    expect(yes).toHaveLength(0)
   })
 
   test('06c — accepting reserves only your own things', async () => {

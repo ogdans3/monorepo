@@ -51,6 +51,11 @@ describe('deleting an account', () => {
       sql`insert into notifications (user_id, type) values (${ola}, 'trade_accepted')`,
     )
     await like(ola, tent)
+    // What he wrote on the drill's listing, which stays on the row after the
+    // trade: the snapshot takes the title, never the words.
+    await db.execute(
+      sql`update items set description = 'Hentes i Storgata 5, ring 412 34 567' where id = ${drill}`,
+    )
   })
 
   afterAll(close)
@@ -98,9 +103,11 @@ describe('deleting an account', () => {
     expect(row!['bankid_subject']).toBe('bankid-subject-ola')
     expect(row!['reason']).toBe('legal_claims')
 
-    // Three years past the day the trade closed, not three years from now.
+    // Three years past the day the trade closed, not three years from now —
+    // the day in Norway, which is not the database's.
     const [expected] = await db.execute<Record<string, string>>(
-      sql`select (closed_at::date + interval '3 years')::date as d from trades where id = ${done}`,
+      sql`select ((closed_at at time zone 'Europe/Oslo')::date + interval '3 years')::date as d
+          from trades where id = ${done}`,
     )
     expect(String(row!['purge_after'])).toBe(String(expected!['d']))
   })
@@ -141,5 +148,22 @@ describe('deleting an account', () => {
       ['Bosch drill 18V', 'traded'],
       ['Stige', 'withdrawn'],
     ])
+  })
+
+  test('8b. and nothing he wrote on the traded one stays readable: it is taken down too', async () => {
+    // Left as it was, the drill's listing still answered GET /items/:id to
+    // anybody holding its id, with the address and the number he had put in
+    // the description. Kari's history is the snapshot, which never had it.
+    const [row] = await db.execute<Record<string, string | null>>(
+      sql`select status, description, deleted_at from items where id = ${drill}`,
+    )
+    expect(row!['status']).toBe('traded')
+    expect(row!['description']).toBeNull()
+    expect(row!['deleted_at']).not.toBeNull()
+
+    const snapshot = await db.execute<Record<string, string>>(
+      sql`select title from trade_item_snapshots where trade_id = ${done} and item_id = ${drill}`,
+    )
+    expect(snapshot.map((s) => s['title'])).toEqual(['Bosch drill 18V'])
   })
 })

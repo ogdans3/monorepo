@@ -34,18 +34,5 @@ export async function blockedInTrade(
   return Boolean(row)
 }
 
-/** The same, for everybody else in a conversation. */
-export async function blockedInThread(
-  db: Database | Tx,
-  threadId: string,
-  userId: string,
-): Promise<boolean> {
-  const [row] = await db.execute<Row>(
-    sql`select 1 from thread_participants tp
-        join blocks b on (b.blocker = ${userId} and b.blocked = tp.user_id)
-                      or (b.blocker = tp.user_id and b.blocked = ${userId})
-        where tp.thread_id = ${threadId} and tp.user_id <> ${userId}
-        limit 1`,
-  )
-  return Boolean(row)
-}
+// A conversation across a block is refused by `closedReason` in
+// `conversation.ts`, which is also what tells the app the field is closed.
