@@ -356,7 +356,8 @@ export async function tradeList(db: Database, viewerId: string) {
     // no yes in it (`incomplete_offer`), and counting one sends a person to a
     // screen with nothing to press. Everybody, not only the two sides you
     // see: in a ring the third can be the empty one. The badge on Bytter
-    // (`tradesNeedingYou` on GET /me) is the same rule.
+    // (`tradesNeedingYou` on GET /me) counts a deal by the same rule, and a
+    // withdrawal question waiting on you besides.
     yourTurn: waiting.filter(
       (v) =>
         !v.you.accepted &&
