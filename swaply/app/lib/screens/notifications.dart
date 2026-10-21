@@ -49,7 +49,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       // Read, as far as the server is told, and quietly: they came, and
       // marking them used to share their `try`, so no answer to it put
       // «Fikk ikke kontakt» where the list it had just fetched should be.
-      unawaited(api.markNotificationsRead().then((_) {}, onError: (Object _) {}));
+      // Up to the newest one on screen, and no further: marking everything
+      // read one that arrived in between, which nobody had seen. With none
+      // on screen there is nothing to mark.
+      final newest = result.notifications.firstOrNull?.id;
+      if (newest != null) {
+        unawaited(api.markNotificationsRead(upTo: newest).then((_) {}, onError: (Object _) {}));
+      }
     } on ApiException catch (e) {
       if (!mounted) return;
       if (_items == null) {
