@@ -170,7 +170,7 @@ void main() {
   });
 
   group('rows that could not give way', () {
-    const long = {...FakeServer.kari, 'displayName': 'Kristoffer-Alexander H.'};
+    final long = {...FakeServer.kari, 'displayName': 'Kristoffer-Alexander H.'};
 
     testWidgets('11: «Venter på …» stays on its card with a long name at 130 %', (tester) async {
       server.overrides['GET /trades'] = {
