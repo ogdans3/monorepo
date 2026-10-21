@@ -645,5 +645,62 @@ void main() {
       expect(api.token, 'tok');
       expect(find.byType(SwaplyToast), findsNothing);
     });
+
+    testWidgets('24. Oppdag asked again with a dead token: the server says 401 there too now',
+        (tester) async {
+      // The server answers a token it does not know with 401 on every route
+      // but the sign-ins, Oppdag's included, where it used to answer as to
+      // nobody in particular.
+      server.overrides['GET /me'] = (http.Request request) =>
+          switch (request.headers['authorization']) {
+            'Bearer tok' => FakeServer.me,
+            'Bearer ${FakeServer.deviceToken}' => FakeServer.lookingAround,
+            _ => 401,
+          };
+      await boot(tester, token: 'tok');
+      expect(find.byType(DiscoverScreen), findsOneWidget);
+
+      server.overrides['GET /discover'] = (http.Request request) =>
+          request.headers['authorization'] == 'Bearer tok' ? 401 : asUsual;
+      unawaited(tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator).first).show());
+      await tester.pumpAndSettle();
+
+      expect(asked('POST /auth/anonymous'), 1);
+      expect(session.anonymous, isTrue);
+      expect(find.byType(InterestsScreen), findsOneWidget);
+      expect(find.byType(SwaplyToast), findsNothing);
+    });
+
+    testWidgets('25. a request on the device\'s token refused while its profile is being made is not the end',
+        (tester) async {
+      // Making the profile ends every session the device's account had, and
+      // the answer's token is the way in from then on. A request that went
+      // on the device's token meanwhile is refused for it, and that is the
+      // profile being made, not the account gone.
+      await boot(tester);
+      final making = Completer<Object?>();
+      server.overrides['POST /auth/register'] = (http.Request _) => making.future;
+      final made = session.register(
+          displayName: 'Ola N.', email: 'ola@epost.no', password: 'drillbits123');
+      await tester.pump();
+
+      server.overrides['POST /me/hidden'] = 401;
+      await expectLater(api.hide('item-console'), throwsA(isA<ApiException>()));
+      await tester.pumpAndSettle();
+      expect(asked('POST /auth/anonymous'), 0);
+
+      server.overrides['GET /me'] = {...FakeServer.me, 'id': FakeServer.lookingAround['id']};
+      making.complete({
+        'token': 'tok',
+        'user': FakeServer.profileOnly({...FakeServer.me, 'id': FakeServer.lookingAround['id']}),
+      });
+      await made;
+      await tester.pumpAndSettle();
+
+      expect(api.token, 'tok');
+      expect(session.anonymous, isFalse);
+      expect(session.me?.id, FakeServer.lookingAround['id']);
+      expect(asked('POST /auth/anonymous'), 0);
+    });
   });
 }
