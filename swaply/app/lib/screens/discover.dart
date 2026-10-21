@@ -902,6 +902,9 @@ class _ItemCardState extends State<ItemCard> {
     final item = widget.item;
 
     return GestureDetector(
+      // The whole card, the space beside a short caption line included: a
+      // value that goes under the name leaves room at its right.
+      behavior: HitTestBehavior.opaque,
       onTap: _open,
       onLongPress: () =>
           _showContextMenu(context, item, onChanged: widget.onChanged, onHide: widget.onHide),
