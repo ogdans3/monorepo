@@ -176,7 +176,7 @@ body.studio-theme {
   font-size: 12px;
 }
 .studio-inspector-index {
-  color: #8d8d84;
+  color: #5f5f58;
   font-weight: 400;
   font-size: 11px;
 }
@@ -224,7 +224,7 @@ body.studio-theme {
 }
 .studio-upload small {
   font-size: 10px;
-  color: var(--muted-foreground);
+  color: #5f5f58; /* 4.5:1 on the upload box */
   display: block;
   margin-top: 4px;
 }
@@ -362,7 +362,7 @@ body.studio-theme {
   border-radius: 50%;
 }
 .studio-device-name {
-  color: #87877d;
+  color: #5f5f58;
   margin-left: 6px;
 }
 .studio-canvas-actions {
@@ -399,10 +399,22 @@ body.studio-theme {
   flex-shrink: 0;
   padding: 0 24px;
   font-size: 10px;
-  color: #77776e;
+  color: #5f5f58;
 }
 .hint-divider {
   padding: 0 7px;
+}
+/* Touch can't right-drag: say where moving the phone is done instead. */
+.hint-coarse {
+  display: none;
+}
+@media (pointer: coarse) {
+  .hint-fine {
+    display: none;
+  }
+  .hint-coarse {
+    display: inline;
+  }
 }
 .studio-timeline {
   flex-shrink: 0;
@@ -508,7 +520,7 @@ body.studio-theme {
   font-weight: 500;
 }
 .studio-track-count {
-  color: #8c8c81;
+  color: #5f5f58;
   margin-left: 10px;
   font-weight: 400;
 }
@@ -983,5 +995,9 @@ body.studio-theme {
 @media (pointer: coarse) {
   .studio-time-fields input {
     font-size: 16px !important;
+    /* Room for "600.00" at that size. */
+    width: 6.5ch;
+    min-width: 44px;
+    padding: 0 2px;
   }
 }

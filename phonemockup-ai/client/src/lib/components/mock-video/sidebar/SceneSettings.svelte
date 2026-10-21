@@ -1,4 +1,6 @@
 <script lang="ts">
+    // Ids for the selects' labels: the value shown stays part of the name.
+    const uid = $props.id();
     import {Label} from "$lib/components/ui/label";
     import {Input} from "$lib/components/ui/input";
     import * as Select from "$lib/components/ui/select";
@@ -139,19 +141,20 @@
         <Label for="preset" class="text-xs text-muted-foreground">
             Resolution preset
         </Label>
+        <span id={`${uid}-preset-label`} class="sr-only">Select resolution preset</span>
         <Select.Root type="single" name="resolutionPreset" bind:value={project.sceneSettings.selectedPreset}
                      onValueChange={() => unfocusElement()}>
             <Select.Trigger
                     id="preset"
                     class="h-8 w-full rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between"
-                    aria-label="Select resolution preset"
+                    aria-labelledby={`${uid}-preset-label ${uid}-preset-value`}
             >
-                {triggerText}
+                <span id={`${uid}-preset-value`}>{triggerText}</span>
             </Select.Trigger>
 
-            <Select.Content class="min-w-[14rem]">
+            <Select.Content aria-labelledby={`${uid}-preset-label`} class="min-w-[14rem]">
                 <Select.Group>
-                    <Select.Label class="px-2 py-1 text-xs opacity-70">Presets</Select.Label>
+                    <Select.Label class="px-2 py-1 text-xs text-muted-foreground">Presets</Select.Label>
                     {#each presetKeys as key (key)}
                         <Select.Item value={key} label={key} class="text-sm px-2 py-1.5">
                             {key}

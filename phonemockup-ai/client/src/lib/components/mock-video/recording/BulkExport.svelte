@@ -1,4 +1,6 @@
 <script lang="ts">
+    // Ids for the selects' labels: the value shown stays part of the name.
+    const uid = $props.id();
     import {onMount, onDestroy, tick} from "svelte";
     import Canvas from "$lib/components/mock-video/canvas/Canvas.svelte";
     import {currentPlayheadTime, videoController} from "$lib/stores/video.svelte.js";
@@ -139,6 +141,7 @@
         getVideoEl: () => (get(videoController).isVideo ? get(videoController).video : null),
         setMediaSource: (file, isImage) =>
             get(videoController).setMediaSource(file, isImage),
+        whenMediaReady: () => get(videoController).whenMediaReady(),
         getEndTimeSec: () => project.timeline.endTime ?? 0,
         getPlayheadAnimateFromSec: () =>
             get(get(videoController).playheadAnimateFrom) ?? 0,
@@ -353,6 +356,7 @@
     <div class="studio-export-controls flex flex-wrap gap-2">
         {#if !downloadAsImage}
             <div class="w-[180px]">
+                <span id={`${uid}-format-label`} class="sr-only">Select output format</span>
                 <Select.Root
                         type="single"
                         name="exportFormat"
@@ -361,14 +365,15 @@
                 >
                     <Select.Trigger
                             class="h-8 w-[180px] rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between"
-                            aria-label="Select output format"
+                            id={`${uid}-format`}
+                            aria-labelledby={`${uid}-format-label ${uid}-format-value`}
                     >
-                        {formatTriggerText}
+                        <span id={`${uid}-format-value`}>{formatTriggerText}</span>
                     </Select.Trigger>
 
-                    <Select.Content class="min-w-[14rem]">
+                    <Select.Content aria-labelledby={`${uid}-format-label`} class="min-w-[14rem]">
                         <Select.Group>
-                            <Select.Label class="px-2 py-1 text-xs opacity-70">
+                            <Select.Label class="px-2 py-1 text-xs text-muted-foreground">
                                 Format
                             </Select.Label>
                             {#each formatOptions as opt (opt.value)}
@@ -387,6 +392,7 @@
         {/if}
 
         <div class="w-[260px] max-w-full">
+            <span id={`${uid}-file-label`} class="sr-only">Select file to preview</span>
             <Select.Root
                     type="single"
                     disabled={inProgress}
@@ -399,15 +405,16 @@
             >
                 <Select.Trigger
                             class="h-8 w-full rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between overflow-hidden whitespace-nowrap"
-                        aria-label="Select file to preview"
+                        id={`${uid}-file`}
+                        aria-labelledby={`${uid}-file-label ${uid}-file-value`}
                 >
-                    <span class="truncate">
+                    <span id={`${uid}-file-value`} class="truncate">
                         {bulkList[activeBulkIndex]?.fileBlob?.name ?? "Select file"}
                     </span>
                 </Select.Trigger>
-                <Select.Content class="min-w-[18rem]">
+                <Select.Content aria-labelledby={`${uid}-file-label`} class="min-w-[18rem]">
                     <Select.Group>
-                        <Select.Label class="px-2 py-1 text-xs opacity-70">
+                        <Select.Label class="px-2 py-1 text-xs text-muted-foreground">
                             File
                         </Select.Label>
                         {#each bulkList as f, i (i)}
@@ -451,11 +458,16 @@
                     <div class="flex flex-row justify-between">
                         <div>
                             <CardTitle class="text-sm font-medium">Progress</CardTitle>
-                            <div class="text-xs text-muted-foreground">
+                            <!-- Announced: it changes when an export starts, finishes or fails. -->
+                            <div class="text-xs text-muted-foreground" role="status">
                                 {#if inProgress}
                                     {downloadAsImage
                                         ? "Exporting images…"
                                         : "Rendering batch…"} Keep this tab open.
+                                {:else if finalBlob}
+                                    {status}. Download it again below if needed.
+                                {:else if status === "Failed"}
+                                    <span class="text-destructive">The export failed. Try again.</span>
                                 {:else}
                                     {downloadAsImage
                                         ? "Image export idle."
@@ -470,7 +482,7 @@
                         <span>{Math.round(progress)}%</span>
                         <div class="truncate text-xs text-muted-foreground">{status}</div>
                     </div>
-                    <Progress value={Math.max(0, Math.min(100, progress))}/>
+                    <Progress aria-label="Export progress" value={Math.max(0, Math.min(100, progress))}/>
                 </CardContent>
             </Card>
         </div>

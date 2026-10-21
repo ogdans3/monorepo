@@ -22,12 +22,21 @@ import {getModel} from "$lib/models/3d-models/3d-models-spec";
 import {PresetName} from "$lib/models/models";
 import {detectIsImage} from "$lib/repo/uploadFile.svelte";
 
-/** What's on the phone before the user drops anything in. */
-export const DEMO_MEDIA = "/iphone-recording.webm";
+/**
+ * What's on the phone before the user drops anything in. The WebM is the
+ * smaller file, but iOS plays WebM only from 17.4; older iPhones get the same
+ * recording as MP4 instead of a black screen and an error.
+ */
+function demoMedia(): string {
+    const webm = typeof document !== "undefined" &&
+        document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== "";
+    return webm ? "/iphone-recording.webm" : "/iphone-recording.mp4";
+}
 
 function resetEditorState() {
     const controller = get(videoController);
     controller.pause();
+    controller.forgetLastGoodMedia();
     controller.startTime.set(0);
     controller.playheadAnimateFrom.set(0);
     currentPlayheadTime.set(0);
@@ -47,7 +56,7 @@ function resetEditorState() {
 export function applyDemoMedia() {
     const id = project.demoMediaId;
     const image = id === "focus" || id === "workspace";
-    get(videoController).setMediaSource(image ? `/media/studio/${id}.png` : DEMO_MEDIA, image);
+    get(videoController).setMediaSource(image ? `/media/studio/${id}.png` : demoMedia(), image);
 }
 
 /** A fresh project; the editor's timeline fills in the chosen animation. */

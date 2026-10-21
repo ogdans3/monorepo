@@ -75,6 +75,19 @@ export class BulkRecorder {
             callbacks?.onItemStart?.(i, file);
 
             await this.videoCtx.setMediaSource(file, detectIsImage(file));
+            // A file the browser can't open is a failed item, not a copy of
+            // the one before it (the editor puts the last good screen back).
+            // A load that never settles is left to the render below.
+            try {
+                await Promise.race([
+                    this.videoCtx.whenMediaReady?.(),
+                    new Promise<void>((resolve) => setTimeout(resolve, MEDIA_READY_TIMEOUT_MS)),
+                ]);
+            } catch {
+                callbacks?.onError?.(i, new Error(`The browser can't open ${file.name}`));
+                callbacks?.onItemDone?.(i, null);
+                continue;
+            }
 
             // Pre-settle the preview so textures/shaders are ready
             const settleT = Number.isFinite(tSec!)
@@ -155,6 +168,9 @@ export class BulkRecorder {
         return zipBlob;
     }
 }
+
+/** How long a file may take to load before its item renders anyway. */
+const MEDIA_READY_TIMEOUT_MS = 20_000;
 
 function mergeAbortSignals(signals: AbortSignal[]): AbortSignal {
     const controller = new AbortController();

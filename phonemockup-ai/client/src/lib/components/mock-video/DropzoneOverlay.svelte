@@ -13,10 +13,14 @@
         console.log("[Dropzone]", ...args);
     }
 
-    /** A dialog is up (an export may be running behind it): drops wait. */
+    /**
+     * The export dialog (an export may be running behind it) or a
+     * confirmation is up: drops wait. Other dialogs, such as the compact
+     * inspector with its own "drop your file anywhere" box, take them.
+     */
     function dialogOpen() {
         return !!document.querySelector(
-            ':is([role="dialog"], [role="alertdialog"])[data-state="open"]'
+            '.studio-export-dialog[data-state="open"], [role="alertdialog"][data-state="open"]'
         );
     }
 

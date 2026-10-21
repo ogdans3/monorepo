@@ -225,7 +225,8 @@
                     <div class="flex flex-row justify-between">
                         <div>
                             <CardTitle class="text-sm font-medium">Progress</CardTitle>
-                            <div class="text-xs text-muted-foreground">
+                            <!-- Announced: it changes when an export starts, finishes or fails. -->
+                            <div class="text-xs text-muted-foreground" role="status">
                                 {#if inProgress}
                                     Exporting image… Keep this tab open.
                                 {:else if finalBlob}
@@ -244,7 +245,7 @@
                         <span>{Math.round(progress)}%</span>
                         <div class="truncate text-xs text-muted-foreground">{status}</div>
                     </div>
-                    <Progress value={Math.max(0, Math.min(100, progress))}/>
+                    <Progress aria-label="Export progress" value={Math.max(0, Math.min(100, progress))}/>
                 </CardContent>
             </Card>
         </div>

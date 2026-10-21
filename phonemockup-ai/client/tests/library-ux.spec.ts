@@ -333,7 +333,7 @@ test("image export downloads a PNG and returns to the editor", async ({
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const downloading = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Download image", exact: true })
+    .getByRole("button", { name: "Download as image", exact: true })
     .click();
   const download = await downloading;
   expect(download.suggestedFilename()).toMatch(/\.png$/);
@@ -358,7 +358,7 @@ test("video export waits for the chosen format and completes a short image seque
   await page.getByLabel("End time in seconds").blur();
   await page.getByRole("button", { name: "Export", exact: true }).click();
   await page
-    .getByRole("button", { name: "Download video", exact: true })
+    .getByRole("button", { name: "Download as video", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
     name: "Export video",
@@ -445,7 +445,7 @@ test("bulk video export fits the dialog and waits for format selection", async (
   }
   await page.getByRole("button", { name: "Bulk Export", exact: true }).click();
   await page
-    .getByRole("button", { name: "Download video", exact: true })
+    .getByRole("button", { name: "Bulk download videos", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
     name: "Export video",
@@ -483,7 +483,7 @@ test("bulk video export fits the dialog and waits for format selection", async (
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
     page.getByRole("button", {
-      name: compact ? "Bulk Export" : "Download video",
+      name: compact ? "Bulk Export" : "Bulk download videos",
       exact: true,
     }),
   ).toBeFocused();

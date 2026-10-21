@@ -144,6 +144,14 @@
   }
 </script>
 
+<svelte:head>
+  {#if priority && poster}
+    <!-- The poster is the page's largest paint; as a <video poster> it was
+         found only after layout. -->
+    <link rel="preload" as="image" href={poster} fetchpriority="high" />
+  {/if}
+</svelte:head>
+
 <div
   class="motion-preview"
   bind:this={root}

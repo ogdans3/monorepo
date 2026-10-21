@@ -26,6 +26,9 @@
     /** Whether the field was typed in since it got focus. */
     let typed = false;
     let committedValue = $state<number>(value);
+    // iPhone's decimal keypad has no minus key, so a field that takes
+    // negative numbers asks for the full keyboard (its number row has one).
+
     /** The value as shown; a damaged save can hold null instead of a number. */
     const format = (v: number) => (Number.isFinite(v) ? v.toFixed(precision) : "");
     let inputText = $state<string>(format(value));
@@ -222,7 +225,7 @@
                 bind:ref={inputElement}
                 id={id}
                 type="text"
-                inputmode="decimal"
+                inputmode={min < 0 ? "text" : "decimal"}
                 class="removeInner w-full text-right tabular-nums appearance-none"
                 min={minAttr}
                 max={maxAttr}

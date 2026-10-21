@@ -34,7 +34,6 @@
                 <Button
                         onclick={() => {onDownloadImage(); unfocusElement();}}
                         class="h-8 gap-2"
-                        aria-label="Download image"
                 >
                     <ImageIcon class="h-4 w-4" aria-hidden="true"/>
                     <span>
@@ -50,7 +49,6 @@
                         onclick={() => {onDownloadVideo(); unfocusElement();}}
                         variant="secondary"
                         class="h-8 gap-2"
-                        aria-label="Download video"
                 >
                     <Video class="h-4 w-4" aria-hidden="true"/>
                     <span>

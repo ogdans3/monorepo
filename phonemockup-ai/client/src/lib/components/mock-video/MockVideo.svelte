@@ -205,7 +205,9 @@
         />
       </aside>
     {/if}
-    <div class="studio-workspace">
+    <!-- The studio's one main landmark; the canvas used to render its own. -->
+    <main class="studio-workspace">
+      <h1 class="sr-only">{project.name || "Untitled project"}</h1>
       <div class="studio-canvas-toolbar">
         <div class="studio-view-label">
           <span class="studio-status-dot"></span> Live preview
@@ -231,7 +233,10 @@
       <div class="studio-stage"><Canvas bind:sceneRef /></div>
       <div class="studio-canvas-hint">
         <span
-          >Drag to rotate <span class="hint-divider">·</span> Right-drag to move</span
+          >Drag to rotate <span class="hint-divider">·</span>
+          <span class="hint-fine">Right-drag to move</span><span
+            class="hint-coarse">Use Position to move</span
+          ></span
         ><span>Preview only · Export at full resolution</span>
       </div>
       <Timeline
@@ -239,7 +244,7 @@
         {createMp4ForAnimations}
         {animationGroup}
       />
-    </div>
+    </main>
   </div>
 </div>
 

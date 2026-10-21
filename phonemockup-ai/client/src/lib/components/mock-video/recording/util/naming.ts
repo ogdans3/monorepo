@@ -1,7 +1,7 @@
 // Letters that don't decompose into a base letter and an accent.
 const FOLDED: Record<string, string> = {
-    æ: "ae", Æ: "Ae", ø: "o", Ø: "O", œ: "oe", Œ: "Oe", ß: "ss",
-    đ: "d", Đ: "D", ł: "l", Ł: "L", þ: "th", Þ: "Th",
+    æ: "ae", Æ: "AE", ø: "o", Ø: "O", œ: "oe", Œ: "OE", ß: "ss",
+    đ: "d", Đ: "D", ł: "l", Ł: "L", þ: "th", Þ: "TH",
 };
 
 /**
@@ -11,14 +11,16 @@ const FOLDED: Record<string, string> = {
  */
 export function toKebabCase(name: string): string {
     return name
+        // Before folding, so "ÆRLIG" doesn't become "AErlig" and split.
+        .replace(/([a-z])([A-Z])/g, "$1-$2")
         .replace(/[æÆøØœŒßđĐłŁþÞ]/g, (c) => FOLDED[c])
         .normalize("NFKD")
         .replace(/([A-Za-z])\p{M}+/gu, "$1")
         .normalize("NFC")
-        .replace(/([a-z])([A-Z])/g, "$1-$2")
         .replace(/\s*-\s*/g, "-")
         .replace(/\s+/g, "-")
-        .replace(/[^\p{L}\p{N}-]/gu, "")
+        // Marks stay: in Hindi or Tamil the vowel signs are part of the word.
+        .replace(/[^\p{L}\p{M}\p{N}-]/gu, "")
         .replace(/-+/g, "-")
         .replace(/^-+|-+$/g, "")
         .toLowerCase();

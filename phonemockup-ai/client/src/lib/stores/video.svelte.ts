@@ -10,6 +10,7 @@ import {tick} from "svelte";
 import {setTransformControlsFromPlayhead} from "./tracks.svelte";
 import {project} from "$lib/stores/project.svelte";
 import {detectIsImage} from "$lib/repo/uploadFile.svelte";
+import {exportState} from "$lib/components/mock-video/recording/export-state.svelte";
 
 type MediaKind = "video" | "image" | null;
 
@@ -22,6 +23,24 @@ export const MAX_END_TIME = 600;
  * before it is pulled back. The two run on separate clocks.
  */
 const VIDEO_DRIFT_TOLERANCE = 0.15;
+
+/** Resolves on the element's `success` event, rejects on its `error`. */
+function settled(el: HTMLMediaElement | HTMLImageElement, success: "load" | "loadeddata"): Promise<void> {
+    const promise = new Promise<void>((resolve, reject) => {
+        const done = (ok: boolean) => () => {
+            el.removeEventListener(success, onSuccess);
+            el.removeEventListener("error", onError);
+            if (ok) resolve();
+            else reject(new Error("The browser can't open this file"));
+        };
+        const onSuccess = done(true);
+        const onError = done(false);
+        el.addEventListener(success, onSuccess);
+        el.addEventListener("error", onError);
+    });
+    promise.catch(() => {}); // only a bulk export awaits it
+    return promise;
+}
 
 export class VideoController {
     // Unified src and kind
@@ -47,6 +66,8 @@ export class VideoController {
     /** What setMediaSource was last given, and the last of those that loaded. */
     private source: {src: File | string; isImage: boolean} | null = null;
     private lastGood: {src: File | string; isImage: boolean} | null = null;
+    /** Settles when the media last set has loaded, or fails to. */
+    private ready: Promise<void> = Promise.resolve();
 
     constructor() {
     }
@@ -206,6 +227,7 @@ export class VideoController {
         this.mediaSrc.set(resolved);
 
         if (!resolved || !kind) {
+            this.ready = Promise.resolve();
             // Clear both elements
             if (this.video) {
                 this.video.removeAttribute("src");
@@ -235,6 +257,7 @@ export class VideoController {
             this.video.autoplay = false;
             this.video.playsInline = true;
 
+            this.ready = settled(this.video, "loadeddata");
             this.video.src = resolved;
 
             // Load and sync to current timeline
@@ -246,6 +269,7 @@ export class VideoController {
             }
         } else if (kind === "image" && this.image) {
             // Wire up image
+            this.ready = settled(this.image, "load");
             this.image.src = resolved;
         }
     }
@@ -280,6 +304,22 @@ export class VideoController {
         this._image.set(image);
     }
 
+    /**
+     * Resolves once the media last set has loaded, rejects if the browser
+     * can't open it. A bulk export waits on it per file.
+     */
+    public whenMediaReady(): Promise<void> {
+        return this.ready;
+    }
+
+    /**
+     * Forget the screen that last worked. A new or reopened project must not
+     * fall back to another project's file when its own can't be opened.
+     */
+    public forgetLastGoodMedia() {
+        this.lastGood = null;
+    }
+
     private reportMediaError() {
         const file = get(this.currentFile);
         const message = file
@@ -287,9 +327,11 @@ export class VideoController {
             : "The screen content couldn't be loaded.";
         // Put back the screen that worked, rather than leave a black phone
         // that a save would then store. setMediaSource clears the error, so
-        // it is set again once the old screen is back.
+        // it is set again once the old screen is back. Not during an export:
+        // a bulk export would render the previous file under this one's name;
+        // it counts the file as failed instead.
         const previous = this.lastGood;
-        if (file && previous && previous.src !== file) {
+        if (file && previous && previous.src !== file && !exportState.running) {
             void this.setMediaSource(previous.src, previous.isImage).finally(() => this.mediaError.set(message));
             return;
         }

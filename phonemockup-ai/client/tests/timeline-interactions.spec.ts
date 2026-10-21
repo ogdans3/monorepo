@@ -30,8 +30,7 @@ async function dragCenterOfAnimationBySeconds(
     ).toBeVisible();
 
     const moveHandle = wrapper.getByRole("button", {
-        name: "Click and drag to move",
-        exact: true,
+        name: /, drag to move$/,
     });
     await expect(
         moveHandle,

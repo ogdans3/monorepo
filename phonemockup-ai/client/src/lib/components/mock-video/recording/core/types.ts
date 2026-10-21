@@ -36,6 +36,9 @@ export interface VideoContext {
     // Swap media source (image or video). May be async.
     setMediaSource: (file: File | null, isImage: boolean) => Promise<void> | void;
 
+    // Resolves when that media has loaded; rejects if the browser can't open it.
+    whenMediaReady?: () => Promise<void>;
+
     // Total duration of the current composition in seconds
     getEndTimeSec: () => number;
 

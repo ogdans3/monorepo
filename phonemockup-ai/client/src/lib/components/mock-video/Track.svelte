@@ -54,6 +54,24 @@
         return Math.max(0, (animation.end - animation.start) * pxPerSecond);
     }
 
+    /** Clips are drawn at least this wide (min-w-[70px]) so their keyframes stay usable. */
+    const MIN_CLIP_PX = 70;
+
+    /**
+     * Where a clip is drawn. A short clip near the end of the ruler is drawn
+     * wider than its span, and the track clips what runs past the end, which
+     * hid its end keyframe; it moves left by as much of that extra width as
+     * it needs to fit. A clip whose real span runs past the end isn't moved.
+     */
+    function drawnLeftFor(animation: Animation) {
+        const left = leftFor(animation.start);
+        const width = widthFor(animation);
+        const extra = Math.max(0, MIN_CLIP_PX - width);
+        const trackWidth = (project.timeline.endTime - $startTime) * pxPerSecond;
+        const overflow = Math.max(0, left + Math.max(width, MIN_CLIP_PX) - trackWidth);
+        return left - Math.min(extra, overflow);
+    }
+
     // Magnetic hold types/state
     type HoldState = {
         targetTime: number;
@@ -583,18 +601,19 @@
     {#each track.animations as anim (anim.id)}
         <div
                 class="absolute top-0 h-full"
-                style={`left:${leftFor(anim.start)}px;width:${widthFor(anim)}px;`}
+                style={`left:${drawnLeftFor(anim)}px;width:${widthFor(anim)}px;`}
         >
             <ContextMenu.Root>
                 <ContextMenu.Trigger class="w-full h-full absolute top-0">
-                    <!-- svelte-ignore a11y_interactive_supports_focus -->
-                    <!-- svelte-ignore a11y_click_events_have_key_events -->
                     <!-- TODO: Instead of using a min-w here we should figure out a way to have small width animations.
                         My suggestion is to reduce the height of the controls for the animation and place it at the top
                         Showing only the length of the animation on the track.
                      -->
+                    <!-- A group named after the clip: its keyframe buttons are
+                         otherwise "Set start keyframe" in every clip alike. -->
                     <div
-                            role="button"
+                            role="group"
+                            aria-label={anim.name}
                             class="overflow-hidden h-full w-full
                    flex items-stretch studio-clip
                    border rounded-md transition-colors min-w-[70px] animation"
@@ -613,7 +632,6 @@
                                 aria-pressed={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.startKeyframe.id}
                                 title="Set start keyframe"
                                 onclick={(e) => toggleKeyframe(e, anim.id, 0)}
-                                onmouseup={(e) => e.stopPropagation()}
                         >
                             <span
                                     class="studio-keyframe"
@@ -623,7 +641,7 @@
 
                         <div
                                 tabindex="-1"
-                                aria-label="Click and drag to move"
+                                aria-label={`${anim.name}, drag to move`}
                                 role="button"
                                 class="flex-1 flex items-center justify-center cursor-grab active:cursor-grabbing select-none text-xs text-surface-100 overflow-hidden"
                                 onmousedown={(e) => startDrag(e, anim.id, "move")}
@@ -637,7 +655,6 @@
                                 aria-pressed={$selectedAnimationStore?.id === anim.id && $selectedAnimationKeyframe?.id === anim.endKeyframe.id}
                                 title="Set end keyframe"
                                 onclick={(e) => toggleKeyframe(e, anim.id, 1)}
-                                onmouseup={(e) => e.stopPropagation()}
                         >
                             <span
                                     class="studio-keyframe"

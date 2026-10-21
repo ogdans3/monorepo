@@ -121,10 +121,14 @@
 </script>
 
 <header class="studio-topbar">
-  <a class="studio-wordmark" href="/" aria-label="PhoneMockup home"
+  <!-- Named by what it shows ("phonemockup / studio", "pm." on phones) plus
+       where it goes, so voice control can say what's on screen. -->
+  <a class="studio-wordmark" href="/"
     ><span></span><span class="studio-brand-name">phonemockup</span><span
       class="studio-mobile-brand">pm<span>.</span></span
-    ><span class="studio-wordmark-suffix"> / studio</span></a
+    ><span class="studio-wordmark-suffix"> / studio</span><span class="sr-only"
+      >, home</span
+    ></a
   >
   <div class="studio-project-title">
     <span class="studio-project-divider">/</span><span

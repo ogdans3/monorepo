@@ -1,4 +1,6 @@
 <script lang="ts">
+    // Ids for the selects' labels: the value shown stays part of the name.
+    const uid = $props.id();
     import {Label} from "$lib/components/ui/label";
     import {Button} from "$lib/components/ui/button";
     import {TooltipProvider} from "$lib/components/ui/tooltip";
@@ -133,6 +135,7 @@
                         accept="image/*"
                         class="sr-only"
                         aria-hidden="true"
+                        tabindex="-1"
                         onchange={handleImagesSelected}
                 />
 
@@ -143,6 +146,7 @@
                         accept="video/*"
                         class="sr-only"
                         aria-hidden="true"
+                        tabindex="-1"
                         onchange={handleVideosSelected}
                 />
 
@@ -187,6 +191,7 @@
                         Active file
                     </Label>
 
+                    <span id={`${uid}-file-label`} class="sr-only">Active file</span>
                     <Select.Root
                             type="single"
                             value={selectedIndex >= 0 ? String(selectedIndex) : ""}
@@ -198,9 +203,9 @@
                         <Select.Trigger
                                 id="media-select"
                                 class="h-8 w-full max-w-full overflow-hidden whitespace-nowrap text-ellipsis rounded border px-2 text-sm bg-background"
-                                aria-label="Active file"
+                                aria-labelledby={`${uid}-file-label ${uid}-file-value`}
                         >
-                            <span class="block w-full truncate">
+                            <span id={`${uid}-file-value`} class="block w-full truncate">
                                 {#if selectedIndex >= 0 && project.files[selectedIndex]}
                                     {project.files[selectedIndex].fileBlob.name}
                                     ({detectIsImage(project.files[selectedIndex].fileBlob) ? "image" : "video"})
@@ -210,7 +215,7 @@
                             </span>
                         </Select.Trigger>
 
-                        <Select.Content
+                        <Select.Content aria-labelledby={`${uid}-file-label`}
                                 class="focus-override border-muted bg-background shadow-popover z-50 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border p-1"
                                 sideOffset={8}
                         >

@@ -13,7 +13,15 @@ function dropUnusableRange(request) {
   const range = request.headers.range;
   if (range === undefined) return;
   const match = /^bytes=(\d{1,15})-(\d{0,15})$/.exec(range.trim());
-  if (!match || (match[2] !== "" && Number(match[2]) < Number(match[1]))) {
+  if (
+    !match ||
+    (match[2] !== "" && Number(match[2]) < Number(match[1])) ||
+    // sirv reads an end of 0 as "to the end" and sends the whole file as
+    // if it were the one byte asked for.
+    (match[2] !== "" && Number(match[2]) === 0) ||
+    // sirv doesn't check If-Range; sending the whole file is always right.
+    request.headers["if-range"] !== undefined
+  ) {
     delete request.headers.range;
   }
 }
@@ -21,6 +29,11 @@ function dropUnusableRange(request) {
 const server = createServer((request, response) => {
   response.setHeader("X-Content-Type-Options", "nosniff");
   response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  // The studio and the saved projects are app pages, served as an empty
+  // shell: say noindex before any script runs. The motion library stays.
+  if (/^\/platform\/(animation\/[^/?#]+|project)(\/|\?|$)/.test(request.url || "")) {
+    response.setHeader("X-Robots-Tag", "noindex");
+  }
   // MP4s are already compressed. CDN transformations can strip Content-Length
   // and turn Safari's bytes=0-1 probe into a full 200 response instead of 206.
   if (/^\/previews\/[^?]+\.mp4(?:\?|$)/.test(request.url || "")) {

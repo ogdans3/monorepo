@@ -18,7 +18,7 @@ export function saveProjectToLocalStorage(
     const payload = {
         ...project,
         id: projectId,
-        name: project.name?.trim() || "Untitled Project",
+        name: project.name?.trim() || "Untitled project",
         _metadata: {
             savedAt: timestamp,
             isLocalOnly: true,

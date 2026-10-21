@@ -8,7 +8,7 @@
     const height = $derived(Math.round(project.sceneResolution.y));
 </script>
 
-<main class="w-full h-full" data-testid="canvas">
+<div class="w-full h-full" data-testid="canvas">
     <div
             class={cn("px-2 w-full h-full rounded-lg overflow-hidden min-h-0", className)}
     >
@@ -21,4 +21,4 @@
                 {height}
         />
     </div>
-</main>
+</div>

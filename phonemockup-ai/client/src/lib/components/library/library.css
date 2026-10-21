@@ -226,7 +226,7 @@
   margin: 18px 0 24px;
   font-size: 14px;
   line-height: 1.7;
-  color: var(--muted-foreground);
+  color: #5f5f58; /* the token is 4.49:1 here, short of 4.5 */
   max-width: 40ch;
 }
 .library-empty-art {

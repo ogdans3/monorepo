@@ -299,7 +299,6 @@
         <button
           class="motion-toggle"
           type="button"
-          aria-pressed={motionPaused}
           onclick={() => (motionPaused = !motionPaused)}
         >
           {#if motionPaused}<Play size={15} />{:else}<Pause
@@ -527,6 +526,16 @@
     font-weight: 400 700;
     font-display: swap;
   }
+  /* Arial reshaped to Archivo's widths and line metrics, so text set in
+     the fallback wraps where Archivo will and the swap moves nothing. */
+  @font-face {
+    font-family: "Archivo Fallback";
+    src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"), local("Roboto");
+    size-adjust: 99.5%;
+    ascent-override: 88.2%;
+    descent-override: 21.1%;
+    line-gap-override: 0%;
+  }
   .landing {
     --ink: #242421;
     --muted: #696963;
@@ -536,7 +545,7 @@
     --ease: cubic-bezier(0.23, 1, 0.32, 1);
     background: var(--paper);
     color: var(--ink);
-    font-family: Archivo, Arial, sans-serif;
+    font-family: Archivo, "Archivo Fallback", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
@@ -784,6 +793,11 @@
     border-top: 1px solid #24242128;
     font-size: 13px;
   }
+  /* The stage ink the guides use on these grounds: --muted is 4.27:1 on
+     Top Down's blue-grey. */
+  .desktop-caption .muted {
+    color: #535a4d;
+  }
   .hero-selector {
     display: flex;
     gap: 21px;
@@ -881,8 +895,10 @@
     gap: 23px;
     overflow: auto;
     scrollbar-width: thin;
-    padding: 5px;
-    margin: -5px;
+    /* Room for the 2px focus ring at its 5px offset inside the scroller,
+       which clips everything outside its padding. */
+    padding: 8px;
+    margin: -8px;
   }
   .filters button {
     flex-shrink: 0;
@@ -1274,8 +1290,12 @@
       width: calc(100% - 40px);
     }
     .site-header {
-      height: 72px;
-      gap: 15px;
+      /* With text at 200% the wordmark and Menu wrap instead of pushing
+         the page sideways. */
+      height: auto;
+      min-height: 72px;
+      flex-wrap: wrap;
+      gap: 0 15px;
     }
     .wordmark {
       font-size: 20px;
@@ -1287,7 +1307,7 @@
     nav {
       display: none;
       position: absolute;
-      top: 71px;
+      top: calc(100% - 1px);
       left: 0;
       right: 0;
       padding: 12px 20px 18px;
@@ -1429,8 +1449,8 @@
     }
     .filters {
       gap: 23px;
-      padding-inline: 3px;
-      margin-inline: -3px;
+      padding-inline: 8px;
+      margin-inline: -8px;
     }
     .filters button {
       font-size: 13px;

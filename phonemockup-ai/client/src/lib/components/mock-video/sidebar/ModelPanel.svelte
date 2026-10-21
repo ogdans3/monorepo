@@ -1,4 +1,6 @@
 <script lang="ts">
+    // Ids for the selects' labels: the value shown stays part of the name.
+    const uid = $props.id();
   import { Label } from "$lib/components/ui/label";
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
@@ -41,6 +43,7 @@
       >Model type</Label
     >
 
+    <span id={`${uid}-model-label`} class="sr-only">Select 3D model</span>
     <Select.Root
       type="single"
       name="modelId"
@@ -53,12 +56,12 @@
       <Select.Trigger
         id="model-type"
         class="h-8 w-full rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between"
-        aria-label="Select 3D model"
+        aria-labelledby={`${uid}-model-label ${uid}-model-value`}
       >
-        {project.model?.name ?? "Select model"}
+        <span id={`${uid}-model-value`}>{project.model?.name ?? "Select model"}</span>
       </Select.Trigger>
 
-      <Select.Content class="min-w-[16rem]">
+      <Select.Content aria-labelledby={`${uid}-model-label`} class="min-w-[16rem]">
         <Select.Group>
           <Select.Label>Available models</Select.Label>
           {#each models as m (m.id)}

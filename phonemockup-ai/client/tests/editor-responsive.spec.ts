@@ -45,8 +45,8 @@ test.describe('touch editing', () => {
         await expect(page.getByRole('checkbox', {name: 'Show logo', exact: true})).not.toBeChecked();
         await page.getByRole('button', {name: 'Close', exact: true}).tap();
         await page.getByRole('button', {name: 'Export', exact: true}).tap();
-        await expect(page.getByRole('button', {name: 'Download image', exact: true})).toBeInViewport();
-        await expect(page.getByRole('button', {name: 'Download video', exact: true})).toBeInViewport();
+        await expect(page.getByRole('button', {name: 'Download as image', exact: true})).toBeInViewport();
+        await expect(page.getByRole('button', {name: 'Download as video', exact: true})).toBeInViewport();
         await page.getByRole('button', {name: 'Close', exact: true}).tap();
         expect(errors).toEqual([]);
     });

@@ -60,7 +60,7 @@ export function initializeAuth(key = publishableKey): Promise<Clerk | null> {
             colorPrimary: "#a3442c",
             colorBackground: "#fffefa",
             colorForeground: "#282923",
-            colorMutedForeground: "#6f7066",
+            colorMutedForeground: "#5c5d55",
             colorInputBackground: "#ffffff",
             colorInputForeground: "#282923",
             fontFamily: "Archivo, sans-serif",

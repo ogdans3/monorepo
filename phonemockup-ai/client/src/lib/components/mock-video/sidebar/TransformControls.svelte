@@ -1,4 +1,6 @@
 <script lang="ts">
+    // Ids for the selects' labels: the value shown stays part of the name.
+    const uid = $props.id();
     import ScrubNumber from "$lib/components/mock-video/ScrubNumber.svelte";
     import {
         transformControlPosition,
@@ -135,32 +137,36 @@
     </fieldset>
 
     <!-- Curve picker -->
+    <!-- A legend inside the row's div doesn't name the fieldset; the id does. -->
     <fieldset
             class="space-y-1"
             class:opacity-60={isDisabled}
             disabled={isDisabled}
             aria-disabled={isDisabled}
+            aria-labelledby={`${uid}-curve-legend`}
     >
         <div class="flex items-center justify-between">
-            <legend class="text-xs text-muted-foreground m-0">Animation curve</legend>
+            <span id={`${uid}-curve-legend`} class="text-xs text-muted-foreground m-0">Animation curve</span>
             {#if isDisabled}
                 <span class="text-[11px] text-muted-foreground">Select a keyframe</span>
             {/if}
         </div>
 
+        <span id={`${uid}-curve-label`} class="sr-only">Select animation curve</span>
         <Select.Root type="single" name="animationCurve" bind:value={$transformCurve} onValueChange={unfocusElement}>
             <Select.Trigger
                     class="h-8 w-full rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Select animation curve"
+                    id={`${uid}-curve`}
+                    aria-labelledby={`${uid}-curve-label ${uid}-curve-value`}
                     disabled={isDisabled}
             >
-                {curveTriggerText}
+                <span id={`${uid}-curve-value`}>{curveTriggerText}</span>
             </Select.Trigger>
 
             {#if !isDisabled}
-                <Select.Content class="min-w-[14rem]">
+                <Select.Content aria-labelledby={`${uid}-curve-label`} class="min-w-[14rem]">
                     <Select.Group>
-                        <Select.Label class="px-2 py-1 text-xs opacity-70">
+                        <Select.Label class="px-2 py-1 text-xs text-muted-foreground">
                             Curves
                         </Select.Label>
                         {#each AnimationCurveOptions as opt (opt.value)}

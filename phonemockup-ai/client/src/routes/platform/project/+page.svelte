@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import {
     ArrowUpRight,
     Plus,
@@ -34,6 +34,7 @@
   let unreadable = $state(0);
   let projects = $state<Entry[]>([]);
   let search = $state("");
+  let searchInput = $state<HTMLInputElement>();
   let sort = $state("recent");
   let selected = $state<Entry | null>(null);
   let deleting = $state(false);
@@ -138,6 +139,13 @@
         mediaRemoved = false;
       }
       loadProjects();
+      // The deleted card's button is about to go: give focus to the first
+      // remaining card, or to New project, instead of dropping it to <body>.
+      await tick();
+      actionTrigger =
+        document.querySelector<HTMLElement>(".project-grid a") ??
+        document.querySelector<HTMLElement>("[data-library-new-project]") ??
+        undefined;
       deleteOpen = false;
       if (mediaRemoved) toast.success("Project deleted");
       else
@@ -212,12 +220,13 @@
           type="search"
           placeholder="Find a project or device"
           bind:value={search}
+          bind:this={searchInput}
         /></label
       ><span class="library-count" role="status"
         >{filtered.length}
         {filtered.length === 1 ? "project" : "projects"}</span
       ><label class="library-sort"
-        >Sort by<select bind:value={sort} aria-label="Sort projects"
+        >Sort by<select bind:value={sort}
           ><option value="recent">Last saved</option><option value="name"
             >Name A–Z</option
           ></select
@@ -227,8 +236,12 @@
     {#if !filtered.length}<div class="library-no-results">
         <h2>No projects found.</h2>
         <p>Try a different project name or device.</p>
-        <button class="library-button" onclick={() => (search = "")}
-          >Clear search</button
+        <button
+          class="library-button"
+          onclick={() => {
+            search = "";
+            searchInput?.focus();
+          }}>Clear search</button
         >
       </div>
     {:else}<div class="project-grid">
@@ -454,7 +467,7 @@
     gap: 10px;
     align-items: center;
     text-align: center;
-    color: #747367;
+    color: #5f5f58;
     padding: 24px;
   }
   .project-placeholder span {

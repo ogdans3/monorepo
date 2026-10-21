@@ -16,6 +16,7 @@
     persistFilters?: boolean;
   } = $props();
   let search = $state("");
+  let searchInput = $state<HTMLInputElement>();
   let category = $state("All");
   let paused = $state(false);
   let ready = $state(false);
@@ -91,6 +92,7 @@
         type="search"
         disabled={!ready}
         placeholder="Search animations"
+        bind:this={searchInput}
         value={search}
         oninput={(e) => updateFilters(e.currentTarget.value, category)}
       /></label
@@ -100,14 +102,13 @@
       class="motion-pause"
       disabled={!ready}
       onclick={() => (paused = !paused)}
-      aria-pressed={paused}
       aria-label={paused ? "Play previews" : "Pause previews"}
       >{#if paused}<Play size={14} />{:else}<Pause size={14} />{/if}<span
         >{paused ? "Play previews" : "Pause previews"}</span
       ></button
     >
   </div>
-  <div class="motion-filters" aria-label="Filter animations">
+  <div class="motion-filters" role="group" aria-label="Filter animations">
     {#each categories as cat}<button
         type="button"
         disabled={!ready}
@@ -171,8 +172,12 @@
     {:else}<div class="motion-empty">
         <h3>No matching motions.</h3>
         <p>Try another name or start with all animations.</p>
-        <button type="button" onclick={() => updateFilters("", "All")}
-          >Clear filters <span aria-hidden="true">↗</span></button
+        <button
+          type="button"
+          onclick={() => {
+            updateFilters("", "All");
+            searchInput?.focus();
+          }}>Clear filters <span aria-hidden="true">↗</span></button
         >
       </div>{/if}
   </div>
@@ -427,7 +432,9 @@
       flex-wrap: nowrap;
       overflow-x: auto;
       flex-shrink: 0;
-      padding: 3px 2px 8px;
+      /* The scroller clips outside its padding: leave the focus ring room. */
+      padding: 6px 6px 8px;
+      margin-inline: -6px;
     }
     .compact .motion-filters button {
       flex-shrink: 0;

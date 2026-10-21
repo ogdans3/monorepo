@@ -321,9 +321,14 @@
     mouseHoverPosition = null;
   }
 
-  function clickTimeline() {
+  function clickTimeline(event: MouseEvent) {
     //The user actually dragged the animation a little, so we dont want to change the playhead
     if ($maxAnimationDragDistanceAbs > 10) {
+      return;
+    }
+    // A keyframe button toggles its own selection on click. Moving the
+    // playhead off it first deselected it, so the click selected it again.
+    if ((event.target as HTMLElement | null)?.closest(".studio-clip button")) {
       return;
     }
     if (mouseHoverPosition == null) {

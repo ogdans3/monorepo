@@ -11,6 +11,18 @@
   font-display: swap;
 }
 
+/* Arial reshaped to Archivo's widths and line metrics, so text set in the
+   fallback wraps where Archivo will. Without it the swap re-wrapped the
+   heading and lead on phones and pushed the stage down (CLS 0.16). */
+@font-face {
+  font-family: "Archivo Fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"), local("Roboto");
+  size-adjust: 99.5%;
+  ascent-override: 88.2%;
+  descent-override: 21.1%;
+  line-gap-override: 0%;
+}
+
 .guide {
   --ink: #242421;
   --muted: #696963;
@@ -22,7 +34,7 @@
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);
-  font-family: Archivo, Arial, sans-serif;
+  font-family: Archivo, "Archivo Fallback", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -373,6 +385,12 @@
   font-size: 14px;
   line-height: 1.55;
   font-variant-numeric: tabular-nums;
+  /* With text at 200% the column is narrower than "watermark.": break a
+     word only when it can't fit at all, instead of widening the page. */
+  overflow-wrap: anywhere;
+}
+.guide :is(h1, h2) {
+  overflow-wrap: break-word;
 }
 .guide .g-passages {
   display: grid;
@@ -841,8 +859,12 @@
     width: calc(100% - 40px);
   }
   .guide .site-header {
-    height: 72px;
-    gap: 15px;
+    /* A height, not a fixed one: with text at 200% the wordmark and Menu
+       wrap instead of pushing the page sideways. */
+    height: auto;
+    min-height: 72px;
+    flex-wrap: wrap;
+    gap: 0 15px;
   }
   .guide .wordmark {
     font-size: 20px;
@@ -857,7 +879,7 @@
   .guide .site-nav {
     display: none;
     position: absolute;
-    top: 71px;
+    top: calc(100% - 1px);
     left: 0;
     right: 0;
     padding: 12px 20px 18px;
