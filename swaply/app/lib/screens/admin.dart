@@ -96,15 +96,31 @@ class _AdminScreenState extends State<AdminScreen> {
   /// Every lever reports what it did, in order, in the log at the foot of the
   /// screen: a tool whose buttons do things silently is a tool you stop
   /// trusting the first time one of them seems not to have worked.
+  ///
+  /// Only the lever writes a ✕. What is asked for after it is reading back,
+  /// and the session's own asking used to share the lever's `try`: with no
+  /// answer to it, «✕ Vi får ikke kontakt …» went up over the line saying
+  /// the lever had worked. The overview says its own failure in a toast, and
+  /// the session's is quiet, as it is everywhere else.
   Future<void> _run(String key, Future<String> Function(SwaplyApi api) action) async {
     setState(() => _busy = key);
     try {
-      final said = await action(context.read<SwaplyApi>());
+      final String said;
+      try {
+        said = await action(context.read<SwaplyApi>());
+      } on ApiException catch (e) {
+        if (mounted) setState(() => _said.insert(0, '✕ ${e.message}'));
+        return;
+      }
       if (mounted) setState(() => _said.insert(0, said));
       await _load();
-      if (mounted) await context.read<Session>().refresh();
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _said.insert(0, '✕ ${e.message}'));
+      if (mounted) {
+        try {
+          await context.read<Session>().refresh();
+        } on ApiException {
+          // The bar's counts come with the next asking.
+        }
+      }
     } finally {
       if (mounted) setState(() => _busy = null);
     }
