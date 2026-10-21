@@ -529,6 +529,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     final chain = trade.isChain;
 
     final withdrawal = trade.withdrawal;
+    final refusedWithdrawal = withdrawal != null &&
+        withdrawal.byYou &&
+        trade.state == 'accepted' &&
+        withdrawal.state == 'rejected' &&
+        withdrawal.blockedBySent;
     return [
       // 08b: the trade is paused while the question is answered.
       if (trade.state == 'paused' && withdrawal?.state == 'waiting') _withdrawalBanner(trade),
@@ -536,12 +541,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // to the one who asked, and only while the trade carries on: it was
       // drawn for everybody in it — telling the one who had answered that
       // they could not withdraw — and stayed after the trade had ended.
-      if (withdrawal != null &&
-          withdrawal.byYou &&
-          trade.state == 'accepted' &&
-          withdrawal.state == 'rejected' &&
-          withdrawal.blockedBySent)
-        _blockedBanner(trade),
+      if (refusedWithdrawal)
+        _blockedBanner(trade)
+      // 06f: agreed, which nothing on the page said. 08c says it its own way.
+      else if (trade.state == 'accepted')
+        _agreedCard(),
       // 09e: a new proposal is on the table.
       if (_counteredByOther(trade))
         _noticeCard('Nytt forslag fra ${trade.receivingFrom.displayName.split(' ').first}. '
@@ -834,6 +838,22 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       ),
     );
   }
+
+  /// 06f's first two lines: everybody has said yes, and the rest is between
+  /// the people in it.
+  Widget _agreedCard() => const Padding(
+        padding: EdgeInsets.only(top: Insets.sm),
+        child: SectionCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Byttet er godtatt!', style: Type.heading),
+              SizedBox(height: 6),
+              Text('Dere kan også avtale å møtes i samtalen.', style: Type.secondary),
+            ],
+          ),
+        ),
+      );
 
   /// «Kari har allerede sendt sin ting.», naming whoever has marked theirs
   /// sent: in a ring that is one of two, and not always the one you receive
@@ -1171,10 +1191,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
               ),
               const SizedBox(height: Insets.md),
               SecondaryButton(sent ? 'Marker som ikke sendt' : 'Marker som sendt',
-                  onPressed: _busy
-                      ? null
-                      : () => _run((api) async =>
-                          (await api.mark(trade.id, 'sent', value: !sent)).trade)),
+                  onPressed: _busy ? null : () => _run((api) => _mark(api, trade, 'sent', !sent))),
             ],
           ),
         ),
@@ -1193,19 +1210,23 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
               SecondaryButton(received ? 'Marker som ikke mottatt' : 'Marker som mottatt',
                   onPressed: _busy
                       ? null
-                      : () => _run((api) async {
-                            final result = await api.mark(trade.id, 'received', value: !received);
-                            if (result.complete && mounted) {
-                              await pushOverBar<void>(
-                                  context, TradeCompletedScreen(trade: result.trade));
-                            }
-                            return result.trade;
-                          })),
+                      : () => _run((api) => _mark(api, trade, 'received', !received))),
             ],
           ),
         ),
       ],
     );
+  }
+
+  /// Sets or clears a handover mark. Whichever mark is the last one finishes
+  /// the trade, and then 09h comes up: «Marker som sendt» used to leave that
+  /// out, so a trade finished by it just turned completed under the person.
+  Future<Trade> _mark(SwaplyApi api, Trade trade, String marker, bool value) async {
+    final result = await api.mark(trade.id, marker, value: value);
+    if (result.complete && result.trade.state == 'completed' && mounted) {
+      await pushOverBar<void>(context, TradeCompletedScreen(trade: result.trade));
+    }
+    return result.trade;
   }
 
   Widget _statusSection(Trade trade) => Column(
