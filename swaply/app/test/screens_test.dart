@@ -598,6 +598,29 @@ void main() {
       expect(find.descendant(of: card, matching: find.byIcon(Icons.favorite)), findsOneWidget);
     });
 
+    testWidgets('05 a heart that found its ring opened by another heart a moment before still '
+        'counts it on the bar', (tester) async {
+      // Two hearts over one ring at once: the server opens one trade and
+      // answers the second as not new. For the second person it is new all
+      // the same, and the bar went on counting as before the heart.
+      server.overrides['POST /items/item-console/like'] = {
+        'liked': true,
+        'tradeId': 'trade-1',
+        'tradeIsNew': false,
+        'promptToList': false,
+        'likedCount': 3,
+      };
+      await mount(tester, const DiscoverScreen());
+      server.overrides['GET /me'] = {...FakeServer.me, 'tradesNeedingYou': 2};
+      final card = find.byKey(const ValueKey('item-console'));
+
+      await tester.tap(find.descendant(of: card, matching: find.byIcon(Icons.favorite_border)));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MatchScreen), findsNothing);
+      expect(session.tradesNeedingYou, 2);
+    });
+
     testWidgets('a listing with no photo gets a card, not a hole', (tester) async {
       await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
       expect(find.byIcon(Icons.sports_esports_outlined), findsWidgets);

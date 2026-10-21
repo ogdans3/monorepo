@@ -1061,6 +1061,10 @@ Future<void> followWish(BuildContext? context, NavigatorState root, Session sess
   BuildContext over() => context != null && context.mounted ? context : root.context;
   final tradeId = wished.tradeId;
   if (tradeId != null) {
+    // The bar counts the trades waiting on this person, and the heart's may
+    // be one it does not count yet: new, or opened by another heart over the
+    // same ring in the same moment, which the server answers as not new.
+    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
     // A heart taken back and pressed again finds the ring its first press
     // opened, and the server answers with that trade rather than a second
     // one. 06a is the moment a trade opens, and this one has had it: put up
@@ -1068,9 +1072,6 @@ Future<void> followWish(BuildContext? context, NavigatorState root, Session sess
     // with the same people. The heart just turns, and the trade is in Bytter
     // where it was. Nor 10a: somebody in a ring has something to give.
     if (!wished.tradeIsNew) return;
-    // The bar counts the trades waiting on this person, and this one is new:
-    // it went on counting as before the heart until something else asked.
-    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
     final on = over();
     if (on.mounted) await pushOverBar<void>(on, MatchScreen(tradeId: tradeId));
     return;
