@@ -121,6 +121,30 @@ void main() {
     });
   });
 
+  group('«Rediger annonsen» can be left without saving', () {
+    testWidgets('1. it has «‹», which goes back to 04 and sends nothing', (tester) async {
+      // It covers the bar like 05b and 16b, and was the one screen there
+      // with no «‹»: «Lagre endringene» or a gesture were the only ways out.
+      await correct(tester);
+      await tester.enterText(field(title), 'Noe annet');
+
+      expect(find.bySemanticsLabel('Tilbake'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Tilbake'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PostItemScreen), findsNothing);
+      expect(find.byType(ItemDetailScreen), findsOneWidget);
+      expect(server.requests, isNot(contains('PATCH /items/item-mine')));
+    });
+
+    testWidgets('2. a new listing is the tab as drawn, with no «‹»', (tester) async {
+      await mount(tester, const PostItemScreen());
+
+      expect(find.text('Legg ut en gjenstand'), findsOneWidget);
+      expect(find.bySemanticsLabel('Tilbake'), findsNothing);
+    });
+  });
+
   group('10b says what the server would refuse before 10c, and names the field', () {
     /// A device's 10b with a title, and «Neste» pressed after [fill].
     Future<void> next(WidgetTester tester, Future<void> Function() fill) async {

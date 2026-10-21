@@ -678,25 +678,30 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
     return SwaplyScaffold(
       currentTab: 1,
+      // Correcting a listing is not the tab: it is opened over 04 and covers
+      // the bar, and like every other screen there it has «‹». Without it the
+      // only way out short of saving was a gesture the screen never offered.
+      // The export draws 10b as the tab's own first screen, which is the new
+      // listing, and that stays as drawn.
+      appBar: _editing == null ? null : swaplyAppBar(context, 'Rediger annonsen'),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // «Legg ut en gjenstand» and «1/2» do not both fit on a narrow
-                // phone, and the heading is the one that may give way.
-                Flexible(
-                    child: Text(_editing == null ? 'Legg ut en gjenstand' : 'Rediger annonsen',
-                        style: Type.screen)),
-                if (!signedIn && _editing == null)
-                  const Text('1/2',
-                      style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.grey)),
-              ],
+          if (_editing == null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // «Legg ut en gjenstand» and «1/2» do not both fit on a
+                  // narrow phone, and the heading is the one that may give way.
+                  const Flexible(child: Text('Legg ut en gjenstand', style: Type.screen)),
+                  if (!signedIn)
+                    const Text('1/2',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.grey)),
+                ],
+              ),
             ),
-          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(22, 13, 22, 0),
