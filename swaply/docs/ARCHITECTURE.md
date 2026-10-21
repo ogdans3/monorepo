@@ -151,7 +151,9 @@ the listings they hold are a fixed set one sorted statement can take. An
 acceptance locks its own trade and every trade its yes will push out, then its
 own listings and whatever the pushed-out trades were holding; an ending —
 cancelling, completing, erasure, a yes to a withdrawal — locks the trade, then
-what it holds. Each reads the state again under the lock, so a yes into a trade
+what it holds. Completing also ends the negotiations still going on about what
+it gives away (opened while it was reserved, which a reserved thing allows), so
+it locks those with its own trade, the way an acceptance does. Each reads the state again under the lock, so a yes into a trade
 that ended while it waited is refused in words instead of bringing the trade
 back to `accepted`, and a trade that has ended keeps the reason it ended with.
 

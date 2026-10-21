@@ -133,6 +133,37 @@ describe('a trade that loses the race lets go of what it was holding', () => {
     )
     expect(second!['at']).toBe(first!['at'])
   })
+
+  test('3c. once the drill has changed hands, the conversation about it ends, in words', async () => {
+    // Per's conversation was opened while the drill was held, which a held
+    // thing allows. When the trade it was held for was done, it stood open
+    // for ever: in «Venter» for both, a yes in it refused, and 04 writing
+    // into it about a thing that was gone.
+    const askingAbout = (await call('GET', '/trades', { token: per })).body!['waiting'].find(
+      (t: Json) => t['state'] === 'talking',
+    )!['id'] as string
+    expect((await call('POST', `/trades/${withKari}/accept`, { token: kari })).status).toBe(200)
+    for (const token of [ola, kari]) {
+      for (const marker of ['sent', 'received']) {
+        await call('POST', `/trades/${withKari}/mark`, { token, body: { marker } })
+      }
+    }
+    expect(await tradeState(withKari)).toBe('completed')
+    expect((await itemRow(drill))['status']).toBe('traded')
+
+    const view = (await call('GET', `/trades/${askingAbout}`, { token: per })).body!
+    expect(view['state']).toBe('cancelled')
+    expect(view['closeCode']).toBe('displaced')
+    const told = (await call('GET', '/notifications', { token: per })).body!['notifications'] as Json[]
+    expect(
+      told.some((n) => n['type'] === 'trade_cancelled' && n['payload']['tradeId'] === askingAbout),
+    ).toBe(true)
+
+    // And 04 says what is true instead of writing into it.
+    const again = await call('POST', `/items/${drill}/message`, { token: per, body: { body: 'Hallo?' } })
+    expect(again.status).toBe(409)
+    expect(again.body!['code']).toBe('item_unavailable')
+  })
 })
 
 describe('a trade whose table no longer holds the thing is not pushed out by it', () => {
