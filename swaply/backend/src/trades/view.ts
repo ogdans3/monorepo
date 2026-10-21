@@ -2,10 +2,10 @@ import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { mediaUrl } from '../lib/media.js'
-import { coverSql, iso, many, num, one } from '../lib/rows.js'
+import { coverSql, iso, many, num, uuidArray, type Row } from '../lib/rows.js'
 import { publicItem, publicUser } from '../routes/serialize.js'
 import type { CloseCode } from './close.js'
-import { lastMessageIn } from './conversation.js'
+import type { LastMessage } from './conversation.js'
 
 /**
  * Everything the trade screens render, from one viewer's point of view.
@@ -13,42 +13,202 @@ import { lastMessageIn } from './conversation.js'
  * The screens are written in the second person — «DU FÅR», «DU GIR», «OLA GIR» —
  * so the server does the position arithmetic once rather than every client
  * doing it slightly differently. Position p gives to p+1 and receives from p-1.
+ *
+ * One trade is a list of one (`tradeViews`), so the screen behind a single
+ * trade and the list on 11 are built by the same code.
  */
 export async function tradeView(db: Database, tradeId: string, viewerId: string) {
-  const trade = await one(db, sql`select * from trades where id = ${tradeId}`)
-  if (!trade) return null
+  const [view] = await tradeViews(db, [tradeId], viewerId)
+  return view ?? null
+}
 
-  const participants = await many(
-    db,
-    // `p.*` has no id of its own, so the user's has to be named explicitly or
-    // every serialised participant comes back without one.
-    sql`select p.*, u.id as id, u.display_name, u.town, u.phone, u.rating_avg,
-               u.rating_count, u.bankid_verified_at, u.created_at
-        from trade_participants p join users u on u.id = p.user_id
-        where p.trade_id = ${tradeId} order by p.position`,
+/** Rows of one query, grouped by the column that says which trade or offer they belong to. */
+function byKey(rows: Row[], key: string): Map<string, Row[]> {
+  const out = new Map<string, Row[]>()
+  for (const row of rows) {
+    const k = row[key] as string
+    const list = out.get(k)
+    if (list) list.push(row)
+    else out.set(k, [row])
+  }
+  return out
+}
+
+/**
+ * [tradeView] for several trades at once, in the order given, leaving out any
+ * that does not exist or that [viewerId] is not in.
+ *
+ * Eleven statements for the whole list rather than eleven per trade. Screen
+ * 11 lists every trade a person has ever been in, finished ones included,
+ * and anybody can add one to somebody else's list by writing about a listing
+ * and declining, over and over: built one trade at a time, 300 of them took
+ * five seconds on every visit to Bytter, and the time grew with each.
+ */
+export async function tradeViews(db: Database, tradeIds: string[], viewerId: string) {
+  const ids = [...new Set(tradeIds)]
+  if (ids.length === 0) return []
+  const idList = uuidArray(ids)
+
+  const trades = new Map(
+    (await many(db, sql`select * from trades where id = any(${idList})`)).map((t) => [
+      t['id'] as string,
+      t,
+    ]),
   )
+
+  // `p.*` has no id of its own, so the user's has to be named explicitly or
+  // every serialised participant comes back without one.
+  const participantsOf = byKey(
+    await many(
+      db,
+      sql`select p.*, u.id as id, u.display_name, u.town, u.phone, u.rating_avg,
+                 u.rating_count, u.bankid_verified_at, u.created_at
+          from trade_participants p join users u on u.id = p.user_id
+          where p.trade_id = any(${idList}) order by p.trade_id, p.position`,
+    ),
+    'trade_id',
+  )
+
+  // The version on the table: the highest `seq` of each trade.
+  const offers = new Map(
+    (
+      await many(
+        db,
+        sql`select distinct on (trade_id) * from trade_offers
+            where trade_id = any(${idList}) order by trade_id, seq desc`,
+      )
+    ).map((o) => [o['trade_id'] as string, o]),
+  )
+  const offerList = uuidArray([...offers.values()].map((o) => o['id'] as string))
+
+  const offerItemsOf = byKey(
+    await many(
+      db,
+      sql`select oi.offer_id, oi.giver_position, i.*, ${coverSql('i')} as cover
+          from trade_offer_items oi join items i on i.id = oi.item_id
+          where oi.offer_id = any(${offerList}) order by oi.giver_position, i.title`,
+    ),
+    'offer_id',
+  )
+  const cashOf = byKey(
+    await many(db, sql`select * from trade_offer_cash where offer_id = any(${offerList})`),
+    'offer_id',
+  )
+  const acceptancesOf = byKey(
+    await many(
+      db,
+      sql`select offer_id, user_id, accepted_at, revoked_at, terms_version
+          from trade_acceptances where offer_id = any(${offerList})`,
+    ),
+    'offer_id',
+  )
+
+  const threads = new Map(
+    (await many(db, sql`select id, trade_id from threads where trade_id = any(${idList})`)).map(
+      (t) => [t['trade_id'] as string, t['id'] as string],
+    ),
+  )
+  // The last thing said in each, as `lastMessageIn` reads one.
+  const lastOf = new Map(
+    (
+      await many(
+        db,
+        sql`select distinct on (m.thread_id) m.*, u.display_name as sender_name
+            from messages m join users u on u.id = m.sender_id
+            where m.thread_id = any(${uuidArray([...threads.values()])})
+            order by m.thread_id, m.created_at desc`,
+      )
+    ).map((m) => [
+      m['thread_id'] as string,
+      {
+        body: m['body'] as string,
+        senderName: (m['sender_name'] as string | null) ?? null,
+        mine: m['sender_id'] === viewerId,
+        createdAt: iso(m['created_at']),
+      } satisfies LastMessage,
+    ]),
+  )
+
+  const withdrawals = new Map(
+    (
+      await many(
+        db,
+        sql`select distinct on (trade_id) * from trade_withdrawals
+            where trade_id = any(${idList}) order by trade_id, requested_at desc`,
+      )
+    ).map((w) => [w['trade_id'] as string, w]),
+  )
+
+  const snapshotsOf = byKey(
+    await many(
+      db,
+      sql`select * from trade_item_snapshots
+          where trade_id = any(${idList}) order by trade_id, giver_position`,
+    ),
+    'trade_id',
+  )
+
+  const reviews = new Map(
+    (
+      await many(
+        db,
+        sql`select distinct on (trade_id) * from reviews
+            where trade_id = any(${idList}) and rater = ${viewerId}
+            order by trade_id, created_at`,
+      )
+    ).map((r) => [r['trade_id'] as string, r]),
+  )
+
+  const views = []
+  for (const tradeId of ids) {
+    const trade = trades.get(tradeId)
+    if (!trade) continue
+    const participants = participantsOf.get(tradeId) ?? []
+    const offer = offers.get(tradeId) ?? null
+    const threadId = threads.get(tradeId) ?? null
+    const view = buildView({
+      viewerId,
+      trade,
+      participants,
+      offer,
+      offerItems: offer ? (offerItemsOf.get(offer['id']) ?? []) : [],
+      cash: offer ? (cashOf.get(offer['id'])?.[0] ?? null) : null,
+      acceptances: offer ? (acceptancesOf.get(offer['id']) ?? []) : [],
+      threadId,
+      lastMessage: threadId ? (lastOf.get(threadId) ?? null) : null,
+      withdrawal: withdrawals.get(tradeId) ?? null,
+      snapshots: snapshotsOf.get(tradeId) ?? [],
+      myReview: reviews.get(tradeId) ?? null,
+    })
+    if (view) views.push(view)
+  }
+  return views
+}
+
+/** One trade as [viewerId] sees it, from the rows `tradeViews` read for it. */
+function buildView(rows: {
+  viewerId: string
+  trade: Row
+  participants: Row[]
+  offer: Row | null
+  offerItems: Row[]
+  cash: Row | null
+  acceptances: Row[]
+  threadId: string | null
+  lastMessage: LastMessage | null
+  withdrawal: Row | null
+  snapshots: Row[]
+  myReview: Row | null
+}) {
+  const { viewerId, trade, participants, offer, offerItems, cash, acceptances } = rows
+  const { threadId, lastMessage, withdrawal, snapshots, myReview } = rows
+
   const me = participants.find((p) => p['user_id'] === viewerId)
   if (!me) return null
 
   const n = participants.length
   const myPos = Number(me['position'])
   const at = (pos: number) => participants[((pos % n) + n) % n]!
-
-  const offer = await one(
-    db,
-    sql`select * from trade_offers where trade_id = ${tradeId} order by seq desc limit 1`,
-  )
-  const offerItems = offer
-    ? await many(
-        db,
-        sql`select oi.giver_position, i.*, ${coverSql('i')} as cover
-            from trade_offer_items oi join items i on i.id = oi.item_id
-            where oi.offer_id = ${offer['id']} order by oi.giver_position, i.title`,
-      )
-    : []
-  const cash = offer
-    ? await one(db, sql`select * from trade_offer_cash where offer_id = ${offer['id']}`)
-    : null
 
   const byGiver = (pos: number) =>
     offerItems.filter((i) => Number(i['giver_position']) === pos).map(publicItem)
@@ -58,34 +218,8 @@ export async function tradeView(db: Database, tradeId: string, viewerId: string)
       .filter((i) => Number(i['giver_position']) === pos)
       .reduce((total, i) => total + (num(i['estimated_value_nok']) ?? 0), 0)
 
-  const acceptances = offer
-    ? await many(
-        db,
-        sql`select user_id, accepted_at, revoked_at, terms_version
-            from trade_acceptances where offer_id = ${offer['id']}`,
-      )
-    : []
   const acceptedBy = new Set(
     acceptances.filter((a) => !a['revoked_at']).map((a) => a['user_id'] as string),
-  )
-
-  const thread = await one(db, sql`select id from threads where trade_id = ${tradeId}`)
-  const lastMessage = thread ? await lastMessageIn(db, thread['id'] as string, viewerId) : null
-
-  const withdrawal = await one(
-    db,
-    sql`select * from trade_withdrawals where trade_id = ${tradeId}
-        order by requested_at desc limit 1`,
-  )
-
-  const snapshots = await many(
-    db,
-    sql`select * from trade_item_snapshots where trade_id = ${tradeId} order by giver_position`,
-  )
-
-  const myReview = await one(
-    db,
-    sql`select * from reviews where trade_id = ${tradeId} and rater = ${viewerId} limit 1`,
   )
 
   // Position travels with the person: the counter-offer screens address items
@@ -168,7 +302,7 @@ export async function tradeView(db: Database, tradeId: string, viewerId: string)
       gives: byGiver(Number(p['position'])),
     })),
 
-    threadId: thread?.['id'] ?? null,
+    threadId,
     lastMessage,
 
     withdrawal: withdrawal
@@ -205,11 +339,12 @@ export async function tradeList(db: Database, viewerId: string) {
         order by t.created_at desc`,
   )
 
-  const views = []
-  for (const row of rows) {
-    const view = await tradeView(db, row['id'], viewerId)
-    if (view) views.push(view)
-  }
+  // Every one of them in one go: see `tradeViews`.
+  const views = await tradeViews(
+    db,
+    rows.map((row) => row['id'] as string),
+    viewerId,
+  )
 
   const waiting = views.filter((v) => ['talking', 'pending', 'countered'].includes(v.state))
   return {
