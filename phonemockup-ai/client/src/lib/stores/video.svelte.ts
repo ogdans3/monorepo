@@ -15,8 +15,8 @@ import {exportState} from "$lib/components/mock-video/recording/export-state.sve
 type MediaKind = "video" | "image" | null;
 
 /** Shortest and longest timeline the editor accepts, in seconds. */
-export const MIN_END_TIME = 0.1;
-export const MAX_END_TIME = 600;
+import {MIN_END_TIME, MAX_END_TIME} from "./timeline-limits";
+export {MIN_END_TIME, MAX_END_TIME};
 
 /**
  * How far the screen recording may drift from the playhead during playback

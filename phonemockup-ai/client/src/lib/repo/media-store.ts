@@ -60,9 +60,24 @@ async function inline(file: File): Promise<InlineFile> {
     return {name: file.name, type: file.type, lastModified: file.lastModified, data: await file.arrayBuffer()};
 }
 
-function revive(file: StoredFile): File {
-    if (file instanceof Blob) return file;
-    return new File([file.data], file.name, {type: file.type, lastModified: file.lastModified});
+/**
+ * A stored entry as a file, or null when it isn't one. A damaged or
+ * hand-edited record used to come back as a 9-byte file named "undefined",
+ * and a nameless Blob as a black screen that the next save deleted.
+ */
+function revive(file: unknown): File | null {
+    if (file instanceof File) return file;
+    if (file instanceof Blob) return new File([file], "Saved screen", {type: file.type});
+    if (file && typeof file === "object") {
+        const {name, type, lastModified, data} = file as Partial<InlineFile>;
+        if (typeof name === "string" && (data instanceof ArrayBuffer || ArrayBuffer.isView(data))) {
+            return new File([data], name, {
+                type: typeof type === "string" ? type : "",
+                lastModified: Number.isFinite(lastModified) ? lastModified : Date.now(),
+            });
+        }
+    }
+    return null;
 }
 
 export async function saveProjectMedia(projectId: string, media: ProjectMedia): Promise<void> {
@@ -83,10 +98,17 @@ export async function saveProjectMedia(projectId: string, media: ProjectMedia): 
     }
 }
 
-export async function loadProjectMedia(projectId: string): Promise<ProjectMedia | null> {
-    const media = await withStore<StoredMedia | undefined>("readonly", (store) => store.get(projectId));
-    if (!media) return null;
-    return {screen: media.screen && revive(media.screen), bulk: (media.bulk ?? []).map(revive)};
+/** What was stored, minus anything that isn't a file; `damaged` when something was left out. */
+export async function loadProjectMedia(projectId: string): Promise<(ProjectMedia & {damaged: boolean}) | null> {
+    const media = await withStore<unknown>("readonly", (store) => store.get(projectId));
+    if (media === undefined || media === null) return null;
+    const record = (typeof media === "object" ? media : {}) as Partial<StoredMedia>;
+    const screen = record.screen == null ? null : revive(record.screen);
+    const stored: unknown[] = Array.isArray(record.bulk) ? record.bulk : [];
+    const bulk = stored.map(revive).filter((file): file is File => file !== null);
+    const damaged = typeof media !== "object" || (record.screen != null && !screen) || bulk.length < stored.length
+        || (record.bulk !== undefined && !Array.isArray(record.bulk));
+    return {screen, bulk, damaged};
 }
 
 export async function deleteProjectMedia(projectId: string): Promise<void> {

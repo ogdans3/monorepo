@@ -132,9 +132,13 @@ async function restoreMedia(saved: Project) {
     if (project.id !== saved.id) return;
     if (unreadable) {
         unreadMedia = {projectId: saved.id, screenMedia: saved.screenMedia ?? null};
-        toast.warning("This project's screen image or video couldn't be read. Reload the page to try again.");
+        toast.warning("This project's screen image or video couldn't be read. Reload the page to try again, or upload it again if that doesn't help.");
         applyDemoMedia();
         return;
+    }
+
+    if (media?.damaged) {
+        toast.warning("Some of this project's saved media is damaged and was left out. Upload it again to use it.");
     }
 
     const controller = get(videoController);
@@ -156,6 +160,10 @@ async function restoreMedia(saved: Project) {
     }
     if (media?.screen) {
         await controller.setMediaSource(media.screen);
+        return;
+    }
+    if (media?.damaged) {
+        applyDemoMedia();
         return;
     }
     if (hadMedia) {

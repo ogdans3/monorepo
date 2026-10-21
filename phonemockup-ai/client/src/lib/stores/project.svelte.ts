@@ -9,6 +9,7 @@ import type {
 import defaultModel, {getModel, type Model} from "$lib/models/3d-models/3d-models-spec";
 import type {Vec3} from '../components/mock-video/Animation';
 import {PresetName, type Resolution, type RGBA} from "$lib/models/models";
+import {MAX_END_TIME, MIN_END_TIME} from "./timeline-limits";
 
 // Scene presets
 export const presets: Record<PresetName, Resolution> = {
@@ -164,18 +165,25 @@ export class ProjectState {
         this.demoMediaId = project.demoMediaId === "focus" || project.demoMediaId === "workspace" ? project.demoMediaId : undefined;
 
         this.timeline = {...this.timeline, ...(project?.timeline ?? {})}
+        // Inside the limits the end time field keeps: an end time of 1e7
+        // built half a million ruler marks and froze the tab.
         const endTime = Number(this.timeline.endTime);
-        this.timeline.endTime = Number.isFinite(endTime) && endTime > 0 ? endTime : new ProjectState().timeline.endTime;
+        this.timeline.endTime = Number.isFinite(endTime) && endTime > 0
+            ? Math.min(MAX_END_TIME, Math.max(MIN_END_TIME, endTime))
+            : new ProjectState().timeline.endTime;
         this.settings = {
             ...this.settings,
             ...(project.settings ?? {}),
         };
+        const fps = Number(this.settings.fps);
+        this.settings.fps = Number.isFinite(fps) && fps >= 1 && fps <= 240 ? fps : new ProjectState().settings.fps;
 
         this.sceneSettings = {
             ...this.sceneSettings,
             ...(project.sceneSettings ?? {}),
         };
-        if (!(this.sceneSettings.selectedPreset in presets)) {
+        // Own keys only: "toString" or "constructor" is `in` every object.
+        if (!Object.hasOwn(presets, this.sceneSettings.selectedPreset)) {
             this.sceneSettings.selectedPreset = new ProjectState().sceneSettings.selectedPreset;
         }
     }
