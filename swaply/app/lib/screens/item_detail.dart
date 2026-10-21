@@ -493,7 +493,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     itemBuilder: (_, i) => GestureDetector(
                       excludeFromSemantics: true,
                       onTap: () => _openPhotos(photos, i),
+                      // Which of how many, for a screen reader, which said
+                      // «bilde» and nothing more.
                       child: Image.network(photos[i],
+                          semanticLabel: 'Bilde ${i + 1} av ${photos.length}: ${item.title}',
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(color: SwaplyColors.greenSoft)),
                     ),

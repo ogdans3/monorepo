@@ -1126,7 +1126,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                             initial: entry.key),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(Radii.card),
-                          child: _thumbnail(entry.value),
+                          child: _thumbnail(entry.value, entry.key),
                         ),
                       ),
                       if (identical(entry.value, _refused))
@@ -1151,7 +1151,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
                               color: SwaplyColors.greenDeep,
                               borderRadius: BorderRadius.circular(Radii.pill),
                             ),
+                            // Said with the picture's name, «Bilde 1, forside».
                             child: const Text('Forside',
+                                semanticsLabel: '',
                                 style: TextStyle(
                                     color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
                           ),
@@ -1197,15 +1199,20 @@ class _PostItemScreenState extends State<PostItemScreen> {
   }
 
   /// From memory while the bytes are on the phone, from the server otherwise.
-  Widget _thumbnail(ListingPhoto photo) {
+  /// [at] counts from nought; the first is the cover, as its badge says.
+  Widget _thumbnail(ListingPhoto photo, int at) {
     Widget blank(BuildContext _, Object _, StackTrace? _) =>
         Container(height: 106, width: 106, color: SwaplyColors.greenSoft);
+    // Named for a screen reader, which said «bilde» and nothing more.
+    final label = at == 0 ? 'Bilde 1, forside' : 'Bilde ${at + 1}';
     final bytes = photo.bytes;
     if (bytes != null) {
       return Image.memory(bytes,
+          semanticLabel: label,
           height: 106, width: 106, fit: BoxFit.cover, errorBuilder: blank);
     }
     return Image.network(photo.stored!.url,
+        semanticLabel: label,
         height: 106, width: 106, fit: BoxFit.cover, errorBuilder: blank);
   }
 

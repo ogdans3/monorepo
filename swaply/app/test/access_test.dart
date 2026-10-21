@@ -27,6 +27,7 @@ import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/shell.dart';
 
+import 'export_fixtures.dart' as fx;
 import 'fake_server.dart';
 import 'phone.dart';
 
@@ -335,6 +336,7 @@ void main() {
     final screens = <(String, Widget Function(), Future<void> Function(WidgetTester)?)>[
       ('05', () => const DiscoverScreen(), null),
       ('04', () => const ItemDetailScreen(itemId: 'item-console'), null),
+      ('04 with pictures', () => const ItemDetailScreen(itemId: 'item-pictures'), null),
       ('11', () => const TradesScreen(), null),
       ('12', () => const LikedScreen(), null),
       ('13', () => const ProfileScreen(), null),
@@ -348,6 +350,23 @@ void main() {
     for (final (name, screen, act) in screens) {
       testWidgets('$name: a role and a name on every target', (tester) async {
         final semantics = tester.ensureSemantics();
+        // The export's photographs, decoded, so each Image is drawn and is
+        // there to be named.
+        await precachePhotos(tester);
+        const picture = '${fx.photos}console.jpg';
+        server.overrides['GET /items/item-pictures'] = {
+          ...FakeServer.console,
+          'id': 'item-pictures',
+          'cover': picture,
+          'media': [picture, picture],
+          'owner': FakeServer.kari,
+        };
+        server.overrides['GET /discover'] = {
+          'total': 1,
+          'items': [
+            {...FakeServer.console, 'cover': picture, 'media': [picture]},
+          ],
+        };
         await mount(tester, screen());
         await act?.call(tester);
 
@@ -369,6 +388,10 @@ void main() {
                 f.isToggled != Tristate.none;
             final name = data.label.isNotEmpty || data.value.isNotEmpty || data.tooltip.isNotEmpty;
             if (!role || !name) faults.add('«${data.label}» role: $role, name: $name');
+          }
+          // A picture a screen reader stops on and calls «bilde», and nothing.
+          if (f.isImage && data.label.isEmpty && !node.isMergedIntoParent) {
+            faults.add('an image with no name at ${node.rect}');
           }
           node.visitChildren((child) {
             visit(child);

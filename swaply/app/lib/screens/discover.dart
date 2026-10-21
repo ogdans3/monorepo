@@ -924,7 +924,9 @@ class _ItemCardState extends State<ItemCard> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(Radii.card),
                     child: item.cover != null
+                        // The card is named by its caption.
                         ? Image.network(item.cover!,
+                            excludeFromSemantics: true,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => _generatedCard(item))
                         : _generatedCard(item),

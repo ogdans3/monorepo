@@ -912,7 +912,10 @@ class ItemThumb extends StatelessWidget {
     if (item.cover != null) {
       return ClipRRect(
         borderRadius: shape,
+        // The name is always beside it, and says what the picture is: alone,
+        // a screen reader stopped on it and said «bilde» and nothing more.
         child: Image.network(item.cover!,
+            excludeFromSemantics: true,
             height: size, width: size, fit: BoxFit.cover,
             errorBuilder: (_, _, _) => _placeholder(shape)),
       );
