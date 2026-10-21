@@ -339,7 +339,7 @@ void main() {
       await hold(tester, phones.last, const DiscoverScreen());
 
       final name = tester.getRect(find.text('Bosch drill 18V'));
-      final value = tester.getRect(find.text('Verdi 1 200 kr'));
+      final value = tester.getRect(find.text('Verdi 1\u00A0200\u00A0kr'));
       expect(value.left, greaterThan(name.right));
       expect(value.top, lessThan(name.bottom));
     });
