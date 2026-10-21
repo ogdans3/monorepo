@@ -23,6 +23,7 @@ class Session extends ChangeNotifier {
     final elsewhere = otherTabs ?? tokenChangedElsewhere();
     _shared = elsewhere != null;
     _otherTabs = elsewhere?.listen((_) => unawaited(_followOtherTab()));
+    api.onTokenRefused = _heardRefusal;
   }
 
   final SwaplyApi api;
@@ -485,6 +486,7 @@ class Session extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (api.onTokenRefused == _heardRefusal) api.onTokenRefused = null;
     unawaited(_otherTabs?.cancel());
     unawaited(_gate.close());
     super.dispose();
@@ -499,6 +501,10 @@ class Session extends ChangeNotifier {
       await prefs.setString(_pickerKey, owed);
     }
   }
+
+  /// A switch of account asking who it has become; see [_switch]. A refusal
+  /// heard meanwhile is the switch's to decide, not [_heardRefusal]'s.
+  bool _switching = false;
 
   /// Become one of your test accounts.
   ///
@@ -551,6 +557,7 @@ class Session extends ChangeNotifier {
     _decided++;
     api.token = token;
     final Me found;
+    _switching = true;
     try {
       found = await api.me();
     } catch (e) {
@@ -562,6 +569,8 @@ class Session extends ChangeNotifier {
         undo();
       }
       rethrow;
+    } finally {
+      _switching = false;
     }
     // Their first run, not yours. «Nullstill interesser» is sold as bringing
     // screen 02 back, and emptying the column is only half of that — somebody
@@ -932,44 +941,37 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Who this is, asked again: for the bar's badges and 13, by every screen
-  /// that changed something or came back into view.
-  ///
-  /// A refusal of the token itself is a session that has ended with the app
-  /// in front — the account deleted from a browser on another machine, say —
-  /// and it is taken as [wake] takes one on the way back from the
-  /// background: the screens go, and the gate makes the next start. Heard
-  /// only there, every screen that asked was refused, «Du må logge inn.»
-  /// under every tap and the last person's things on every tab, until the
-  /// app had been put away for a minute and brought back. The refusal still
-  /// goes to whoever asked.
-  Future<void> refresh() => _refresh(hearRefusal: true);
-
-  Future<void> _refresh({required bool hearRefusal}) async {
+  Future<void> refresh() async {
     final asked = _decided;
-    final token = api.token;
-    final Me found;
-    try {
-      found = await api.me();
-    } on ApiException catch (e) {
-      if (hearRefusal && e.statusCode == 401) await _refusedWhileOpen(token, asked);
-      rethrow;
-    }
+    final found = await api.me();
     _lastHeard = now();
     // A screen of the stranger's asking as the sign-in lands: it would put
     // the stranger back, over the account the likes were just folded into.
     if (asked == _decided) _become(found);
   }
 
-  /// [token], asked about while nothing else was deciding who this is, is
-  /// refused; see [refresh]. Not while a sign-in or a profile is on its way,
-  /// which retires the token the asking went on as it lets the person in
-  /// ([wake] has the long story), nor while signing out, which retires it
-  /// itself, nor once anything has changed who this is since it was asked.
-  Future<void> _refusedWhileOpen(String? token, int asked) async {
-    if (token == null || _signingIn != null || _loggingOut != null || starting) return;
-    if (asked != _decided || api.token != token) return;
-    await _turnedAway(token);
+  /// The server refused [token] itself, to any request at all; see
+  /// [SwaplyApi.onTokenRefused]. A session that ended with the app in front
+  /// — the account deleted from a browser on another machine, say — is
+  /// taken as [wake] takes one on the way back from the background: the
+  /// screens go, and the gate makes the next start. Heard only there, every
+  /// screen was refused, «Du må logge inn.» under every tap and the last
+  /// person's things on every tab, until the app had been put away for a
+  /// minute and brought back.
+  ///
+  /// Only for the token this phone holds now, and only while nothing else is
+  /// deciding who this is: a sign-in or a profile on its way retires the
+  /// token the request went on as it lets the person in ([wake] has the long
+  /// story, and decides its own refusal once the sign-in has landed); a
+  /// sign-out retires it itself; a start, a check of a kept token or a switch
+  /// of account asks about a token on purpose and says what it heard.
+  bool _heardRefusal(String token) {
+    if (token != api.token) return false;
+    if (_signingIn != null || _loggingOut != null || starting || _waking != null || _switching) {
+      return false;
+    }
+    unawaited(_turnedAway(token));
+    return true;
   }
 
   /// When the server last answered this phone about who it is — a cold
@@ -1036,9 +1038,7 @@ class Session extends ChangeNotifier {
     final token = api.token;
     final asked = _decided;
     final signedInAsked = signedIn;
-    // Its own refusal heard here, below, where a sign-in on its way is
-    // waited out first.
-    final asking = _waking = signedIn ? _refresh(hearRefusal: false) : retry();
+    final asking = _waking = signedIn ? refresh() : retry();
     try {
       await asking;
     } on ApiException catch (e) {

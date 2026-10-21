@@ -177,10 +177,11 @@ with nothing to tap.
   gate goes with the person it was about, and the gate makes a new stranger —
   for a device and for an erased account alike, since an erased account has
   no device id left. No toast: the gate is the news. `Session.sentBack` is how
-  the session tells the app to take the screens down. The same refusal heard
-  with the app in front — a tab coming back, a pull, the badges asked for
-  after something was done — does the same, rather than leaving «Du må logge
-  inn.» under every tap until the app had been put away and brought back. A
+  the session tells the app to take the screens down. The same refusal of
+  any request with the app in front — «Send» in a conversation, a heart, a
+  tab coming back — does the same, and says nothing either, rather than
+  leaving «Du må logge inn.» under every tap until the app had been put away
+  and brought back (`SwaplyApi.onTokenRefused`). A
   session the account switcher minted goes back to the admin's own token
   parked behind it, as «Tilbake til …» would, and is a stranger only if that
   one is dead too: the stranger used to keep the admin's token parked where

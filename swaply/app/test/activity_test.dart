@@ -31,6 +31,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/main.dart';
+import 'package:swaply_app/screens/chat.dart';
 import 'package:swaply_app/screens/discover.dart';
 import 'package:swaply_app/screens/onboarding.dart';
 import 'package:swaply_app/screens/profile.dart';
@@ -578,6 +579,71 @@ void main() {
       expect(session.anonymous, isFalse);
       expect(session.me?.id, 'me-1');
       expect(asked('POST /auth/anonymous'), 0);
+    });
+
+    testWidgets('22. and so does any request refused for its token: «Send» in a conversation',
+        (tester) async {
+      server.overrides['GET /me'] = FakeServer.me;
+      await boot(tester, token: 'tok');
+      await tapTab(tester, 'Chats');
+      await tester.tap(find.text('Kari'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ThreadScreen), findsOneWidget);
+
+      // Only the message hears it: nothing else asks who this is meanwhile.
+      server.overrides['POST /threads/thread-1/messages'] = 401;
+      server.overrides['GET /me'] = (http.Request request) =>
+          switch (request.headers['authorization']) {
+            'Bearer tok' => FakeServer.me,
+            'Bearer ${FakeServer.deviceToken}' => FakeServer.lookingAround,
+            _ => 401,
+          };
+      await tester.enterText(find.byType(TextField).last, 'Er du der?');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ThreadScreen, skipOffstage: false), findsNothing);
+      expect(asked('POST /auth/anonymous'), 1);
+      expect(session.anonymous, isTrue);
+      expect(find.byType(InterestsScreen), findsOneWidget);
+      // The gate is the news, and «Du må logge inn.» over 02 was not.
+      expect(find.byType(SwaplyToast), findsNothing);
+    });
+
+    testWidgets('23. a heart refused for a test account\'s token goes back to the admin',
+        (tester) async {
+      tester.view.physicalSize = const Size(430, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      SharedPreferences.setMockInitialValues({'token': 'tok-test-1', 'adminToken': 'tok'});
+      var ended = false;
+      server.overrides['GET /me'] = (http.Request request) =>
+          switch (request.headers['authorization']) {
+            'Bearer tok-test-1' => ended ? 401 : FakeServer.actingAsTest,
+            'Bearer tok' => FakeServer.admin,
+            _ => 401,
+          };
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(value: session, child: SwaplyApp(api: api)),
+      );
+      unawaited(session.restore());
+      await tester.pumpAndSettle();
+      expect(session.actingAs, isTrue);
+
+      // Deleted from Testverktøy on another phone.
+      ended = true;
+      server.overrides['POST /items/item-console/like'] = 401;
+      await tester.tap(find.bySemanticsLabel('Jeg vil ha').last);
+      await tester.pumpAndSettle();
+
+      expect(asked('POST /auth/anonymous'), 0);
+      expect(session.isAdmin, isTrue);
+      expect(session.actingAs, isFalse);
+      expect(api.token, 'tok');
+      expect(find.byType(SwaplyToast), findsNothing);
     });
   });
 }

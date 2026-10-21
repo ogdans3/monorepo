@@ -22,7 +22,7 @@ typedef HideAnswer = ({HiddenKind kind, int? count});
 /// Thrown for anything the server refused, and for no answer at all. `code` is
 /// what the UI switches on; `message` is already Norwegian and safe to show.
 class ApiException implements Exception {
-  ApiException(this.statusCode, this.code, this.message);
+  ApiException(this.statusCode, this.code, this.message, {this.sessionEnded = false});
 
   /// No answer, or none that could be read: no network, no server behind the
   /// address, a request that took longer than [SwaplyApi.patience], or a page
@@ -37,7 +37,8 @@ class ApiException implements Exception {
   ApiException.noContact()
       : statusCode = 0,
         code = noContactCode,
-        message = noContact;
+        message = noContact,
+        sessionEnded = false;
 
   static const noContactCode = 'no_contact';
 
@@ -59,6 +60,13 @@ class ApiException implements Exception {
   final int statusCode;
   final String code, message;
 
+  /// The server did not know the session this went on, and the session has
+  /// taken that as the end of it: the app is on its way back through the
+  /// gate, which is the news. A toast over that — «Du må logge inn.» — went
+  /// up over the screens being taken down and lay across 02 after them. See
+  /// [SwaplyApi.onTokenRefused].
+  final bool sessionEnded;
+
   /// Whether this is [ApiException.noContact] rather than a refusal. A refusal
   /// is the server's answer about what was asked; this is not an answer.
   bool get isNoContact => code == noContactCode;
@@ -74,6 +82,16 @@ class SwaplyApi {
   final String baseUrl;
   final http.Client _client;
   String? token;
+
+  /// Told the token a request went on whenever the server says it does not
+  /// know it — `401 unauthorized` to a request that carried one: the account
+  /// deleted, or its sessions ended. Not a refusal of what was asked but of
+  /// who asked, which is the session's business and not the screen's; the
+  /// session listens (`Session`), and says whether it has taken it as the
+  /// end of the session, which the refusal then carries to the caller as
+  /// [ApiException.sessionEnded]. A request sent with no token is refused the
+  /// same way and is not this: the phone never had a session to lose.
+  bool Function(String token)? onTokenRefused;
 
   /// How long a request is given before it counts as no answer. A host that
   /// drops packets refuses nothing, and a phone waits a minute or two before
@@ -132,10 +150,11 @@ class SwaplyApi {
       required Duration patience,
       void Function(int status)? heard}) async {
     final giveUp = Completer<void>();
+    final request = build(giveUp.future);
     final http.Response response;
     try {
       response = await _client
-          .send(build(giveUp.future))
+          .send(request)
           .then(http.Response.fromStream)
           .timeout(patience, onTimeout: () {
         giveUp.complete();
@@ -159,10 +178,18 @@ class SwaplyApi {
 
     if (response.statusCode >= 400) {
       final map = decoded is Map ? decoded : const {};
+      final code = map['code'] as String? ?? 'error';
+      final bearer = request.headers['authorization'];
+      final ended = response.statusCode == 401 &&
+          code == 'unauthorized' &&
+          bearer != null &&
+          bearer.startsWith('Bearer ') &&
+          (onTokenRefused?.call(bearer.substring('Bearer '.length)) ?? false);
       throw ApiException(
         response.statusCode,
-        map['code'] as String? ?? 'error',
+        code,
         map['message'] as String? ?? refused,
+        sessionEnded: ended,
       );
     }
     heard?.call(response.statusCode);
