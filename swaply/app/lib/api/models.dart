@@ -196,10 +196,15 @@ class InvitePreview {
         used = j['used'] as bool? ?? false,
         inviterName = (j['inviter'] as Map<String, dynamic>?)?['displayName'] as String?,
         itemTitle = (j['item'] as Map<String, dynamic>?)?['title'] as String?,
+        itemRetired = j['itemRetired'] as bool? ?? false,
         itemId = j['itemId'] as String?;
 
   final String token;
   final bool used;
+
+  /// The link was sent for a listing that is no longer out: taken down, or
+  /// traded away. The invitation still works, and there is nothing to open.
+  final bool itemRetired;
   final String? inviterName, itemTitle;
 
   /// The listing behind the link, for somebody who is already signed in and can

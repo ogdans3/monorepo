@@ -347,6 +347,28 @@ void main() {
         expect(server.asked('GET /discover'), discovered);
         expect(find.text('Retro spillkonsoll'), findsOneWidget);
       });
+
+      testWidgets('13. a link to a listing gone since says so, and opens nothing',
+          (tester) async {
+        // Traded away or taken down after the link went out: the server says
+        // `itemRetired`, and the app landed on Oppdag with no word about what
+        // had been tapped.
+        server.overrides['GET /invites/${FakeServer.shareToken}'] = {
+          'token': FakeServer.shareToken,
+          'url': 'http://web/i/${FakeServer.shareToken}',
+          'used': true,
+          'itemRetired': true,
+          'itemId': null,
+          'inviter': {'displayName': 'Kari N.', 'town': 'Bergen'},
+          'item': null,
+          'shareText': 'Kari N. inviterer deg til Swaply.',
+        };
+        await launch(tester);
+
+        expect(find.byType(ItemDetailScreen), findsNothing);
+        expect(find.byType(DiscoverScreen), findsOneWidget);
+        expect(toast(tester), 'Tingen som ble delt med deg er ikke lenger ute.');
+      });
     });
   });
 

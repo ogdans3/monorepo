@@ -244,6 +244,19 @@ class _InviteScreenState extends State<InviteScreen> {
                     ),
                   ),
                 ],
+                // Sent for a thing that is no longer out: said, as the web page
+                // behind the same link says it, rather than a page that never
+                // mentions what was tapped.
+                if (invite?.itemRetired == true) ...[
+                  const SizedBox(height: Insets.lg),
+                  Text(
+                    invite!.used
+                        ? 'Tingen som ble delt med deg er ikke lenger ute.'
+                        : 'Tingen som ble delt med deg er ikke lenger ute. Invitasjonen virker '
+                            'fortsatt.',
+                    style: const TextStyle(color: Color(0xB8FFFFFF), fontSize: 14, height: 1.45),
+                  ),
+                ],
                 if (invite?.used == true) ...[
                   const SizedBox(height: Insets.lg),
                   Text(
