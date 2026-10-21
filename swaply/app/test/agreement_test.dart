@@ -184,4 +184,41 @@ void main() {
     expect(find.text('Godta byttet'), findsNothing);
     expect(find.text('Angre godkjenningen'), findsOneWidget);
   });
+
+  testWidgets('7. «Lukk» on the terms closes the terms, and 06c stays, inside a tab',
+      (tester) async {
+    // In the app 06c is pushed into the tab's own navigator, and a dialog
+    // goes on the root one. «Lukk» popped with 06c's context, which found
+    // the tab's navigator and took 06c down, leaving the terms up over the
+    // trade. A screen mounted alone has one navigator and never showed it.
+    await mount(
+      tester,
+      Navigator(
+        onGenerateRoute: (_) =>
+            MaterialPageRoute(builder: (_) => const TradeDetailScreen(tradeId: 'trade-1')),
+      ),
+    );
+    await tester.tap(find.text('Godta byttet'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AgreementScreen), findsOneWidget);
+
+    await tester.tap(find.text('Les hele byttevilkårene ›'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.text('Swaply er ikke part i byttet og fasiliterer ikke frakt eller '
+          'betaling. Avtalen er mellom dere.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Lukk'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(AgreementScreen), findsOneWidget);
+    // And it still agrees: the box and the swipe are where they were.
+    await tick(tester);
+    await swipe(tester);
+    expect(server.requests, contains('POST /trades/trade-1/accept'));
+  });
 }
