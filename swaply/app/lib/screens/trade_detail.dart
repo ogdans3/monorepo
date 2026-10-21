@@ -1429,7 +1429,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   Widget _reviewSection(Trade trade) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Kicker('Din vurdering av ${trade.receivingFrom.displayName.split(' ').first}'),
+          // In a ring 07l rates both of the others, so it is not one person's.
+          Kicker(trade.isChain
+              ? 'Din vurdering'
+              : 'Din vurdering av ${trade.receivingFrom.displayName.split(' ').first}'),
           const SizedBox(height: Insets.sm),
           SectionCard(
             child: trade.yourReviewScore == null
@@ -1593,7 +1596,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           onPressed: () => goToTab(context, 2)));
     } else if (trade.state == 'completed' && trade.yourReviewScore == null) {
       children.add(PrimaryButton(
-          'Vurder ${trade.receivingFrom.displayName.split(' ').first}',
+          // 07l, for a ring, rates both of the others: not «Vurder Kari».
+          trade.isChain
+              ? 'Vurder byttet'
+              : 'Vurder ${trade.receivingFrom.displayName.split(' ').first}',
           onPressed: () async {
             await pushOverBar<void>(context, ReviewScreen(trade: trade));
             await _load();
@@ -1625,11 +1631,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   /// Undoing your own acceptance, which is not the same as ending the trade:
   /// the offer stays on the table and it is somebody's turn again.
   Future<void> _confirmRevoke(Trade trade) async {
-    final other = trade.receivingFrom.displayName.split(' ').first;
     final yes = await _confirm(
       title: 'Angre godkjenningen?',
       body: 'Byttet står fortsatt, men du har ikke godtatt det lenger. '
-          '$other får beskjed.',
+          '${_firstNames(_others(trade))} får beskjed.',
       bullets: const [
         'Tingene dine blir tilgjengelige for andre igjen',
         'Du kan godta på nytt, eller foreslå noe annet',
@@ -1640,7 +1645,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   }
 
   Future<void> _confirmDecline(Trade trade) async {
-    final other = trade.receivingFrom.displayName.split(' ').first;
+    // Everybody else is told, which in a ring is two.
+    final other = _firstNames(_others(trade));
     final yes = await _confirm(
       title: 'Avslå byttet?',
       // With a side still empty nobody can have said yes, so nothing was
@@ -1654,15 +1660,19 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   }
 
   /// 09g. Nobody has committed anything, so it just ends.
+  ///
+  /// Named from the people in it: in a ring the one you receive from may well
+  /// have said yes, and it is the third who has not; and both are told.
   Future<void> _confirmWithdrawEarly(Trade trade) async {
-    final other = trade.receivingFrom.displayName.split(' ').first;
+    final others = _others(trade);
+    final notYet = others.where((p) => p.accepted != true).toList();
     final yes = await _confirm(
       title: 'Trekke deg fra byttet?',
-      body: '$other har ikke godtatt ennå, så byttet avbrytes med en gang. '
-          'Ingen har sendt noe.',
-      bullets: const [
+      body: '${_firstNames(notYet.isEmpty ? others : notYet)} har ikke godtatt ennå, så '
+          'byttet avbrytes med en gang. Ingen har sendt noe.',
+      bullets: [
         'Tingene dine blir tilgjengelige igjen',
-        'Den andre får beskjed, samtalen beholdes',
+        '${_firstNames(others)} får beskjed, samtalen beholdes',
       ],
       confirm: 'Trekk meg fra byttet',
     );
@@ -1673,17 +1683,31 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   Future<void> _confirmWithdrawLate(Trade trade) async {
     // Read before the sheet: after awaiting it, the context may be gone.
     final api = context.read<SwaplyApi>();
-    final other = trade.receivingFrom.displayName.split(' ').first;
+    final others = _others(trade);
+    final other = _firstName(trade.receivingFrom);
+    // In a ring both of the others are asked, the first answer decides, and
+    // one of them having sent is enough to keep you in: what 08b and 08c
+    // say after it, said before it.
+    final ring = others.length > 1;
+    final either = others.map(_firstName).join(' eller ');
     final yes = await _confirm(
       title: 'Vil du trekke deg fra byttet?',
-      body: 'Dere har begge godtatt, og $other kan allerede ha sendt tingen sin. '
-          'Vi spør $other om det er greit at du trekker deg.',
+      body: ring
+          ? 'Dere har alle godtatt, og $either kan allerede ha sendt tingen sin. '
+              'Vi spør ${_firstNames(others)} om det er greit at du trekker deg.'
+          : 'Dere har begge godtatt, og $other kan allerede ha sendt tingen sin. '
+              'Vi spør $other om det er greit at du trekker deg.',
       bullets: [
         // The export's «når han sier ja» was written for Ola. Said of whoever
         // is on the other side, a pronoun is a guess, and a wrong one for
         // half of them; the answer is what the sentence is about anyway.
-        'Har $other ikke sendt noe, avbrytes byttet når svaret er ja',
-        'Har $other allerede sendt, kan du ikke trekke deg',
+        if (ring) ...[
+          'Har ingen av dem sendt noe, avbrytes byttet når en av dem svarer ja',
+          'Har en av dem allerede sendt, kan du ikke trekke deg',
+        ] else ...[
+          'Har $other ikke sendt noe, avbrytes byttet når svaret er ja',
+          'Har $other allerede sendt, kan du ikke trekke deg',
+        ],
       ],
       confirm: 'Spør om å trekke meg',
     );

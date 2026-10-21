@@ -199,14 +199,23 @@ class _TradesScreenState extends State<TradesScreen>
     final w = trade.withdrawal;
     final asked = trade.state == 'paused' && w != null && w.state == 'waiting' && !w.byYou;
     final yourTurn = canAccept || asked;
-    final other = trade.receivingFrom.displayName.split(' ').first;
+    // Who it waits on: the others who have not said yes, which in a ring is
+    // not always the one you receive from.
+    final others = trade.participants.where((p) => p.position != trade.youPosition).toList();
+    final notYet = others.where((p) => p.accepted != true).toList();
+    final waitingOn = (notYet.isEmpty ? [trade.receivingFrom] : notYet)
+        .map((p) => p.displayName.split(' ').first)
+        .toList();
+    final waiting = ('Venter på ${_names(waitingOn)}', SwaplyColors.inkMuted);
+    // A counter-offer of your own is your yes to it (DESIGN.md), and waits
+    // on the others: «Endret» is for one somebody else made.
+    final you = trade.participants.where((p) => p.position == trade.youPosition).firstOrNull;
+    final yoursProposed = trade.counterOfferBy != null && trade.counterOfferBy == you?.id;
 
     final (label, colour) = switch (trade.state) {
       'talking' => ('Samtale', SwaplyColors.greySoft),
-      'pending' => canAccept
-          ? ('Din tur', SwaplyColors.amberText)
-          : ('Venter på $other', SwaplyColors.inkMuted),
-      'countered' => ('Endret', SwaplyColors.amberText),
+      'pending' => canAccept ? ('Din tur', SwaplyColors.amberText) : waiting,
+      'countered' => yoursProposed ? waiting : ('Endret', SwaplyColors.amberText),
       'accepted' => ('Godtatt', SwaplyColors.greenText),
       'paused' => asked ? ('Svar', SwaplyColors.amberText) : ('Pauset', SwaplyColors.amberText),
       'completed' => ('Gjennomført', SwaplyColors.greenText),
@@ -457,3 +466,8 @@ class _Segments extends StatelessWidget {
     );
   }
 }
+
+/// «Kari», or «Kari og Per».
+String _names(List<String> names) => names.length < 2
+    ? names.firstOrNull ?? ''
+    : '${names.sublist(0, names.length - 1).join(', ')} og ${names.last}';

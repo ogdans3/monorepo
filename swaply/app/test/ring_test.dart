@@ -185,4 +185,28 @@ void main() {
       expect(find.byType(ReviewScreen), findsOneWidget);
     });
   });
+
+  testWidgets('7. a finished ring asks for a rating of the trade, not of Kari alone',
+      (tester) async {
+    // 07l rates both of the others. The button named Kari, whom you receive
+    // from, and the card over a rating given said «Din vurdering av Kari».
+    server.overrides['GET /trades/trade-chain'] = {
+      ...ring(marked: {'me-1', 'kari-1', 'per-1'}),
+      'state': 'completed',
+      'closedAt': '2026-09-10T10:00:00Z',
+    };
+    await open(tester, const TradeDetailScreen(tradeId: 'trade-chain'));
+
+    expect(find.text('Vurder byttet'), findsWidgets);
+    expect(find.text('Vurder Kari'), findsNothing);
+    expect(find.text('DIN VURDERING'), findsOneWidget);
+    expect(find.textContaining('VURDERING AV KARI'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Vurder byttet'));
+    await tester.pumpAndSettle();
+    // 07l, with both of them on it.
+    expect(find.text('Ble byttet gjennomført?'), findsOneWidget);
+    expect(find.text('Kari N.'), findsOneWidget);
+    expect(find.text('Per H.'), findsOneWidget);
+  });
 }
