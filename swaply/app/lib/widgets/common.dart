@@ -14,6 +14,10 @@ import 'toast.dart' show KeepClear;
 // already imports this file, and the toast itself is its own thing.
 export 'toast.dart';
 
+/// [n] of something, in the singular for one: «1 bytte», «3 bytter». A
+/// count read off the server used to keep the plural for one, «1 bytter».
+String counted(int n, String one, String many) => n == 1 ? '1 $one' : '$n $many';
+
 /// The smallest thing a finger is asked to hit, in logical points: Apple's
 /// 44. The export draws plenty of controls smaller than that — a «Hopp over»
 /// 21 tall, a heart 34 across — and they stay drawn that way. What grows is
@@ -769,11 +773,17 @@ class Avatar extends StatelessWidget {
 }
 
 class Kicker extends StatelessWidget {
-  const Kicker(this.text, {super.key});
+  const Kicker(this.text, {super.key, this.oneLine = false});
   final String text;
+
+  /// Cut short with an ellipsis rather than wrapped, for a kicker that
+  /// shares its line with something that must stay whole: «Åpne ›».
+  final bool oneLine;
 
   @override
   Widget build(BuildContext context) => Text(text.toUpperCase(),
+      maxLines: oneLine ? 1 : null,
+      overflow: oneLine ? TextOverflow.ellipsis : null,
       style: const TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
@@ -852,6 +862,81 @@ class ItemThumb extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// A listing's name with its value beside it, as the export captions a card
+/// on 05, 13 and 13b: 7 down and 2 in, the name at 13/700 wrapping, and
+/// «Verdi 600 kr» at 10.5/600 staying put at the top right.
+///
+/// Where the value leaves the name too little room for its longest word, the
+/// value goes under the name. Beside it on a 320 phone, «Sykkelhjelm» broke
+/// as «Sykkelhjel / m»; with the text set large the value alone ran past
+/// the edge of the card, and the name had none of the row left.
+class ListingCaption extends StatelessWidget {
+  const ListingCaption(this.item, {super.key, this.maxLines});
+
+  final Item item;
+
+  /// Lines the name may take before it is cut short; all it needs if null.
+  final int? maxLines;
+
+  static const _name =
+      TextStyle(fontSize: 13, height: 1.15, fontWeight: FontWeight.w700, color: SwaplyColors.ink);
+  static const _value =
+      TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: SwaplyColors.grey);
+
+
+  @override
+  Widget build(BuildContext context) {
+    final name = Text(item.title,
+        maxLines: maxLines,
+        overflow: maxLines == null ? null : TextOverflow.ellipsis,
+        style: _name);
+    final value = item.estimatedValueNok;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
+      child: value == null
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Flexible(child: name)])
+          : LayoutBuilder(builder: (context, box) {
+              final words = 'Verdi ${kr(value)}';
+              final ambient = DefaultTextStyle.of(context).style;
+              double width(String text, TextStyle style) {
+                final painter = TextPainter(
+                  text: TextSpan(text: text, style: ambient.merge(style)),
+                  textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+                  textScaler: MediaQuery.textScalerOf(context),
+                  maxLines: 1,
+                )..layout();
+                final wide = painter.width;
+                painter.dispose();
+                return wide;
+              }
+
+              // The name's longest word, which has to fit beside the value
+              // for the name to break between words and not inside one.
+              final longest = item.title
+                  .split(RegExp(r'\s+'))
+                  .fold<double>(0, (most, word) => math.max(most, width(word, _name)));
+              if (width(words, _value) + 8 + longest + 1 > box.maxWidth) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [name, const SizedBox(height: 2), Text(words, style: _value)],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Flexible(child: name),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(words, style: _value),
+                  ),
+                ],
+              );
+            }),
+    );
+  }
 }
 
 /// A category, a condition, an interest. Filled, never outlined: in the export

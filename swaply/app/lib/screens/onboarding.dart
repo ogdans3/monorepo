@@ -244,6 +244,19 @@ class _InviteScreenState extends State<InviteScreen> {
                     ),
                   ),
                 ],
+                // Sent for a thing that is no longer out: said, as the web page
+                // behind the same link says it, rather than a page that never
+                // mentions what was tapped.
+                if (invite?.itemRetired == true) ...[
+                  const SizedBox(height: Insets.lg),
+                  Text(
+                    invite!.used
+                        ? 'Tingen som ble delt med deg er ikke lenger ute.'
+                        : 'Tingen som ble delt med deg er ikke lenger ute. Invitasjonen virker '
+                            'fortsatt.',
+                    style: const TextStyle(color: Color(0xB8FFFFFF), fontSize: 14, height: 1.45),
+                  ),
+                ],
                 if (invite?.used == true) ...[
                   const SizedBox(height: Insets.lg),
                   Text(
@@ -992,30 +1005,35 @@ class _InterestsScreenState extends State<InterestsScreen> {
                                         ? SwaplyColors.greenPressed
                                         : SwaplyColors.fieldLine),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(entry.value,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: selected
-                                            ? SwaplyColors.greenDeep
-                                            : SwaplyColors.inkBody,
-                                      )),
-                                  if (selected) ...[
-                                    const SizedBox(width: 6),
-                                    // Said by `selected` above, so not read
-                                    // out as a tick as well.
-                                    const ExcludeSemantics(
-                                      child: Text('✓',
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                              color: SwaplyColors.greenText)),
-                                    ),
+                              // Smaller rather than past the tile's edge when
+                              // the text is set large and the ✓ is beside it.
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(entry.value,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: selected
+                                              ? SwaplyColors.greenDeep
+                                              : SwaplyColors.inkBody,
+                                        )),
+                                    if (selected) ...[
+                                      const SizedBox(width: 6),
+                                      // Said by `selected` above, so not read
+                                      // out as a tick as well.
+                                      const ExcludeSemantics(
+                                        child: Text('✓',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: SwaplyColors.greenText)),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
                             ),
                           ),

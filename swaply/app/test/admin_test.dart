@@ -308,6 +308,24 @@ void main() {
       expect(find.byType(SwaplyToast), findsOneWidget);
     });
 
+    testWidgets('a lever that worked is not logged as failed when the session is not heard after it',
+        (tester) async {
+      // The session was asked again inside the lever's own `try`, and with
+      // no answer «✕ Vi får ikke kontakt …» went up in the log over the line
+      // saying the account had been made.
+      asAdmin();
+      await mount(tester, const AdminScreen());
+      server.overrides['GET /me'] = unreachable;
+
+      await tester.tap(find.text('Lag testkonto'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
+      expect(find.textContaining('✕'), findsNothing);
+      expect(find.text(noContact), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('a first asking that fails offers to ask again, and the tool comes', (tester) async {
       asAdmin();
       server.overrides['GET /admin/overview'] = unreachable;
@@ -415,6 +433,33 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(session.interestsPending, isTrue);
+    });
+
+    testWidgets('coming back to your own account is not your 02 again, interests or none',
+        (tester) async {
+      // The way back read the admin's own interests as the test account's
+      // were read: an admin who had pressed «Hopp over» on 02 was shown it
+      // again after every «Tilbake til …».
+      final skipped = {...FakeServer.admin, 'interests': const <String>[]};
+      server.overrides['POST /auth/login'] = {'token': 'tok', 'user': skipped};
+      server.overrides['GET /me'] = skipped;
+      await session.login('ola@epost.no', 'passord');
+      session.dismissInterests();
+      await mount(tester, const AdminScreen(), signedIn: false);
+      expect(session.interestsPending, isFalse);
+
+      server.overrides['GET /me'] = FakeServer.actingAsTest;
+      await tester.tap(find.text('Bli denne'));
+      await tester.pumpAndSettle();
+      expect(session.actingAs, isTrue);
+
+      server.overrides['GET /me'] = skipped;
+      await tester.tap(find.textContaining('Tilbake til Ola N.'));
+      await tester.pumpAndSettle();
+
+      expect(session.actingAs, isFalse);
+      expect(session.isAdmin, isTrue);
+      expect(session.interestsPending, isFalse);
     });
 
     testWidgets('switching parks your own token and the floor gets you back',

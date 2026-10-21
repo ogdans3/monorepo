@@ -96,15 +96,31 @@ class _AdminScreenState extends State<AdminScreen> {
   /// Every lever reports what it did, in order, in the log at the foot of the
   /// screen: a tool whose buttons do things silently is a tool you stop
   /// trusting the first time one of them seems not to have worked.
+  ///
+  /// Only the lever writes a ✕. What is asked for after it is reading back,
+  /// and the session's own asking used to share the lever's `try`: with no
+  /// answer to it, «✕ Vi får ikke kontakt …» went up over the line saying
+  /// the lever had worked. The overview says its own failure in a toast, and
+  /// the session's is quiet, as it is everywhere else.
   Future<void> _run(String key, Future<String> Function(SwaplyApi api) action) async {
     setState(() => _busy = key);
     try {
-      final said = await action(context.read<SwaplyApi>());
+      final String said;
+      try {
+        said = await action(context.read<SwaplyApi>());
+      } on ApiException catch (e) {
+        if (mounted) setState(() => _said.insert(0, '✕ ${e.message}'));
+        return;
+      }
       if (mounted) setState(() => _said.insert(0, said));
       await _load();
-      if (mounted) await context.read<Session>().refresh();
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _said.insert(0, '✕ ${e.message}'));
+      if (mounted) {
+        try {
+          await context.read<Session>().refresh();
+        } on ApiException {
+          // The bar's counts come with the next asking.
+        }
+      }
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -216,7 +232,7 @@ class _AdminScreenState extends State<AdminScreen> {
       if (!account.claimed) 'uten profil',
       if (account.town != null) account.town!,
       '${account.itemCount} ting',
-      if (account.openTrades > 0) '${account.openTrades} åpne bytter',
+      if (account.openTrades > 0) counted(account.openTrades, 'åpent bytte', 'åpne bytter'),
     ].join(' · ');
 
     return Container(
@@ -421,7 +437,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     final opened = await api.adminRunSweep();
                     return opened == 0
                         ? 'Sweepen fant ingen nye sirkler'
-                        : 'Sweepen åpnet $opened bytter';
+                        : 'Sweepen åpnet ${counted(opened, 'bytte', 'bytter')}';
                   })),
         ],
       );
@@ -439,7 +455,8 @@ class _AdminScreenState extends State<AdminScreen> {
                 onPressed: () => _run('state', (api) async {
                       final state = await api.adminState();
                       if (mounted) setState(() => _state = state);
-                      return 'Leste ${state.items.length} gjenstander og ${state.trades.length} bytter';
+                      return 'Leste ${counted(state.items.length, 'gjenstand', 'gjenstander')} og '
+                          '${counted(state.trades.length, 'bytte', 'bytter')}';
                     }))
           else ...[
             for (final item in _state!.items)

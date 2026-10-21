@@ -505,7 +505,7 @@ class Session extends ChangeNotifier {
     final parked = _adminToken;
     final session = await api.adminSession(accountId);
     _adminToken ??= mine;
-    await _switch(session.token, undo: () {
+    await _switch(session.token, firstRun: true, undo: () {
       api.token = mine;
       _adminToken = parked;
     });
@@ -523,7 +523,7 @@ class Session extends ChangeNotifier {
     if (parked == null) return logout();
     final acting = api.token;
     _adminToken = null;
-    await _switch(parked, undo: () {
+    await _switch(parked, firstRun: false, undo: () {
       api.token = acting;
       _adminToken = parked;
     }, deadToken: () => api.token = acting);
@@ -535,9 +535,12 @@ class Session extends ChangeNotifier {
   /// [_persist] writes them — and never a token whose 02 was lost on the way.
   /// [undo] puts everything back when there is no answer, since nothing has
   /// been kept yet; [deadToken] instead, when the server said [token] opens
-  /// nothing.
+  /// nothing. [firstRun] is whether 02 may be owed to whoever [token] is: a
+  /// test account being become, and not the admin being gone back to.
   Future<void> _switch(String token,
-      {required void Function() undo, void Function()? deadToken}) async {
+      {required bool firstRun,
+      required void Function() undo,
+      void Function()? deadToken}) async {
     // Somebody else from here on, as after a sign-in: a `/me` still on its
     // way for the account being left would put it back when it landed.
     _decided++;
@@ -558,7 +561,12 @@ class Session extends ChangeNotifier {
     // Their first run, not yours. «Nullstill interesser» is sold as bringing
     // screen 02 back, and emptying the column is only half of that — somebody
     // has to walk through the gate again for anybody to see the picker.
-    interestsPending = found.interests.isEmpty;
+    //
+    // Nor yours on the way back: the admin went through 02 at the gate, and
+    // «Hopp over» there leaves the interests as empty as never having been
+    // asked. Read off the column, an admin who skipped it was shown 02 again
+    // after every «Tilbake til …».
+    interestsPending = firstRun && found.interests.isEmpty;
     _become(found);
     await _persist();
   }

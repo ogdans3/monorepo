@@ -322,6 +322,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
     final grid = _grid;
     if (!mounted || grid == null || _loadingMore || _moreFailed || _loading) return;
     if (_error != null || _end || _next >= _total || _asked != _settled) return;
+    // A kind hidden since the grid was asked for is out of the server's order
+    // now, and everything after it has moved up as many places as it had
+    // listings above [_next]: the next page from there started past those,
+    // and they were never shown. So the grid is asked for again behind
+    // itself, as far down as it has been read, which also takes the kind out
+    // of «N treff»; the page after it is asked for from what that says.
+    if (_hidden.any((h) => h.until != null && _shown <= h.until!)) {
+      unawaited(_load(quiet: true));
+      return;
+    }
     final api = context.read<SwaplyApi>();
     final asked = _asked;
     setState(() => _loadingMore = true);
@@ -584,7 +594,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
           setState(() => _filters = _filters.inCategory(category));
           _load();
         },
-        child: Center(child: Pill(label, selected: _chip == category)),
+        // Said as well as lit: in green alone a screen reader had a row of
+        // buttons and no way to tell which filter was on.
+        child: Center(
+            child: Semantics(
+                selected: _chip == category, child: Pill(label, selected: _chip == category))),
       );
 
   Widget _body() {
@@ -888,6 +902,9 @@ class _ItemCardState extends State<ItemCard> {
     final item = widget.item;
 
     return GestureDetector(
+      // The whole card, the space beside a short caption line included: a
+      // value that goes under the name leaves room at its right.
+      behavior: HitTestBehavior.opaque,
       onTap: _open,
       onLongPress: () =>
           _showContextMenu(context, item, onChanged: widget.onChanged, onHide: widget.onHide),
@@ -949,33 +966,7 @@ class _ItemCardState extends State<ItemCard> {
           // The export's caption: 7 down and 2 in, the name at 13/700 with the
           // value at 10.5/600 beside it, and the name wraps while the value
           // stays put at the top right.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Flexible(
-                  child: Text(item.title,
-                      style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.15,
-                          fontWeight: FontWeight.w700,
-                          color: SwaplyColors.ink)),
-                ),
-                if (item.estimatedValueNok != null) ...[
-                  const SizedBox(width: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text('Verdi ${kr(item.estimatedValueNok)}',
-                        style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: SwaplyColors.grey)),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          ListingCaption(item),
         ],
       ),
     );
@@ -1073,6 +1064,10 @@ Future<void> followWish(BuildContext? context, NavigatorState root, Session sess
   BuildContext over() => context != null && context.mounted ? context : root.context;
   final tradeId = wished.tradeId;
   if (tradeId != null) {
+    // The bar counts the trades waiting on this person, and the heart's may
+    // be one it does not count yet: new, or opened by another heart over the
+    // same ring in the same moment, which the server answers as not new.
+    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
     // A heart taken back and pressed again finds the ring its first press
     // opened, and the server answers with that trade rather than a second
     // one. 06a is the moment a trade opens, and this one has had it: put up
@@ -1080,9 +1075,6 @@ Future<void> followWish(BuildContext? context, NavigatorState root, Session sess
     // with the same people. The heart just turns, and the trade is in Bytter
     // where it was. Nor 10a: somebody in a ring has something to give.
     if (!wished.tradeIsNew) return;
-    // The bar counts the trades waiting on this person, and this one is new:
-    // it went on counting as before the heart until something else asked.
-    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
     final on = over();
     if (on.mounted) await pushOverBar<void>(on, MatchScreen(tradeId: tradeId));
     return;
@@ -1397,21 +1389,24 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                                   setState(() => _sort = key);
                                   _countPreview();
                                 },
-                                child: Container(
-                                  height: 33,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: _sort == key ? Colors.white : null,
-                                    borderRadius: BorderRadius.circular(11),
+                                child: Semantics(
+                                  selected: _sort == key,
+                                  child: Container(
+                                    height: 33,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: _sort == key ? Colors.white : null,
+                                      borderRadius: BorderRadius.circular(11),
+                                    ),
+                                    child: Text(label,
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight:
+                                                _sort == key ? FontWeight.w700 : FontWeight.w600,
+                                            color: _sort == key
+                                                ? SwaplyColors.ink
+                                                : SwaplyColors.greySoft)),
                                   ),
-                                  child: Text(label,
-                                      style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight:
-                                              _sort == key ? FontWeight.w700 : FontWeight.w600,
-                                          color: _sort == key
-                                              ? SwaplyColors.ink
-                                              : SwaplyColors.greySoft)),
                                 ),
                               ),
                             ),
@@ -1453,8 +1448,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
 
   /// The chips on 05: filled green when chosen, the chip grey otherwise. Each
   /// is in a [TapRoom] with the ones beside it, which gives it its area.
-  Widget _choice(String label, bool selected, VoidCallback onTap) =>
-      TapArea(onTap: onTap, child: Pill(label, selected: selected));
+  Widget _choice(String label, bool selected, VoidCallback onTap) => TapArea(
+      onTap: onTap,
+      // Said as well as drawn; see the chips over the grid.
+      child: Semantics(selected: selected, child: Pill(label, selected: selected)));
 }
 
 /// 10a. Wishes and nothing to give is a dead end, so we say so: at the fifth

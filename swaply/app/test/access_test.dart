@@ -12,7 +12,9 @@ import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/api/models.dart';
 import 'package:swaply_app/screens/agreement.dart';
 import 'package:swaply_app/screens/counter_offer.dart';
+import 'package:swaply_app/screens/discover.dart';
 import 'package:swaply_app/screens/onboarding.dart';
+import 'package:swaply_app/screens/post_item.dart';
 import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/screens/review.dart';
 import 'package:swaply_app/state/session.dart';
@@ -212,6 +214,63 @@ void main() {
           isSemantics(label: '4', isSelected: true, isButton: true));
       expect(tester.getSemantics(find.text('3')),
           isSemantics(label: '3', isSelected: false, isButton: true));
+
+    testWidgets('7. the chip over Oppdag that is lit is selected, and the others are not',
+        (tester) async {
+      // Lit in green and said as nothing: a screen reader had a row of
+      // buttons and no way to tell which filter was on.
+      final semantics = tester.ensureSemantics();
+      await mount(tester, const DiscoverScreen());
+
+      expect(tester.getSemantics(find.text('Alt')),
+          isSemantics(label: 'Alt', isButton: true, hasSelectedState: true, isSelected: true));
+      expect(tester.getSemantics(find.text('Gaming')),
+          isSemantics(label: 'Gaming', isButton: true, hasSelectedState: true, isSelected: false));
+
+      await tester.tap(find.text('Gaming'));
+      await tester.pumpAndSettle();
+      expect(tester.getSemantics(find.text('Gaming')),
+          isSemantics(label: 'Gaming', hasSelectedState: true, isSelected: true));
+      expect(tester.getSemantics(find.text('Alt')),
+          isSemantics(label: 'Alt', hasSelectedState: true, isSelected: false));
+      semantics.dispose();
+    });
+
+    testWidgets('8. 05b says which subcategory, condition and order are chosen', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await mount(tester,
+          const AdvancedSearchScreen(initial: SearchFilters(category: 'verktoy'), query: ''));
+
+      expect(tester.getSemantics(find.text('Alle')),
+          isSemantics(hasSelectedState: true, isSelected: true));
+      expect(tester.getSemantics(find.text('Elektroverktøy')),
+          isSemantics(hasSelectedState: true, isSelected: false));
+      expect(tester.getSemantics(find.text('Nyeste')),
+          isSemantics(hasSelectedState: true, isSelected: true));
+      expect(tester.getSemantics(find.text('Verdi').last),
+          isSemantics(hasSelectedState: true, isSelected: false));
+
+      await tester.tap(find.text('God'));
+      await tester.pump();
+      expect(tester.getSemantics(find.text('God')),
+          isSemantics(hasSelectedState: true, isSelected: true));
+      expect(tester.getSemantics(find.text('Ny')),
+          isSemantics(hasSelectedState: true, isSelected: false));
+      semantics.dispose();
+    });
+
+    testWidgets('9. 10b says which type and which condition are chosen', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await mount(tester, const PostItemScreen());
+
+      expect(tester.getSemantics(find.text('Gjenstand')),
+          isSemantics(hasSelectedState: true, isSelected: true));
+      expect(tester.getSemantics(find.text('Tjeneste')),
+          isSemantics(hasSelectedState: true, isSelected: false));
+      expect(tester.getSemantics(find.text('God')),
+          isSemantics(hasSelectedState: true, isSelected: true));
+      expect(tester.getSemantics(find.text('Slitt')),
+          isSemantics(hasSelectedState: true, isSelected: false));
       semantics.dispose();
     });
   });

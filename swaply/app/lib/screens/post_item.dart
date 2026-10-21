@@ -678,25 +678,30 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
     return SwaplyScaffold(
       currentTab: 1,
+      // Correcting a listing is not the tab: it is opened over 04 and covers
+      // the bar, and like every other screen there it has «‹». Without it the
+      // only way out short of saving was a gesture the screen never offered.
+      // The export draws 10b as the tab's own first screen, which is the new
+      // listing, and that stays as drawn.
+      appBar: _editing == null ? null : swaplyAppBar(context, 'Rediger annonsen'),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // «Legg ut en gjenstand» and «1/2» do not both fit on a narrow
-                // phone, and the heading is the one that may give way.
-                Flexible(
-                    child: Text(_editing == null ? 'Legg ut en gjenstand' : 'Rediger annonsen',
-                        style: Type.screen)),
-                if (!signedIn && _editing == null)
-                  const Text('1/2',
-                      style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.grey)),
-              ],
+          if (_editing == null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // «Legg ut en gjenstand» and «1/2» do not both fit on a
+                  // narrow phone, and the heading is the one that may give way.
+                  const Flexible(child: Text('Legg ut en gjenstand', style: Type.screen)),
+                  if (!signedIn)
+                    const Text('1/2',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700, color: SwaplyColors.grey)),
+                ],
+              ),
             ),
-          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(22, 13, 22, 0),
@@ -1022,21 +1027,26 @@ class _PostItemScreenState extends State<PostItemScreen> {
                         setState(() => _condition = e.key);
                         _changed();
                       },
-                      child: Container(
-                        height: 31,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _condition == e.key ? Colors.white : null,
-                          borderRadius: BorderRadius.circular(9),
+                      // Said as well as drawn, which a white segment alone
+                      // was not to a screen reader.
+                      child: Semantics(
+                        selected: _condition == e.key,
+                        child: Container(
+                          height: 31,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _condition == e.key ? Colors.white : null,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Text(e.value,
+                              style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight:
+                                      _condition == e.key ? FontWeight.w700 : FontWeight.w600,
+                                  color: _condition == e.key
+                                      ? SwaplyColors.ink
+                                      : SwaplyColors.greySoft)),
                         ),
-                        child: Text(e.value,
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight:
-                                    _condition == e.key ? FontWeight.w700 : FontWeight.w600,
-                                color: _condition == e.key
-                                    ? SwaplyColors.ink
-                                    : SwaplyColors.greySoft)),
                       ),
                     ),
                   ))
@@ -1066,21 +1076,28 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2.2),
                         ),
                       )
-                    : const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('+',
-                              style: TextStyle(
-                                  fontSize: 26, height: 1, color: SwaplyColors.greenText)),
-                          SizedBox(height: 4),
-                          Text('Legg til bilder',
-                              style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: SwaplyColors.greenText)),
-                          Text('opptil 10',
-                              style: TextStyle(fontSize: 9, color: SwaplyColors.grey)),
-                        ],
+                    // Smaller rather than past the tile's edge when the text is
+                    // set large: the tile is the export's 106 square either way.
+                    : const Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('+',
+                                  style: TextStyle(
+                                      fontSize: 26, height: 1, color: SwaplyColors.greenText)),
+                              SizedBox(height: 4),
+                              Text('Legg til bilder',
+                                  style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: SwaplyColors.greenText)),
+                              Text('opptil 10',
+                                  style: TextStyle(fontSize: 9, color: SwaplyColors.grey)),
+                            ],
+                          ),
+                        ),
                       ),
               ),
             ),
@@ -1184,19 +1201,22 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   Widget _pick(String label, bool selected, VoidCallback onTap) => TapArea(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: selected ? SwaplyColors.greenPressed : Colors.white,
-            borderRadius: BorderRadius.circular(Radii.pill),
-            border: Border.all(
-                color: selected ? SwaplyColors.greenPressed : const Color(0x22064E3B)),
+        child: Semantics(
+          selected: selected,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? SwaplyColors.greenPressed : Colors.white,
+              borderRadius: BorderRadius.circular(Radii.pill),
+              border: Border.all(
+                  color: selected ? SwaplyColors.greenPressed : const Color(0x22064E3B)),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : SwaplyColors.ink)),
           ),
-          child: Text(label,
-              style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : SwaplyColors.ink)),
         ),
       );
 }
