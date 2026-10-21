@@ -307,7 +307,7 @@
                     <span id={`${uid}-format-value`}>{formatTriggerText}</span>
                 </Select.Trigger>
 
-                <Select.Content aria-labelledby={`${uid}-format-label`} class="min-w-[14rem]">
+                <Select.Content aria-label="Output formats" class="min-w-[14rem]">
                     <Select.Group>
                         <Select.Label class="px-2 py-1 text-xs text-muted-foreground">
                             Format

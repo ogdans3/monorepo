@@ -215,7 +215,7 @@
                             </span>
                         </Select.Trigger>
 
-                        <Select.Content aria-labelledby={`${uid}-file-label`}
+                        <Select.Content aria-label="Files"
                                 class="focus-override border-muted bg-background shadow-popover z-50 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border p-1"
                                 sideOffset={8}
                         >

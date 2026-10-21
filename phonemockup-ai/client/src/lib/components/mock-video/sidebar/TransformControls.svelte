@@ -164,7 +164,7 @@
             </Select.Trigger>
 
             {#if !isDisabled}
-                <Select.Content aria-labelledby={`${uid}-curve-label`} class="min-w-[14rem]">
+                <Select.Content aria-label="Animation curves" class="min-w-[14rem]">
                     <Select.Group>
                         <Select.Label class="px-2 py-1 text-xs text-muted-foreground">
                             Curves

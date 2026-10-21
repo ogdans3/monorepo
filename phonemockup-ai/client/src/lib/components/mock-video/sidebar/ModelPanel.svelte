@@ -61,7 +61,7 @@
         <span id={`${uid}-model-value`}>{project.model?.name ?? "Select model"}</span>
       </Select.Trigger>
 
-      <Select.Content aria-labelledby={`${uid}-model-label`} class="min-w-[16rem]">
+      <Select.Content aria-label="3D models" class="min-w-[16rem]">
         <Select.Group>
           <Select.Label>Available models</Select.Label>
           {#each models as m (m.id)}

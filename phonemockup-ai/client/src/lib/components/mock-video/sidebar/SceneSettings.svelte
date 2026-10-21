@@ -152,7 +152,7 @@
                 <span id={`${uid}-preset-value`}>{triggerText}</span>
             </Select.Trigger>
 
-            <Select.Content aria-labelledby={`${uid}-preset-label`} class="min-w-[14rem]">
+            <Select.Content aria-label="Resolution presets" class="min-w-[14rem]">
                 <Select.Group>
                     <Select.Label class="px-2 py-1 text-xs text-muted-foreground">Presets</Select.Label>
                     {#each presetKeys as key (key)}
