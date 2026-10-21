@@ -73,6 +73,32 @@ void main() {
       expect(find.text(noContact), findsNothing);
     });
 
+    testWidgets('2b. a refusal because the trade moved on elsewhere asks for the trade again',
+        (tester) async {
+      // The yes was taken back on another phone. «Angre godkjenningen» here
+      // was refused, and the page went on offering it, and «Trekk deg» on
+      // the strength of a yes that was no longer there.
+      final accepted = {
+        ...FakeServer.trade,
+        'you': {...FakeServer.trade['you'] as Map, 'accepted': true},
+      };
+      server.overrides['GET /trades/trade-1'] = accepted;
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+      expect(find.text('Angre godkjenningen'), findsOneWidget);
+
+      server.overrides['GET /trades/trade-1'] = FakeServer.trade;
+      server.overrides['DELETE /trades/trade-1/accept'] =
+          const Refusal(409, 'not_accepted', 'Du har ikke godtatt dette byttet.');
+      await tester.tap(find.text('Angre godkjenningen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Angre godkjenningen').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Du har ikke godtatt dette byttet.'), findsOneWidget);
+      expect(find.text('Angre godkjenningen'), findsNothing);
+      expect(find.text('Godta byttet'), findsOneWidget);
+    });
+
     testWidgets('2. a yes on 06c whose badges get no answer throws nothing', (tester) async {
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
       server.overrides['GET /me'] = unreachable;

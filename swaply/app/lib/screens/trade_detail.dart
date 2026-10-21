@@ -489,7 +489,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // the button had spun for the whole of the asking's patience.
       _askSessionAgain();
     } on ApiException catch (e) {
-      if (mounted) showError(context, e);
+      if (!mounted) return;
+      showError(context, e);
+      // A refusal is the server saying the trade is not what this page
+      // shows — a yes already taken back on another phone, an offer changed,
+      // a trade ended — so the page asks for it again, quietly, under the
+      // server's words. It went on offering what had just been refused, and
+      // «Trekk deg» on the strength of a yes that was no longer there. No
+      // answer says nothing about the trade, and asks for nothing.
+      if (!e.isNoContact) unawaited(_load(quiet: true));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1933,7 +1941,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         );
       }
     } on ApiException catch (e) {
-      if (mounted) showError(context, e);
+      if (!mounted) return;
+      showError(context, e);
+      // Refused because the trade has moved on — asked already on another
+      // phone, or no longer agreed: the page asks for it again, as [_run]
+      // does.
+      if (!e.isNoContact) unawaited(_load(quiet: true));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
