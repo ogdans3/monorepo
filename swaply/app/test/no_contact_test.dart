@@ -313,6 +313,21 @@ void main() {
       expect(toast(tester), noContact);
     });
 
+    testWidgets('3b. 13: a pull with no contact keeps the profile, and says so', (tester) async {
+      // Its pull asked the session again and handed the refusal straight to
+      // the indicator: the spinner stopped, nothing was said, and the
+      // exception went past everybody.
+      await mount(tester, const ProfileScreen());
+      expect(find.text('Mine gjenstander · 1'), findsOneWidget);
+
+      server.overrides['GET /me'] = unreachable;
+      await pullDown(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Mine gjenstander · 1'), findsOneWidget);
+      expect(toast(tester), noContact);
+    });
+
     testWidgets('4. 06g: a message that went, and a reload that did not, keeps the conversation',
         (tester) async {
       await mount(tester, const ThreadScreen(threadId: 'thread-1'));

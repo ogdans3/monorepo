@@ -196,10 +196,15 @@ class InvitePreview {
         used = j['used'] as bool? ?? false,
         inviterName = (j['inviter'] as Map<String, dynamic>?)?['displayName'] as String?,
         itemTitle = (j['item'] as Map<String, dynamic>?)?['title'] as String?,
+        itemRetired = j['itemRetired'] as bool? ?? false,
         itemId = j['itemId'] as String?;
 
   final String token;
   final bool used;
+
+  /// The link was sent for a listing that is no longer out: taken down, or
+  /// traded away. The invitation still works, and there is nothing to open.
+  final bool itemRetired;
   final String? inviterName, itemTitle;
 
   /// The listing behind the link, for somebody who is already signed in and can
@@ -221,6 +226,7 @@ class UserRef {
         interests = (j['interests'] as List?)?.cast<String>() ?? const [],
         items = ((j['items'] as List?) ?? const []).map((e) => Item.fromJson(e)).toList(),
         blockedByYou = j['blockedByYou'] as bool? ?? false,
+        gone = j.containsKey('displayName') && j['displayName'] == null,
         accepted = j['accepted'] as bool?,
         sentAt = _date(j['sentAt']),
         receivedAt = _date(j['receivedAt']),
@@ -230,6 +236,12 @@ class UserRef {
   final String id, displayName;
   final String? town;
   final bool blockedByYou;
+
+  /// Somebody who has deleted their account, where the server says so by
+  /// sending no name: the people in a conversation (`GET /threads/:id`).
+  /// Elsewhere it writes «Slettet bruker» in the name's place, and this is
+  /// false there.
+  final bool gone;
   final double? ratingAvg;
   final int ratingCount;
   final int? itemCount, tradeCount, position;
@@ -450,12 +462,16 @@ class Trade {
   /// An owner took down a listing that was on the table.
   static const closedByListingRemoved = 'listing_removed';
 
-  /// Ended in a way that leaves nobody to write to: somebody in it deleted
-  /// their account, or blocked another. A trade that ended any other way
-  /// keeps its conversation, since how long an ordinary conversation lives
-  /// is an open question.
+  /// Ended in a way that leaves nobody to write to: the other one in a pair
+  /// deleted their account, or somebody blocked another. A trade that ended
+  /// any other way keeps its conversation, since how long an ordinary
+  /// conversation lives is an open question. A ring one of whose two others
+  /// deleted theirs still has the third to write to, and the server takes
+  /// messages there: it is closed once both have gone, which only the
+  /// conversation's people say (see [UserRef.gone]).
   bool get conversationClosed =>
-      state == 'cancelled' && (closeCode == closedByErasure || closeCode == closedByBlock);
+      state == 'cancelled' &&
+      (closeCode == closedByBlock || (closeCode == closedByErasure && !isChain && participants.length <= 2));
 
   final int? offerSeq, yourReviewScore;
   final int youPosition, youGiveValue, youGetValue, difference;

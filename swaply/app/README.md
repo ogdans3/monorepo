@@ -354,6 +354,13 @@ over. A page that gets no answer leaves the grid as it is and says so in a
 toast, and the next drag asks again; one that lands after a new search is
 dropped. `test/discover_test.dart` holds it.
 
+A card's value sits beside its name, as drawn, only while the name's longest
+word fits beside it; otherwise the value goes under the name. Beside it,
+«Landeveissykkel» broke as «Landeveissyk / kel» at the export's own 390, and
+on a 320 phone «Sykkelhjelm» as «Sykkelhjel / m». So the goldens of 05 and
+13b differ from the export there on purpose. `ListingCaption` in
+`widgets/common.dart`, on 05, 13 and 13b alike.
+
 The chips over the grid are 05b's category, chosen from above it, and nothing
 else. A chip takes the place of the category chosen on 05b and lets go of the
 subcategory chosen under it, and 05b opens on the chip's category. They used

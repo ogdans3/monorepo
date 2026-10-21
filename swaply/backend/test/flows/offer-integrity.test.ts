@@ -198,6 +198,32 @@ describe('what a counter-offer may contain', () => {
     expect(res.body!['code']).toBe('no_such_position')
   })
 
+  test('6b. and from one of them to the other, in a sum a person could pay, said in words', async () => {
+    // Both used to walk into the database — the check that a payer is not
+    // the payee, and the column's `int` — and came back as a 500.
+    const items = [
+      { itemId: drill, giverPosition: mine },
+      { itemId: tent, giverPosition: theirs },
+    ]
+
+    const toSelf = await call('POST', `/trades/${tradeId}/counter`, {
+      token: ola,
+      body: { items, cash: { payerPosition: mine, payeePosition: mine, amountNok: 200 } },
+    })
+    expect(toSelf.status).toBe(400)
+    expect(toSelf.body).toEqual({
+      code: 'cash_two_parties',
+      message: 'Mellomlegget må gå fra én av dere til en annen.',
+    })
+
+    const huge = await call('POST', `/trades/${tradeId}/counter`, {
+      token: ola,
+      body: { items, cash: { payerPosition: mine, payeePosition: theirs, amountNok: 5_000_000_000 } },
+    })
+    expect(huge.status).toBe(400)
+    expect(huge.body!['message']).toBe('Mellomlegget kan være høyst 10 000 000 kr.')
+  })
+
   test('7. a retired listing cannot be put back on the table', async () => {
     const gone = await list(ola, 'Gammel sag')
     expect((await call('DELETE', `/items/${gone}`, { token: ola })).status).toBe(204)

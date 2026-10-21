@@ -266,4 +266,65 @@ void main() {
     expect(find.bySemanticsLabel(RegExp('1 ulest melding')), findsOneWidget);
     semantics.dispose();
   });
+
+  group('06g over several days', () {
+    // The date stood over the first message only, so what was said today
+    // read as said on the day the conversation began.
+    setUp(() {
+      // Thursday morning.
+      now = () => DateTime(2026, 9, 10, 9, 0);
+      addTearDown(() => now = DateTime.now);
+    });
+
+    Map<String, Object?> message(String id, String at, {bool mine = false}) => {
+          'id': id,
+          'senderId': mine ? 'me-1' : 'kari-1',
+          'senderName': mine ? 'Ola N.' : 'Kari N.',
+          'body': 'Melding $id',
+          'mine': mine,
+          // The phone's own time, as the app reads it.
+          'createdAt': at,
+        };
+
+    testWidgets('13. says the day over the first message of each day', (tester) async {
+      server.overrides['GET /threads/thread-1'] = {
+        ...FakeServer.thread,
+        'messages': [
+          message('a', '2026-09-08T14:02:00'),
+          message('b', '2026-09-08T14:10:00', mine: true),
+          message('c', '2026-09-09T20:15:00'),
+          message('d', '2026-09-10T08:30:00', mine: true),
+          message('e', '2026-09-10T08:41:00'),
+        ],
+      };
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.text('8.9. 14:02'), findsOneWidget);
+      expect(find.text('I går 20:15'), findsOneWidget);
+      expect(find.text('I dag 08:30'), findsOneWidget);
+      // One a day, and not over the messages that follow on the same day.
+      expect(find.textContaining(':10'), findsNothing);
+      expect(find.textContaining('08:41'), findsNothing);
+      // Each over the message that begins its day.
+      expect(tester.getRect(find.text('I går 20:15')).bottom,
+          lessThanOrEqualTo(tester.getRect(find.text('Melding c')).top));
+      expect(tester.getRect(find.text('I går 20:15')).top,
+          greaterThanOrEqualTo(tester.getRect(find.text('Melding b')).bottom));
+    });
+
+    testWidgets('14. …and a conversation of one day has the one label, as drawn',
+        (tester) async {
+      server.overrides['GET /threads/thread-1'] = {
+        ...FakeServer.thread,
+        'messages': [
+          message('a', '2026-09-10T07:02:00'),
+          message('b', '2026-09-10T07:10:00', mine: true),
+        ],
+      };
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.text('I dag 07:02'), findsOneWidget);
+      expect(find.textContaining('I dag'), findsOneWidget);
+    });
+  });
 }

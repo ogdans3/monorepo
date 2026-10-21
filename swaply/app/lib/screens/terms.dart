@@ -11,16 +11,24 @@ import '../widgets/common.dart';
 const termsVersion = '2026-09-06';
 
 /// The terms as one person agrees to them, [other] being whoever they trade
-/// with, by first name.
-List<String> tradeTerms(String other) => [
-  'Jeg leverer eller sender tingene mine innen 7 dager etter at begge har godtatt',
-  'Tingene mine er som beskrevet i annonsen',
-  'Mellomlegg betales når begge har godtatt, før noe sendes',
-  'Trekker jeg meg etterpå, må $other si ja først. Er noe sendt, kan jeg ikke trekke meg',
-];
+/// with, by first name. In a ring of three [ring] is true and [other] is the
+/// two of them, «Ingrid eller Kari»: all three say yes, and either of the
+/// others answering yes lets a person out, as the server has it. The same
+/// terms and the same version either way, said of the trade they are said
+/// for.
+List<String> tradeTerms(String other, {bool ring = false}) {
+  final everybody = ring ? 'alle' : 'begge';
+  return [
+    'Jeg leverer eller sender tingene mine innen 7 dager etter at $everybody har godtatt',
+    'Tingene mine er som beskrevet i annonsen',
+    'Mellomlegg betales når $everybody har godtatt, før noe sendes',
+    'Trekker jeg meg etterpå, må $other si ja først. Er noe sendt, kan jeg ikke trekke meg',
+  ];
+}
 
 /// «Byttevilkår», whole, over whatever screen asked.
-Future<void> showTradeTerms(BuildContext context, {required String other}) => showDialog<void>(
+Future<void> showTradeTerms(BuildContext context, {required String other, bool ring = false}) =>
+    showDialog<void>(
   context: context,
   builder: (dialog) => AlertDialog(
     title: const Text('Byttevilkår', style: Type.heading),
@@ -31,7 +39,7 @@ Future<void> showTradeTerms(BuildContext context, {required String other}) => sh
         children: [
           const Text('Versjon $termsVersion', style: Type.small),
           const SizedBox(height: Insets.sm),
-          ...tradeTerms(other).map(
+          ...tradeTerms(other, ring: ring).map(
             (t) => Padding(
               padding: const EdgeInsets.only(bottom: Insets.sm),
               child: Text('• $t', style: Type.body),

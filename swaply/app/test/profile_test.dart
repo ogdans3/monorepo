@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/screens/item_detail.dart';
+import 'package:swaply_app/screens/liked.dart';
 import 'package:swaply_app/screens/onboarding.dart';
 import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/state/session.dart';
@@ -145,6 +146,26 @@ void main() {
       expect(find.byType(ItemDetailScreen), findsNothing);
       expect(server.asked('GET /me'), asked + 1);
       expect(find.text('Bosch drill 18V med koffert'), findsOneWidget);
+    });
+
+    testWidgets('4. back from 12, the likes are counted again', (tester) async {
+      // A liker blocked from 12 no longer counts, and «♥ 4 har likt
+      // tingene dine» went on counting them until the tab was left.
+      var likes = 4;
+      server.overrides['GET /me'] = (http.Request _) => {...FakeServer.me, 'likedByCount': likes};
+      await mount(tester, const ProfileScreen());
+      expect(find.text('♥ 4 har likt tingene dine'), findsOneWidget);
+
+      await tester.tap(find.text('Se hvem ›'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LikedScreen), findsOneWidget);
+
+      likes = 3;
+      await tester.tap(find.bySemanticsLabel('Tilbake'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LikedScreen), findsNothing);
+      expect(find.text('♥ 3 har likt tingene dine'), findsOneWidget);
     });
   });
 

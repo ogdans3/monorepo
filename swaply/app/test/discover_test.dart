@@ -304,6 +304,60 @@ void main() {
       expect(card(0), findsNothing);
       expect(find.text('Ingen treff'), findsNothing);
     });
+
+    testWidgets('9. after «Ikke vis meg slike», the next page skips nothing, and the count is right',
+        (tester) async {
+      // Five of the first thirty are of the kind hidden. The server leaves
+      // them out from then on, so everything after them moves up five
+      // places: the next page asked from 30 started at what had been 35,
+      // and the five between were never shown. «N treff» took the five off
+      // a count the server had already taken them off.
+      final all = [
+        for (final item in listings(70))
+          if ((item['title'] as String).compareTo('Ting 5') < 0 &&
+              (item['title'] as String).length == 6)
+            {...item, 'subcategory': 'PS5'}
+          else
+            item,
+      ];
+      var hidden = false;
+      server.overrides['POST /me/hidden'] = (http.Request request) {
+        hidden = true;
+        return {
+          'hidden': {'category': 'gaming', 'subcategory': 'PS5', 'itemId': null},
+          'hiddenCount': 1,
+        };
+      };
+      server.overrides['GET /discover'] = (http.Request request) {
+        final query = request.url.queryParameters;
+        asked.add(query);
+        final shown = [
+          for (final item in all)
+            if (!hidden || item['subcategory'] != 'PS5') item,
+        ];
+        final from = int.parse(query['offset']!);
+        final take = int.parse(query['limit']!);
+        return {'total': shown.length, 'items': shown.skip(from).take(take).toList()};
+      };
+      await mount(tester, const DiscoverScreen());
+      expect(find.text('70 treff'), findsOneWidget);
+
+      await tester.longPress(find.text('Ting 0'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ikke vis meg slike'));
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 5; i++) {
+        expect(card(i), findsNothing);
+      }
+
+      await toTheFoot(tester);
+      await toTheFoot(tester);
+      for (var i = 30; i < 40; i++) {
+        expect(card(i), findsOneWidget, reason: 'Ting $i');
+      }
+      await toTheTop(tester);
+      expect(find.text('65 treff'), findsOneWidget);
+    });
   });
 
   group('the chips and 05b are one filter', () {

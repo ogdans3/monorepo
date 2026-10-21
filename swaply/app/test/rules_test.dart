@@ -218,11 +218,14 @@ void main() {
   });
 
   group('a number is a fact about a thing, and is written once', () {
-    test('«Verdi 2 500 kr», with a plain space and no decimals', () {
-      expect(kr(2500), '2 500 kr');
-      expect(kr(600), '600 kr');
-      expect(kr(1200000), '1 200 000 kr');
-      expect(kr(0), '0 kr');
+    test('«Verdi 2 500 kr», with a full-width space and no decimals', () {
+      // As wide as a plain space, the export's, and one a line does not
+      // break at: a narrow phone wrote «Du får verdi 1» over «200 kr».
+      expect(kr(2500), '2\u00A0500\u00A0kr');
+      expect(kr(600), '600\u00A0kr');
+      expect(kr(1200000), '1\u00A0200\u00A0000\u00A0kr');
+      expect(kr(0), '0\u00A0kr');
+      expect(kr(2500).replaceAll(nbsp, ' '), '2 500 kr');
     });
 
     test('and nothing at all when there is no value', () {

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -75,6 +76,21 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
   List<Item> get _selectedMine => _mine.where((i) => _chosenMine.contains(i.id)).toList();
   List<Item> get _selectedTheirs => _theirs.where((i) => _chosenTheirs.contains(i.id)).toList();
 
+  /// Whether what is composed differs from the offer on the table. One that
+  /// does not is a new version of the same deal: it takes the other side's
+  /// yes away — and what their yes held — and they have to give it again
+  /// for nothing, where «Godta endringen» would have agreed the trade.
+  bool get _changed {
+    final trade = widget.trade;
+    Set<String> ids(Iterable<Item> items) => items.map((i) => i.id).toSet();
+    final sameThings = setEquals(ids(_selectedMine), ids(trade.youGive)) &&
+        setEquals(ids(_selectedTheirs), ids(trade.youGet));
+    final cash = trade.cash;
+    final sameCash =
+        cash == null ? _cash <= 0 : _cash == cash.amountNok && _iPay == cash.youPay;
+    return !(sameThings && sameCash);
+  }
+
   Future<void> _send() async {
     if (_selectedMine.isEmpty || _selectedTheirs.isEmpty) return;
     setState(() => _busy = true);
@@ -134,7 +150,7 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                               fontSize: 13, height: 1.5, color: SwaplyColors.inkMuted),
                         ),
                         const SizedBox(height: 9),
-                        _side('Du får · ${other}s ting', SwaplyColors.greenText, _theirs,
+                        _side('Du får · ${possessive(other)} ting', SwaplyColors.greenText, _theirs,
                             _chosenTheirs),
                         const SizedBox(height: 9),
                         _side('Du gir · dine ting', SwaplyColors.amberText, _mine, _chosenMine),
@@ -168,7 +184,10 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                             busy: _busy,
                             // Both sides, because a deal where one of them
                             // gives nothing is not one the other can accept.
-                            enabled: _selectedMine.isNotEmpty && _selectedTheirs.isNotEmpty,
+                            // And something changed: see [_changed].
+                            enabled: _selectedMine.isNotEmpty &&
+                                _selectedTheirs.isNotEmpty &&
+                                _changed,
                             onPressed: _send),
                         // The 8 over it and the foot under it: 40, which is
                         // all the export leaves between the button and the
@@ -238,43 +257,52 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
     // At three, the unpicked ones on that side stop answering.
     final full = !selected && selection.length >= maxPerSide;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: locked || full
-          ? null
-          : () => setState(() => selected ? selection.remove(item.id) : selection.add(item.id)),
-      child: Opacity(
-        opacity: locked || full ? 0.55 : 1,
-        child: Row(
-          children: [
-            ItemThumb(item, size: 44, radius: 11),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
-                  Text(
-                    [
-                      'verdi ${kr(item.estimatedValueNok)}',
-                      if (locked) 'reservert i annet bytte',
-                      if (item.inOffer && !locked) 'allerede i byttet',
-                    ].join(' · '),
-                    style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey),
-                  ),
-                ],
+    // Chosen is said as well as drawn, as on 02: a screen reader had only a
+    // «✓» in the row to go by, read out as part of the title.
+    return Semantics(
+      container: true,
+      button: true,
+      selected: selected,
+      enabled: !(locked || full),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: locked || full
+            ? null
+            : () => setState(() => selected ? selection.remove(item.id) : selection.add(item.id)),
+        child: Opacity(
+          opacity: locked || full ? 0.55 : 1,
+          child: Row(
+            children: [
+              ItemThumb(item, size: 44, radius: 11),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                    Text(
+                      [
+                        // Left out for a thing with no value, as 04 and 05 do.
+                        if (item.estimatedValueNok != null) 'verdi ${kr(item.estimatedValueNok)}',
+                        if (locked) 'reservert i annet bytte',
+                        if (item.inOffer && !locked) 'allerede i byttet',
+                      ].join(' · '),
+                      style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            if (locked)
-              const StatePill('Låst', color: SwaplyColors.inkMuted)
-            else
-              _tick(selected),
-          ],
+              const SizedBox(width: 12),
+              if (locked)
+                const StatePill('Låst', color: SwaplyColors.inkMuted)
+              else
+                ExcludeSemantics(child: _tick(selected)),
+            ],
+          ),
         ),
       ),
     );

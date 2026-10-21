@@ -18,7 +18,7 @@ import 'screens/tabs.dart';
 import 'state/session.dart';
 import 'util/reduced_motion.dart';
 import 'widgets/admin_chrome.dart';
-import 'widgets/common.dart' show onLightStatusBar;
+import 'widgets/common.dart' show onLightStatusBar, showNoteOn;
 import 'widgets/desk.dart';
 import 'widgets/keyboard.dart';
 import 'widgets/shell.dart';
@@ -277,11 +277,19 @@ class _RootGateState extends State<RootGate> {
   }
 
   Future<void> _openSharedListing(String token) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final invite = await context.read<SwaplyApi>().invite(token);
-      // A listing can be retired after the link went out, and a plain
-      // invitation carries none at all. Then there is simply nothing to open.
-      if (!mounted || invite.itemId == null) return;
+      if (!mounted) return;
+      // A listing can be taken down or traded away after the link went out,
+      // and then there is nothing to open. Said, rather than landing on
+      // Oppdag with no word about what was tapped. A plain invitation carries
+      // no listing at all, and has nothing to say.
+      if (invite.itemRetired) {
+        showNoteOn(messenger, 'Tingen som ble delt med deg er ikke lenger ute.');
+        return;
+      }
+      if (invite.itemId == null) return;
       // Into Oppdag, over the grid, with the bar under it: the gate is above
       // the tabs rather than in one, so it says which. And the grid asks
       // again after a block made on it, as it does for a listing it opened.

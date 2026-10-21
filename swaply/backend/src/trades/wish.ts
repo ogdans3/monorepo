@@ -4,10 +4,10 @@ import type { Database } from '../db/index.js'
 import { blocked, blockedBetween } from '../lib/blocks.js'
 import { LIKES_BEFORE_LISTING_PROMPT, LISTING_PROMPT_EVERY } from '../lib/constants.js'
 import { badRequest, notFound } from '../lib/errors.js'
-import { one } from '../lib/rows.js'
+import { one, type Executor } from '../lib/rows.js'
 import { findCyclesThrough, type Cycle } from './cycles.js'
 import { ringsApart, testRing } from './ring.js'
-import { openTradeFromCycle } from './trades.js'
+import { insertTradeFromCycle } from './trades.js'
 
 export type Wish = {
   tradeId: string | null
@@ -171,7 +171,11 @@ export async function closeLoopThrough(
   const cycle = cycles[0]
   if (!cycle) return null
 
-  const tradeId = await openTradeFromCycle(db, cycle)
+  // Asked again where it is opened: a heart on the other side of the same
+  // ring, pressed in the same moment, may have opened it since the look above.
+  const loop = await openRingOnce(db, cycle)
+  if (!loop.isNew) return loop
+  const tradeId = loop.tradeId
   for (const hop of cycle) {
     await db.execute(
       sql`insert into notifications (user_id, type, payload)
@@ -180,6 +184,32 @@ export async function closeLoopThrough(
     )
   }
   return { tradeId, isNew: true }
+}
+
+/**
+ * Open a trade over [ring], unless one is already going on over it.
+ *
+ * The look and the opening are one step, taken under a lock on the ring
+ * itself: two hearts closing the same ring in the same moment — Ola's on the
+ * tent as Kari's lands on the drill, or a heart and the hourly sweep, or the
+ * wishes a sign-in carried over — each looked, each found nothing open, and
+ * each opened it, with two «Dere kan swappe!» and two conversations about
+ * the same swap. The second now waits for the first and is answered with
+ * its trade, as not new. Keyed on the ring's (giver, listing, receiver)
+ * hops, so other rings, through the same listings or not, never wait.
+ */
+export async function openRingOnce(db: Database, ring: Cycle): Promise<Loop> {
+  const n = ring.length
+  const key = ring
+    .map((hop, i) => `${hop.userId}:${hop.givesItemId}:${ring[(i + 1) % n]!.userId}`)
+    .sort()
+    .join('|')
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`ring:${key}`}))`)
+    const open = await openTradeOver(tx, ring)
+    if (open) return { tradeId: open, isNew: false }
+    return { tradeId: await insertTradeFromCycle(tx, ring), isNew: true }
+  })
 }
 
 /**
@@ -192,7 +222,7 @@ export async function closeLoopThrough(
  * counter-offer can reach the same swap by hand. The sweep asks it too: a
  * ring of services is never reserved, so an agreed one is still found.
  */
-export async function openTradeOver(db: Database, ring: Cycle): Promise<string | null> {
+export async function openTradeOver(db: Executor, ring: Cycle): Promise<string | null> {
   const n = ring.length
   // (giver, listing, receiver), since a three-way ring and its mirror image
   // give the same things to different people.

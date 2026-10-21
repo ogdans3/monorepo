@@ -285,6 +285,46 @@ describe('deleting your own account', () => {
     })
   })
 
+  describe('after a trade that was done', () => {
+    test('12b. nobody writes into a conversation whose other side has gone', async () => {
+      // A completed trade keeps its conversation, and deleting an account
+      // ends nothing that is finished. «Send» answered 201 and wrote to a
+      // tombstone; nobody would ever read it.
+      const una = await register('Una', 'una@epost.no')
+      const vid = await register('Vid', 'vid@epost.no')
+      const lamp = await list(una.token, 'Lampe')
+      const bike = await list(vid.token, 'Sykkel')
+      await heart(una.token, bike)
+      const done = (await heart(vid.token, lamp))!
+      for (const token of [una.token, vid.token]) {
+        await call('POST', `/trades/${done}/accept`, { token })
+      }
+      for (const token of [una.token, vid.token]) {
+        await call('POST', `/trades/${done}/complete`, { token })
+      }
+      const thread = (await call('GET', `/trades/${done}`, { token: una.token })).body!
+      expect(thread['state']).toBe('completed')
+      expect((await call('POST', `/threads/${thread['threadId']}/messages`, {
+        token: una.token, body: { body: 'Takk for byttet!' },
+      })).status).toBe(201)
+
+      expect((await call('DELETE', '/me', { token: vid.token, body: { password: 'byttehandel1' } })).status)
+        .toBe(204)
+
+      const res = await call('POST', `/threads/${thread['threadId']}/messages`, {
+        token: una.token, body: { body: 'Hei, er du der?' },
+      })
+      expect(res.status).toBe(409)
+      expect(res.body).toEqual({
+        code: 'conversation_closed',
+        message: 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.',
+      })
+      // What was said before stays, as the history it is.
+      const read = await call('GET', `/threads/${thread['threadId']}`, { token: una.token })
+      expect((read.body!['messages'] as Json[]).map((m) => m['body'])).toEqual(['Takk for byttet!'])
+    })
+  })
+
   describe('and the test tooling', () => {
     let gabriel = ''
 

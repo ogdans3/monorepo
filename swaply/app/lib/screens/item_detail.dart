@@ -399,62 +399,70 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     await showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
+      // A ring can hold more accounts than nine sixteenths of a phone, and
+      // the ones past it were cut off with nothing to scroll: as tall as the
+      // list, and scrolling past the screen, as the tool's own sheet does.
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AdminColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
       builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
-              child: Text('Hvem vil ha den?',
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w800, color: AdminColors.ink)),
-            ),
-            if (accounts.isEmpty)
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               const Padding(
-                padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: Text('Du har ingen testkontoer ennå. Lag en i Testverktøy.',
-                    style: TextStyle(fontSize: 13, color: AdminColors.muted)),
+                padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
+                child: Text('Hvem vil ha den?',
+                    style: TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w800, color: AdminColors.ink)),
               ),
-            for (final account in accounts)
-              ListTile(
-                dense: true,
-                title: Text(account.displayName,
-                    style: const TextStyle(fontSize: 14, color: AdminColors.ink)),
-                subtitle: Text('${account.itemCount} ting · ${account.likeCount} likes',
-                    style: const TextStyle(fontSize: 11.5, color: AdminColors.muted)),
-                onTap: () async {
-                  Navigator.of(sheet).pop();
-                  try {
-                    final wanted = await api.adminWant(item.id, as: account.id);
-                    if (wanted.tradeId == null) {
-                      showNoteOn(messenger, '${account.displayName} vil ha den. Ingen sirkel ennå.');
-                    } else if (!wanted.tradeIsNew) {
-                      // Pressed again on something the account already
-                      // wants: the server names the trade already open over
-                      // that ring rather than opening a second, and saying
-                      // the circle closed read as a new trade.
-                      showNoteOn(
-                          messenger,
-                          '${account.displayName} vil ha den. Sirkelen har allerede '
-                          'et åpent bytte.');
-                    } else {
-                      showDoneOn(messenger,
-                          '${account.displayName} vil ha den, og sirkelen lukket seg.');
-                      // A trade of yours opened, and the bar counts them.
-                      unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
+              if (accounts.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: Text('Du har ingen testkontoer ennå. Lag en i Testverktøy.',
+                      style: TextStyle(fontSize: 13, color: AdminColors.muted)),
+                ),
+              for (final account in accounts)
+                ListTile(
+                  dense: true,
+                  title: Text(account.displayName,
+                      style: const TextStyle(fontSize: 14, color: AdminColors.ink)),
+                  subtitle: Text(
+                      '${account.itemCount} ting · ${counted(account.likeCount, 'like', 'likes')}',
+                      style: const TextStyle(fontSize: 11.5, color: AdminColors.muted)),
+                  onTap: () async {
+                    Navigator.of(sheet).pop();
+                    try {
+                      final wanted = await api.adminWant(item.id, as: account.id);
+                      if (wanted.tradeId == null) {
+                        showNoteOn(messenger, '${account.displayName} vil ha den. Ingen sirkel ennå.');
+                      } else if (!wanted.tradeIsNew) {
+                        // Pressed again on something the account already
+                        // wants: the server names the trade already open over
+                        // that ring rather than opening a second, and saying
+                        // the circle closed read as a new trade.
+                        showNoteOn(
+                            messenger,
+                            '${account.displayName} vil ha den. Sirkelen har allerede '
+                            'et åpent bytte.');
+                      } else {
+                        showDoneOn(messenger,
+                            '${account.displayName} vil ha den, og sirkelen lukket seg.');
+                        // A trade of yours opened, and the bar counts them.
+                        unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
+                      }
+                      if (mounted) await _load();
+                    } on ApiException catch (e) {
+                      showErrorOn(messenger, e);
                     }
-                    await _load();
-                  } on ApiException catch (e) {
-                    showErrorOn(messenger, e);
-                  }
-                },
-              ),
-            const SizedBox(height: 12),
-          ],
+                  },
+                ),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     );
@@ -653,11 +661,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final yes = await showModalBottomSheet<bool>(
       context: context,
       useRootNavigator: true,
+      // As tall as what is in it, and scrolling past that. Held to nine
+      // sixteenths of the screen and not scrolling, it cut «Avbryt» off on a
+      // small phone with the text set at 130 %, and both buttons at 160 %.
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
       builder: (sheet) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(Insets.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -753,7 +766,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         [
                           if (owner.ratingAvg != null)
                             '★ ${owner.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
-                          if (owner.tradeCount != null) '${owner.tradeCount} bytter',
+                          if (owner.tradeCount case final trades?) counted(trades, 'bytte', 'bytter'),
                         ].join(' · '),
                         style: const TextStyle(
                             fontSize: 12, height: 1.35, color: SwaplyColors.grey),
@@ -828,10 +841,21 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Kicker('Samtale med $name'),
+                // The name gives way, not «Åpne ›»: with a long first name
+                // and larger text the line ran past the card on a narrow
+                // phone and took «Åpne ›» with it.
+                Flexible(child: Kicker('Samtale med $name', oneLine: true)),
                 if (talk != null)
                   TapArea(
-                    onTap: () => pushOverBar<void>(context, ThreadScreen(threadId: talk.threadId)),
+                    // Asked for again on the way back, quietly: what was said
+                    // in the thread since is what the box says now, and the
+                    // owner may have been blocked from there, which takes the
+                    // listing away; see [_load]. It went on showing the
+                    // message it had opened on.
+                    onTap: () async {
+                      await pushOverBar<void>(context, ThreadScreen(threadId: talk.threadId));
+                      if (mounted) await _load(leaveIfGone: true);
+                    },
                     child: const Text('Åpne ›', style: Type.link),
                   ),
               ],

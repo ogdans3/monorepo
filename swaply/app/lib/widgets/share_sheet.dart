@@ -31,6 +31,8 @@ Future<void> showShareSheet(
     // Over the bar, not inside the tab under it; see `pushOverBar`.
     useRootNavigator: true,
     isScrollControlled: true,
+    // Clear of the status bar when it is as tall as the screen; see below.
+    useSafeArea: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
@@ -118,53 +120,58 @@ class _ShareSheetState extends State<_ShareSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          Insets.screen, Insets.md, Insets.screen, MediaQuery.of(context).padding.bottom + Insets.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              height: 4,
-              width: 44,
-              decoration: BoxDecoration(
-                  color: SwaplyColors.line, borderRadius: BorderRadius.circular(Radii.pill)),
-            ),
-          ),
-          const SizedBox(height: Insets.lg),
-          Text(widget.title, style: Type.title),
-          const SizedBox(height: Insets.md),
-          if (_error case final error?) ...[
-            Text(error.message, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13.5)),
-            if (_wayOn(error) case final way?) ...[
-              const SizedBox(height: Insets.md),
-              way,
-            ],
-          ] else if (_link == null)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: Insets.xl),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2.4)),
-            )
-          else ...[
-            // The card is where the text can be selected, not only the
-            // words: two lines of it in a 42-tall box are not a target.
-            TapArea(
-              child: SectionCard(
-                child: SelectableText(_link!.text, style: Type.body),
+    // It scrolls: with the text set large on a small phone the link, the
+    // button and the words under it are taller than the screen, and «Kopier
+    // lenke» was below its edge.
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+            Insets.screen, Insets.md, Insets.screen, MediaQuery.of(context).padding.bottom + Insets.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                height: 4,
+                width: 44,
+                decoration: BoxDecoration(
+                    color: SwaplyColors.line, borderRadius: BorderRadius.circular(Radii.pill)),
               ),
             ),
+            const SizedBox(height: Insets.lg),
+            Text(widget.title, style: Type.title),
             const SizedBox(height: Insets.md),
-            PrimaryButton('Kopier lenke', icon: Icons.link, onPressed: _copy),
-            const SizedBox(height: Insets.md),
-            const Text(
-              'Lenken er også en invitasjon, og kan brukes én gang. Siden den åpner '
-              'fungerer for alle du sender den til.',
-              style: Type.secondary,
-            ),
+            if (_error case final error?) ...[
+              Text(error.message, style: const TextStyle(color: SwaplyColors.coral, fontSize: 13.5)),
+              if (_wayOn(error) case final way?) ...[
+                const SizedBox(height: Insets.md),
+                way,
+              ],
+            ] else if (_link == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: Insets.xl),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2.4)),
+              )
+            else ...[
+              // The card is where the text can be selected, not only the
+              // words: two lines of it in a 42-tall box are not a target.
+              TapArea(
+                child: SectionCard(
+                  child: SelectableText(_link!.text, style: Type.body),
+                ),
+              ),
+              const SizedBox(height: Insets.md),
+              PrimaryButton('Kopier lenke', icon: Icons.link, onPressed: _copy),
+              const SizedBox(height: Insets.md),
+              const Text(
+                'Lenken er også en invitasjon, og kan brukes én gang. Siden den åpner '
+                'fungerer for alle du sender den til.',
+                style: Type.secondary,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

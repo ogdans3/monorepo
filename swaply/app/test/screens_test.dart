@@ -324,7 +324,7 @@ void main() {
       expect(find.text('Verktøy'), findsOneWidget);
       expect(find.text('Gaming'), findsOneWidget);
       expect(find.text('Bosch drill 18V'), findsOneWidget);
-      expect(find.text('Verdi 600 kr'), findsOneWidget);
+      expect(find.text('Verdi 600\u00A0kr'), findsOneWidget);
     });
 
     testWidgets('05 the heart is on the face of the card, not behind a long press',
@@ -396,7 +396,7 @@ void main() {
       await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
 
       expect(find.text('Retro spillkonsoll'), findsOneWidget);
-      expect(find.text('Verdi 1 200 kr'), findsOneWidget);
+      expect(find.text('Verdi 1\u00A0200\u00A0kr'), findsOneWidget);
       expect(find.text('Kari N.'), findsOneWidget);
       // The export's line ends «· BankID-verifisert», which is left out until
       // BankID is real, and the line ends where the facts do.
@@ -598,6 +598,29 @@ void main() {
       expect(find.descendant(of: card, matching: find.byIcon(Icons.favorite)), findsOneWidget);
     });
 
+    testWidgets('05 a heart that found its ring opened by another heart a moment before still '
+        'counts it on the bar', (tester) async {
+      // Two hearts over one ring at once: the server opens one trade and
+      // answers the second as not new. For the second person it is new all
+      // the same, and the bar went on counting as before the heart.
+      server.overrides['POST /items/item-console/like'] = {
+        'liked': true,
+        'tradeId': 'trade-1',
+        'tradeIsNew': false,
+        'promptToList': false,
+        'likedCount': 3,
+      };
+      await mount(tester, const DiscoverScreen());
+      server.overrides['GET /me'] = {...FakeServer.me, 'tradesNeedingYou': 2};
+      final card = find.byKey(const ValueKey('item-console'));
+
+      await tester.tap(find.descendant(of: card, matching: find.byIcon(Icons.favorite_border)));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MatchScreen), findsNothing);
+      expect(session.tradesNeedingYou, 2);
+    });
+
     testWidgets('a listing with no photo gets a card, not a hole', (tester) async {
       await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
       expect(find.byIcon(Icons.sports_esports_outlined), findsWidgets);
@@ -791,16 +814,16 @@ void main() {
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
       expect(find.text('MELLOMLEGG'), findsOneWidget);
-      expect(find.text('Du betaler 350 kr til Kari'), findsOneWidget);
+      expect(find.text('Du betaler 350\u00A0kr til Kari'), findsOneWidget);
       expect(find.text('betales når begge har godtatt'), findsOneWidget);
     });
 
     testWidgets('06b the values and the difference add up', (tester) async {
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
-      expect(find.textContaining('verdi 1 200 kr'), findsWidgets);
-      expect(find.textContaining('verdi 600 kr'), findsWidgets);
-      expect(find.text('differanse 600 kr'), findsOneWidget);
+      expect(find.textContaining('verdi 1\u00A0200\u00A0kr'), findsWidgets);
+      expect(find.textContaining('verdi 600\u00A0kr'), findsWidgets);
+      expect(find.text('differanse 600\u00A0kr'), findsOneWidget);
     });
 
     testWidgets('06e waiting: no accept button once you have accepted', (tester) async {
@@ -1262,7 +1285,7 @@ void main() {
       await openChip(tester, 'Foreslå mellomlegg');
 
       expect(find.text('Foreslå mellomlegg'), findsWidgets);
-      expect(find.textContaining('Differansen er 600 kr'), findsOneWidget);
+      expect(find.textContaining('Differansen er 600\u00A0kr'), findsOneWidget);
       expect(find.text('Jeg betaler'), findsOneWidget);
       expect(find.text('Kari betaler'), findsOneWidget);
       expect(find.text('Ingen'), findsOneWidget);
@@ -1432,6 +1455,31 @@ void main() {
       expect(find.text('♥ 4 har likt tingene dine'), findsOneWidget);
       expect(find.text('Mine gjenstander · 1'), findsOneWidget);
       expect(find.text('Tilgjengelig'), findsOneWidget);
+    });
+
+    testWidgets('one of something is said in the singular on 04, 13 and 13b', (tester) async {
+      // A count off the server kept its plural for one: «1 bytter»,
+      // «1 vurderinger».
+      final one = {...FakeServer.kari, 'tradeCount': 1};
+      server.overrides['GET /me'] = {...FakeServer.me, 'ratingAvg': 5, 'ratingCount': 1};
+      server.overrides['GET /items/item-console'] = {...FakeServer.console, 'owner': one};
+      server.overrides['GET /users/kari-1'] = {
+        ...one,
+        'items': [FakeServer.console],
+        'interests': const <String>[],
+      };
+
+      await mount(tester, const ProfileScreen());
+      await tester.pumpAndSettle();
+      expect(find.textContaining('5,0 · 1 vurdering'), findsOneWidget);
+      expect(find.textContaining('vurderinger'), findsNothing);
+
+      await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
+      expect(find.text('★ 4,8 · 1 bytte'), findsOneWidget);
+
+      await mount(tester, const OtherProfileScreen(userId: 'kari-1'));
+      expect(find.textContaining('4,8 · 1 bytte'), findsOneWidget);
+      expect(find.textContaining('1 bytter'), findsNothing);
     });
 
     testWidgets('17c with nothing listed it says so and offers the way out',

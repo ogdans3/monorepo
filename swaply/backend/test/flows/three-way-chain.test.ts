@@ -7,9 +7,16 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
+import { markHandover, requestWithdrawal, respondToWithdrawal } from '../../src/trades/actions.js'
+import { postMessage } from '../../src/trades/conversation.js'
 import { findCyclesThrough } from '../../src/trades/cycles.js'
+import { anonymiseUser } from '../../src/trades/erasure.js'
 import { acceptOffer, completeTrade, openTradeFromCycle } from '../../src/trades/trades.js'
 import { close, currentOffer, db, itemRow, like, makeItem, makeUser, reset, tradeState } from '../helpers.js'
+
+type Row = Record<string, string>
+
+afterAll(close)
 
 describe('a three-way chain', () => {
   let ola: string, kari: string, per: string
@@ -25,8 +32,6 @@ describe('a three-way chain', () => {
     tent = await makeItem(kari, 'Telt')
     bike = await makeItem(per, 'Sykkel')
   })
-
-  afterAll(close)
 
   test('1. two of the three wishes close nothing', async () => {
     await like(ola, tent)
@@ -100,5 +105,63 @@ describe('a three-way chain', () => {
     for (const item of [drill, tent, bike]) {
       expect((await itemRow(item))['status']).toBe('traded')
     }
+  })
+})
+
+describe('a ring of three, and one of them asking to get out', () => {
+  let tor: string, una: string, vid: string
+  let kayak: string, lamp: string, bike: string
+  let trade: string
+
+  beforeAll(async () => {
+    tor = await makeUser('Tor')
+    una = await makeUser('Una')
+    vid = await makeUser('Vid')
+    kayak = await makeItem(tor, 'Kajakk')
+    lamp = await makeItem(una, 'Lampe')
+    bike = await makeItem(vid, 'Sykkel')
+    await like(tor, lamp)
+    await like(una, bike)
+    await like(vid, kayak)
+    trade = await openTradeFromCycle(db, (await findCyclesThrough(db, vid, kayak))[0]!)
+    const offer = await currentOffer(trade)
+    for (const who of [tor, una, vid]) await acceptOffer(db, offer, who, 'terms-2026-09')
+    expect(await tradeState(trade)).toBe('accepted')
+  })
+
+  test('8. Tor asks, and while the others answer, Vid sends his bike to Una', async () => {
+    expect((await requestWithdrawal(db, trade, tor)).blocked).toBe(false)
+    expect(await tradeState(trade)).toBe('paused')
+    await markHandover(db, trade, vid, 'sent')
+  })
+
+  test('9. Una’s yes is then a no, because something is on its way, and the ring goes on', async () => {
+    // 08a: «Har Ola allerede sendt, kan du ikke trekke deg», and that is true
+    // of anybody but the one asking. Only the one answering was asked, so
+    // Una's yes ended the ring with Vid's bike already sent.
+    const answer = await respondToWithdrawal(db, trade, una, true)
+
+    expect(answer).toMatchObject({ state: 'rejected', blockedBySent: true })
+    expect(await tradeState(trade)).toBe('accepted')
+    expect((await itemRow(kayak))['active_trade_id']).toBe(trade)
+  })
+
+  test('10. Vid deletes his account, and Tor and Una can still talk: somebody is left', async () => {
+    await anonymiseUser(db, vid)
+    const [thread] = await db.execute<Row>(sql`select id from threads where trade_id = ${trade}`)
+
+    const said = await postMessage(db, thread!['id'], tor, 'Synd at det ble sånn.')
+    expect(said['body']).toBe('Synd at det ble sånn.')
+  })
+
+  test('11. once Una has gone too, nobody is, and the conversation is closed', async () => {
+    await anonymiseUser(db, una)
+    const [thread] = await db.execute<Row>(sql`select id from threads where trade_id = ${trade}`)
+
+    await expect(postMessage(db, thread!['id'], tor, 'Hallo?')).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'conversation_closed',
+      message: 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.',
+    })
   })
 })

@@ -229,3 +229,18 @@ describe('a withdrawal question that is answered', () => {
     expect(await expireWithdrawals(db)).toBe(0)
   })
 })
+
+describe('a yes', () => {
+  test('13. names who said it, so 12a can say «Ola godtok byttet» and not «Noen»', async () => {
+    const { tradeId, a, b } = await pair()
+    expect((await call('POST', `/trades/${tradeId}/accept`, { token: a.token })).status).toBe(200)
+
+    const res = await call('GET', '/notifications', { token: b.token })
+    const partly = (res.body!['notifications'] as Json[])
+      .find((n) => n['type'] === 'trade_partly_accepted' && n['payload']['tradeId'] === tradeId)
+    expect(partly).toMatchObject({ payload: { tradeId, byUserId: a.id } })
+    expect(partly!['actorName']).toMatch(/^Person \d+$/)
+    // The one who said yes is not told about their own yes.
+    expect(await told(a, tradeId, 'trade_partly_accepted')).toEqual([])
+  })
+})

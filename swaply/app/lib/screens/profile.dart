@@ -137,7 +137,16 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
         ),
       ),
       child: RefreshIndicator(
-        onRefresh: () => context.read<Session>().refresh(),
+        // A pull that gets no answer keeps 13 as it was and says so, as every
+        // other list does. Handed straight to the indicator, the refusal went
+        // past everybody: the spinner stopped and nothing was said.
+        onRefresh: () async {
+          try {
+            await context.read<Session>().refresh();
+          } on ApiException catch (e) {
+            if (context.mounted) showError(context, e);
+          }
+        },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 0, 22, Insets.xl),
           children: [
@@ -210,7 +219,9 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                                   TextSpan(
                                       text: me.ratingAvg!.toStringAsFixed(1).replaceAll('.', ','),
                                       style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  TextSpan(text: ' · ${me.ratingCount} vurderinger'),
+                                  TextSpan(
+                                      text:
+                                          ' · ${counted(me.ratingCount, 'vurdering', 'vurderinger')}'),
                                 ],
                               ]),
                               style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
@@ -233,8 +244,14 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
               room: const EdgeInsets.symmetric(vertical: 2),
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const LikedScreen())),
+                // Asked again on the way back, as from a listing below: a
+                // liker blocked from 12 no longer counts, and the line went
+                // on counting them until the tab was left.
+                onTap: () async {
+                  await Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => const LikedScreen()));
+                  _askAgain();
+                },
                 child: SectionCard(
                   radius: 16,
                   child: Row(
@@ -398,40 +415,14 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
               ],
             ),
           ),
-          _caption(item),
+          // Title and value on one line under a 166-wide picture, as 13 and
+          // 13b draw it.
+          ListingCaption(item, maxLines: 2),
         ],
       ),
     );
   }
 }
-
-/// 13b Annen profil. Their things are the point of the screen: it is where a
-/// loop gets closed from the other side.
-/// Title and value on one line under a 166-wide picture, as 13 and 13b draw it.
-Widget _caption(Item item) => Padding(
-      padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            child: Text(item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13, height: 1.15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
-          ),
-          if (item.estimatedValueNok != null) ...[
-            const SizedBox(width: 8),
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text('Verdi ${kr(item.estimatedValueNok)}',
-                  style: const TextStyle(
-                      fontSize: 10.5, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
-            ),
-          ],
-        ],
-      ),
-    );
 
 /// «★★★★★» for 4,6 and up, «★★★★☆» below: the export writes the stars as
 /// text and puts the number beside them.
@@ -441,6 +432,8 @@ String _stars(double? rating) {
   return '★' * full + '☆' * (5 - full);
 }
 
+/// 13b Annen profil. Their things are the point of the screen: it is where a
+/// loop gets closed from the other side.
 class OtherProfileScreen extends StatefulWidget {
   const OtherProfileScreen({super.key, required this.userId});
 
@@ -613,8 +606,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               style: const TextStyle(fontWeight: FontWeight.w700)),
                         ] else
                           const TextSpan(text: 'Ingen vurderinger ennå'),
-                        if (user.tradeCount != null)
-                          TextSpan(text: ' · ${user.tradeCount} bytter'),
+                        if (user.tradeCount case final trades?)
+                          TextSpan(text: ' · ${counted(trades, 'bytte', 'bytter')}'),
                       ]),
                       style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
                     ),
@@ -656,57 +649,63 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                   .toList(),
             ),
           ],
-          const SizedBox(height: 12),
-          // A 44-tall «Send melding» between the chips and the things.
-          SizedBox(
-            height: 44,
-            // Every conversation belongs to a trade and every trade starts on a
-            // listing, so this opens one of theirs rather than a chat window
-            // there is nothing to put in. A grey button that explains nothing
-            // is worse than the sentence.
-            child: PrimaryButton('Send melding', onPressed: () {
-              if (user.items.isEmpty) {
-                showNote(
-                    context,
-                    '${user.displayName.split(' ').first} har ingenting ute '
-                    'akkurat nå. En samtale starter alltid på en gjenstand.');
-                return;
-              }
-              _openListing(user.items.first.id);
-            }),
-          ),
-          const SizedBox(height: 12),
-          Text('${user.displayName.split(' ').first} sine gjenstander · ${user.items.length}',
-              style: Type.section),
-          const SizedBox(height: 12),
-          if (user.items.isEmpty)
-            const Text('Ingen ting ute akkurat nå.', style: Type.secondary)
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 166 / 146,
-              ),
-              itemCount: user.items.length,
-              itemBuilder: (context, i) {
-                final item = user.items[i];
-                // The whole cell, to the foot of the caption row.
-                return TapArea(
-                  onTap: () => _openListing(item.id),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: ItemThumb(item, size: 400, radius: 16)),
-                      _caption(item),
-                    ],
-                  ),
-                );
-              },
+          // Across a block there is nothing to write about and no things to
+          // show: the server sends none of theirs, and the line above says
+          // they are hidden. «Send melding» stood on, and said they had
+          // nothing out, over «… sine gjenstander · 0».
+          if (!user.blockedByYou) ...[
+            const SizedBox(height: 12),
+            // A 44-tall «Send melding» between the chips and the things.
+            SizedBox(
+              height: 44,
+              // Every conversation belongs to a trade and every trade starts on a
+              // listing, so this opens one of theirs rather than a chat window
+              // there is nothing to put in. A grey button that explains nothing
+              // is worse than the sentence.
+              child: PrimaryButton('Send melding', onPressed: () {
+                if (user.items.isEmpty) {
+                  showNote(
+                      context,
+                      '${user.displayName.split(' ').first} har ingenting ute '
+                      'akkurat nå. En samtale starter alltid på en gjenstand.');
+                  return;
+                }
+                _openListing(user.items.first.id);
+              }),
             ),
+            const SizedBox(height: 12),
+            Text('${user.displayName.split(' ').first} sine gjenstander · ${user.items.length}',
+                style: Type.section),
+            const SizedBox(height: 12),
+            if (user.items.isEmpty)
+              const Text('Ingen ting ute akkurat nå.', style: Type.secondary)
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 166 / 146,
+                ),
+                itemCount: user.items.length,
+                itemBuilder: (context, i) {
+                  final item = user.items[i];
+                  // The whole cell, to the foot of the caption row.
+                  return TapArea(
+                    onTap: () => _openListing(item.id),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: ItemThumb(item, size: 400, radius: 16)),
+                        ListingCaption(item, maxLines: 2),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
           const SizedBox(height: Insets.xl),
         ],
       ),
@@ -804,37 +803,41 @@ class SettingsScreen extends StatelessWidget {
                     child: InkWell(
                       onTap: () => Navigator.of(context)
                           .push(MaterialPageRoute(builder: (_) => const AdminScreen())),
-                      child: SizedBox(
+                      child: ConstrainedBox(
                         // Two lines of type rather than the product rows' one,
                         // which is four pixels more than 48 and the reason this
-                        // is not `_tile`.
-                        height: 58,
-                        child: Row(
-                          children: [
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('Testverktøy',
-                                      style: TextStyle(
-                                          fontSize: 14.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: AdminColors.ink)),
-                                  Text('Kontoer · bygg et bytte · tilstand',
-                                      style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
-                                ],
+                        // is not `_tile`. At least that: larger text wraps the
+                        // second line, and a fixed 58 cut it off.
+                        constraints: const BoxConstraints(minHeight: 58),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('Testverktøy',
+                                        style: TextStyle(
+                                            fontSize: 14.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: AdminColors.ink)),
+                                    Text('Kontoer · bygg et bytte · tilstand',
+                                        style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const Icon(Icons.chevron_right, size: 20, color: AdminColors.accent),
-                          ],
+                              const Icon(Icons.chevron_right, size: 20, color: AdminColors.accent),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const Divider(height: 1, color: AdminColors.hairline),
-                  SizedBox(
-                    height: 44,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 44),
                     child: Row(
                       children: [
                         Expanded(

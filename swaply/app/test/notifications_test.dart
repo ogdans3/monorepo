@@ -84,6 +84,23 @@ void main() {
     });
   });
 
+  group('a yes names who said it, as the export does, when the server says who', () {
+    testWidgets('1. «Ola N.» is «Ola godtok byttet»', (tester) async {
+      one('trade_partly_accepted', actorName: 'Ola N.');
+      await mount(tester, const NotificationsScreen());
+
+      expect(find.text('Ola godtok byttet'), findsOneWidget);
+      expect(find.text('Nå er det din tur. Sveip for å godta avtalen.'), findsOneWidget);
+    });
+
+    testWidgets('2. nobody named is «Noen godtok byttet»', (tester) async {
+      one('trade_partly_accepted');
+      await mount(tester, const NotificationsScreen());
+
+      expect(find.text('Noen godtok byttet'), findsOneWidget);
+    });
+  });
+
   group('a trade that ended says why, true for a pair and for a ring', () {
     for (final (reason, words) in [
       ('declined', 'Noen i byttet avslo det.'),

@@ -71,6 +71,17 @@ export const publicItem = (i: Row) => ({
   createdAt: iso(i['created_at']),
 })
 
+/**
+ * A listing on Oppdag, with who it is from: the card's long-press offers
+ * «Rapporter» and «Blokkér <navn>», and a block is of a person, not of a
+ * thing. Read from the row's `owner_name` beside `owner_id`, the way the item
+ * page carries `owner`, and named as `publicUser` names a tombstone.
+ */
+export const discoveredItem = (i: Row) => ({
+  ...publicItem(i),
+  owner: { id: i['owner_id'], displayName: i['owner_name'] ?? 'Slettet bruker' },
+})
+
 export const publicMessage = (m: Row) => ({
   id: m['id'],
   senderId: m['sender_id'],

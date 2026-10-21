@@ -73,10 +73,12 @@ export async function acceptTrade(
   // Asked again under the lock: a counter-offer may land after the read above.
   const result = await acceptOffer(db, view.offerId, userId, termsVersion)
 
+  // Who said yes rides along as an id, never a name (12a: «Ola godtok
+  // byttet»), and GET /notifications looks the name up, as it does for a like.
   if (!opts.quiet || result.everyoneAccepted) await db.execute(sql`
     insert into notifications (user_id, type, payload)
     select p.user_id, ${result.everyoneAccepted ? 'trade_accepted' : 'trade_partly_accepted'},
-           jsonb_build_object('tradeId', ${tradeId}::text)
+           jsonb_build_object('tradeId', ${tradeId}::text, 'byUserId', ${userId}::text)
     from trade_participants p where p.trade_id = ${tradeId} and p.user_id <> ${userId}
   `)
 

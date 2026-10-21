@@ -185,4 +185,58 @@ void main() {
       expect(find.byType(ReviewScreen), findsOneWidget);
     });
   });
+
+  testWidgets('7. a finished ring asks for a rating of the trade, not of Kari alone',
+      (tester) async {
+    // 07l rates both of the others. The button named Kari, whom you receive
+    // from, and the card over a rating given said «Din vurdering av Kari».
+    server.overrides['GET /trades/trade-chain'] = {
+      ...ring(marked: {'me-1', 'kari-1', 'per-1'}),
+      'state': 'completed',
+      'closedAt': '2026-09-10T10:00:00Z',
+    };
+    await open(tester, const TradeDetailScreen(tradeId: 'trade-chain'));
+
+    expect(find.text('Vurder byttet'), findsWidgets);
+    expect(find.text('Vurder Kari'), findsNothing);
+    expect(find.text('DIN VURDERING'), findsOneWidget);
+    expect(find.textContaining('VURDERING AV KARI'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Vurder byttet'));
+    await tester.pumpAndSettle();
+    // 07l, with both of them on it.
+    expect(find.text('Ble byttet gjennomført?'), findsOneWidget);
+    expect(find.text('Kari N.'), findsOneWidget);
+    expect(find.text('Per H.'), findsOneWidget);
+  });
+
+  testWidgets('8. 07l says what each of the two did with you, and 06i that both were rated',
+      (tester) async {
+    // Kari got your drill; Per sent you the bike. 07l said «ga …» of both,
+    // which for Kari is the leg to Per you were never part of.
+    final finished = Trade.fromJson({
+      ...ring(marked: {'me-1', 'kari-1', 'per-1'}),
+      'state': 'completed',
+      'givingTo': {...FakeServer.kari, 'position': 1},
+      'receivingFrom': {'id': 'per-1', 'displayName': 'Per H.', 'position': 2},
+      'youGive': [FakeServer.drill],
+      'youGet': [FakeServer.lockedItem],
+    });
+    server.overrides['POST /trades/trade-chain/reviews'] = {'ok': true};
+    await open(tester, ReviewScreen(trade: finished));
+
+    expect(find.text('fikk Bosch drill 18V'), findsOneWidget);
+    expect(find.text('sendte Bysykkel, dame'), findsOneWidget);
+    expect(find.textContaining('ga '), findsNothing);
+
+    for (final row in [0, 5]) {
+      await tester.tap(find.text('★').at(row + 4));
+      await tester.pump();
+    }
+    await tester.tap(find.text('Ja, send vurdering'));
+    await tester.pumpAndSettle();
+    expect(server.asked('POST /trades/trade-chain/reviews'), 2);
+    expect(find.text('Kari og Per har fått hver sin. Et par sekunder fra deg gjør appen bedre.'),
+        findsOneWidget);
+  });
 }

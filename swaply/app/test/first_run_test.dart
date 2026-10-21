@@ -343,6 +343,29 @@ void main() {
       expect(find.byType(TabShell, skipOffstage: false), findsOneWidget);
     });
 
+    testWidgets('7b. a link sent for a listing gone since says so on the invitation',
+        (tester) async {
+      server.overrides['GET /invites/${FakeServer.shareToken}'] = {
+        'token': FakeServer.shareToken,
+        'url': 'http://web/i/${FakeServer.shareToken}',
+        'used': false,
+        'itemRetired': true,
+        'itemId': null,
+        'inviter': {'displayName': 'Ola N.', 'town': 'Trondheim'},
+        'item': null,
+        'shareText': 'Ola N. inviterer deg til Swaply.',
+      };
+      session.pendingInvite = FakeServer.shareToken;
+      await boot(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(InviteScreen), findsOneWidget);
+      expect(
+          find.text('Tingen som ble delt med deg er ikke lenger ute. Invitasjonen virker fortsatt.'),
+          findsOneWidget);
+      expect(find.textContaining('Delt med deg'), findsNothing);
+    });
+
     /// A link whose key the server does not know: cut short by a chat app.
     const garbled = 'inv-token-01234';
 

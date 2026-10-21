@@ -48,6 +48,10 @@ class ApiException implements Exception {
   /// newest: somebody proposed something else while it was being read.
   static const offerChanged = 'offer_changed';
 
+  /// A message into a conversation whose everybody else has deleted their
+  /// account: nobody is left to read it.
+  static const conversationClosed = 'conversation_closed';
+
   /// A sign-in too soon after a run of wrong passwords for its address. The
   /// password was not looked at, and the message says how long to wait.
   static const tooManyAttempts = 'too_many_attempts';

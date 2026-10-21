@@ -4,9 +4,10 @@
 
   // A person who lands here has almost always followed a link somebody sent
   // them, so the page says what to do about it rather than printing a number.
-  const heading = $derived(
-    page.status === 404 ? 'Denne lenken fører ingen steder' : 'Noe gikk galt hos oss',
-  )
+  // Only a 5xx is ours: a 400 is a paste on the landing page that is not a
+  // link, and calling that «Noe gikk galt hos oss» blamed us for it.
+  const ours = $derived(page.status >= 500)
+  const heading = $derived(ours ? 'Noe gikk galt hos oss' : 'Denne lenken fører ingen steder')
 </script>
 
 <svelte:head>
@@ -21,10 +22,13 @@
 <main>
   <h1>{heading}</h1>
   <p>{page.error?.message ?? 'Prøv igjen om litt.'}</p>
-  <p class="fine">
-    Invitasjoner kan brukes én gang, og en lenke som er skrevet av litt feil finner vi
-    ikke igjen. Be den som sendte den om en ny.
-  </p>
+  {#if !ours}
+    <!-- About the link, so not when the link was fine and we were not. -->
+    <p class="fine">
+      Invitasjoner kan brukes én gang, og en lenke som er skrevet av litt feil finner vi
+      ikke igjen. Be den som sendte den om en ny.
+    </p>
+  {/if}
   <a class="button" href="/">Til forsiden</a>
 </main>
 

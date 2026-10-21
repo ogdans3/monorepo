@@ -11,6 +11,7 @@
 // had deleted their account, with «Se tingene deres ›» to nothing.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
@@ -153,5 +154,34 @@ void main() {
     expect(find.text('1 gjenstand · Bergen'), findsOneWidget);
     expect(find.text('4 gjenstander · Bergen'), findsOneWidget);
     expect(find.textContaining('1 gjenstander'), findsNothing);
+  });
+
+  testWidgets('6. a liker blocked from their profile is gone from 12 on the way back',
+      (tester) async {
+    // 13b was opened and nothing happened when it closed: a block made there
+    // left the person on 12, with «Se tingene deres ›» to things the block had
+    // just hidden. The server leaves them out once the block is written.
+    var blocked = false;
+    server.overrides['GET /me/liked-by'] = (http.Request _) => {
+          'items': [
+            {
+              'item': FakeServer.drill,
+              'likers': [if (!blocked) FakeServer.kari],
+            },
+          ],
+        };
+    await mount(tester, const LikedScreen());
+    expect(find.text('Kari'), findsOneWidget);
+
+    await tester.tap(find.text('Se tingene deres ›'));
+    await tester.pumpAndSettle();
+    expect(find.byType(OtherProfileScreen), findsOneWidget);
+
+    blocked = true;
+    Navigator.of(tester.element(find.byType(OtherProfileScreen))).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kari'), findsNothing);
+    expect(find.text('Se tingene deres ›'), findsNothing);
   });
 }

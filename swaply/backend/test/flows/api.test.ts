@@ -82,6 +82,19 @@ describe('the whole journey over HTTP', () => {
     ola = again.body!['token']
   })
 
+  test('and a body that is not JSON is a bad request, not our failure', async () => {
+    // The parser above replaced Fastify's, and a broken body came back as a
+    // 500, «Noe gikk galt hos oss».
+    const res = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      headers: { 'content-type': 'application/json' },
+      payload: '{',
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toEqual({ code: 'invalid_request', message: 'Forespørselen var ikke gyldig.' })
+  })
+
   test('a route that does not exist is answered in Norwegian, like every refusal', async () => {
     // Fastify's own answer is «Route GET:/finnes-ikke not found», and the app
     // shows a refusal's message as it comes.

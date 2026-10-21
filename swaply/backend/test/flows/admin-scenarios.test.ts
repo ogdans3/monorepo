@@ -342,6 +342,20 @@ describe('building a trade in a named state', () => {
       )
     })
 
+  test('14b2. and so it does in a ring of three, whose third opens the rival on purpose',
+    async () => {
+      // The rival is a conversation the third person opens about a listing
+      // the ring already has on its table. The box on 04 would take that
+      // message into the ring's own conversation (one per pair per listing);
+      // the tool asks `startTalking` for a second trade, which is the point.
+      const res = await scenario('displaced', 'three-way')
+      expect(res.status).toBe(200)
+
+      const loser = await call('GET', `/trades/${res.body!['tradeId']}`, { token: gabriel })
+      expect(loser.body!['state']).toBe('cancelled')
+      expect(loser.body!['closeCode']).toBe('displaced')
+    })
+
   test('14c. a scenario spends listings it made, never the ones already there',
     async () => {
       // An accepted scenario reserves what it is given and a completed one

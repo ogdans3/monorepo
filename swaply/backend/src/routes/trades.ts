@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { blocked, blockedBetween } from '../lib/blocks.js'
-import { TERMS_VERSION } from '../lib/constants.js'
+import { MAX_VALUE_NOK, TERMS_VERSION } from '../lib/constants.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import {
@@ -61,40 +61,50 @@ export default async function tradeRoutes(app: FastifyInstance) {
 
     // One conversation per pair per listing: a second message goes to the same
     // place rather than opening a second trade.
-    const existing = await conversationAbout(app.db, userId, item['owner_id'], id)
+    let existing = await conversationAbout(app.db, userId, item['owner_id'], id)
 
-    if (existing) {
-      // As the thread's own field writes it: refused across a block, and the
-      // others told. This branch used to write the message and nothing else,
-      // so a second message from 04 arrived without a notification.
-      await postMessage(app.db, existing.threadId, userId, body.body)
-      reply.code(201)
-      // What was said, as the box on 04 draws it. 04 shows it straight away,
-      // and it is the server's words, trimmed as it kept them.
-      return { ...existing, lastMessage: await lastMessageIn(app.db, existing.threadId, userId) }
+    if (!existing) {
+      // A new conversation is a new negotiation, and only a thing still on the
+      // market is something to negotiate about. A traded one used to open a
+      // trade about a thing already given away. Reserved is still on the
+      // market: several trades may want one drill, and its owner decides.
+      if (item['status'] === 'traded') {
+        throw conflict('item_unavailable', 'Denne er allerede byttet bort.')
+      }
+      if (item['status'] === 'withdrawn') {
+        throw conflict('item_unavailable', 'Denne er ikke lagt ut lenger.')
+      }
+      // Nor between a test account and anybody outside its ring (`ring.ts`):
+      // the first message puts two people in one trade, and a test listing is
+      // still reachable by a link somebody was handed.
+      if (await ringsApart(app.db, userId, item['owner_id'])) throw testRing()
+
+      const opened = await startTalking(app.db, userId, id, body.body, { once: true })
+      if (opened.isNew) {
+        await app.db.execute(sql`
+          insert into notifications (user_id, type, payload)
+          values (${item['owner_id']}, 'message', jsonb_build_object('tradeId', ${opened.tradeId}::text))
+        `)
+        reply.code(201)
+        return {
+          tradeId: opened.tradeId,
+          threadId: opened.threadId,
+          lastMessage: await lastMessageIn(app.db, opened.threadId, userId),
+        }
+      }
+      // A first message sent in the same moment opened it (`startTalking`),
+      // and this one is the second message in it.
+      existing = { tradeId: opened.tradeId, threadId: opened.threadId }
     }
 
-    // A new conversation is a new negotiation, and only a thing still on the
-    // market is something to negotiate about. A traded one used to open a
-    // trade about a thing already given away. Reserved is still on the
-    // market: several trades may want one drill, and its owner decides.
-    if (item['status'] === 'traded') {
-      throw conflict('item_unavailable', 'Denne er allerede byttet bort.')
-    }
-    if (item['status'] === 'withdrawn') {
-      throw conflict('item_unavailable', 'Denne er ikke lagt ut lenger.')
-    }
-    // Nor between a test account and anybody outside its ring (`ring.ts`):
-    // the first message puts two people in one trade, and a test listing is
-    // still reachable by a link somebody was handed.
-    if (await ringsApart(app.db, userId, item['owner_id'])) throw testRing()
-    const opened = await startTalking(app.db, userId, id, body.body)
-    await app.db.execute(sql`
-      insert into notifications (user_id, type, payload)
-      values (${item['owner_id']}, 'message', jsonb_build_object('tradeId', ${opened.tradeId}::text))
-    `)
+    // As the thread's own field writes it: refused across a block, and the
+    // others told. This branch used to write the message and nothing else,
+    // so a second message from 04 arrived without a notification.
+    await postMessage(app.db, existing.threadId, userId, body.body)
     reply.code(201)
-    return { ...opened, lastMessage: await lastMessageIn(app.db, opened.threadId, userId) }
+    // What was said, as the box on 04 draws it. 04 shows it straight away,
+    // and it is the server's words, trimmed as it kept them.
+    return { ...existing, lastMessage: await lastMessageIn(app.db, existing.threadId, userId) }
   })
 
   // Screen 06c: the swipe at the bottom of the agreement. Everything above it is
@@ -129,20 +139,11 @@ export default async function tradeRoutes(app: FastifyInstance) {
     if (!view) throw notFound('Fant ikke byttet.')
     if (!view.offerId) throw conflict('no_offer', 'Det finnes ikke noe forslag å angre.')
     if (!view.you.accepted) throw conflict('not_accepted', 'Du har ikke godtatt dette byttet.')
-    if (['completed', 'cancelled'].includes(view.state)) {
-      throw conflict('trade_closed', 'Byttet er avsluttet.')
-    }
-    // Once something has been handed over, undoing the yes it was handed over
-    // on is the withdrawal negotiation on 08a, not a button.
-    const handed = await one(
-      app.db,
-      sql`select 1 from trade_participants
-          where trade_id = ${id} and (sent_at is not null or received_at is not null)`,
-    )
-    if (handed) {
-      throw conflict('already_sent', 'Noe er allerede sendt. Be de andre om å avslutte byttet.')
-    }
 
+    // The state, and whether something has been handed over — after which
+    // undoing the yes it was handed over on is the withdrawal negotiation on
+    // 08a, not a button — are judged in `revokeAcceptance`, under the
+    // trade's lock. A paused trade is refused there too.
     const { freed } = await revokeAcceptance(app.db, view.offerId, userId)
     await app.db.execute(sql`
       insert into notifications (user_id, type, payload)
@@ -163,7 +164,13 @@ export default async function tradeRoutes(app: FastifyInstance) {
           .object({
             payerPosition: z.number().int().min(0),
             payeePosition: z.number().int().min(0),
-            amountNok: z.number().int().positive(),
+            // No more than a listing may be worth, which keeps it well inside
+            // the column's `int`: past it the insert was a 500.
+            amountNok: z
+              .number()
+              .int()
+              .positive()
+              .max(MAX_VALUE_NOK, 'Mellomlegget kan være høyst 10 000 000 kr.'),
           })
           .nullish(),
         // The version the proposal answers. Absent, it answers whatever is on

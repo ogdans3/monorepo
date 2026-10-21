@@ -133,8 +133,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'Byttet er godtatt',
             'Alle har godtatt. Nå kan dere avtale overleveringen.',
           ),
+        // «Ola godtok byttet», as the export writes it, where the server
+        // says who. It does not name anybody for this kind yet, and then it
+        // is «Noen».
         'trade_partly_accepted' => (
-            'Noen godtok byttet',
+            '${_firstName(n.actorName)} godtok byttet',
             'Nå er det din tur. Sveip for å godta avtalen.',
           ),
         'acceptance_revoked' => (

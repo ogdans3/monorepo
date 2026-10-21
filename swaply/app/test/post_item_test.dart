@@ -121,6 +121,30 @@ void main() {
     });
   });
 
+  group('«Rediger annonsen» can be left without saving', () {
+    testWidgets('1. it has «‹», which goes back to 04 and sends nothing', (tester) async {
+      // It covers the bar like 05b and 16b, and was the one screen there
+      // with no «‹»: «Lagre endringene» or a gesture were the only ways out.
+      await correct(tester);
+      await tester.enterText(field(title), 'Noe annet');
+
+      expect(find.bySemanticsLabel('Tilbake'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Tilbake'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PostItemScreen), findsNothing);
+      expect(find.byType(ItemDetailScreen), findsOneWidget);
+      expect(server.requests, isNot(contains('PATCH /items/item-mine')));
+    });
+
+    testWidgets('2. a new listing is the tab as drawn, with no «‹»', (tester) async {
+      await mount(tester, const PostItemScreen());
+
+      expect(find.text('Legg ut en gjenstand'), findsOneWidget);
+      expect(find.bySemanticsLabel('Tilbake'), findsNothing);
+    });
+  });
+
   group('10b says what the server would refuse before 10c, and names the field', () {
     /// A device's 10b with a title, and «Neste» pressed after [fill].
     Future<void> next(WidgetTester tester, Future<void> Function() fill) async {
@@ -137,9 +161,9 @@ void main() {
       ('a description over 2000', description, 'y' * 2001, 'Beskrivelsen kan ha høyst 2000 tegn.'),
       ('a subcategory over 60', subcategory, 'z' * 61, 'Underkategorien kan ha høyst 60 tegn.'),
       ('a value over ten million', value, '10000001',
-          'Anslått verdi kan være høyst 10 000 000 kr.'),
+          'Anslått verdi kan være høyst 10\u00A0000\u00A0000\u00A0kr.'),
       ('a value too long to be a number', value, '9' * 25,
-          'Anslått verdi kan være høyst 10 000 000 kr.'),
+          'Anslått verdi kan være høyst 10\u00A0000\u00A0000\u00A0kr.'),
     ]) {
       testWidgets('$what stays on 10b, over the button', (tester) async {
         // Found out after 10c had made a profile for it, in words that name

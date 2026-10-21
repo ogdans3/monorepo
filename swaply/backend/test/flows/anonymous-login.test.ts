@@ -551,6 +551,47 @@ describe('signing in on a phone that has been looking around', () => {
     expect(res.body!['carried']).toBeUndefined()
   })
 
+  test('21b. a block that comes along ends what the account was negotiating across it', async () => {
+    // Signe, on her own phone, is talking with Tor about his kayak, and Una
+    // with her about her skis. On a new phone she blocks Tor while looking
+    // around, and Una blocks the stranger. Signed in, both blocks are hers,
+    // and each used to stand beside a conversation that went on: neither
+    // side could write in it, and nobody was told it was over.
+    const signe = await register('Signe T.', 'signe@epost.no')
+    const tor = await register('Tor V.', 'tor@epost.no')
+    const una = await register('Una L.', 'una@epost.no')
+    const kayak = await list(tor.token, 'Havkajakk')
+    const skis = await list(signe.token, 'Langrennski')
+    const withTor = (await call('POST', `/items/${kayak}/message`, {
+      token: signe.token, body: { body: 'Er kajakken ledig?' },
+    })).body!['tradeId'] as string
+    const withUna = (await call('POST', `/items/${skis}/message`, {
+      token: una.token, body: { body: 'Er skiene ledige?' },
+    })).body!['tradeId'] as string
+
+    const stranger = await call('POST', '/auth/anonymous', {
+      body: { deviceId: 'device-signe-new-phone-0123456789' },
+    })
+    const strangerToken = stranger.body!['token'] as string
+    expect((await call('POST', `/blocks/${tor.id}`, { token: strangerToken })).status).toBe(204)
+    expect((await call('POST', `/blocks/${stranger.body!['user']['id']}`, { token: una.token })).status)
+      .toBe(204)
+
+    expect((await signIn('signe@epost.no', strangerToken)).status).toBe(200)
+
+    for (const [tradeId, who] of [[withTor, tor.token], [withUna, una.token]] as const) {
+      const trade = (await call('GET', `/trades/${tradeId}`, { token: who })).body!
+      expect(trade['state'], tradeId).toBe('cancelled')
+      expect(trade['closeCode'], tradeId).toBe('blocked')
+    }
+    // Told as a block tells: everybody but the one who blocked.
+    const told = await db.execute<Json>(
+      sql`select user_id from notifications
+          where type = 'trade_cancelled' and payload->>'reason' = 'blocked'`,
+    )
+    expect(told.map((n) => n['user_id']).sort()).toEqual([tor.id, signe.id].sort())
+  })
+
   test('22. every column that points at a person has a decided fate', async () => {
     // The merge ends in a delete, and the delete fails on any reference nobody
     // moved. A table added later is caught here, in review, rather than on the
