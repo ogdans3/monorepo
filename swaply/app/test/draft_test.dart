@@ -668,6 +668,54 @@ void main() {
     });
   });
 
+  group('whose it is, across the account switcher', () {
+    testWidgets('3. a form on 10c as a test account is not listed as the admin on the way back',
+        (tester) async {
+      // Acting as a test account born without a profile — what the tool
+      // makes for walking 10b and 10c — «Neste» hands the form to the
+      // session for 10c. «Tilbake til …» from 10c made the admin somebody
+      // else with that form still handed over, and the admin's own app
+      // opened on Legg ut and listed it, the test account's words and
+      // pictures on the admin's own account, in front of real people.
+      final unclaimed = <String, Object?>{
+        ...FakeServer.lookingAround,
+        'id': 'test-2',
+        'testAccount': true,
+        'interests': ['verktoy'],
+        'actingAs': {'adminId': 'me-1', 'adminName': 'Ola N.'},
+      };
+      server.overrides['GET /me'] = (http.Request request) =>
+          switch (request.headers['authorization']) {
+            'Bearer tok-test-2' => unclaimed,
+            'Bearer tok' => FakeServer.admin,
+            _ => 401,
+          };
+      SharedPreferences.setMockInitialValues({'token': 'tok-test-2', 'adminToken': 'tok'});
+      final phone = Phone();
+      await boot(tester, phone);
+      expect(phone.session.actingAs, isTrue);
+      expect(phone.session.anonymous, isTrue);
+
+      await tester.tap(find.descendant(of: find.byType(SwaplyNavBar), matching: find.text('Legg ut')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(Field.title.index), 'Testlampe');
+      await tester.tap(find.text('Neste'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lag profil'), findsOneWidget);
+
+      await tester.tap(find.text('Tilbake til Ola N. ↩'));
+      await tester.pumpAndSettle();
+
+      expect(phone.session.isAdmin, isTrue);
+      expect(phone.session.listingToFinish, isNull);
+      expect(server.requests, isNot(contains('POST /items')));
+      expect(find.byType(PostItemScreen), findsNothing);
+      // The test account's form is its own, kept for it.
+      expect((await kept('test-2'))?['title'], 'Testlampe');
+      expect(await kept('me-1'), isNull);
+    });
+  });
+
   group('nothing of it is left behind', () {
     testWidgets('1. emptied, the form is thrown away: no «Forkast» is drawn, and none is needed',
         (tester) async {

@@ -581,6 +581,12 @@ class Session extends ChangeNotifier {
     // asked. Read off the column, an admin who skipped it was shown 02 again
     // after every «Tilbake til …».
     interestsPending = firstRun && found.interests.isEmpty;
+    // A form handed over for 10c is the account's being left, and stays kept
+    // for it on the phone, by its id. Held on to here, the gate opened the
+    // next account's app on Legg ut and its form listed it there: a test
+    // account's words and pictures on the admin's own account, «Tilbake til
+    // …» pressed on 10c.
+    listingToFinish = null;
     _become(found);
     await _persist();
   }
