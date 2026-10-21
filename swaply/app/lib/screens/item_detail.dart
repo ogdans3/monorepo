@@ -722,6 +722,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Widget _round(IconData icon, String label, VoidCallback onTap) => TapArea(
         room: const EdgeInsets.all(_roundRoom),
         label: label,
+        button: true,
         child: Material(
           color: SwaplyColors.bg.withValues(alpha: 0.92),
           shape: const CircleBorder(),
@@ -739,6 +740,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   // Its own node: without one, the whole page of words around it told a
   // screen reader it was the button.
   Widget _ownerStrip(UserRef owner) => TapArea(
+        button: true,
         child: InkWell(
           // Asked for again on the way back: the owner may have been blocked
           // there, and then this listing is gone as well; see [_load].

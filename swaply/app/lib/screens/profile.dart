@@ -118,7 +118,9 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
       // two «Legg ut» on one empty screen.
       floatingActionButton: me.items.isEmpty ? null : Padding(
         padding: const EdgeInsets.only(right: 4, bottom: 28),
-        child: GestureDetector(
+        child: Semantics(
+          button: true,
+          child: GestureDetector(
           onTap: () => openListingForm(context),
           child: Container(
             height: 50,
@@ -134,6 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                       fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
             ),
           ),
+        ),
         ),
       ),
       child: RefreshIndicator(
@@ -242,6 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
             const SizedBox(height: 11 - 2),
             TapArea(
               room: const EdgeInsets.symmetric(vertical: 2),
+              button: true,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 // Asked again on the way back, as from a listing below: a
@@ -957,7 +961,11 @@ Widget _group(List<Widget> rows) => Container(
 
 /// A 48-tall row: the label, a word at the right if there is one
 /// («2 skjult»), and the chevron.
-Widget _tile(String title, String? value, {VoidCallback? onTap}) => InkWell(
+///
+/// A button to a screen reader, which an InkWell does not say.
+Widget _tile(String title, String? value, {VoidCallback? onTap}) => Semantics(
+    button: true,
+    child: InkWell(
       onTap: onTap,
       child: SizedBox(
         height: 48,
@@ -979,7 +987,7 @@ Widget _tile(String title, String? value, {VoidCallback? onTap}) => InkWell(
           ],
         ),
       ),
-    );
+    ));
 
 /// «Vis alt på Oppdag igjen» on 16b, with how many kinds are hidden beside
 /// it. The server keeps no way to name one kind back, so it is all of them.

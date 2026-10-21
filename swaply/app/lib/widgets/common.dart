@@ -99,12 +99,19 @@ class TapArea extends StatefulWidget {
     this.reach,
     this.above = false,
     this.keepsKeyboard = false,
+    this.button,
   });
 
   final Widget child;
   final VoidCallback? onTap, onLongPress;
   final String? label;
 
+  /// Whether a screen reader is told this is a button. It is when [onTap]
+  /// or [onLongPress] is this target's own; around an [InkWell], which
+  /// answers a tap and says nothing of being a button, it has to be said.
+  /// Left unsaid there, «Tilbake», «Del» and «⋯» on 04, the rows of 16b and
+  /// more were read as words and not as things to press.
+  final bool? button;
   final EdgeInsets room;
   final EdgeInsets? reach;
   final bool above;
@@ -155,7 +162,7 @@ class _TapAreaState extends State<TapArea> {
       // Room without a reach is the whole area; neither is the 44 square.
       reach: widget.room == EdgeInsets.zero ? widget.reach : widget.reach ?? EdgeInsets.zero,
       label: widget.label,
-      button: own,
+      button: widget.button ?? own,
       child: target,
     );
     if (!widget.above) return area;

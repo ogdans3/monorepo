@@ -101,8 +101,11 @@ class SwaplyNavBar extends StatelessWidget {
     return Expanded(
       // The tab you are in is said as well as drawn: in green alone, a
       // screen reader had five buttons and no way to tell where it was.
+      // A button as well: an InkWell says nothing of being one, and a tab
+      // was read as a word.
       child: Semantics(
         container: true,
+        button: true,
         selected: selected,
         child: InkWell(
           onTap: onSelect != null

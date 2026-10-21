@@ -1059,7 +1059,11 @@ class _PostItemScreenState extends State<PostItemScreen> {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            GestureDetector(
+            // A button to a screen reader, which a GestureDetector does not say.
+            Semantics(
+              button: true,
+              enabled: _photos.length < 10,
+              child: GestureDetector(
               onTap: _photos.length >= 10 ? null : _addPhoto,
               child: Container(
                 width: 106,
@@ -1100,6 +1104,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                         ),
                       ),
               ),
+            ),
             ),
             ..._photos.asMap().entries.map((entry) => Padding(
                   padding: const EdgeInsets.only(left: Insets.sm),

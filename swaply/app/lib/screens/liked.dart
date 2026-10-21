@@ -149,6 +149,7 @@ class _LikedScreenState extends State<LikedScreen> {
             // the whole card, padding and all, used to tell a screen reader it
             // was the one button, and answered only in the middle of it.
             TapArea(
+              button: count > 0,
               child: InkWell(
                 onTap: count == 0
                     ? null
@@ -262,6 +263,7 @@ class _LikedScreenState extends State<LikedScreen> {
     );
     if (liker.anonymous) return drawn;
     return TapArea(
+      button: true,
       child: InkWell(
         // Asked for again on the way back, quietly: a block made on 13b
         // takes the person off this list, and they stood on it with «Se

@@ -4,7 +4,10 @@
 // inn» and «Juridisk og personvern» with it; a tab label broke in two; and the
 // switches on 16b, the tab you are in and the interests chosen on 02 were
 // drawn and never said.
+import 'dart:ui' show CheckedState, Tristate;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,10 +16,13 @@ import 'package:swaply_app/api/models.dart';
 import 'package:swaply_app/screens/agreement.dart';
 import 'package:swaply_app/screens/counter_offer.dart';
 import 'package:swaply_app/screens/discover.dart';
+import 'package:swaply_app/screens/item_detail.dart';
+import 'package:swaply_app/screens/liked.dart';
 import 'package:swaply_app/screens/onboarding.dart';
 import 'package:swaply_app/screens/post_item.dart';
 import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/screens/review.dart';
+import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/shell.dart';
 
@@ -275,5 +281,61 @@ void main() {
           isSemantics(hasSelectedState: true, isSelected: false));
       semantics.dispose();
     });
+  });
+
+  group('everything that answers a tap says what it is', () {
+    // InkWell and GestureDetector answer a tap and say nothing of being a
+    // button, so the tabs, «Tilbake», «Del» and «⋯» on 04, the cards on 05
+    // and 11, the rows of 16b and 12 and more were read as words. And on
+    // 16a each round and box was a node of its own with no name.
+    final screens = <(String, Widget Function(), Future<void> Function(WidgetTester)?)>[
+      ('05', () => const DiscoverScreen(), null),
+      ('04', () => const ItemDetailScreen(itemId: 'item-console'), null),
+      ('11', () => const TradesScreen(), null),
+      ('12', () => const LikedScreen(), null),
+      ('13', () => const ProfileScreen(), null),
+      ('16b', () => const SettingsScreen(), null),
+      ('10b', () => const PostItemScreen(), null),
+      ('16a', () => const ItemDetailScreen(itemId: 'item-console'), (tester) async {
+        await tester.tap(find.byIcon(Icons.more_horiz));
+        await tester.pumpAndSettle();
+      }),
+    ];
+    for (final (name, screen, act) in screens) {
+      testWidgets('$name: a role and a name on every target', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await mount(tester, screen());
+        await act?.call(tester);
+
+        final faults = <String>[];
+        void visit(SemanticsNode node) {
+          final data = node.getSemanticsData();
+          final f = data.flagsCollection;
+          // The dimming behind a sheet is Flutter's own, and says so.
+          final barrier = data.label == 'Scrim' || data.label == 'Dismiss';
+          // Merged into the node above it, which is what is read.
+          if (!barrier &&
+              !node.isMergedIntoParent &&
+              (data.hasAction(SemanticsAction.tap) || data.hasAction(SemanticsAction.longPress))) {
+            final role = f.isButton ||
+                f.isLink ||
+                f.isTextField ||
+                f.isSlider ||
+                f.isChecked != CheckedState.none ||
+                f.isToggled != Tristate.none;
+            final name = data.label.isNotEmpty || data.value.isNotEmpty || data.tooltip.isNotEmpty;
+            if (!role || !name) faults.add('«${data.label}» role: $role, name: $name');
+          }
+          node.visitChildren((child) {
+            visit(child);
+            return true;
+          });
+        }
+
+        visit(tester.binding.renderViews.first.owner!.semanticsOwner!.rootSemanticsNode!);
+        expect(faults, isEmpty, reason: faults.join('\n'));
+        semantics.dispose();
+      });
+    }
   });
 }

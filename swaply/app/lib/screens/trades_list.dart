@@ -228,6 +228,7 @@ class _TradesScreenState extends State<TradesScreen>
       // inside it a node of its own.
       child: Semantics(
         container: true,
+        button: true,
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: () => _openTrade(trade),
@@ -430,6 +431,7 @@ class _Segments extends StatelessWidget {
   Widget _segment(int i, String label, TextStyle on, TextStyle off, double at) {
     final chosen = (1 - (at - i).abs()).clamp(0.0, 1.0);
     return TapArea(
+      button: true,
       child: Semantics(
         selected: i == controller.index,
         child: InkWell(

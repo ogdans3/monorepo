@@ -718,6 +718,7 @@ class _SquareIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TapArea(
         label: 'Avansert søk',
+        button: true,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(Radii.pill),
@@ -901,7 +902,12 @@ class _ItemCardState extends State<ItemCard> {
   Widget build(BuildContext context) {
     final item = widget.item;
 
-    return GestureDetector(
+    // A button to a screen reader, which a GestureDetector does not say: the
+    // card opens its page, and was read as its name and value alone.
+    return Semantics(
+      container: true,
+      button: true,
+      child: GestureDetector(
       // The whole card, the space beside a short caption line included: a
       // value that goes under the name leaves room at its right.
       behavior: HitTestBehavior.opaque,
@@ -968,6 +974,7 @@ class _ItemCardState extends State<ItemCard> {
           // stays put at the top right.
           ListingCaption(item),
         ],
+      ),
       ),
     );
   }
