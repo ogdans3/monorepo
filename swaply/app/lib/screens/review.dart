@@ -18,65 +18,93 @@ class TradeCompletedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final other = trade.receivingFrom.displayName.split(' ').first;
+    final cash = trade.cash;
+    final cashIn = cash != null && cash.payee.position == trade.youPosition ? cash.amountNok : 0;
+    final cashOut = cash != null && cash.youPay ? cash.amountNok : 0;
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(Insets.screen),
-          child: Column(
-            children: [
-              const Spacer(),
-              Container(
-                height: 76,
-                width: 76,
-                decoration: const BoxDecoration(
-                    color: SwaplyColors.greenSoft, shape: BoxShape.circle),
-                child: const Icon(Icons.check, size: 40, color: SwaplyColors.greenPressed),
-              ),
-              const SizedBox(height: Insets.lg),
-              const Text('Byttet er gjennomført!',
-                  style: Type.display, textAlign: TextAlign.center),
-              const SizedBox(height: Insets.sm),
-              Text(
-                'Du og $other har begge bekreftet. '
-                '${trade.youGet.map((i) => i.title).join(' og ')} er din, '
-                '${trade.youGive.map((i) => i.title).join(' og ')} er hans.',
-                style: Type.secondary,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: Insets.xl),
-              SectionCard(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+        // Laid out for a screen with room to spare, the words in the middle
+        // and the buttons at the foot. Where it is short — a small phone, a
+        // large text size — it scrolls rather than pushing «Vurder Kari» and
+        // «Senere», the only ways on, off the foot of the screen.
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            padding: const EdgeInsets.all(Insets.screen),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight - 2 * Insets.screen),
+              child: IntrinsicHeight(
+                child: Column(
                   children: [
-                    Column(
-                      children: [
-                        Text(kr(trade.youGetValue), style: Type.title),
-                        const Text('verdi inn', style: Type.small),
-                      ],
+                    const Spacer(),
+                    Container(
+                      height: 76,
+                      width: 76,
+                      decoration: const BoxDecoration(
+                          color: SwaplyColors.greenSoft, shape: BoxShape.circle),
+                      child: const Icon(Icons.check, size: 40, color: SwaplyColors.greenPressed),
                     ),
-                    Column(
-                      children: [
-                        Text(kr(trade.youGiveValue), style: Type.title),
-                        const Text('verdi ut', style: Type.small),
-                      ],
+                    const SizedBox(height: Insets.lg),
+                    const Text('Byttet er gjennomført!',
+                        style: Type.display, textAlign: TextAlign.center),
+                    const SizedBox(height: Insets.sm),
+                    // The export's «… er hans» was written for Ola. Said of
+                    // whoever is on the other side a pronoun is a guess, so
+                    // it is their name: «… er Karis».
+                    Text(
+                      'Du og $other har begge bekreftet. '
+                      '${trade.youGet.map((i) => i.title).join(' og ')} '
+                      'er ${trade.youGet.length > 1 ? 'dine' : 'din'}, '
+                      '${trade.youGive.map((i) => i.title).join(' og ')} er ${possessive(other)}.',
+                      style: Type.secondary,
+                      textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: Insets.xl),
+                    // With the mellomlegg on the side it went to: without
+                    // it the one paid 450 kr on top read as having given
+                    // more than they got.
+                    SectionCard(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _value(kr(trade.youGetValue + cashIn),
+                              cashIn > 0 ? 'verdi inn, med mellomlegg' : 'verdi inn'),
+                          _value(kr(trade.youGiveValue + cashOut),
+                              cashOut > 0 ? 'verdi ut, med mellomlegg' : 'verdi ut'),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    const SizedBox(height: Insets.lg),
+                    PrimaryButton('Vurder $other', onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => ReviewScreen(trade: trade)));
+                    }),
+                    const SizedBox(height: Insets.sm),
+                    SecondaryButton('Senere', onPressed: () => Navigator.of(context).maybePop()),
                   ],
                 ),
               ),
-              const Spacer(),
-              PrimaryButton('Vurder $other', onPressed: () {
-                Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => ReviewScreen(trade: trade)));
-              }),
-              const SizedBox(height: Insets.sm),
-              SecondaryButton('Senere', onPressed: () => Navigator.of(context).maybePop()),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  /// An amount over its words, made smaller rather than run over the card's
+  /// edge when the two of them do not fit side by side.
+  Widget _value(String amount, String words) => Flexible(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            children: [
+              Text(amount, style: Type.title),
+              Text(words, style: Type.small),
+            ],
+          ),
+        ),
+      );
 }
 
 /// 06h Vurdering, and 07l when the trade was a chain and there are two people
@@ -133,6 +161,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  /// What [person] did with you, as 07l says it from the one rating: the
+  /// one you gave to «fikk drillen din», the one you got from «sendte
+  /// fiskestangen». It said what each of them gave, which for the one you
+  /// gave to is a leg you were never part of.
+  String _withYou(UserRef person) {
+    final trade = widget.trade;
+    String things(List<Item> items) => items.map((i) => i.title).join(' og ');
+    if (person.position == trade.givingTo.position && trade.youGive.isNotEmpty) {
+      return 'fikk ${things(trade.youGive)}';
+    }
+    if (person.position == trade.receivingFrom.position && trade.youGet.isNotEmpty) {
+      return 'sendte ${things(trade.youGet)}';
+    }
+    return 'byttet med deg';
+  }
+
   /// «Byttet ble ikke noe av» on 07l. The export has it free the things
   /// again, asked a week into the chat; here 07l comes once all three have
   /// marked the ring done, and a completed trade has nothing left to free.
@@ -143,9 +187,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       context,
       title: 'Hvem gjelder det?',
       people: _others,
-      describe: (p) => p.gives.isEmpty
-          ? 'byttet med deg'
-          : 'ga ${p.gives.map((i) => i.title).join(' og ')}',
+      describe: _withYou,
     );
     if (person == null || !mounted) return;
     await showReportSheet(context, userId: person.id, personName: person.displayName);
@@ -244,12 +286,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(person.displayName, style: Type.heading),
-                                      Text(
-                                        person.gives.isEmpty
-                                            ? 'byttet med deg'
-                                            : 'ga ${person.gives.map((i) => i.title).join(' og ')}',
-                                        style: Type.small,
-                                      ),
+                                      Text(_withYou(person), style: Type.small),
                                     ],
                                   ),
                                 ),
@@ -368,7 +405,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   for (var n = 1; n <= 5; n++)
                     Padding(
                       padding: EdgeInsets.only(right: n < 5 ? gap : 0),
+                      // A star is a mark, as an icon is, and keeps its size
+                      // whatever the text size: grown with it, the row ran
+                      // past the screen and the fifth star was cut off.
                       child: Text('★',
+                          textScaler: TextScaler.noScaling,
                           style: TextStyle(
                               fontSize: size,
                               height: 1,
@@ -435,7 +476,14 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final other = widget.trade.receivingFrom.displayName.split(' ').first;
+    final trade = widget.trade;
+    final others = trade.participants
+        .where((p) => p.position != trade.youPosition)
+        .map((p) => p.displayName.split(' ').first)
+        .toList();
+    final rated = trade.isChain && others.length > 1
+        ? '${others.sublist(0, others.length - 1).join(', ')} og ${others.last}'
+        : trade.receivingFrom.displayName.split(' ').first;
 
     return Scaffold(
       appBar: AppBar(
@@ -459,7 +507,9 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
                 children: [
                   const Text('Hvordan var det å bytte med Swaply?', style: Type.display),
                   const SizedBox(height: Insets.sm),
-                  Text('$other har fått sin. Et par sekunder fra deg gjør appen bedre.',
+                  // In a ring both were rated, not only the one you got from.
+                  Text('$rated har fått ${trade.isChain ? 'hver sin' : 'sin'}. '
+                      'Et par sekunder fra deg gjør appen bedre.',
                       style: Type.secondary),
                   const SizedBox(height: Insets.xl),
                   Row(
@@ -467,25 +517,31 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
                     children: List.generate(5, (i) {
                       final value = i + 1;
                       final selected = _score == value;
-                      return GestureDetector(
-                        onTap: () => setState(() => _score = value),
-                        child: Container(
-                          height: 52,
-                          width: 52,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: selected ? SwaplyColors.greenPressed : Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: selected
-                                    ? SwaplyColors.greenPressed
-                                    : const Color(0x22064E3B)),
+                      // The one chosen is said, not only filled in.
+                      return Semantics(
+                        container: true,
+                        button: true,
+                        selected: selected,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _score = value),
+                          child: Container(
+                            height: 52,
+                            width: 52,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: selected ? SwaplyColors.greenPressed : Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: selected
+                                      ? SwaplyColors.greenPressed
+                                      : const Color(0x22064E3B)),
+                            ),
+                            child: Text('$value',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: selected ? Colors.white : SwaplyColors.ink)),
                           ),
-                          child: Text('$value',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: selected ? Colors.white : SwaplyColors.ink)),
                         ),
                       );
                     }),

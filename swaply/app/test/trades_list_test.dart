@@ -124,4 +124,41 @@ void main() {
     expect(find.text('Svar'), findsNothing);
     expect(edge(tester, 'Pauset'), SwaplyColors.cardLine);
   });
+
+  testWidgets('5. a counter-offer of your own waits on Kari, not «Endret»', (tester) async {
+    // Sending it was your yes to it (DESIGN.md, 02.10.2026). «Endret» in amber
+    // is the pill for one somebody else made, with your turn under it.
+    list(waiting: [
+      {
+        ...FakeServer.trade,
+        'state': 'countered',
+        'counterOfferBy': 'me-1',
+        'you': {...FakeServer.trade['you'] as Map, 'accepted': true},
+        'participants': [
+          {...FakeServer.me, 'position': 0, 'accepted': true, 'gives': [FakeServer.drill]},
+          {...FakeServer.kari, 'position': 1, 'accepted': false, 'gives': [FakeServer.console]},
+        ],
+      },
+    ]);
+    await mount(tester);
+
+    expect(find.text('Venter på Kari'), findsOneWidget);
+    expect(find.text('Endret'), findsNothing);
+    expect(edge(tester, 'Venter på Kari'), SwaplyColors.cardLine);
+  });
+
+  testWidgets('6. in a ring it names the one who has not said yes', (tester) async {
+    // Kari, whom you receive from, has said yes. Per has not.
+    final ring = chainTrade();
+    list(waiting: [
+      {
+        ...ring,
+        'you': {...ring['you']! as Map, 'accepted': true},
+      },
+    ]);
+    await mount(tester);
+
+    expect(find.text('Venter på Per'), findsOneWidget);
+    expect(find.text('Venter på Kari'), findsNothing);
+  });
 }

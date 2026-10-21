@@ -6,6 +6,7 @@ import '../api/models.dart';
 import '../design/tokens.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
+import 'terms.dart';
 
 /// 06c Avtalen. The explicit agreement, in words, with a checkbox and a swipe.
 ///
@@ -23,8 +24,6 @@ class AgreementScreen extends StatefulWidget {
 class _AgreementScreenState extends State<AgreementScreen> {
   bool _accepted = false;
   bool _busy = false;
-
-  static const termsVersion = '2026-09-06';
 
   /// The swipe, and a screen reader's tap on it. True once the server has
   /// the acceptance; false hands the swipe back for another try, since a
@@ -57,9 +56,21 @@ class _AgreementScreenState extends State<AgreementScreen> {
     final trade = widget.trade;
     final other = trade.givingTo.displayName.split(' ').first;
     final from = trade.receivingFrom.displayName.split(' ').first;
+    // A ring of three is agreed with both of the others: «Med Ingrid og
+    // Kari», and terms that say so. It said «Med Ingrid», whom you give to,
+    // and «begge», as if there were two of you.
+    final ring = trade.isChain || trade.participants.length > 2;
+    final others = trade.participants
+        .where((p) => p.position != trade.youPosition)
+        .map((p) => p.displayName.split(' ').first)
+        .toList();
+    final withWhom = ring && others.length > 1
+        ? '${others.sublist(0, others.length - 1).join(', ')} og ${others.last}'
+        : other;
+    final askWhom = ring && others.length > 1 ? others.join(' eller ') : other;
 
     return Scaffold(
-      appBar: swaplyAppBar(context, 'Avtalen', subtitle: 'Med $other'),
+      appBar: swaplyAppBar(context, 'Avtalen', subtitle: 'Med $withWhom'),
       body: SafeArea(
         child: Column(
           children: [
@@ -113,90 +124,72 @@ class _AgreementScreenState extends State<AgreementScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (final (i, t) in _terms(other).indexed) ...[
+                      for (final (i, t) in tradeTerms(askWhom, ring: ring).indexed) ...[
                         if (i > 0) const SizedBox(height: 8),
                         _term(t),
                       ],
                       TapArea(
                         room: const EdgeInsets.symmetric(vertical: 12),
                         reach: const EdgeInsets.only(top: 5),
-                        onTap: () => showDialog<void>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Byttevilkår', style: Type.heading),
-                            content: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('Versjon $termsVersion', style: Type.small),
-                                  const SizedBox(height: Insets.sm),
-                                  ..._terms(other).map((t) => Padding(
-                                        padding: const EdgeInsets.only(bottom: Insets.sm),
-                                        child: Text('• $t', style: Type.body),
-                                      )),
-                                  const Text(
-                                    'Swaply er ikke part i byttet og fasiliterer ikke frakt eller '
-                                    'betaling. Avtalen er mellom dere.',
-                                    style: Type.body,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Lukk')),
-                            ],
-                          ),
-                        ),
+                        // The whole terms, closed by the dialog's own context.
+                        // 06c is in the tab's navigator and the dialog on the
+                        // root one, so «Lukk» popping with this screen's
+                        // context took 06c down and left the terms up.
+                        onTap: () => showTradeTerms(context, other: askWhom, ring: ring),
                         child: const Text('Les hele byttevilkårene ›', style: Type.link),
                       ),
                     ],
                   ),
                   // The consent is a card of its own with a square tick, not a
-                  // Material checkbox.
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(() => _accepted = !_accepted),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: SwaplyColors.cardLine),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 22,
-                            height: 22,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: _accepted ? SwaplyColors.greenPressed : null,
-                              borderRadius: BorderRadius.circular(7),
-                              border: _accepted
-                                  ? null
-                                  : Border.all(color: SwaplyColors.chevron, width: 2),
+                  // Material checkbox, and to a screen reader it is a checkbox
+                  // that says whether it is ticked: it is what unlocks the
+                  // swipe, which is dimmed until it is.
+                  Semantics(
+                    container: true,
+                    checked: _accepted,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => setState(() => _accepted = !_accepted),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: SwaplyColors.cardLine),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _accepted ? SwaplyColors.greenPressed : null,
+                                borderRadius: BorderRadius.circular(7),
+                                border: _accepted
+                                    ? null
+                                    : Border.all(color: SwaplyColors.chevron, width: 2),
+                              ),
+                              child: _accepted
+                                  // Said by the checkbox, not read out as a word.
+                                  ? const ExcludeSemantics(child: Text('✓',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          height: 1.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white)))
+                                  : null,
                             ),
-                            child: _accepted
-                                ? const Text('✓',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        height: 1.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white))
-                                : null,
-                          ),
-                          const SizedBox(width: 10),
-                          const Expanded(
-                            child: Text('Jeg har lest og godtar vilkårene',
-                                style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: SwaplyColors.ink)),
-                          ),
-                        ],
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text('Jeg har lest og godtar vilkårene',
+                                  style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: SwaplyColors.ink)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -240,13 +233,6 @@ class _AgreementScreenState extends State<AgreementScreen> {
       ),
     );
   }
-
-  List<String> _terms(String other) => [
-        'Jeg leverer eller sender tingene mine innen 7 dager etter at begge har godtatt',
-        'Tingene mine er som beskrevet i annonsen',
-        'Mellomlegg betales når begge har godtatt, før noe sendes',
-        'Trekker jeg meg etterpå, må $other si ja først. Er noe sendt, kan jeg ikke trekke meg',
-      ];
 
   /// Up to two 40px pictures, the second tucked behind the first.
   Widget _thumbs(List<Item> items) {

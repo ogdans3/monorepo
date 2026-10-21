@@ -9,8 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/api/models.dart';
+import 'package:swaply_app/screens/agreement.dart';
+import 'package:swaply_app/screens/counter_offer.dart';
 import 'package:swaply_app/screens/onboarding.dart';
 import 'package:swaply_app/screens/profile.dart';
+import 'package:swaply_app/screens/review.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/shell.dart';
 
@@ -156,6 +160,58 @@ void main() {
       await tester.pump();
       expect(tester.getSemantics(find.text('Båt')),
           isSemantics(label: 'Båt', isSelected: true));
+      semantics.dispose();
+    });
+
+    testWidgets('4. 06c\'s box is a checkbox that says whether it is ticked', (tester) async {
+      // It is what unlocks the swipe, and was read as its words alone.
+      final semantics = tester.ensureSemantics();
+      await mount(tester, AgreementScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      final box = find.text('Jeg har lest og godtar vilkårene');
+      expect(
+          tester.getSemantics(box),
+          isSemantics(
+              label: 'Jeg har lest og godtar vilkårene',
+              hasCheckedState: true,
+              isChecked: false,
+              hasTapAction: true));
+
+      await tester.tap(box);
+      await tester.pump();
+      // Ticked, and the «✓» is not read out as part of it.
+      expect(tester.getSemantics(box),
+          isSemantics(label: 'Jeg har lest og godtar vilkårene', isChecked: true));
+      semantics.dispose();
+    });
+
+    testWidgets('5. 09a\'s things say which are chosen', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await mount(tester, CounterOfferScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      // The drill is in the trade, and so chosen; the bike is held by another.
+      expect(tester.getSemantics(find.text('Bosch drill 18V')),
+          isSemantics(isSelected: true, isButton: true, hasTapAction: true));
+      expect(tester.getSemantics(find.text('Bysykkel, dame')),
+          isSemantics(isSelected: false, isButton: true, hasEnabledState: true, isEnabled: false));
+      expect(find.bySemanticsLabel(RegExp('✓')), findsNothing);
+
+      await tester.tap(find.text('Bosch drill 18V'));
+      await tester.pump();
+      expect(tester.getSemantics(find.text('Bosch drill 18V')), isSemantics(isSelected: false));
+      semantics.dispose();
+    });
+
+    testWidgets('6. 06i\'s scale says which number is chosen', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await mount(tester, AppFeedbackScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      await tester.tap(find.text('4'));
+      await tester.pump();
+      expect(tester.getSemantics(find.text('4')),
+          isSemantics(label: '4', isSelected: true, isButton: true));
+      expect(tester.getSemantics(find.text('3')),
+          isSemantics(label: '3', isSelected: false, isButton: true));
       semantics.dispose();
     });
   });

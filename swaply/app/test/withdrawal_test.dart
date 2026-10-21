@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/widgets/common.dart';
 
 import 'fake_server.dart';
 
@@ -165,6 +166,171 @@ void main() {
 
       expect(find.text('Du kan ikke trekke deg'), findsOneWidget);
       expect(find.textContaining('Per har allerede sendt sin ting.'), findsOneWidget);
+    });
+  });
+
+  group('08a and 09g, the sheets before it', () {
+    // The sheets named the one you receive from and nobody else. In a ring
+    // that one may have said yes already while the third has not, both of
+    // them are asked, and either having sent keeps you in.
+
+    /// The ring as [ring] has it, with your own yes on it.
+    void ringYouAccepted(String state) {
+      ring(state, const {});
+      final trade = server.overrides['GET /trades/trade-chain']! as Map<String, Object?>;
+      server.overrides['GET /trades/trade-chain'] = {
+        ...trade,
+        'withdrawal': null,
+        'you': {...trade['you']! as Map, 'accepted': true},
+      };
+    }
+
+    Future<void> openSheet(WidgetTester tester) async {
+      await tester.tap(find.text('Trekk deg fra byttet'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('9. 09g in a ring names the one who has not said yes, and tells both',
+        (tester) async {
+      // Kari, whom you receive from, has said yes. Per has not.
+      ringYouAccepted('pending');
+      await mount(tester, 'trade-chain');
+      await openSheet(tester);
+
+      expect(
+          find.text('Per har ikke godtatt ennå, så byttet avbrytes med en gang. '
+              'Ingen har sendt noe.'),
+          findsOneWidget);
+      expect(find.text('Kari og Per får beskjed, samtalen beholdes'), findsOneWidget);
+      expect(find.textContaining('Kari har ikke godtatt'), findsNothing);
+    });
+
+    testWidgets('10. 09g in a pair says what the export says', (tester) async {
+      pair('pending', const {}, {
+        'withdrawal': null,
+        'you': {...FakeServer.trade['you'] as Map, 'accepted': true},
+        'participants': [
+          {...FakeServer.me, 'position': 0, 'accepted': true, 'gives': [FakeServer.drill]},
+          {...FakeServer.kari, 'position': 1, 'accepted': false, 'gives': [FakeServer.console]},
+        ],
+      });
+      await mount(tester, 'trade-1');
+      await openSheet(tester);
+
+      expect(
+          find.text('Kari har ikke godtatt ennå, så byttet avbrytes med en gang. '
+              'Ingen har sendt noe.'),
+          findsOneWidget);
+      expect(find.text('Kari får beskjed, samtalen beholdes'), findsOneWidget);
+    });
+
+    testWidgets('11. 08a in a ring asks both, and either having sent keeps you in',
+        (tester) async {
+      ringYouAccepted('accepted');
+      await mount(tester, 'trade-chain');
+      await openSheet(tester);
+
+      expect(
+          find.text('Dere har alle godtatt, og Kari eller Per kan allerede ha sendt tingen sin. '
+              'Vi spør Kari og Per om det er greit at du trekker deg.'),
+          findsOneWidget);
+      expect(find.text('Har ingen av dem sendt noe, avbrytes byttet når en av dem svarer ja'),
+          findsOneWidget);
+      expect(find.text('Har en av dem allerede sendt, kan du ikke trekke deg'), findsOneWidget);
+    });
+
+    testWidgets('12. 08a in a pair asks Kari', (tester) async {
+      pair('accepted', const {}, {'withdrawal': null});
+      await mount(tester, 'trade-1');
+      await openSheet(tester);
+
+      expect(
+          find.text('Dere har begge godtatt, og Kari kan allerede ha sendt tingen sin. '
+              'Vi spør Kari om det er greit at du trekker deg.'),
+          findsOneWidget);
+      expect(find.text('Har Kari allerede sendt, kan du ikke trekke deg'), findsOneWidget);
+    });
+
+    testWidgets('13. «Angre godkjenningen» in a ring says both are told', (tester) async {
+      ringYouAccepted('pending');
+      await mount(tester, 'trade-chain');
+      await tester.tap(find.text('Angre godkjenningen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Byttet står fortsatt, men du har ikke godtatt det lenger. '
+          'Kari og Per får beskjed.'), findsOneWidget);
+    });
+  });
+
+  group('a yes the server turns into a no', () {
+    // Saying yes once something has been sent is not possible: the server
+    // records the answer as no and the trade carries on. The app said
+    // nothing, and the banner just went, as if «Ja, greit» had been lost.
+    String toast(WidgetTester tester) =>
+        tester.widget<SwaplyToast>(find.byType(SwaplyToast)).message;
+
+    testWidgets('14. says so when it was your own thing that was sent', (tester) async {
+      pair('paused', question(by: 'kari-1'));
+      server.overrides['POST /trades/trade-1/withdrawal/respond'] = {
+        'state': 'rejected',
+        'blockedBySent': true,
+        'trade': {
+          ...FakeServer.trade,
+          'state': 'accepted',
+          'you': {...FakeServer.trade['you'] as Map, 'accepted': true, 'sentAt': '2026-09-09T10:00:00Z'},
+          'withdrawal': question(by: 'kari-1', state: 'rejected', blockedBySent: true),
+        },
+      };
+      await mount(tester, 'trade-1');
+
+      await tester.tap(find.text('Ja, greit'));
+      await tester.pump();
+
+      expect(toast(tester), 'Du har allerede sendt din ting, så svaret ble nei. Byttet fortsetter.');
+    });
+
+    testWidgets('15. in a ring, names the third, who had sent', (tester) async {
+      ring('paused', question(by: 'per-1'));
+      final asked = server.overrides['GET /trades/trade-chain']! as Map<String, Object?>;
+      server.overrides['POST /trades/trade-chain/withdrawal/respond'] = {
+        'state': 'rejected',
+        'blockedBySent': true,
+        'trade': {
+          ...asked,
+          'state': 'accepted',
+          'withdrawal': question(by: 'per-1', state: 'rejected', blockedBySent: true),
+          'participants': [
+            for (final p in asked['participants']! as List)
+              if ((p as Map)['id'] == 'kari-1') {...p, 'sentAt': '2026-09-09T10:00:00Z'} else p,
+          ],
+        },
+      };
+      await mount(tester, 'trade-chain');
+
+      await tester.tap(find.text('Ja, greit'));
+      await tester.pump();
+
+      expect(toast(tester), 'Kari har allerede sendt, så svaret ble nei. Byttet fortsetter.');
+    });
+
+    testWidgets('16. a yes that let them out says nothing of the kind', (tester) async {
+      pair('paused', question(by: 'kari-1'));
+      server.overrides['POST /trades/trade-1/withdrawal/respond'] = {
+        'state': 'approved',
+        'trade': {
+          ...FakeServer.trade,
+          'state': 'cancelled',
+          'closeCode': 'withdrawal_approved',
+          'withdrawal': question(by: 'kari-1', state: 'approved'),
+        },
+      };
+      await mount(tester, 'trade-1');
+
+      await tester.tap(find.text('Ja, greit'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SwaplyToast), findsNothing);
+      expect(find.text('Byttet er avsluttet'), findsOneWidget);
     });
   });
 }

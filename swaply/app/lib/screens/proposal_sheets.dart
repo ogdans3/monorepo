@@ -68,6 +68,21 @@ class _ProposalSheetState extends State<_ProposalSheet> {
         ProposalKind.cash => widget.trade.youGive.isNotEmpty && widget.trade.youGet.isNotEmpty,
       };
 
+  /// Whether the mellomlegg proposed differs from the one on the table. The
+  /// same one again is a new version of the same deal, which takes the other
+  /// side's yes away for nothing — and «Foreslå ingen mellomlegg» where there
+  /// was none said «Jeg foreslår at vi dropper mellomlegget» about nothing.
+  bool get _cashChanged {
+    final cash = widget.trade.cash;
+    if (cash == null) return _amount > 0;
+    return _amount != cash.amountNok || (_amount > 0 && _iPay != cash.youPay);
+  }
+
+  /// Nothing of theirs is in the trade yet, so what is asked for is the
+  /// first thing and not one more: the owner answering «Jeg vil ha» about
+  /// their own listing, asking for something back.
+  bool get _first => widget.trade.youGet.isEmpty;
+
   int get _theirPosition =>
       widget.trade.receivingFrom.position ?? (widget.trade.youPosition == 0 ? 1 : 0);
 
@@ -165,10 +180,17 @@ class _ProposalSheetState extends State<_ProposalSheet> {
   }
 
   String _messageLine() => switch (widget.kind) {
-        ProposalKind.offerMine => 'Jeg foreslår ${_chosen!.title} '
-            '(verdi ${kr(_chosen!.estimatedValueNok)}) i byttet.',
-        ProposalKind.askTheirs =>
-          'Kan jeg få ${_chosen!.title} i tillegg? Da er vi nærmere skuls.',
+        // Kept in the conversation and read by the other side, so a thing
+        // with no value is named without «(verdi )».
+        ProposalKind.offerMine => _chosen!.estimatedValueNok == null
+            ? 'Jeg foreslår ${_chosen!.title} i byttet.'
+            : 'Jeg foreslår ${_chosen!.title} '
+                '(verdi ${kr(_chosen!.estimatedValueNok)}) i byttet.',
+        // «i tillegg» only to what you already get: asked first, there is
+        // nothing to add it to, and nothing to be closer to even with.
+        ProposalKind.askTheirs => _first
+            ? 'Kan jeg få ${_chosen!.title}?'
+            : 'Kan jeg få ${_chosen!.title} i tillegg? Da er vi nærmere skuls.',
         ProposalKind.cash => _amount == 0
             ? 'Jeg foreslår at vi dropper mellomlegget.'
             : _iPay
@@ -210,7 +232,7 @@ class _ProposalSheetState extends State<_ProposalSheet> {
                   PrimaryButton(
                     _confirmLabel(),
                     busy: _busy,
-                    enabled: widget.kind == ProposalKind.cash || _chosen != null,
+                    enabled: widget.kind == ProposalKind.cash ? _cashChanged : _chosen != null,
                     onPressed: _send,
                   ),
                   const SizedBox(height: Insets.sm),
@@ -223,7 +245,7 @@ class _ProposalSheetState extends State<_ProposalSheet> {
 
   String _title() => switch (widget.kind) {
         ProposalKind.offerMine => 'Foreslå en av dine ting',
-        ProposalKind.askTheirs => 'Vil du ha noe mer av $_other?',
+        ProposalKind.askTheirs => _first ? 'Vil du ha noe av $_other?' : 'Vil du ha noe mer av $_other?',
         ProposalKind.cash => 'Foreslå mellomlegg',
       };
 
@@ -235,21 +257,36 @@ class _ProposalSheetState extends State<_ProposalSheet> {
         ProposalKind.cash => _cashBlurb(),
       };
 
+  /// 09d's sentence: what each side is worth, and the difference between
+  /// them. One thing a side is the export's, by name. With more on a side it
+  /// is the side's sum: the first thing alone gave two values that did not
+  /// make the difference it named.
   String _cashBlurb() {
-    final get = widget.trade.youGet.firstOrNull;
-    final give = widget.trade.youGive.firstOrNull;
-    if (get == null || give == null) {
+    final trade = widget.trade;
+    final get = trade.youGet, give = trade.youGive;
+    if (get.isEmpty || give.isEmpty || trade.youGetValue + trade.youGiveValue == 0) {
       return 'Mellomlegget avtales mellom dere og betales utenfor appen.';
     }
-    return '${get.title} er verdt ${kr(get.estimatedValueNok)}, ${give.title} '
-        '${kr(give.estimatedValueNok)}. Differansen er ${kr(widget.trade.difference)}.';
+    final difference = 'Differansen er ${kr(trade.difference)}.';
+    if (get.length == 1 &&
+        give.length == 1 &&
+        get.single.estimatedValueNok != null &&
+        give.single.estimatedValueNok != null) {
+      return '${get.single.title} er verdt ${kr(get.single.estimatedValueNok)}, '
+          '${give.single.title} ${kr(give.single.estimatedValueNok)}. $difference';
+    }
+    return 'Det du får er verdt ${kr(trade.youGetValue)}, det du gir '
+        '${kr(trade.youGiveValue)}. $difference';
   }
 
   String _confirmLabel() => switch (widget.kind) {
         ProposalKind.offerMine =>
           _chosen == null ? 'Foreslå' : 'Foreslå ${_chosen!.title}',
-        ProposalKind.askTheirs =>
-          _chosen == null ? 'Be om i tillegg' : 'Be om ${_chosen!.title} i tillegg',
+        ProposalKind.askTheirs => _chosen == null
+            ? (_first ? 'Be om' : 'Be om i tillegg')
+            : _first
+                ? 'Be om ${_chosen!.title}'
+                : 'Be om ${_chosen!.title} i tillegg',
         ProposalKind.cash => _amount == 0 ? 'Foreslå ingen mellomlegg' : 'Foreslå ${kr(_amount)}',
       };
 
@@ -281,7 +318,8 @@ class _ProposalSheetState extends State<_ProposalSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(item.title, style: Type.heading),
-                            Text('Verdi ${kr(item.estimatedValueNok)}', style: Type.small),
+                            if (item.estimatedValueNok != null)
+                              Text('Verdi ${kr(item.estimatedValueNok)}', style: Type.small),
                           ],
                         ),
                       ),

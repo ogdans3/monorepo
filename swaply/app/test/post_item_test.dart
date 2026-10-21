@@ -137,9 +137,9 @@ void main() {
       ('a description over 2000', description, 'y' * 2001, 'Beskrivelsen kan ha høyst 2000 tegn.'),
       ('a subcategory over 60', subcategory, 'z' * 61, 'Underkategorien kan ha høyst 60 tegn.'),
       ('a value over ten million', value, '10000001',
-          'Anslått verdi kan være høyst 10 000 000 kr.'),
+          'Anslått verdi kan være høyst 10\u00A0000\u00A0000\u00A0kr.'),
       ('a value too long to be a number', value, '9' * 25,
-          'Anslått verdi kan være høyst 10 000 000 kr.'),
+          'Anslått verdi kan være høyst 10\u00A0000\u00A0000\u00A0kr.'),
     ]) {
       testWidgets('$what stays on 10b, over the button', (tester) async {
         // Found out after 10c had made a profile for it, in words that name

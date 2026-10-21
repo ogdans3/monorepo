@@ -402,6 +402,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   /// A message from the card's field is on its way.
   bool _sending = false;
 
+  /// The server's words for a conversation it takes no more messages in,
+  /// once «Send» on the card was refused with them (`conversation_closed`).
+  String? _closedByServer;
+
   /// Which asking for the trade is the newest. The page asks from several
   /// places now, and an answer to an older asking — or a trade an action
   /// handed back after it — must not be overwritten by one that lands late.
@@ -528,7 +532,19 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   List<Widget> _sections(Trade trade) {
     final chain = trade.isChain;
 
+    // A finished trade is drawn from the copy taken as it finished, where
+    // the server sent one; anything else from the offer as it stands.
+    final gotCopy = _traded(trade, trade.receivingFrom.position);
+    final gaveCopy = _traded(trade, trade.youPosition);
+    final got = gotCopy ?? trade.youGet;
+    final gave = gaveCopy ?? trade.youGive;
+
     final withdrawal = trade.withdrawal;
+    final refusedWithdrawal = withdrawal != null &&
+        withdrawal.byYou &&
+        trade.state == 'accepted' &&
+        withdrawal.state == 'rejected' &&
+        withdrawal.blockedBySent;
     return [
       // 08b: the trade is paused while the question is answered.
       if (trade.state == 'paused' && withdrawal?.state == 'waiting') _withdrawalBanner(trade),
@@ -536,12 +552,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // to the one who asked, and only while the trade carries on: it was
       // drawn for everybody in it — telling the one who had answered that
       // they could not withdraw — and stayed after the trade had ended.
-      if (withdrawal != null &&
-          withdrawal.byYou &&
-          trade.state == 'accepted' &&
-          withdrawal.state == 'rejected' &&
-          withdrawal.blockedBySent)
-        _blockedBanner(trade),
+      if (refusedWithdrawal)
+        _blockedBanner(trade)
+      // 06f: agreed, which nothing on the page said. 08c says it its own way.
+      else if (trade.state == 'accepted')
+        _agreedCard(),
       // 09e: a new proposal is on the table.
       if (_counteredByOther(trade))
         _noticeCard('Nytt forslag fra ${trade.receivingFrom.displayName.split(' ').first}. '
@@ -559,45 +574,53 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       if (trade.state == 'completed') _completedHeader(trade),
 
       const SizedBox(height: Insets.md),
-      // One card per leg, the kicker inside it beside the first thing.
-      _legCard(
-        kicker: trade.state == 'completed' ? 'Du fikk' : 'Du får',
-        colour: SwaplyColors.greenText,
-        items: trade.youGet,
-        from: 'fra ${trade.receivingFrom.displayName.split(' ').first}',
-        done: trade.youReceivedAt != null ? 'Mottatt' : null,
-      ),
-      const SizedBox(height: 7),
-      _legCard(
-        kicker: trade.state == 'completed'
-            ? 'Du ga'
-            : trade.youGive.length > 1
-                ? 'Du gir · ${trade.youGive.length} ting'
-                : 'Du gir',
-        colour: SwaplyColors.amberText,
-        items: trade.youGive,
-        from: 'til ${trade.givingTo.displayName.split(' ').first}',
-        done: trade.youSentAt != null ? 'Levert' : null,
-        // «Fjern» and «+ Legg til flere» both open the counter-offer, which is
-        // the only way the set of things changes once a trade exists.
-        edit: !chain && ['talking', 'pending', 'countered'].contains(trade.state)
-            ? () => _openCounterOffer(trade)
-            : null,
-      ),
-
-      // 07j: the leg that is neither yours to give nor yours to receive.
-      for (final leg in trade.otherLegs) ...[
+      // 09f: an ended trade is what was not traded, in one card, with whether
+      // each of your things is out there again. It drew «DU FÅR» and «DU GIR»
+      // and the totals, as if the trade were still going on.
+      if (trade.state == 'cancelled') ...[
+        _notTradedCard(trade),
+      ] else ...[
+        // One card per leg, the kicker inside it beside the first thing.
+        _legCard(
+          kicker: trade.state == 'completed' ? 'Du fikk' : 'Du får',
+          colour: SwaplyColors.greenText,
+          items: got,
+          from: 'fra ${trade.receivingFrom.displayName.split(' ').first}',
+          done: trade.youReceivedAt != null ? 'Mottatt' : null,
+        ),
         const SizedBox(height: 7),
         _legCard(
-          kicker: '${leg.giver.displayName.split(' ').first} gir',
-          colour: SwaplyColors.greyLight,
-          items: leg.items,
-          from: 'til ${leg.receiver.displayName.split(' ').first}',
+          kicker: trade.state == 'completed'
+              ? 'Du ga'
+              : trade.youGive.length > 1
+                  ? 'Du gir · ${trade.youGive.length} ting'
+                  : 'Du gir',
+          colour: SwaplyColors.amberText,
+          items: gave,
+          from: 'til ${trade.givingTo.displayName.split(' ').first}',
+          done: trade.youSentAt != null ? 'Levert' : null,
+          // «Fjern» and «+ Legg til flere» both open the counter-offer, which is
+          // the only way the set of things changes once a trade exists.
+          edit: !chain && ['talking', 'pending', 'countered'].contains(trade.state)
+              ? () => _openCounterOffer(trade)
+              : null,
         ),
-      ],
 
-      const SizedBox(height: 7),
-      _valueSummary(trade),
+        // 07j: the leg that is neither yours to give nor yours to receive.
+        for (final leg in trade.otherLegs) ...[
+          const SizedBox(height: 7),
+          _legCard(
+            kicker: '${leg.giver.displayName.split(' ').first} gir',
+            colour: SwaplyColors.greyLight,
+            items: _traded(trade, _positionOf(trade, leg.giver)) ?? leg.items,
+            from: 'til ${leg.receiver.displayName.split(' ').first}',
+          ),
+        ],
+
+        const SizedBox(height: 7),
+        _valueSummary(gotCopy == null ? trade.youGetValue : _sum(got),
+            gaveCopy == null ? trade.youGiveValue : _sum(gave)),
+      ],
       // Not on an ended trade: there is nothing left to pay, and «betales
       // når begge har godtatt» was a promise about a trade that is over.
       if (trade.cash != null && trade.state != 'cancelled') ...[
@@ -824,7 +847,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                   Expanded(
                     child: PrimaryButton('Ja, greit',
                         busy: _busy,
-                        onPressed: () => _run((api) => api.respondToWithdrawal(trade.id, true))),
+                        onPressed: () => _run((api) async {
+                              final after = await api.respondToWithdrawal(trade.id, true);
+                              _saidNoFor(after, askedBy: w.requestedBy);
+                              return after;
+                            })),
                   ),
                 ],
               ),
@@ -833,6 +860,41 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ),
       ),
     );
+  }
+
+  /// 06f's first two lines: everybody has said yes, and the rest is between
+  /// the people in it.
+  Widget _agreedCard() => const Padding(
+        padding: EdgeInsets.only(top: Insets.sm),
+        child: SectionCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Byttet er godtatt!', style: Type.heading),
+              SizedBox(height: 6),
+              Text('Dere kan også avtale å møtes i samtalen.', style: Type.secondary),
+            ],
+          ),
+        ),
+      );
+
+  /// A yes that the server turned into a no, because something had been
+  /// sent by then — the one answering, or in a ring the third — said, since
+  /// the trade only carried on, and «Ja, greit» looked as if it had been lost.
+  void _saidNoFor(Trade after, {String? askedBy}) {
+    final w = after.withdrawal;
+    if (w == null || w.state != 'rejected' || !w.blockedBySent || !mounted) return;
+    final senders = after.participants
+        .where((p) => p.position != after.youPosition && p.id != askedBy && p.sentAt != null)
+        .toList();
+    showNote(
+        context,
+        after.youSentAt != null
+            ? 'Du har allerede sendt din ting, så svaret ble nei. Byttet fortsetter.'
+            : senders.isEmpty
+                ? 'Noe er allerede sendt, så svaret ble nei. Byttet fortsetter.'
+                : '${_firstNames(senders)} har allerede sendt, så svaret ble nei. '
+                    'Byttet fortsetter.');
   }
 
   /// «Kari har allerede sendt sin ting.», naming whoever has marked theirs
@@ -975,7 +1037,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 color: SwaplyColors.ink)),
-                        Text('$from · verdi ${kr(item.estimatedValueNok)}',
+                        // A thing may have no value, and «verdi » with
+                        // nothing after it read as a hole.
+                        Text(
+                            item.estimatedValueNok == null
+                                ? from
+                                : '$from · verdi ${kr(item.estimatedValueNok)}',
                             style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
                       ],
                     ),
@@ -1013,22 +1080,127 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ),
       );
 
-  /// «Du får · verdi 1 200 kr» left, the difference in the middle, «Du gir ·
-  /// verdi 850 kr» right — a line, not a card.
-  Widget _valueSummary(Trade trade) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(child: _valueCell('Du får', SwaplyColors.greenText, trade.youGetValue)),
-            if (trade.difference > 0)
-              Text('differanse ${kr(trade.difference)}',
-                  style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
-            Expanded(
-                child: _valueCell('Du gir', SwaplyColors.amberText, trade.youGiveValue, end: true)),
+  /// What a finished trade's side at [position] gave, from the copy the
+  /// server took as it finished (`trade_item_snapshots`) rather than the
+  /// listings as they are now. A listing can change after it was traded — a
+  /// service is never «byttet» and stays up to be edited — and an erased
+  /// account's pictures go with it; the copy is what lets the counterparty's
+  /// history outlive both (DESIGN.md). Null where there is nothing to draw it
+  /// from: a trade not finished, or a server that sent no copy.
+  List<Item>? _traded(Trade trade, int? position) {
+    if (trade.state != 'completed' || trade.snapshots.isEmpty || position == null) return null;
+    final listed = [
+      ...trade.youGet,
+      ...trade.youGive,
+      for (final leg in trade.otherLegs) ...leg.items,
+    ];
+    return [
+      for (final (i, copy) in trade.snapshots.indexed)
+        if (copy.giverPosition == position)
+          Item.fromJson({
+            'id': 'traded-$i',
+            'title': copy.title,
+            'estimatedValueNok': copy.estimatedValueNok,
+            'cover': copy.cover,
+            // The copy carries no category, which is the mark drawn on a
+            // thing without a picture. The listing's, while it has the name
+            // it was traded under.
+            'category': listed.where((l) => l.title == copy.title).firstOrNull?.category ??
+                'diverse',
+          }),
+    ];
+  }
+
+  /// Where [person] sits in the ring, from the participants, which carry it.
+  int? _positionOf(Trade trade, UserRef person) =>
+      person.position ??
+      trade.participants.where((p) => p.id == person.id).firstOrNull?.position;
+
+  int _sum(List<Item> items) => items.fold(0, (total, i) => total + (i.estimatedValueNok ?? 0));
+
+  /// 09f's «IKKE BYTTET»: everything that was on the table, theirs with
+  /// whose it is and yours with «din», and each of yours with where it stands
+  /// now — «Tilgjengelig» is the export's, and a thing taken by another trade
+  /// since, or traded, says so rather than claiming to be free.
+  Widget _notTradedCard(Trade trade) {
+    final rows = [
+      for (final item in trade.youGet) (item, _firstName(trade.receivingFrom), false),
+      for (final leg in trade.otherLegs)
+        for (final item in leg.items) (item, _firstName(leg.giver), false),
+      for (final item in trade.youGive) (item, 'din', true),
+    ];
+    return SectionCard(
+      radius: 16,
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('IKKE BYTTET',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.66,
+                  color: SwaplyColors.greyLight)),
+          for (final (item, whose, mine) in rows) ...[
+            const SizedBox(height: 9),
+            Row(
+              children: [
+                ItemThumb(item, size: 48, radius: 12),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                      Text(
+                          item.estimatedValueNok == null
+                              ? whose
+                              : '$whose · verdi ${kr(item.estimatedValueNok)}',
+                          style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                    ],
+                  ),
+                ),
+                if (mine) ...[
+                  const SizedBox(width: 8),
+                  switch (item.status) {
+                    'traded' => const StatePill('Byttet', color: SwaplyColors.inkMuted),
+                    'withdrawn' => const StatePill('Trukket', color: SwaplyColors.inkMuted),
+                    _ when item.reserved || item.status == 'reserved' =>
+                      const StatePill('Reservert', color: SwaplyColors.amberText),
+                    _ => const StatePill('Tilgjengelig'),
+                  },
+                ],
+              ],
+            ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
+
+  /// «Du får · verdi 1 200 kr» left, the difference in the middle, «Du gir ·
+  /// verdi 850 kr» right — a line, not a card. The server's sums, or a
+  /// finished trade's copy's, whichever the cards above it are drawn from.
+  Widget _valueSummary(int getValue, int giveValue) {
+    final difference = (getValue - giveValue).abs();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: _valueCell('Du får', SwaplyColors.greenText, getValue)),
+          if (difference > 0)
+            Text('differanse ${kr(difference)}',
+                style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
+          Expanded(child: _valueCell('Du gir', SwaplyColors.amberText, giveValue, end: true)),
+        ],
+      ),
+    );
+  }
 
   Widget _valueCell(String label, Color colour, int value, {bool end = false}) => Text.rich(
         TextSpan(children: [
@@ -1152,6 +1324,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   Widget _handoverSection(Trade trade) {
     final sent = trade.youSentAt != null;
     final received = trade.youReceivedAt != null;
+    final theirSent =
+        trade.participants.where((p) => p.id == trade.receivingFrom.id).firstOrNull?.sentAt;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1171,10 +1345,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
               ),
               const SizedBox(height: Insets.md),
               SecondaryButton(sent ? 'Marker som ikke sendt' : 'Marker som sendt',
-                  onPressed: _busy
-                      ? null
-                      : () => _run((api) async =>
-                          (await api.mark(trade.id, 'sent', value: !sent)).trade)),
+                  onPressed: _busy ? null : () => _run((api) => _mark(api, trade, 'sent', !sent))),
             ],
           ),
         ),
@@ -1187,25 +1358,36 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             children: [
               Text(trade.youGet.map((i) => i.title).join(' + '), style: Type.heading),
               const SizedBox(height: 4),
-              Text('fra ${trade.receivingFrom.displayName.split(' ').first} · '
-                  'avtal detaljer i samtalen', style: Type.small),
+              // Sent, once the one you receive from has marked it so: «sendt
+              // av Ola i går», as 08c draws it. It said «avtal detaljer i
+              // samtalen» whatever they had marked, and the one waiting
+              // learnt it only by being refused a withdrawal.
+              Text(
+                  theirSent == null
+                      ? 'fra ${_firstName(trade.receivingFrom)} · avtal detaljer i samtalen'
+                      : 'sendt av ${_firstName(trade.receivingFrom)} ${_day(theirSent)}',
+                  style: Type.small),
               const SizedBox(height: Insets.md),
               SecondaryButton(received ? 'Marker som ikke mottatt' : 'Marker som mottatt',
                   onPressed: _busy
                       ? null
-                      : () => _run((api) async {
-                            final result = await api.mark(trade.id, 'received', value: !received);
-                            if (result.complete && mounted) {
-                              await pushOverBar<void>(
-                                  context, TradeCompletedScreen(trade: result.trade));
-                            }
-                            return result.trade;
-                          })),
+                      : () => _run((api) => _mark(api, trade, 'received', !received))),
             ],
           ),
         ),
       ],
     );
+  }
+
+  /// Sets or clears a handover mark. Whichever mark is the last one finishes
+  /// the trade, and then 09h comes up: «Marker som sendt» used to leave that
+  /// out, so a trade finished by it just turned completed under the person.
+  Future<Trade> _mark(SwaplyApi api, Trade trade, String marker, bool value) async {
+    final result = await api.mark(trade.id, marker, value: value);
+    if (result.complete && result.trade.state == 'completed' && mounted) {
+      await pushOverBar<void>(context, TradeCompletedScreen(trade: result.trade));
+    }
+    return result.trade;
   }
 
   Widget _statusSection(Trade trade) => Column(
@@ -1318,7 +1500,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         _message.clear();
         await _load();
       } on ApiException catch (e) {
-        if (mounted) showError(context, e);
+        if (!mounted) return;
+        if (e.code == ApiException.conversationClosed) {
+          // Nobody left to read it, as the server says: the field gives way
+          // to its words rather than staying to be refused again.
+          setState(() => _closedByServer = e.message);
+        } else {
+          showError(context, e);
+        }
       } finally {
         if (mounted) setState(() => _sending = false);
       }
@@ -1336,12 +1525,20 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text((trade.isChain ? 'Chat · alle tre' : 'Samtale med $name').toUpperCase(),
-                  style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.72,
-                      color: SwaplyColors.greyLight)),
+              // The kicker gives way, never «Åpne ›»: at a large text size,
+              // or with a long first name, a row that could not shrink ran
+              // past the card and clipped the only way to the conversation.
+              Flexible(
+                child: Text((trade.isChain ? 'Chat · alle tre' : 'Samtale med $name').toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.72,
+                        color: SwaplyColors.greyLight)),
+              ),
+              if (trade.threadId != null) const SizedBox(width: 8),
               if (trade.threadId != null)
                 TapArea(
                   onTap: () async {
@@ -1363,8 +1560,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             LastMessage(trade.lastMessage!),
             const SizedBox(height: 8),
           ],
-          // Nobody left to write to; the card above says why.
-          if (trade.conversationClosed)
+          // Nobody left to write to; the card above says why, or the
+          // server did when «Send» was refused.
+          if (_closedByServer case final words?)
+            Text(words, style: Type.small)
+          else if (trade.conversationClosed)
             const Text('Samtalen er stengt.', style: Type.small)
           else
             Row(
@@ -1421,18 +1621,19 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   Widget _reviewSection(Trade trade) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Kicker('Din vurdering av ${trade.receivingFrom.displayName.split(' ').first}'),
+          // In a ring 07l rates both of the others, so it is not one person's.
+          Kicker(trade.isChain
+              ? 'Din vurdering'
+              : 'Din vurdering av ${trade.receivingFrom.displayName.split(' ').first}'),
           const SizedBox(height: Insets.sm),
           SectionCard(
             child: trade.yourReviewScore == null
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // The way to rate it is the button at the foot of the
+                      // screen; a second one here opened the same 06h.
                       const Text('Du har ikke vurdert byttet ennå.', style: Type.secondary),
-                      const SizedBox(height: Insets.sm),
-                      SecondaryButton('Vurder byttet',
-                          onPressed: () =>
-                              pushOverBar<void>(context, ReviewScreen(trade: trade))),
                     ],
                   )
                 : Column(
@@ -1585,7 +1786,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           onPressed: () => goToTab(context, 2)));
     } else if (trade.state == 'completed' && trade.yourReviewScore == null) {
       children.add(PrimaryButton(
-          'Vurder ${trade.receivingFrom.displayName.split(' ').first}',
+          // 07l, for a ring, rates both of the others: not «Vurder Kari».
+          trade.isChain
+              ? 'Vurder byttet'
+              : 'Vurder ${trade.receivingFrom.displayName.split(' ').first}',
           onPressed: () async {
             await pushOverBar<void>(context, ReviewScreen(trade: trade));
             await _load();
@@ -1617,11 +1821,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   /// Undoing your own acceptance, which is not the same as ending the trade:
   /// the offer stays on the table and it is somebody's turn again.
   Future<void> _confirmRevoke(Trade trade) async {
-    final other = trade.receivingFrom.displayName.split(' ').first;
     final yes = await _confirm(
       title: 'Angre godkjenningen?',
       body: 'Byttet står fortsatt, men du har ikke godtatt det lenger. '
-          '$other får beskjed.',
+          '${_firstNames(_others(trade))} får beskjed.',
       bullets: const [
         'Tingene dine blir tilgjengelige for andre igjen',
         'Du kan godta på nytt, eller foreslå noe annet',
@@ -1632,7 +1835,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   }
 
   Future<void> _confirmDecline(Trade trade) async {
-    final other = trade.receivingFrom.displayName.split(' ').first;
+    // Everybody else is told, which in a ring is two.
+    final other = _firstNames(_others(trade));
     final yes = await _confirm(
       title: 'Avslå byttet?',
       // With a side still empty nobody can have said yes, so nothing was
@@ -1646,15 +1850,19 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   }
 
   /// 09g. Nobody has committed anything, so it just ends.
+  ///
+  /// Named from the people in it: in a ring the one you receive from may well
+  /// have said yes, and it is the third who has not; and both are told.
   Future<void> _confirmWithdrawEarly(Trade trade) async {
-    final other = trade.receivingFrom.displayName.split(' ').first;
+    final others = _others(trade);
+    final notYet = others.where((p) => p.accepted != true).toList();
     final yes = await _confirm(
       title: 'Trekke deg fra byttet?',
-      body: '$other har ikke godtatt ennå, så byttet avbrytes med en gang. '
-          'Ingen har sendt noe.',
-      bullets: const [
+      body: '${_firstNames(notYet.isEmpty ? others : notYet)} har ikke godtatt ennå, så '
+          'byttet avbrytes med en gang. Ingen har sendt noe.',
+      bullets: [
         'Tingene dine blir tilgjengelige igjen',
-        'Den andre får beskjed, samtalen beholdes',
+        '${_firstNames(others)} får beskjed, samtalen beholdes',
       ],
       confirm: 'Trekk meg fra byttet',
     );
@@ -1665,17 +1873,31 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   Future<void> _confirmWithdrawLate(Trade trade) async {
     // Read before the sheet: after awaiting it, the context may be gone.
     final api = context.read<SwaplyApi>();
-    final other = trade.receivingFrom.displayName.split(' ').first;
+    final others = _others(trade);
+    final other = _firstName(trade.receivingFrom);
+    // In a ring both of the others are asked, the first answer decides, and
+    // one of them having sent is enough to keep you in: what 08b and 08c
+    // say after it, said before it.
+    final ring = others.length > 1;
+    final either = others.map(_firstName).join(' eller ');
     final yes = await _confirm(
       title: 'Vil du trekke deg fra byttet?',
-      body: 'Dere har begge godtatt, og $other kan allerede ha sendt tingen sin. '
-          'Vi spør $other om det er greit at du trekker deg.',
+      body: ring
+          ? 'Dere har alle godtatt, og $either kan allerede ha sendt tingen sin. '
+              'Vi spør ${_firstNames(others)} om det er greit at du trekker deg.'
+          : 'Dere har begge godtatt, og $other kan allerede ha sendt tingen sin. '
+              'Vi spør $other om det er greit at du trekker deg.',
       bullets: [
         // The export's «når han sier ja» was written for Ola. Said of whoever
         // is on the other side, a pronoun is a guess, and a wrong one for
         // half of them; the answer is what the sentence is about anyway.
-        'Har $other ikke sendt noe, avbrytes byttet når svaret er ja',
-        'Har $other allerede sendt, kan du ikke trekke deg',
+        if (ring) ...[
+          'Har ingen av dem sendt noe, avbrytes byttet når en av dem svarer ja',
+          'Har en av dem allerede sendt, kan du ikke trekke deg',
+        ] else ...[
+          'Har $other ikke sendt noe, avbrytes byttet når svaret er ja',
+          'Har $other allerede sendt, kan du ikke trekke deg',
+        ],
       ],
       confirm: 'Spør om å trekke meg',
     );
@@ -1770,3 +1992,15 @@ String _firstNames(List<UserRef> people) {
 }
 
 String _longDate(DateTime date) => '${date.day}. ${_months[date.month - 1]} ${date.year}';
+
+/// «i dag», «i går», or «4. september»: when something was marked, by the
+/// calendar's days.
+String _day(DateTime when) {
+  final today = now();
+  final days = DateTime.utc(today.year, today.month, today.day)
+      .difference(DateTime.utc(when.year, when.month, when.day))
+      .inDays;
+  if (days == 0) return 'i dag';
+  if (days == 1) return 'i går';
+  return '${when.day}. ${_months[when.month - 1]}';
+}
