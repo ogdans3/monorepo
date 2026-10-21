@@ -1845,6 +1845,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           ? 'Byttet avsluttes, og $other får beskjed.'
           : 'Tingene deres blir tilgjengelige for andre igjen, og $other får beskjed.',
       confirm: 'Avslå byttet',
+      destructive: true,
     );
     if (yes == true) await _run((api) => api.decline(trade.id));
   }
@@ -1865,6 +1866,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         '${_firstNames(others)} får beskjed, samtalen beholdes',
       ],
       confirm: 'Trekk meg fra byttet',
+      destructive: true,
     );
     if (yes == true) await _run((api) => api.withdrawEarly(trade.id));
   }
@@ -1893,13 +1895,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         // half of them; the answer is what the sentence is about anyway.
         if (ring) ...[
           'Har ingen av dem sendt noe, avbrytes byttet når en av dem svarer ja',
-          'Har en av dem allerede sendt, kan du ikke trekke deg',
+          '✕Har en av dem allerede sendt, kan du ikke trekke deg',
         ] else ...[
           'Har $other ikke sendt noe, avbrytes byttet når svaret er ja',
-          'Har $other allerede sendt, kan du ikke trekke deg',
+          '✕Har $other allerede sendt, kan du ikke trekke deg',
         ],
       ],
       confirm: 'Spør om å trekke meg',
+      destructive: true,
     );
     if (yes != true) return;
 
@@ -1924,12 +1927,22 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     }
   }
 
+  /// A sheet that asks before something is done to the trade. A bullet that
+  /// starts with «✕» is something that cannot be done, and is marked so in
+  /// red rather than ticked: 08a's «Har Kari allerede sendt, kan du ikke
+  /// trekke deg» wore a green tick, as if it were one more thing granted.
+  ///
+  /// [destructive] is for leaving or declining, which is the app's
+  /// destructive button and never the green way on, as «Avslå» and «Trekk
+  /// deg fra byttet» are on the page under it, and «Fjern annonsen» and
+  /// «Slett kontoen» are where they are asked.
   Future<bool?> _confirm({
     required String title,
     required String body,
     required String confirm,
     String? cancel = 'Avbryt',
     List<String> bullets = const [],
+    bool destructive = false,
   }) =>
       showModalBottomSheet<bool>(
         context: context,
@@ -1962,15 +1975,27 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.check, size: 16, color: SwaplyColors.greenPressed),
+                          // ✓ and ✕ in the export's green and red, which a
+                          // screen reader has in the words that follow.
+                          ExcludeSemantics(
+                            child: line.startsWith('✕')
+                                ? const Icon(Icons.close, size: 16, color: SwaplyColors.redText)
+                                : const Icon(Icons.check,
+                                    size: 16, color: SwaplyColors.greenPressed),
+                          ),
                           const SizedBox(width: Insets.sm),
-                          Expanded(child: Text(line, style: Type.body)),
+                          Expanded(
+                              child: Text(line.startsWith('✕') ? line.substring(1) : line,
+                                  style: Type.body)),
                         ],
                       ),
                     ),
                 ],
                 const SizedBox(height: Insets.lg),
-                PrimaryButton(confirm, onPressed: () => Navigator.of(sheet).pop(true)),
+                destructive
+                    ? SecondaryButton(confirm,
+                        destructive: true, onPressed: () => Navigator.of(sheet).pop(true))
+                    : PrimaryButton(confirm, onPressed: () => Navigator.of(sheet).pop(true)),
                 if (cancel != null) ...[
                   const SizedBox(height: Insets.sm),
                   SecondaryButton(cancel, onPressed: () => Navigator.of(sheet).pop(false)),
