@@ -57,7 +57,11 @@ rather than believed.
 **The web serves its own font.** Not a font CDN: a stylesheet from one hands
 every visitor's IP to a third party before the page draws, which adds a second
 processor to the transfer chapter. Cloudflare in front of all three hostnames is
-the only one there is, and `docs/ARCHITECTURE.md` says why it stays. `web/static/fonts/` holds the files
+the only one there is, and `docs/ARCHITECTURE.md` says why it stays. The app's
+browser build keeps the same rule: it is built with `--no-web-resources-cdn`,
+`app/web/flutter_bootstrap.js` points CanvasKit and the fonts at our own origin,
+and `app/serve.js` relays each font from Google once and serves it from there.
+A visitor's browser never asks Google for anything. `web/static/fonts/` holds the files
 and the licence.
 
 **Every thread belongs to a trade, and the first message creates one.** Writing
