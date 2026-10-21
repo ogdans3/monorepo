@@ -503,6 +503,21 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     }
   }
 
+  /// «Kari vil trekke seg» refused because something had been sent: the
+  /// server answers her question with 08c, for her, and nothing on this side
+  /// of the trade changes, so the chip did nothing anybody could see. Said,
+  /// since this side is where it was pressed.
+  void _refusedTheOther(Trade after, UserRef person) {
+    final w = after.withdrawal;
+    if (w == null || w.requestedBy != person.id || w.state != 'rejected' || !w.blockedBySent) {
+      return;
+    }
+    if (!mounted) return;
+    final name = _firstName(person);
+    showNote(context,
+        '$name får ikke trekke seg, for noe er allerede sendt. $name ser 08c, og byttet fortsetter.');
+  }
+
   /// The trade as it stands after a lever of the tooling's, or [before] when
   /// there is no answer: the lever worked, and reading back is not the
   /// lever. Sharing its `try`, no answer said «Vi får ikke kontakt» over a
@@ -766,7 +781,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                               : () => _run((api) async {
                                     await api.adminAct(trade.id,
                                         as: person.id, action: action.$1);
-                                    return _readBack(api, trade);
+                                    final after = await _readBack(api, trade);
+                                    if (action.$1 == 'request-withdrawal') {
+                                      _refusedTheOther(after, person);
+                                    }
+                                    return after;
                                   }),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),

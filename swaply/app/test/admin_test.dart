@@ -235,6 +235,35 @@ void main() {
       expect(find.text('Som motparten'), findsOneWidget);
     });
 
+    testWidgets('«Kari vil trekke seg» refused because something is sent says so', (tester) async {
+      // The server turns her question into 08c for her, and nothing on this
+      // side of the trade changes: the chip did nothing anybody could see.
+      asAdmin();
+      final accepted = {
+        ...FakeServer.trade,
+        'state': 'accepted',
+        'you': {...FakeServer.trade['you'] as Map, 'accepted': true, 'sentAt': '2026-09-09T10:00:00Z'},
+      };
+      server.overrides['GET /trades/trade-1'] = accepted;
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+      server.overrides['GET /trades/trade-1'] = {
+        ...accepted,
+        'withdrawal': {
+          'requestedBy': FakeServer.kari['id'],
+          'byYou': false,
+          'state': 'rejected',
+          'respondsBy': null,
+          'blockedBySent': true,
+        },
+      };
+
+      await tester.tap(find.text('Kari vil trekke seg'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /admin/trades/trade-1/act']!['action'], 'request-withdrawal');
+      expect(find.textContaining('Kari får ikke trekke seg'), findsOneWidget);
+    });
+
     testWidgets('«Få noen til å ville ha denne» is offered on your own listing only',
         (tester) async {
       // A test account wanting a stranger's thing puts the two of them in one
