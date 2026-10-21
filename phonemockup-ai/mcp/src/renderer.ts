@@ -86,10 +86,15 @@ export class RenderSession {
         // The page's renderer can die (out of memory, killed) while the
         // browser stays up. Close the browser then, so the session counts as
         // gone and the next call starts a new one instead of "Target crashed".
+        // The flag makes it count as gone at once: closing takes a moment,
+        // and the next queued call would otherwise get the dead session.
         page.on("crash", () => {
+            this.crashed = true;
             void browser.close().catch(() => undefined);
         });
     }
+
+    private crashed = false;
 
     static async launch(): Promise<RenderSession> {
         if (!existsSync(harnessBundle)) {
@@ -165,7 +170,7 @@ export class RenderSession {
 
     /** False once the browser or its page has crashed, been killed or closed. */
     isConnected(): boolean {
-        return this.browser.isConnected() && !this.page.isClosed();
+        return !this.crashed && this.browser.isConnected() && !this.page.isClosed();
     }
 
     /** Calls when the browser goes away, so the caller can start a new one. */
