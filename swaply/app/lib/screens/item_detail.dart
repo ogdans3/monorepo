@@ -828,7 +828,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Kicker('Samtale med $name'),
+                // The name gives way, not «Åpne ›»: with a long first name
+                // and larger text the line ran past the card on a narrow
+                // phone and took «Åpne ›» with it.
+                Flexible(child: Kicker('Samtale med $name', oneLine: true)),
                 if (talk != null)
                   TapArea(
                     onTap: () => pushOverBar<void>(context, ThreadScreen(threadId: talk.threadId)),

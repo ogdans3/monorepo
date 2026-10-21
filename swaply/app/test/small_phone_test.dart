@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/screens/item_detail.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
@@ -37,7 +38,7 @@ const phones = <Phone>[
   (name: '320×568, the narrowest', size: Size(320, 568), statusBar: 20),
 ];
 
-Future<void> hold(WidgetTester tester, Phone phone, Widget screen) async {
+Future<void> hold(WidgetTester tester, Phone phone, Widget screen, {double textScale = 1}) async {
   tester.view.physicalSize = phone.size * 3;
   tester.view.devicePixelRatio = 3;
   tester.view.padding = FakeViewPadding(top: phone.statusBar * 3);
@@ -57,7 +58,8 @@ Future<void> hold(WidgetTester tester, Phone phone, Widget screen) async {
         // The confetti never settles; a phone that asked for less motion
         // holds it still.
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          data: MediaQuery.of(context).copyWith(
+              disableAnimations: true, textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
       ),
@@ -155,5 +157,29 @@ void main() {
       final third = (phones.last.size.width - 44 - 6) / 3;
       expect(rect.width, lessThanOrEqualTo(third), reason: label);
     }
+  });
+
+  testWidgets('04 at 320 across, with larger text, keeps «Åpne ›» in the box', (tester) async {
+    // «SAMTALE MED CHRISTOFFER» and «Åpne ›» shared a line that could not
+    // give way: at 1,3 it ran 26 points past the card.
+    server.overrides['GET /items/item-console'] = {
+      ...FakeServer.console,
+      'owner': {...FakeServer.kari, 'displayName': 'Christoffer A.'},
+      'conversation': {
+        'tradeId': 'trade-1',
+        'threadId': 'thread-1',
+        'lastMessage': {'body': 'Hei!', 'senderName': 'Ola N.', 'mine': true},
+      },
+    };
+    await hold(tester, phones.last, const ItemDetailScreen(itemId: 'item-console'),
+        textScale: 1.3);
+
+    expect(tester.takeException(), isNull);
+    final open = tester.getRect(find.text('Åpne ›'));
+    final card = tester.getRect(find
+        .ancestor(of: find.text('Åpne ›'), matching: find.byType(SectionCard))
+        .first);
+    expect(open.right, lessThanOrEqualTo(card.right));
+    expect(find.textContaining('SAMTALE MED'), findsOneWidget);
   });
 }

@@ -769,11 +769,17 @@ class Avatar extends StatelessWidget {
 }
 
 class Kicker extends StatelessWidget {
-  const Kicker(this.text, {super.key});
+  const Kicker(this.text, {super.key, this.oneLine = false});
   final String text;
+
+  /// Cut short with an ellipsis rather than wrapped, for a kicker that
+  /// shares its line with something that must stay whole: «Åpne ›».
+  final bool oneLine;
 
   @override
   Widget build(BuildContext context) => Text(text.toUpperCase(),
+      maxLines: oneLine ? 1 : null,
+      overflow: oneLine ? TextOverflow.ellipsis : null,
       style: const TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
