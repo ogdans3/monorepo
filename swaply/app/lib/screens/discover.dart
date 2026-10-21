@@ -594,7 +594,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
           setState(() => _filters = _filters.inCategory(category));
           _load();
         },
-        child: Center(child: Pill(label, selected: _chip == category)),
+        // Said as well as lit: in green alone a screen reader had a row of
+        // buttons and no way to tell which filter was on.
+        child: Center(
+            child: Semantics(
+                selected: _chip == category, child: Pill(label, selected: _chip == category))),
       );
 
   Widget _body() {
@@ -1381,21 +1385,24 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
                                   setState(() => _sort = key);
                                   _countPreview();
                                 },
-                                child: Container(
-                                  height: 33,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: _sort == key ? Colors.white : null,
-                                    borderRadius: BorderRadius.circular(11),
+                                child: Semantics(
+                                  selected: _sort == key,
+                                  child: Container(
+                                    height: 33,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: _sort == key ? Colors.white : null,
+                                      borderRadius: BorderRadius.circular(11),
+                                    ),
+                                    child: Text(label,
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight:
+                                                _sort == key ? FontWeight.w700 : FontWeight.w600,
+                                            color: _sort == key
+                                                ? SwaplyColors.ink
+                                                : SwaplyColors.greySoft)),
                                   ),
-                                  child: Text(label,
-                                      style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight:
-                                              _sort == key ? FontWeight.w700 : FontWeight.w600,
-                                          color: _sort == key
-                                              ? SwaplyColors.ink
-                                              : SwaplyColors.greySoft)),
                                 ),
                               ),
                             ),
@@ -1437,8 +1444,10 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
 
   /// The chips on 05: filled green when chosen, the chip grey otherwise. Each
   /// is in a [TapRoom] with the ones beside it, which gives it its area.
-  Widget _choice(String label, bool selected, VoidCallback onTap) =>
-      TapArea(onTap: onTap, child: Pill(label, selected: selected));
+  Widget _choice(String label, bool selected, VoidCallback onTap) => TapArea(
+      onTap: onTap,
+      // Said as well as drawn; see the chips over the grid.
+      child: Semantics(selected: selected, child: Pill(label, selected: selected)));
 }
 
 /// 10a. Wishes and nothing to give is a dead end, so we say so: at the fifth

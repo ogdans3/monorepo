@@ -1027,21 +1027,26 @@ class _PostItemScreenState extends State<PostItemScreen> {
                         setState(() => _condition = e.key);
                         _changed();
                       },
-                      child: Container(
-                        height: 31,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _condition == e.key ? Colors.white : null,
-                          borderRadius: BorderRadius.circular(9),
+                      // Said as well as drawn, which a white segment alone
+                      // was not to a screen reader.
+                      child: Semantics(
+                        selected: _condition == e.key,
+                        child: Container(
+                          height: 31,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _condition == e.key ? Colors.white : null,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Text(e.value,
+                              style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight:
+                                      _condition == e.key ? FontWeight.w700 : FontWeight.w600,
+                                  color: _condition == e.key
+                                      ? SwaplyColors.ink
+                                      : SwaplyColors.greySoft)),
                         ),
-                        child: Text(e.value,
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight:
-                                    _condition == e.key ? FontWeight.w700 : FontWeight.w600,
-                                color: _condition == e.key
-                                    ? SwaplyColors.ink
-                                    : SwaplyColors.greySoft)),
                       ),
                     ),
                   ))
@@ -1196,19 +1201,22 @@ class _PostItemScreenState extends State<PostItemScreen> {
 
   Widget _pick(String label, bool selected, VoidCallback onTap) => TapArea(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: selected ? SwaplyColors.greenPressed : Colors.white,
-            borderRadius: BorderRadius.circular(Radii.pill),
-            border: Border.all(
-                color: selected ? SwaplyColors.greenPressed : const Color(0x22064E3B)),
+        child: Semantics(
+          selected: selected,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? SwaplyColors.greenPressed : Colors.white,
+              borderRadius: BorderRadius.circular(Radii.pill),
+              border: Border.all(
+                  color: selected ? SwaplyColors.greenPressed : const Color(0x22064E3B)),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : SwaplyColors.ink)),
           ),
-          child: Text(label,
-              style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : SwaplyColors.ink)),
         ),
       );
 }
