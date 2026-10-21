@@ -1,6 +1,9 @@
 // 02, 10c and 16c: the ways in.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
@@ -127,6 +130,57 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.bodies['POST /auth/register']!['password'], 'drillbits123');
+    });
+  });
+
+  // The button spins and takes no second press while the answer is on its
+  // way; the return key on the password field went past it, and asked again.
+  group('the return key does not ask twice', () {
+    testWidgets('16c signs in once', (tester) async {
+      await session.lookAround();
+      await mount(tester, const LoginScreen());
+      final answer = Completer<void>();
+      server.overrides['POST /auth/login'] =
+          (http.Request _) => answer.future.then((_) => asUsual);
+
+      await tester.enterText(find.byType(TextField).first, 'ola@epost.no');
+      await tester.enterText(password, 'passord1');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Logg inn'));
+      await tester.pump();
+      await tester.showKeyboard(password);
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(server.asked('POST /auth/login'), 1);
+      answer.complete();
+      await tester.pumpAndSettle();
+      expect(server.asked('POST /auth/login'), 1);
+    });
+
+    testWidgets('10c makes the profile once', (tester) async {
+      await session.lookAround();
+      await mount(tester, const CreateProfileScreen());
+      final answer = Completer<void>();
+      server.overrides['POST /auth/register'] =
+          (http.Request request) => answer.future.then((_) => asUsual);
+      for (final (field, text) in [
+        (0, 'Ola N.'),
+        (1, 'ola@epost.no'),
+        (3, 'drillbits123'),
+      ]) {
+        await tester.enterText(find.byType(TextField).at(field), text);
+      }
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Lag profil'));
+      await tester.pump();
+      await tester.showKeyboard(password);
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(server.asked('POST /auth/register'), 1);
+      answer.complete();
+      await tester.pumpAndSettle();
+      expect(server.asked('POST /auth/register'), 1);
     });
   });
 }
