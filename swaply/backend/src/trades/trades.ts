@@ -427,6 +427,15 @@ export async function acceptOffer(
  *
  * Any single de-accept holds the whole trade, which is why an accepted trade
  * drops back to `pending` rather than staying agreed with a gap in it.
+ *
+ * Judged under the trade's lock, like every other move. A paused trade is
+ * refused, as a yes is: the pause is a question about an agreed trade, and
+ * every answer to it puts the trade back to `accepted` — taken back in the
+ * pause, the yes and the reservation were gone and the trade came back agreed
+ * without them, with the thing free for another trade to take. An ended trade
+ * is refused, and so is one where something has been handed over, which is
+ * the withdrawal question on 08a and not a button; read before the lock, a
+ * marker or an ending landing in the same moment slipped past both.
  */
 export async function revokeAcceptance(
   db: Database,
@@ -440,7 +449,21 @@ export async function revokeAcceptance(
     const tradeId = offer!['trade_id']!
 
     // The one order (`index.ts`): the trade, then what it holds.
-    await lockTrades(tx, [tradeId])
+    const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+    if (!state || state === 'completed' || state === 'cancelled') {
+      throw conflict('trade_closed', 'Byttet er avsluttet.')
+    }
+    if (state === 'paused') {
+      throw conflict('trade_paused', 'Byttet er pauset mens noen svarer på en forespørsel.')
+    }
+    const [handed] = await tx.execute<Row>(
+      sql`select 1 from trade_participants
+          where trade_id = ${tradeId} and (sent_at is not null or received_at is not null)
+          limit 1`,
+    )
+    if (handed) {
+      throw conflict('already_sent', 'Noe er allerede sendt. Be de andre om å avslutte byttet.')
+    }
     await lockItems(tx, sql`i.active_trade_id = ${tradeId} and i.owner_id = ${userId}`)
 
     await tx.execute(

@@ -356,28 +356,34 @@ export async function markHandover(
 ) {
   await participantOf(db, tradeId, userId)
 
-  // 06f is the screen behind these, and it only exists once everybody has
-  // accepted. Marking a thing sent in a trade still being negotiated would
-  // close the door on withdrawing from something nobody has agreed to.
-  const trade = await one(db, sql`select state from trades where id = ${tradeId}`)
-  if (!trade) throw notFound('Fant ikke byttet.')
-  if (!['accepted', 'paused', 'completed'].includes(trade['state'])) {
-    throw conflict('not_accepted', 'Byttet er ikke godtatt ennå.')
-  }
-
   const column = { sent: 'sent_at', received: 'received_at', paid: 'paid_at' }[marker]
 
-  await db.execute(
-    sql`update trade_participants set ${sql.raw(column)} = ${value ? sql`now()` : sql`null`}
-        where trade_id = ${tradeId} and user_id = ${userId}`,
-  )
+  // Under the trade's lock, which is all of the one order (`index.ts`) for a
+  // step that writes nothing a trade holds. A marker is what shuts the door on
+  // taking a yes back (`revokeAcceptance`), which asks under the same lock:
+  // read beforehand, «Sendt» landing in the same moment as somebody's yes
+  // taken back left a thing marked sent on a trade nobody had agreed any more.
+  return db.transaction(async (tx) => {
+    // 06f is the screen behind these, and it only exists once everybody has
+    // accepted. Marking a thing sent in a trade still being negotiated would
+    // close the door on withdrawing from something nobody has agreed to.
+    const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+    if (!state) throw notFound('Fant ikke byttet.')
+    if (!['accepted', 'paused', 'completed'].includes(state)) {
+      throw conflict('not_accepted', 'Byttet er ikke godtatt ennå.')
+    }
 
-  // When everybody has both sent and received, the trade is done without anyone
-  // having to press a separate button.
-  const outstanding = await one(
-    db,
-    sql`select count(*) as n from trade_participants
-        where trade_id = ${tradeId} and (sent_at is null or received_at is null)`,
-  )
-  return { complete: Number(outstanding!['n']) === 0 }
+    await tx.execute(
+      sql`update trade_participants set ${sql.raw(column)} = ${value ? sql`now()` : sql`null`}
+          where trade_id = ${tradeId} and user_id = ${userId}`,
+    )
+
+    // When everybody has both sent and received, the trade is done without
+    // anyone having to press a separate button.
+    const [outstanding] = await tx.execute<Row>(
+      sql`select count(*) as n from trade_participants
+          where trade_id = ${tradeId} and (sent_at is null or received_at is null)`,
+    )
+    return { complete: Number(outstanding!['n']) === 0 }
+  })
 }

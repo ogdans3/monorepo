@@ -129,20 +129,11 @@ export default async function tradeRoutes(app: FastifyInstance) {
     if (!view) throw notFound('Fant ikke byttet.')
     if (!view.offerId) throw conflict('no_offer', 'Det finnes ikke noe forslag å angre.')
     if (!view.you.accepted) throw conflict('not_accepted', 'Du har ikke godtatt dette byttet.')
-    if (['completed', 'cancelled'].includes(view.state)) {
-      throw conflict('trade_closed', 'Byttet er avsluttet.')
-    }
-    // Once something has been handed over, undoing the yes it was handed over
-    // on is the withdrawal negotiation on 08a, not a button.
-    const handed = await one(
-      app.db,
-      sql`select 1 from trade_participants
-          where trade_id = ${id} and (sent_at is not null or received_at is not null)`,
-    )
-    if (handed) {
-      throw conflict('already_sent', 'Noe er allerede sendt. Be de andre om å avslutte byttet.')
-    }
 
+    // The state, and whether something has been handed over — after which
+    // undoing the yes it was handed over on is the withdrawal negotiation on
+    // 08a, not a button — are judged in `revokeAcceptance`, under the
+    // trade's lock. A paused trade is refused there too.
     const { freed } = await revokeAcceptance(app.db, view.offerId, userId)
     await app.db.execute(sql`
       insert into notifications (user_id, type, payload)
