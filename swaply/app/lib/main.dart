@@ -16,6 +16,7 @@ import 'screens/notifications.dart';
 import 'screens/onboarding.dart';
 import 'screens/tabs.dart';
 import 'state/session.dart';
+import 'util/address.dart';
 import 'util/reduced_motion.dart';
 import 'widgets/admin_chrome.dart';
 import 'widgets/common.dart' show onLightStatusBar, showNoteOn;
@@ -40,7 +41,7 @@ void main() {
   // opened. On iOS and Android the same token arrives through a universal link,
   // which needs a registered domain and bundle id — neither exists yet — so
   // there the way in is the link opened in a browser.
-  final invite = Uri.base.queryParameters['invitasjon'];
+  final invite = Uri.base.queryParameters[inviteParameter];
 
   runApp(
     ChangeNotifierProvider(
@@ -264,6 +265,9 @@ class _RootGateState extends State<RootGate> {
     if (link != null) {
       session.pendingInvite = null;
       session.linkToOpen = null;
+      // And out of the address, now that the link has done what it was for:
+      // left there, a reload read it again and opened the listing again.
+      forgetInviteInAddress();
       _openSharedListing(link);
     }
     // A listing that was waiting on 10c when the person signed in there
