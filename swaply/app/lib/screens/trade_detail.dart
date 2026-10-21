@@ -1336,12 +1336,20 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text((trade.isChain ? 'Chat · alle tre' : 'Samtale med $name').toUpperCase(),
-                  style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.72,
-                      color: SwaplyColors.greyLight)),
+              // The kicker gives way, never «Åpne ›»: at a large text size,
+              // or with a long first name, a row that could not shrink ran
+              // past the card and clipped the only way to the conversation.
+              Flexible(
+                child: Text((trade.isChain ? 'Chat · alle tre' : 'Samtale med $name').toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.72,
+                        color: SwaplyColors.greyLight)),
+              ),
+              if (trade.threadId != null) const SizedBox(width: 8),
               if (trade.threadId != null)
                 TapArea(
                   onTap: () async {
