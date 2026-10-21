@@ -97,6 +97,16 @@ void main() {
       expect(find.text('En av tingene i byttet ble tatt ned av eieren.'), findsOneWidget);
     });
 
+    testWidgets('2b. displaced, it says the thing is in another trade, which is true whether '
+        'that one holds it or was completed with it', (tester) async {
+      // The server's words, «… ble reservert av et annet bytte», are said as
+      // well of a trade ended because another was completed with the thing.
+      endedWith('displaced');
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      expect(find.text('En av tingene i byttet er med i et annet bytte nå.'), findsOneWidget);
+    });
+
     testWidgets('3. no ended trade promises a new proposal from the conversation',
         (tester) async {
       for (final code in ['declined', 'withdrawn_early', 'displaced', 'blocked']) {

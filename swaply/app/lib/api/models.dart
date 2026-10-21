@@ -462,6 +462,10 @@ class Trade {
   /// An owner took down a listing that was on the table.
   static const closedByListingRemoved = 'listing_removed';
 
+  /// A thing on the table went to another trade: held there by its owner's
+  /// yes, or given away when that one was completed.
+  static const closedByDisplacement = 'displaced';
+
   /// Ended in a way that leaves nobody to write to: the other one in a pair
   /// deleted their account, or somebody blocked another. A trade that ended
   /// any other way keeps its conversation, since how long an ordinary

@@ -1019,6 +1019,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                 Trade.closedByBlock => 'Byttet ble avsluttet etter en blokkering.',
                 // True for the owner too.
                 Trade.closedByListingRemoved => 'En av tingene i byttet ble tatt ned av eieren.',
+                // The server's «… ble reservert av et annet bytte» is said of a
+                // trade that was completed with the thing, too, where it was
+                // given away and not held.
+                Trade.closedByDisplacement => 'En av tingene i byttet er med i et annet bytte nå.',
                 _ => trade.closeReason ?? 'Tingene dine er tilgjengelige for andre igjen.',
               },
               style: Type.secondary,
