@@ -343,12 +343,12 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 14,
                   // 166 across, 110 of picture and 36 of caption.
-                  childAspectRatio: 166 / 146,
+                  childAspectRatio: _cellAspect(context),
                 ),
                 itemCount: me.items.length,
                 itemBuilder: (context, i) => _ownItem(me.items[i]),
@@ -687,11 +687,11 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 14,
-                  childAspectRatio: 166 / 146,
+                  childAspectRatio: _cellAspect(context),
                 ),
                 itemCount: user.items.length,
                 itemBuilder: (context, i) {
@@ -1724,6 +1724,12 @@ const _months = [
   'januar', 'februar', 'mars', 'april', 'mai', 'juni',
   'juli', 'august', 'september', 'oktober', 'november', 'desember',
 ];
+
+/// A cell of the grid of things on 13 and 13b: 166 across, 110 of picture
+/// and 36 of caption, the caption as tall as the text is set. Held to 36,
+/// two lines of a name at 200 % ran out of the cell.
+double _cellAspect(BuildContext context) =>
+    166 / (110 + MediaQuery.textScalerOf(context).scale(36));
 
 String _month(DateTime date) => _months[date.month - 1];
 

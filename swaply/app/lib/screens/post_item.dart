@@ -777,8 +777,11 @@ class _PostItemScreenState extends State<PostItemScreen> {
                   alignment: Alignment.centerLeft,
                   child: TapRoom(
                     room: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    // A second row for «Tjeneste» rather than past the edge,
+                    // where it ran at 200 % on a 320 phone.
+                    child: Wrap(
+                      spacing: Insets.sm,
+                      runSpacing: Insets.sm,
                       children: [
                         _pick('Gjenstand', _kind == 'item', () {
                           // With the condition it had as a thing. Made a
@@ -791,7 +794,6 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           });
                           _changed();
                         }),
-                        const SizedBox(width: Insets.sm),
                         _pick('Tjeneste', _kind == 'service', () {
                           // A service has no condition, and it is never reserved.
                           setState(() {
@@ -818,6 +820,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           child: DropdownButtonFormField<String>(
                             initialValue: _category,
                             isDense: true,
+                            // The chosen category gives way to the arrow, and
+                            // not past the field's edge at 200 % on a 320.
+                            isExpanded: true,
                             // Not `_fieldText`: a dropdown swaps the ambient
                             // text style for its own, so the family has to
                             // come along explicitly.

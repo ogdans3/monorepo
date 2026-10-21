@@ -352,9 +352,19 @@ class _MatchScreenState extends State<MatchScreen> {
           children: [
             Avatar(name, size: 24, color: mine ? SwaplyColors.greenPressed : null),
             const SizedBox(width: 6),
-            Text(count > 1 ? '$name · $count ting' : name,
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+            // The name gives way, never the count: a long first name at 130 %
+            // ran the whole label off the screen.
+            Flexible(
+              child: Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+            ),
+            if (count > 1)
+              Text(' · $count ting',
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
           ],
         ),
       );

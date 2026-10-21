@@ -245,12 +245,19 @@ class _TradesScreenState extends State<TradesScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Each half the row at most, at its ends: with «Spacer» between
+                // them nothing gave way, and «Venter på Kristoffer» ran off
+                // the card at 130 %, at 200 % «Venter på Anne».
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(trade.isChain ? 'Bytte via kjede' : 'Direkte bytte',
-                        style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
-                    const Spacer(),
-                    Container(
+                    Flexible(
+                      child: Text(trade.isChain ? 'Bytte via kjede' : 'Direkte bytte',
+                          style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: colour == SwaplyColors.amberText
@@ -261,10 +268,12 @@ class _TradesScreenState extends State<TradesScreen>
                         borderRadius: BorderRadius.circular(Radii.pill),
                       ),
                       child: Text(label,
+                          textWidthBasis: TextWidthBasis.longestLine,
                           style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                               color: colour)),
+                    ),
                     ),
                   ],
                 ),

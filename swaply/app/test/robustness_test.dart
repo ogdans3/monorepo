@@ -13,8 +13,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/api/models.dart';
+import 'package:swaply_app/screens/agreement.dart';
+import 'package:swaply_app/screens/post_item.dart';
+import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
+import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/widgets/shell.dart';
 
 import 'fake_server.dart';
 import 'phone.dart';
@@ -157,5 +163,109 @@ void main() {
             reason: '$text in $button');
       });
     }
+  });
+
+  group('rows that could not give way', () {
+    const long = {...FakeServer.kari, 'displayName': 'Kristoffer-Alexander H.'};
+
+    testWidgets('11: «Venter på …» stays on its card with a long name at 130 %', (tester) async {
+      server.overrides['GET /trades'] = {
+        'waiting': [
+          {
+            ...FakeServer.trade,
+            'you': {...FakeServer.trade['you'] as Map, 'accepted': true},
+            'receivingFrom': {...long, 'position': 1},
+            'givingTo': {...long, 'position': 1},
+            'participants': [
+              {...FakeServer.me, 'position': 0, 'accepted': true, 'gives': [FakeServer.drill]},
+              {...long, 'position': 1, 'accepted': false, 'gives': [FakeServer.console]},
+            ],
+          },
+        ],
+        'active': const [],
+        'done': const [],
+        'yourTurn': 0,
+      };
+      await hold(tester, narrow, const TradesScreen(), scale: 1.3);
+
+      expect(tester.takeException(), isNull);
+      onScreen(tester, find.textContaining('Venter på Kristoffer'), narrow);
+    });
+
+    testWidgets('06c in a ring: «Med … og …» stays on the screen beside «Avtalen»',
+        (tester) async {
+      final ring = chainTrade();
+      final participants = <Map<String, Object?>>[
+        for (final p in (ring['participants']! as List).cast<Map<String, Object?>>())
+          switch (p['id']) {
+            'kari-1' => {...p, 'displayName': 'Kristoffer-Alexander H.'},
+            'per-1' => {...p, 'displayName': 'Marianne-Elisabeth K.'},
+            _ => p,
+          },
+      ];
+      await hold(
+          tester,
+          narrow,
+          AgreementScreen(
+              trade: Trade.fromJson({...ring, 'participants': participants})));
+
+      expect(tester.takeException(), isNull);
+      onScreen(tester, find.textContaining('Med Kristoffer-Alexander'), narrow);
+      onScreen(tester, find.text('Avtalen'), narrow);
+    });
+
+    testWidgets('06a: the names under the cards stay on the screen at 130 %', (tester) async {
+      server.overrides['GET /trades/trade-1'] = {
+        ...FakeServer.trade,
+        'receivingFrom': {...long, 'position': 1},
+        'youGive': [FakeServer.drill, {...FakeServer.drill, 'id': 'item-2', 'title': 'Hjelm'}],
+      };
+      await hold(tester, narrow, const MatchScreen(tradeId: 'trade-1'), scale: 1.3);
+
+      expect(tester.takeException(), isNull);
+      // Only the name gives way: the count is whole.
+      expect(find.text(' · 2 ting'), findsOneWidget);
+    });
+
+    for (final (name, screen) in [
+      ('10b', () => const PostItemScreen()),
+      ('13b', () => const OtherProfileScreen(userId: 'kari-1')),
+      ('13', () => const ProfileScreen()),
+    ]) {
+      testWidgets('$name at 200 % on a 320 phone', (tester) async {
+        final me = {
+          ...FakeServer.me,
+          'items': [
+            for (var i = 0; i < 4; i++)
+              {...FakeServer.drill, 'id': 'item-$i', 'title': 'Elektrisk drill med to batterier'},
+          ],
+        };
+        server.overrides['GET /me'] = me;
+        server.overrides['GET /users/kari-1'] = {
+          ...FakeServer.kari,
+          'items': [
+            for (var i = 0; i < 4; i++)
+              {...FakeServer.console, 'id': 'item-$i', 'title': 'Retro spillkonsoll med kontrollere'},
+          ],
+          'interests': ['friluft'],
+        };
+        await hold(tester, narrow, screen(), scale: 2);
+        final list = find.byType(Scrollable).first;
+        await tester.drag(list, const Offset(0, -400));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('the bar\'s labels are whole at 200 % on a 320 phone', (tester) async {
+      await hold(tester, narrow, const TradesScreen(), scale: 2);
+
+      for (final label in ['Oppdag', 'Legg ut', 'Bytter', 'Chats', 'Profil']) {
+        final words = find.descendant(of: find.byType(SwaplyNavBar), matching: find.text(label));
+        expect(tester.renderObject<RenderParagraph>(words).didExceedMaxLines, isFalse,
+            reason: label);
+      }
+    });
   });
 }
