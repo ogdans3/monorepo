@@ -283,6 +283,22 @@ void main() {
       expect(find.text('Noe gikk galt hos oss.'), findsOneWidget);
     });
 
+    testWidgets('3b. …and so does one on a scenario\'s «[test]» thing, in the server\'s words',
+        (tester) async {
+      // «Bygg et bytte» makes its listings for the admin's own test ring, and
+      // a heart from anybody outside it is refused: a real person who
+      // reached one by a link must not open a trade over it.
+      final id = await scrolledDown(tester);
+      server.overrides['POST /items/$id/like'] = Refusal.testListing;
+
+      await tester.tap(heartOf(id));
+      await tester.pumpAndSettle();
+
+      expect(heartOf(id), findsOneWidget);
+      expect(heartOf(id, liked: true), findsNothing);
+      expect(find.text(Refusal.testListing.message), findsOneWidget);
+    });
+
     testWidgets('4. coming back from its page asks again behind the grid, not instead of it',
         (tester) async {
       // A block from the page's «⋯» can change what the grid shows, so the
@@ -963,6 +979,19 @@ void main() {
       // Said over the heart, not on it: pressing it again is what comes next.
       final heart = tester.getRect(find.byType(CircleAction).last);
       expect(tester.getRect(find.byType(SwaplyToast)).bottom, lessThan(heart.top - 14));
+    });
+
+    testWidgets('4. …and so does one on a scenario\'s «[test]» thing, in the server\'s words',
+        (tester) async {
+      server.overrides['POST /items/item-console/like'] = Refusal.testListing;
+      await openListing(tester);
+
+      await tester.tap(find.byIcon(Icons.favorite_border));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+      expect(find.byIcon(Icons.favorite), findsNothing);
+      expect(find.text(Refusal.testListing.message), findsOneWidget);
     });
   });
 }

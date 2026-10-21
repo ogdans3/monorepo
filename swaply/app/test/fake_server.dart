@@ -633,6 +633,12 @@ class Refusal {
   /// for by a device that has no profile yet.
   static const accountRequired = Refusal(403, 'account_required',
       'Lag en profil for å gjøre dette. Du beholder det du har likt.');
+
+  /// A heart, the first message or a counter-offer on a «[test] …» listing
+  /// «Bygg et bytte» made, from outside the test ring of the admin it was
+  /// made for (`testListing` in the backend's `trades/ring.ts`).
+  static const testListing =
+      Refusal(403, 'test_ring', 'Dette er en testannonse, og den er ikke til bytte.');
 }
 
 /// `POST /items` answered with the listing an earlier press with the same
