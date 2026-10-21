@@ -318,6 +318,28 @@ describe('sharing a listing with someone who is not here yet', () => {
       expect(page.body!['itemRetired']).toBe(true)
     })
 
+  test('13c. a listing traded away since is as gone, and is not shared again', async () => {
+    // It still showed as up for grabs, «Se denne på Swaply», and the next
+    // press of «Del» made a new link to it.
+    const listing = await call(app, 'POST', '/items', {
+      token: ola,
+      body: { title: 'Gitar', category: 'musikk', condition: 'good', estimatedValueNok: 900 },
+    })
+    const guitar = listing.body!['id'] as string
+    const link = (await call(app, 'POST', `/items/${guitar}/share`, { token: ola })).body!['token']
+    // What completing a trade does to what it gave (`completeTrade`).
+    await db.execute(sql`update items set status = 'traded' where id = ${guitar}`)
+
+    const page = await call(app, 'GET', `/invites/${link}`)
+    expect(page.status).toBe(200)
+    expect(page.body!['item']).toBe(null)
+    expect(page.body!['itemRetired']).toBe(true)
+
+    const again = await call(app, 'POST', `/items/${guitar}/share`, { token: ola })
+    expect(again.status).toBe(409)
+    expect(again.body).toEqual({ code: 'item_unavailable', message: 'Denne er allerede byttet bort.' })
+  })
+
   test('14. with the wall up there is no way in without a link', async () => {
     const refused = await call(closedApp, 'POST', '/auth/register', {
       body: { displayName: 'Per H.', email: 'per@epost.no', password: 'snomaking1' },

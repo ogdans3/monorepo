@@ -10,7 +10,7 @@ import {
   unknownInvite,
 } from '../lib/invites.js'
 import { blockedBetween } from '../lib/blocks.js'
-import { notFound } from '../lib/errors.js'
+import { conflict, notFound } from '../lib/errors.js'
 import { many, one } from '../lib/rows.js'
 import { inviteText, shareText } from '../lib/text.js'
 import { knownTown, sharedItem } from './serialize.js'
@@ -48,7 +48,7 @@ export default async function inviteRoutes(app: FastifyInstance) {
 
     const item = await one(
       app.db,
-      sql`select id, owner_id, title, estimated_value_nok from items
+      sql`select id, owner_id, title, estimated_value_nok, status from items
           where id = ${id} and deleted_at is null`,
     )
     // Across a block the listing does not exist for you, here as on its page
@@ -56,6 +56,11 @@ export default async function inviteRoutes(app: FastifyInstance) {
     // blocker's things, made by the one person they had shut out.
     if (!item || (await blockedBetween(app.db, userId, item['owner_id']))) {
       throw notFound('Fant ikke gjenstanden.')
+    }
+    // «Se denne på Swaply» about a thing already given away invites somebody
+    // to nothing, in the words a first message about it is refused with.
+    if (item['status'] === 'traded') {
+      throw conflict('item_unavailable', 'Denne er allerede byttet bort.')
     }
 
     const { token, url } = await createInvite(app.db, { inviterId: userId, itemId: id })
@@ -94,12 +99,16 @@ export default async function inviteRoutes(app: FastifyInstance) {
         )
       : null
 
+    // A listing traded away since is as gone as one taken down: the page
+    // says there is nothing to show rather than offering a thing somebody
+    // else already has.
     const item = invite['item_id']
       ? await one(
           app.db,
           sql`select i.*, u.display_name as owner_name
               from items i join users u on u.id = i.owner_id
-              where i.id = ${invite['item_id']} and i.deleted_at is null`,
+              where i.id = ${invite['item_id']} and i.deleted_at is null
+                and i.status <> 'traded'`,
         )
       : null
 
