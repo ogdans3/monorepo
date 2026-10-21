@@ -120,6 +120,17 @@ describe('blocking somebody', () => {
     expect(item.status).toBe(404)
   })
 
+  test('5b. nor share it, which would put the page he cannot see in front of anybody', async () => {
+    // It used to mint a link: a public page with her name, her photos and
+    // her words, made by the one person she had shut out — and Kari can no
+    // more share his than he hers.
+    for (const [token, listing] of [[ola, tent], [kari, drill]] as const) {
+      const res = await call('POST', `/items/${listing}/share`, { token })
+      expect(res.status).toBe(404)
+      expect(res.body!['message']).toBe('Fant ikke gjenstanden.')
+    }
+  })
+
   test('6. no wish of his can reach her', async () => {
     const res = await call('POST', `/items/${tent}/like`, { token: ola })
 

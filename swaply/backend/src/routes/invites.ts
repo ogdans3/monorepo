@@ -9,6 +9,7 @@ import {
   looksLikeInvite,
   unknownInvite,
 } from '../lib/invites.js'
+import { blockedBetween } from '../lib/blocks.js'
 import { notFound } from '../lib/errors.js'
 import { many, one } from '../lib/rows.js'
 import { inviteText, shareText } from '../lib/text.js'
@@ -47,10 +48,15 @@ export default async function inviteRoutes(app: FastifyInstance) {
 
     const item = await one(
       app.db,
-      sql`select id, title, estimated_value_nok from items
+      sql`select id, owner_id, title, estimated_value_nok from items
           where id = ${id} and deleted_at is null`,
     )
-    if (!item) throw notFound('Fant ikke gjenstanden.')
+    // Across a block the listing does not exist for you, here as on its page
+    // (`lib/blocks.ts`): a link minted from here was a public page of the
+    // blocker's things, made by the one person they had shut out.
+    if (!item || (await blockedBetween(app.db, userId, item['owner_id']))) {
+      throw notFound('Fant ikke gjenstanden.')
+    }
 
     const { token, url } = await createInvite(app.db, { inviterId: userId, itemId: id })
 
