@@ -12,14 +12,14 @@ const B2_APP_KEY = process.env.B2_APP_KEY!;
 const B2_BUCKET_ID = process.env.B2_BUCKET_ID!;
 const B2_BUCKET_NAME = process.env.B2_BUCKET_NAME!;
 
-let cachedAuth:
-    | {
+type B2Auth = {
     apiUrl: string;
     authorizationToken: string;
     downloadUrl: string;
     expiresAt: number;
-}
-    | null = null;
+};
+
+let cachedAuth: B2Auth | null = null;
 
 async function b2AuthorizeAccount() {
     if (cachedAuth && cachedAuth.expiresAt > Date.now() + 60000) {
@@ -53,6 +53,31 @@ async function b2AuthorizeAccount() {
     return cachedAuth;
 }
 
+function requestUploadUrl(auth: B2Auth) {
+    return fetch(`${auth.apiUrl}/b2api/v2/b2_get_upload_url`, {
+        method: "POST",
+        headers: {Authorization: auth.authorizationToken, "Content-Type": "application/json"},
+        body: JSON.stringify({bucketId: B2_BUCKET_ID}),
+    });
+}
+
+/**
+ * b2_get_upload_url. B2 can drop an account token before it would expire
+ * (401 expired_auth_token or bad_auth_token); its docs say to authorize again,
+ * so a 401 clears the cached token and asks once more. Without this every
+ * upload failed until the 6-hour cache ran out.
+ */
+async function b2GetUploadUrl(): Promise<{auth: B2Auth; response: Response}> {
+    let auth = await b2AuthorizeAccount();
+    let response = await requestUploadUrl(auth);
+    if (response.status === 401) {
+        cachedAuth = null;
+        auth = await b2AuthorizeAccount();
+        response = await requestUploadUrl(auth);
+    }
+    return {auth, response};
+}
+
 /** Uploads are held in memory before going to B2, so they need a ceiling. */
 const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 
@@ -62,7 +87,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // recordings, nothing else.
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: {fileSize: MAX_UPLOAD_BYTES, files: 1},
+    // Text fields are held in memory too and multer has no ceiling of its
+    // own: one request with a few hundred large fields ran the API out of
+    // heap. The form only carries fileKey (a uuid) besides the file.
+    limits: {fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 4, fieldSize: 1024, fieldNameSize: 100, parts: 6},
     fileFilter: (_req, file, done) => {
         done(null, file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/"));
     },
@@ -106,7 +134,7 @@ function receiveFile(req: express.Request, res: express.Response, next: express.
         if (err instanceof multer.MulterError) {
             const tooBig = (err as {code?: string}).code === "LIMIT_FILE_SIZE";
             return res.status(tooBig ? 413 : 400).json({
-                error: tooBig ? "File is too large" : "Send one file in the \"file\" field",
+                error: tooBig ? "File is too large" : "Send fileKey and one file in the \"file\" field",
             });
         }
         if (err) {
@@ -173,49 +201,31 @@ router.post("/", receiveFile, async (req, res) => {
         const {mimetype, size, buffer} = req.file;
         const originalname = utf8FileName(req.file.originalname);
         const safeContentType = mimetype || "application/octet-stream";
-        let apiUrl: string;
-        let authorizationToken: string;
-        let downloadUrl: string;
-        try {
-            const auth = await b2AuthorizeAccount();
-            apiUrl = auth.apiUrl;
-            authorizationToken = auth.authorizationToken;
-            downloadUrl = auth.downloadUrl;
-        } catch (e: any) {
-            console.error(502, req.method, req.originalUrl, "b2_authorize_account failed", e?.message);
-            return res.status(502).json({error: "File storage is unavailable"});
+        /** An upload URL with its token; false once B2 or the network has failed. */
+        async function uploadTarget() {
+            let got;
+            try {
+                got = await b2GetUploadUrl();
+            } catch (e: any) {
+                console.error(502, req.method, req.originalUrl, "b2_authorize_account or b2_get_upload_url failed", e?.message);
+                return false;
+            }
+            if (!got.response.ok) {
+                const text = await got.response.text().catch(() => "");
+                console.error(502, req.method, req.originalUrl, "b2_get_upload_url failed", text);
+                return false;
+            }
+            const {uploadUrl, authorizationToken} = (await got.response.json()) as {
+                uploadUrl: string;
+                authorizationToken: string;
+            };
+            return {auth: got.auth, uploadUrl, uploadAuthToken: authorizationToken};
         }
-        let getUrlResp;
-        try {
-            getUrlResp = await fetch(`${apiUrl}/b2api/v2/b2_get_upload_url`, {
+        const sendTo = (target: {uploadUrl: string; uploadAuthToken: string}) =>
+            fetch(target.uploadUrl, {
                 method: "POST",
                 headers: {
-                    Authorization: authorizationToken,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({bucketId: B2_BUCKET_ID}),
-            });
-        } catch {
-            console.error(502, req.method, req.originalUrl, "Network error calling b2_get_upload_url");
-            return res.status(502).json({
-                error: "Network error calling b2_get_upload_url",
-            });
-        }
-        if (!getUrlResp.ok) {
-            const text = await getUrlResp.text().catch(() => "");
-            console.error(502, req.method, req.originalUrl, "b2_get_upload_url failed", text);
-            return res.status(502).json({error: "File storage is unavailable"});
-        }
-        const {uploadUrl, authorizationToken: uploadAuthToken} = (await getUrlResp.json()) as {
-            uploadUrl: string;
-            authorizationToken: string;
-        };
-        let uploadResp;
-        try {
-            uploadResp = await fetch(uploadUrl, {
-                method: "POST",
-                headers: {
-                    Authorization: uploadAuthToken,
+                    Authorization: target.uploadAuthToken,
                     "X-Bz-File-Name": encodeURIComponent(fileKey),
                     "Content-Type": safeContentType,
                     "X-Bz-Content-Sha1": "do_not_verify",
@@ -224,10 +234,24 @@ router.post("/", receiveFile, async (req, res) => {
                 },
                 body: new Uint8Array(buffer.buffer as ArrayBuffer, buffer.byteOffset, buffer.byteLength),
             });
+
+        let target = await uploadTarget();
+        if (!target) return res.status(502).json({error: "File storage is unavailable"});
+        let uploadResp;
+        try {
+            uploadResp = await sendTo(target);
+            // An upload URL can expire or its pod be busy; B2's docs say to
+            // get a new one and try again.
+            if (uploadResp.status === 401 || uploadResp.status === 503) {
+                target = await uploadTarget();
+                if (!target) return res.status(502).json({error: "File storage is unavailable"});
+                uploadResp = await sendTo(target);
+            }
         } catch {
             console.error(502, req.method, req.originalUrl, "Network error calling b2_upload_file");
             return res.status(502).json({error: "Network error calling b2_upload_file"});
         }
+        const {apiUrl, authorizationToken, downloadUrl} = target.auth;
         if (!uploadResp.ok) {
             const text = await uploadResp.text().catch(() => "");
             console.error(uploadResp.status, req.method, req.originalUrl, "b2_upload_file failed", text);

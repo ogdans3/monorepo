@@ -4,7 +4,9 @@ import {currentUser, withAuth} from "../middleware/auth.js";
 import {
     createProjectWithFiles,
     getProject,
+    getProjectOwner,
     getProjects,
+    MAX_FILES_PER_SAVE,
     updateProjectWithFiles,
 } from "../db/queries.js";
 import {describeError} from "../errors.js";
@@ -17,7 +19,32 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME_LENGTH = 200;
 
 function validName(value: unknown): value is string {
-    return typeof value === "string" && value.trim().length > 0 && value.length <= MAX_NAME_LENGTH;
+    return (
+        typeof value === "string" &&
+        value.trim().length > 0 &&
+        value.length <= MAX_NAME_LENGTH &&
+        // Postgres refuses NUL in text, which came back as a 500.
+        !/[\u0000-\u001f\u007f]/.test(value)
+    );
+}
+
+/** Upload placeholders one save may ask for: a whole number, none by default. */
+function validFileCount(value: unknown): value is number | undefined {
+    return value === undefined || (Number.isInteger(value) && (value as number) >= 0 && (value as number) <= MAX_FILES_PER_SAVE);
+}
+
+/** Far deeper than a project ever nests; deeper JSON overflowed the stack when saved. */
+const MAX_JSON_DEPTH = 64;
+
+function jsonDepthWithin(value: unknown, limit: number): boolean {
+    const stack: Array<[unknown, number]> = [[value, 1]];
+    while (stack.length) {
+        const [node, depth] = stack.pop()!;
+        if (node === null || typeof node !== "object") continue;
+        if (depth > limit) return false;
+        for (const child of Object.values(node)) stack.push([child, depth + 1]);
+    }
+    return true;
 }
 
 /**
@@ -25,8 +52,9 @@ function validName(value: unknown): value is string {
  * the string as is would save a JSON string, not the object it spells.
  */
 function parseProjectJson(value: unknown): unknown {
-    if (typeof value !== "string") return value;
-    return JSON.parse(value);
+    const json = typeof value === "string" ? JSON.parse(value) : value;
+    if (!jsonDepthWithin(json, MAX_JSON_DEPTH)) throw new Error(`nested deeper than ${MAX_JSON_DEPTH} levels`);
+    return json;
 }
 
 function fail(res: Response, status: number, message: string, err?: unknown) {
@@ -40,8 +68,7 @@ export async function requireOwnedProject(req: Request, res: Response, next: Nex
     const projectId = (req.params as {projectId?: string}).projectId;
     if (!projectId || !UUID.test(projectId)) return fail(res, 404, "Project not found");
     try {
-        const p = await getProject(projectId);
-        if (!p || p.owner !== currentUser(res).id) return fail(res, 404, "Project not found");
+        if ((await getProjectOwner(projectId)) !== currentUser(res).id) return fail(res, 404, "Project not found");
         return next();
     } catch (err) {
         return fail(res, 500, "Failed to load project", err);
@@ -55,12 +82,16 @@ router.get("/", withAuth, async (req, res) => {
             return fail(res, 400, "limit must be a whole number from 1 to 200");
         }
         // Cursor: the createdAt and id of the last project on the previous page.
-        const afterCreatedAt = req.query.afterCreatedAt ? new Date(String(req.query.afterCreatedAt)) : null;
-        const afterId = req.query.afterId ? String(req.query.afterId) : null;
-        const after =
-            afterCreatedAt && !Number.isNaN(afterCreatedAt.getTime()) && afterId && UUID.test(afterId)
-                ? {createdAt: afterCreatedAt, id: afterId}
-                : null;
+        // Half a cursor, or a broken one, used to be ignored and gave page 1 again.
+        let after: {createdAt: Date; id: string} | null = null;
+        if (req.query.afterCreatedAt !== undefined || req.query.afterId !== undefined) {
+            const createdAt = new Date(String(req.query.afterCreatedAt ?? ""));
+            const id = String(req.query.afterId ?? "");
+            if (Number.isNaN(createdAt.getTime()) || !UUID.test(id)) {
+                return fail(res, 400, "afterCreatedAt and afterId must both be given, from the last project of the previous page");
+            }
+            after = {createdAt, id};
+        }
         const rows = await getProjects(currentUser(res).id, {limit, after});
         return res.status(200).json(rows);
     } catch (err) {
@@ -86,18 +117,21 @@ router.post("/", withAuth, async (req, res) => {
     if (!validName(name)) {
         return fail(res, 400, `name is required, at most ${MAX_NAME_LENGTH} characters`);
     }
+    if (!validFileCount(fileCount)) {
+        return fail(res, 400, `fileCount must be a whole number from 0 to ${MAX_FILES_PER_SAVE}`);
+    }
     let json: unknown;
     try {
         json = parseProjectJson(projectJson);
     } catch (err) {
-        return fail(res, 400, "projectJson is not valid JSON", err);
+        return fail(res, 400, `projectJson is not valid JSON, or is nested deeper than ${MAX_JSON_DEPTH} levels`, err);
     }
     try {
         const {project, fileKeys} = await createProjectWithFiles({
             owner: currentUser(res).id,
             name,
             projectJson: json,
-            fileCount: Number(fileCount || 0),
+            fileCount: fileCount ?? 0,
         });
         return res.status(201).json({project, fileKeys});
     } catch (err) {
@@ -112,11 +146,14 @@ router.post("/:id", withAuth, async (req, res) => {
     if (name !== undefined && !validName(name)) {
         return fail(res, 400, `name must not be empty, and at most ${MAX_NAME_LENGTH} characters`);
     }
+    if (!validFileCount(fileCount)) {
+        return fail(res, 400, `fileCount must be a whole number from 0 to ${MAX_FILES_PER_SAVE}`);
+    }
     let json: unknown;
     try {
         json = parseProjectJson(projectJson);
     } catch (err) {
-        return fail(res, 400, "projectJson is not valid JSON", err);
+        return fail(res, 400, `projectJson is not valid JSON, or is nested deeper than ${MAX_JSON_DEPTH} levels`, err);
     }
     try {
         const saved = await updateProjectWithFiles({
@@ -124,7 +161,7 @@ router.post("/:id", withAuth, async (req, res) => {
             owner: currentUser(res).id,
             name,
             projectJson: json,
-            fileCount: Number(fileCount || 0),
+            fileCount: fileCount ?? 0,
         });
         if (!saved) {
             return fail(res, 404, "Project not found");

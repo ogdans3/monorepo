@@ -90,6 +90,19 @@ export async function createProject(
     return row;
 }
 
+/**
+ * Just the owner, for ownership checks: getProject reads the whole project
+ * JSON, which can be megabytes, to compare one column.
+ */
+export async function getProjectOwner(projectId: string): Promise<string | null> {
+    const rows = await db
+        .select({owner: project.owner})
+        .from(project)
+        .where(eq(project.id, projectId))
+        .limit(1);
+    return rows[0]?.owner ?? null;
+}
+
 // Get project by id (uuid)
 export async function getProject(projectId: string): Promise<DBProject | null> {
     const rows = await db
@@ -278,8 +291,7 @@ export async function createProjectWithFiles(
 export async function updateProjectWithFiles(
     input: UpdateProjectInput & {fileCount?: number},
 ): Promise<{project: DBProject; fileKeys: string[]} | null> {
-    const existing = await getProject(input.id);
-    if (!existing || existing.owner !== input.owner) return null;
+    if ((await getProjectOwner(input.id)) !== input.owner) return null;
 
     const values: Partial<{
         name: string;
@@ -298,7 +310,8 @@ export async function updateProjectWithFiles(
     if (Object.keys(values).length === 0) {
         // Nothing to change: no new updatedAt, only the placeholders if any.
         const files = insertFiles ? await insertFiles : [];
-        return {project: existing, fileKeys: files.map((f) => f.id)};
+        const existing = await getProject(input.id);
+        return existing ? {project: existing, fileKeys: files.map((f) => f.id)} : null;
     }
     values.updatedAt = new Date();
     const update = db

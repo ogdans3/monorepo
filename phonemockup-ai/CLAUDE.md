@@ -106,7 +106,7 @@ To run a real end-to-end stack inside the dashboard, swap the root Dockerfile fo
 ## Conventions and gotchas
 
 - **Secrets bootstrap is async.** Routes are dynamically imported *after* `secretManager.initialize()`. If you add a route that reads `process.env.X` at module top-level, import it the same way.
-- **Clerk configuration is runtime-driven.** Client: `CLERK_PUBLISHABLE_KEY` (also accepts `PUBLIC_`/`VITE_` variants). API: `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `APP_URL`. Only the publishable key is serialized to the browser. Apply `server/migrations/20261017_clerk_identity.sql` before the API cutover. See `docs/clerk-auth.md`.
+- **Clerk configuration is runtime-driven.** Client: `CLERK_PUBLISHABLE_KEY` (also accepts `PUBLIC_`/`VITE_` variants). API: `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `APP_URL`. Only the publishable key is serialized to the browser. Apply `server/migrations/20261017_clerk_identity.sql`, then `20261021_project_list.sql` (outside a transaction), before the API cutover. See `docs/clerk-auth.md`.
 - **Data access is Drizzle only.** Don't bring back raw template-string SQL beside it.
 - **Svelte 5 runes only.** Stores are `.svelte.ts` files using `$state`, not the legacy `writable()` API. (A few files still import `get` from `svelte/store` against a runes-style controller — fine, but don't introduce new `writable`-based stores.)
 - **Editor state is local-first.** The browser drives the entire mockup pipeline (three.js render → MediaRecorder/WebCodecs encoder → download). The server is only persistence.

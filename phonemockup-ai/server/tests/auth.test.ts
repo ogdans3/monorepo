@@ -7,8 +7,8 @@ import projectRoutes from '../src/routes/project.js';
 import { resolveIdentity, type AppIdentity, type IdentityStore } from '../src/auth/identity.js';
 
 const queries = vi.hoisted(() => ({
-    getProject: vi.fn(), getProjects: vi.fn(), createProject: vi.fn(), updateProject: vi.fn(),
-    createProjectWithFiles: vi.fn(), updateProjectWithFiles: vi.fn(),
+    getProject: vi.fn(), getProjectOwner: vi.fn(), getProjects: vi.fn(), createProject: vi.fn(), updateProject: vi.fn(),
+    createProjectWithFiles: vi.fn(), updateProjectWithFiles: vi.fn(), MAX_FILES_PER_SAVE: 50,
 }));
 vi.mock('../src/db/queries.js', () => queries);
 vi.mock('../src/db/client.js', () => ({ db: {} }));
@@ -122,12 +122,32 @@ describe('real Clerk signature verification and existing project routes', () => 
         const send = (path: string, name: string) => request(path, token(), {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
         });
-        for (const name of ['', '   ', 'x'.repeat(201)]) {
+        for (const name of ['', '   ', 'x'.repeat(201), 'nul\u0000name', 'tab\tname']) {
             expect((await send('/api/project', name)).status).toBe(400);
             expect((await send(`/api/project/${id}`, name)).status).toBe(400);
         }
         expect(queries.createProjectWithFiles).not.toHaveBeenCalled();
         expect(queries.updateProjectWithFiles).not.toHaveBeenCalled();
+    });
+    it('refuses a fileCount that is not a whole number from 0 to 50, and JSON nested too deep', async () => {
+        const send = (path: string, body: object) => request(path, token(), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+        for (const fileCount of [-1, 1.5, 51, 1000, true, [5], '3', 'Infinity']) {
+            expect((await send('/api/project', { name: 'Mockup', fileCount })).status).toBe(400);
+            expect((await send(`/api/project/${id}`, { fileCount })).status).toBe(400);
+        }
+        let deep: unknown = 0;
+        for (let i = 0; i < 100; i++) deep = [deep];
+        expect((await send('/api/project', { name: 'Mockup', projectJson: deep })).status).toBe(400);
+        expect(queries.createProjectWithFiles).not.toHaveBeenCalled();
+        expect(queries.updateProjectWithFiles).not.toHaveBeenCalled();
+    });
+    it('refuses half a cursor or a broken one instead of returning page 1 again', async () => {
+        for (const query of ['afterId=' + id, 'afterCreatedAt=2026-10-21T00:00:00.000Z', 'afterCreatedAt=junk&afterId=' + id, 'afterCreatedAt=2026-10-21T00:00:00.000Z&afterId=junk']) {
+            expect((await request(`/api/project?${query}`, token())).status).toBe(400);
+        }
+        expect(queries.getProjects).not.toHaveBeenCalled();
     });
     it('lists only the stable, mapped owner and ignores query-supplied owner IDs', async () => {
         queries.getProjects.mockResolvedValue([]);
@@ -136,6 +156,7 @@ describe('real Clerk signature verification and existing project routes', () => 
     });
     it('keeps another user’s project and file routes private', async () => {
         queries.getProject.mockResolvedValue({ id, owner: 'legacy-user_bob' });
+        queries.getProjectOwner.mockResolvedValue('legacy-user_bob');
         for (const path of [`/api/project/${id}`, `/api/project/${id}/file`]) {
             expect((await request(path, token())).status).toBe(404);
         }

@@ -84,7 +84,10 @@ Do this against the actual target deployment before switching its API traffic:
    Back up the database and retain the old deployment for rollback. Repository code
    alone cannot establish whether there are existing live users.
 2. Apply the additive, rerunnable `server/migrations/20261017_clerk_identity.sql`.
-   It adds a unique mapping table without rewriting users or project owners.
+   It adds a unique mapping table without rewriting users or project owners. Then
+   apply `server/migrations/20261021_project_list.sql` (millisecond timestamps for
+   the list's cursor, and the list indexes) outside a transaction block, since it
+   uses `CREATE INDEX CONCURRENTLY`.
 3. Import existing accounts with Clerk's Backend API `createUser`, setting
    `externalId` to their exact existing application/WorkOS user ID. Preserve verified
    identifiers and import password digests only with Clerk-supported hash formats.

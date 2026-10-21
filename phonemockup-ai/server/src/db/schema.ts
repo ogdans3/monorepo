@@ -6,6 +6,7 @@ import {
     uuid,
     primaryKey,
     integer,
+    index,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -39,14 +40,20 @@ export const project = pgTable('project', {
     fileName: text('file_name'),
     projectJson: json('project_json'),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
+    // Milliseconds, as a JS Date holds them: the list's cursor goes through a
+    // Date, and at microseconds rows later in the same millisecond were
+    // skipped. See migrations/20261021_project_list.sql.
+    createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
         .notNull()
         .default(sql`now()`),
 
-    updatedAt: timestamp('updated_at', { withTimezone: true })
+    updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 })
         .notNull()
         .default(sql`now()`),
-});
+}, (table) => [
+    // A user's projects, newest first: the list and its cursor.
+    index('project_owner_created_idx').on(table.owner, table.createdAt.desc(), table.id.desc()),
+]);
 
 export const file = pgTable('file', {
     // Primary key
@@ -68,4 +75,7 @@ export const file = pgTable('file', {
     // Optional metadata
     checksum: text('checksum'), // e.g., sha256 for integrity/dedupe
     storageProvider: text('storage_provider'), // 's3', 'cloudflare_r2', 'gcs', 'local', etc.
-});
+}, (table) => [
+    // A project's files, and the cascade when a project goes.
+    index('file_project_idx').on(table.projectId),
+]);
