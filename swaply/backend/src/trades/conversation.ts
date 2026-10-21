@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { blocked } from '../lib/blocks.js'
+import { conflict } from '../lib/errors.js'
 import { iso, one, type Executor, type Row } from '../lib/rows.js'
 import { blockedInThread } from './blocking.js'
 import type { Tx } from './trades.js'
@@ -54,6 +55,25 @@ export async function postMessage(
   body: string,
 ): Promise<Row> {
   return db.transaction(async (tx) => {
+    // Nobody left to read it: everybody else in the conversation has deleted
+    // their account. A completed trade keeps its conversation, and erasure
+    // ends nothing that is finished, so «Send» used to answer 201 and write
+    // into a thread only tombstones were in. In a ring, one who is left is
+    // somebody to write to.
+    const [others] = await tx.execute<Row>(
+      sql`select count(*) filter (where u.anonymised_at is null) as left,
+                 count(*) as everybody
+          from thread_participants tp join users u on u.id = tp.user_id
+          where tp.thread_id = ${threadId} and tp.user_id <> ${senderId}`,
+    )
+    if (Number(others?.['everybody'] ?? 0) > 0 && Number(others?.['left']) === 0) {
+      throw conflict(
+        'conversation_closed',
+        Number(others!['everybody']) > 1
+          ? 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.'
+          : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.',
+      )
+    }
     if (await blockedInThread(tx, threadId, senderId)) throw blocked()
     const [message] = await tx.execute<Row>(
       sql`insert into messages (thread_id, sender_id, body)

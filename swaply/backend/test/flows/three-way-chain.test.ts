@@ -8,9 +8,13 @@ import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { markHandover, requestWithdrawal, respondToWithdrawal } from '../../src/trades/actions.js'
+import { postMessage } from '../../src/trades/conversation.js'
 import { findCyclesThrough } from '../../src/trades/cycles.js'
+import { anonymiseUser } from '../../src/trades/erasure.js'
 import { acceptOffer, completeTrade, openTradeFromCycle } from '../../src/trades/trades.js'
 import { close, currentOffer, db, itemRow, like, makeItem, makeUser, reset, tradeState } from '../helpers.js'
+
+type Row = Record<string, string>
 
 afterAll(close)
 
@@ -140,5 +144,24 @@ describe('a ring of three, and one of them asking to get out', () => {
     expect(answer).toMatchObject({ state: 'rejected', blockedBySent: true })
     expect(await tradeState(trade)).toBe('accepted')
     expect((await itemRow(kayak))['active_trade_id']).toBe(trade)
+  })
+
+  test('10. Vid deletes his account, and Tor and Una can still talk: somebody is left', async () => {
+    await anonymiseUser(db, vid)
+    const [thread] = await db.execute<Row>(sql`select id from threads where trade_id = ${trade}`)
+
+    const said = await postMessage(db, thread!['id'], tor, 'Synd at det ble sånn.')
+    expect(said['body']).toBe('Synd at det ble sånn.')
+  })
+
+  test('11. once Una has gone too, nobody is, and the conversation is closed', async () => {
+    await anonymiseUser(db, una)
+    const [thread] = await db.execute<Row>(sql`select id from threads where trade_id = ${trade}`)
+
+    await expect(postMessage(db, thread!['id'], tor, 'Hallo?')).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'conversation_closed',
+      message: 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.',
+    })
   })
 })
