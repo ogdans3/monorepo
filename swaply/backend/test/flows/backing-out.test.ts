@@ -180,6 +180,28 @@ describe('taking a yes back', () => {
     expect(await tradeState(tradeId)).toBe('accepted')
   })
 
+  test('7c. nor is a yes taken back in the pause, which every answer ends as agreed', async () => {
+    // Taken back while the question waited, the yes and the tent went, the
+    // trade stayed paused, and «Angre forespørselen» put it back to
+    // `accepted` with Kari's yes gone and her tent free for another trade.
+    await call('POST', `/trades/${tradeId}/withdrawal`, { token: kari })
+    expect(await tradeState(tradeId)).toBe('paused')
+
+    const res = await call('DELETE', `/trades/${tradeId}/accept`, { token: kari })
+
+    expect(res.status).toBe(409)
+    expect(res.body).toEqual({
+      code: 'trade_paused',
+      message: 'Byttet er pauset mens noen svarer på en forespørsel.',
+    })
+    expect((await itemRow(tent))['active_trade_id']).toBe(tradeId)
+
+    await call('DELETE', `/trades/${tradeId}/withdrawal`, { token: kari })
+    const after = await call('GET', `/trades/${tradeId}`, { token: ola })
+    expect(after.body!['state']).toBe('accepted')
+    expect(after.body!['participants'].map((p: Json) => p['accepted'])).toEqual([true, true])
+  })
+
   test('8. once something is sent, the yes is no longer yours to take back', async () => {
     await call('POST', `/trades/${tradeId}/mark`, { token: ola, body: { marker: 'sent' } })
 

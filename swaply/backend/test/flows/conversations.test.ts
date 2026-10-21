@@ -10,10 +10,15 @@
 // conversation with it, and a thread has to keep working after the trade it
 // belongs to is over. Read state is per participant, and a session is a
 // credential that can be taken back.
+import { sql } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/postgres-js'
 import type { FastifyInstance } from 'fastify'
+import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
+import { schema } from '../../src/db/index.js'
+import { env } from '../../src/env.js'
 import { close, db, reset } from '../helpers.js'
 
 let app: FastifyInstance
@@ -332,5 +337,49 @@ describe('a conversation and the trade it belongs to', () => {
     expect((await call('GET', '/me', { token: second })).status).toBe(401)
     // The other device is still signed in: a session is a credential of its own.
     expect((await call('GET', '/me', { token: ola })).body!['id']).toBe(olaId)
+  })
+
+  test('13. two first messages sent in the same moment are one conversation, with both in it', async () => {
+    // A second press while the first was still on its way: each found no
+    // conversation, and each opened one, so Per stood in two trades with Kari
+    // about one sleeping bag. Opening a trade is held up here so that both
+    // have looked before either has written.
+    const bag = await list(kari, 'Sovepose')
+    await db.execute(sql.raw(`
+      create function conversations_slow_trade() returns trigger language plpgsql
+        as $$ begin perform pg_sleep(0.3); return new; end $$`))
+    await db.execute(sql.raw(`
+      create trigger conversations_slow_trade before insert on trades
+        for each row execute function conversations_slow_trade()`))
+    const client = postgres(env.DATABASE_URL!, { max: 4, onnotice: () => {} })
+    const wide = await buildApp(drizzle(client, { schema }))
+    let both: { status: number; body: Json }[]
+    try {
+      await Promise.all([client`select 1`, client`select 1`, client`select 1`, client`select 1`])
+      both = await Promise.all(
+        ['Er soveposen ledig?', 'Den er fin.'].map(async (text) => {
+          const res = await wide.inject({
+            method: 'POST',
+            url: `/items/${bag}/message`,
+            headers: { authorization: `Bearer ${per}` },
+            payload: { body: text },
+          })
+          return { status: res.statusCode, body: res.json() as Json }
+        }),
+      )
+    } finally {
+      await wide.close()
+      await client.end()
+      await db.execute(sql.raw('drop trigger conversations_slow_trade on trades'))
+      await db.execute(sql.raw('drop function conversations_slow_trade()'))
+    }
+
+    expect(both.map((r) => r.status)).toEqual([201, 201])
+    expect(both[0]!.body['tradeId']).toBe(both[1]!.body['tradeId'])
+    const thread = await call('GET', `/threads/${both[0]!.body['threadId']}`, { token: per })
+    expect((thread.body!['messages'] as Json[]).map((m) => m['body']).sort())
+      .toEqual(['Den er fin.', 'Er soveposen ledig?'])
+    const about = (await call('GET', '/threads', { token: per })).body!['threads'] as Json[]
+    expect(about.filter((t) => t['subject'] === 'Sovepose')).toHaveLength(1)
   })
 })

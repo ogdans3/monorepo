@@ -116,6 +116,41 @@ export async function blockAndEnd(db: Database, blocker: string, blocked: string
 }
 
 /**
+ * End every negotiation [blocker] and [blocked] are both in, for a block that
+ * already stands — one a sign-in carried over from a phone (`auth/merge.ts`),
+ * where nobody pressed «Blokkér» on this account and so nothing ended.
+ *
+ * The same ending `blockAndEnd` gives, with the same words and the same
+ * notification, and in the same order: the trades, what they hold, then each
+ * ending. A trade the two have agreed is left standing, as one beside a block
+ * from before 04.10.2026 is, and the guards in `blocking.ts` hold across it.
+ */
+export async function endNegotiationsAcross(db: Database, blocker: string, blocked: string) {
+  return db.transaction(async (tx) => {
+    const negotiations = [
+      ...(
+        await lockTradesWhere(
+          tx,
+          sql`t.state in ('talking', 'pending', 'countered')
+              and exists (select 1 from trade_participants p
+                          where p.trade_id = t.id and p.user_id = ${blocker})
+              and exists (select 1 from trade_participants p
+                          where p.trade_id = t.id and p.user_id = ${blocked})`,
+        )
+      ).keys(),
+    ]
+    if (negotiations.length === 0) return [] as string[]
+    await lockItems(tx, sql`i.active_trade_id = any(${uuidArray(negotiations)})`)
+
+    const freed: string[] = []
+    for (const tradeId of negotiations) {
+      freed.push(...(await endTrade(tx, tradeId, 'blocked', { actor: blocker })))
+    }
+    return freed
+  })
+}
+
+/**
  * The trade a withdrawal action is about, locked until the action is written.
  *
  * Every one of them reads the state first and refuses a trade that has ended,
@@ -228,12 +263,19 @@ export async function respondToWithdrawal(
       throw badRequest('own_request', 'Du kan ikke svare på din egen forespørsel.')
     }
 
-    const [mine] = await tx.execute<Row>(
-      sql`select sent_at from trade_participants where trade_id = ${tradeId} and user_id = ${userId}`,
+    // Saying yes once something has been sent is not a thing you can do — the
+    // screen says as much, and the answer flips to no with the reason
+    // recorded. Sent by anybody but the one who asked, as when the question
+    // was asked (`requestWithdrawal`), and since: handover goes on while it
+    // waits. Asked only of the one answering, a ring of three ended on one
+    // yes with the third person's thing already on its way.
+    const [sent] = await tx.execute<Row>(
+      sql`select 1 from trade_participants
+          where trade_id = ${tradeId} and user_id <> ${req['requested_by']}
+            and sent_at is not null
+          limit 1`,
     )
-    // Saying yes after you have sent is not a thing you can do — the screen says
-    // as much, and the answer flips to no with the reason recorded.
-    if (approve && mine?.['sent_at']) {
+    if (approve && sent) {
       await tx.execute(
         sql`update trade_withdrawals set state = 'rejected', resolved_at = now(),
                    blocked_by_sent = true where id = ${req['id']}`,
@@ -356,28 +398,34 @@ export async function markHandover(
 ) {
   await participantOf(db, tradeId, userId)
 
-  // 06f is the screen behind these, and it only exists once everybody has
-  // accepted. Marking a thing sent in a trade still being negotiated would
-  // close the door on withdrawing from something nobody has agreed to.
-  const trade = await one(db, sql`select state from trades where id = ${tradeId}`)
-  if (!trade) throw notFound('Fant ikke byttet.')
-  if (!['accepted', 'paused', 'completed'].includes(trade['state'])) {
-    throw conflict('not_accepted', 'Byttet er ikke godtatt ennå.')
-  }
-
   const column = { sent: 'sent_at', received: 'received_at', paid: 'paid_at' }[marker]
 
-  await db.execute(
-    sql`update trade_participants set ${sql.raw(column)} = ${value ? sql`now()` : sql`null`}
-        where trade_id = ${tradeId} and user_id = ${userId}`,
-  )
+  // Under the trade's lock, which is all of the one order (`index.ts`) for a
+  // step that writes nothing a trade holds. A marker is what shuts the door on
+  // taking a yes back (`revokeAcceptance`), which asks under the same lock:
+  // read beforehand, «Sendt» landing in the same moment as somebody's yes
+  // taken back left a thing marked sent on a trade nobody had agreed any more.
+  return db.transaction(async (tx) => {
+    // 06f is the screen behind these, and it only exists once everybody has
+    // accepted. Marking a thing sent in a trade still being negotiated would
+    // close the door on withdrawing from something nobody has agreed to.
+    const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+    if (!state) throw notFound('Fant ikke byttet.')
+    if (!['accepted', 'paused', 'completed'].includes(state)) {
+      throw conflict('not_accepted', 'Byttet er ikke godtatt ennå.')
+    }
 
-  // When everybody has both sent and received, the trade is done without anyone
-  // having to press a separate button.
-  const outstanding = await one(
-    db,
-    sql`select count(*) as n from trade_participants
-        where trade_id = ${tradeId} and (sent_at is null or received_at is null)`,
-  )
-  return { complete: Number(outstanding!['n']) === 0 }
+    await tx.execute(
+      sql`update trade_participants set ${sql.raw(column)} = ${value ? sql`now()` : sql`null`}
+          where trade_id = ${tradeId} and user_id = ${userId}`,
+    )
+
+    // When everybody has both sent and received, the trade is done without
+    // anyone having to press a separate button.
+    const [outstanding] = await tx.execute<Row>(
+      sql`select count(*) as n from trade_participants
+          where trade_id = ${tradeId} and (sent_at is null or received_at is null)`,
+    )
+    return { complete: Number(outstanding!['n']) === 0 }
+  })
 }

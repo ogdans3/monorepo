@@ -120,6 +120,17 @@ describe('blocking somebody', () => {
     expect(item.status).toBe(404)
   })
 
+  test('5b. nor share it, which would put the page he cannot see in front of anybody', async () => {
+    // It used to mint a link: a public page with her name, her photos and
+    // her words, made by the one person she had shut out — and Kari can no
+    // more share his than he hers.
+    for (const [token, listing] of [[ola, tent], [kari, drill]] as const) {
+      const res = await call('POST', `/items/${listing}/share`, { token })
+      expect(res.status).toBe(404)
+      expect(res.body!['message']).toBe('Fant ikke gjenstanden.')
+    }
+  })
+
   test('6. no wish of his can reach her', async () => {
     const res = await call('POST', `/items/${tent}/like`, { token: ola })
 
@@ -288,6 +299,36 @@ describe('a block made while the two are already negotiating', () => {
 
     expect(res.status).toBe(201)
     expect(await reports()).toBe(before + 1)
+  })
+
+  test('15b. a report about a person and a thing at once is refused before anything is done', async () => {
+    // It used to make the ticked block — ending the ring Una and Tor are in —
+    // and then walk into the one-target check as a 500, leaving a block and
+    // no report: half of one gesture.
+    const before = await reports()
+    const res = await call('POST', '/reports', {
+      token: una.token,
+      body: { targetUser: tor.id, targetItem: kayak, reason: 'spam', block: true },
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body).toEqual({ code: 'one_target', message: 'Rapporter enten en person eller en ting.' })
+    expect(await reports()).toBe(before)
+    expect(await blocks()).toBe(0)
+    expect(await tradeState(ring)).toBe('pending')
+  })
+
+  test('15c. and somebody who is not there is not found, rather than a 500', async () => {
+    const nobody = '00000000-0000-4000-8000-000000000000'
+    const reported = await call('POST', '/reports', {
+      token: una.token, body: { targetUser: nobody, reason: 'spam', block: true },
+    })
+    expect(reported.status).toBe(404)
+    expect(reported.body).toEqual({ code: 'not_found', message: 'Fant ikke brukeren.' })
+
+    const blocked = await call('POST', `/blocks/${nobody}`, { token: una.token })
+    expect(blocked.status).toBe(404)
+    expect(blocked.body!['message']).toBe('Fant ikke brukeren.')
   })
 
   test('16. once the swap is done, Siri blocks Tor, and both negotiations they share end', async () => {

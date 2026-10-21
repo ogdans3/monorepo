@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm'
 
 import type { Database } from '../db/index.js'
 import { blocked } from '../lib/blocks.js'
-import { iso, one, type Row } from '../lib/rows.js'
+import { iso, one, type Executor, type Row } from '../lib/rows.js'
 import { blockedInThread } from './blocking.js'
 import type { Tx } from './trades.js'
 
@@ -115,7 +115,7 @@ export async function lastMessageIn(
  * and so the box starts empty again as well.
  */
 export async function conversationAbout(
-  db: Database,
+  db: Executor,
   userId: string,
   ownerId: string,
   itemId: string,

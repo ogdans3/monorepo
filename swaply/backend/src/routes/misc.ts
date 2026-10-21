@@ -7,6 +7,15 @@ import { iso, many, one, textArray } from '../lib/rows.js'
 import { agreedTradeInTheWay, blockAndEnd, participantOf } from '../trades/actions.js'
 import { sweepForCycles } from '../trades/sweep.js'
 
+/**
+ * 404 for somebody who is not there, before a block or a report names them.
+ * The foreign key would refuse the row anyway, as a 500.
+ */
+async function existingUser(app: FastifyInstance, id: string) {
+  const user = await one(app.db, sql`select 1 from users where id = ${id}`)
+  if (!user) throw notFound('Fant ikke brukeren.')
+}
+
 export default async function miscRoutes(app: FastifyInstance) {
   // Screen 12a. The payload is ids; the words are assembled by the client, so a
   // push through Google or Apple never carries somebody's name.
@@ -143,6 +152,13 @@ export default async function miscRoutes(app: FastifyInstance) {
     if (!body.targetUser && !body.targetItem) {
       throw badRequest('no_target', 'Velg hva du vil rapportere.')
     }
+    // A report is about one person or one thing (`report_one_target`). Both
+    // walked into that check after a ticked «Blokkér» had already been made,
+    // and the block stood with no report beside it.
+    if (body.targetUser && body.targetItem) {
+      throw badRequest('one_target', 'Rapporter enten en person eller en ting.')
+    }
+    if (body.targetUser) await existingUser(app, body.targetUser)
 
     let blockTarget = body.targetUser ?? null
     if (!blockTarget && body.targetItem) {
@@ -188,6 +204,7 @@ export default async function miscRoutes(app: FastifyInstance) {
     const userId = app.requireUser(request)
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
     if (id === userId) throw badRequest('self_block', 'Du kan ikke blokkere deg selv.')
+    await existingUser(app, id)
 
     // A block reaches what is already going on, not only what has yet to
     // start: the negotiations the two share end (`blockAndEnd`), and what

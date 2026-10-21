@@ -44,6 +44,11 @@ export async function validateOffer(
       throw badRequest('no_such_position', 'Ingen i dette byttet sitter på den plassen.')
     }
   }
+  // A mellomlegg is a number one person pays another. The schema holds the
+  // same rule (`cash_two_parties`), and walking into it was a 500.
+  if (cash && cash.payerPosition === cash.payeePosition) {
+    throw badRequest('cash_two_parties', 'Mellomlegget må gå fra én av dere til en annen.')
+  }
 
   // «Each side of a hop is a list of 1–3 items.» More than three is a pile,
   // and no screen in round 5 draws one.

@@ -6,6 +6,7 @@ import { conflict } from '../lib/errors.js'
 import { uuidArray } from '../lib/rows.js'
 import { blockedInTrade } from './blocking.js'
 import { TOLD, closeReasonSql, type CloseCode } from './close.js'
+import { conversationAbout } from './conversation.js'
 import type { Cycle } from './cycles.js'
 import { lockItems, lockTrades } from './locks.js'
 import { validateOffer, type OfferCash, type OfferItem } from './offer.js'
@@ -41,41 +42,48 @@ const backOnTheMarket = (rows: Row[]) =>
  * and reserving on a suggestion would freeze people's things on a maybe.
  */
 export async function openTradeFromCycle(db: Database, cycle: Cycle): Promise<string> {
-  return db.transaction(async (tx) => {
-    const [trade] = await tx.execute<Row>(
-      sql`insert into trades (state) values ('pending') returning id`,
-    )
-    const tradeId = trade!['id']!
+  return db.transaction((tx) => insertTradeFromCycle(tx, cycle))
+}
 
-    for (const [position, hop] of cycle.entries()) {
-      await tx.execute(
-        sql`insert into trade_participants (trade_id, user_id, position)
-            values (${tradeId}, ${hop.userId}, ${position})`,
-      )
-    }
+/**
+ * `openTradeFromCycle` inside a transaction the caller holds — for
+ * `openRingOnce`, which asks under a lock whether the ring is already open
+ * before it opens it.
+ */
+export async function insertTradeFromCycle(tx: Tx, cycle: Cycle): Promise<string> {
+  const [trade] = await tx.execute<Row>(
+    sql`insert into trades (state) values ('pending') returning id`,
+  )
+  const tradeId = trade!['id']!
 
-    // proposed_by stays null: the cycle search is not a person.
-    const [offer] = await tx.execute<Row>(
-      sql`insert into trade_offers (trade_id, seq) values (${tradeId}, 1) returning id`,
-    )
-
-    for (const [position, hop] of cycle.entries()) {
-      await tx.execute(
-        sql`insert into trade_offer_items (offer_id, item_id, giver_position)
-            values (${offer!['id']!}, ${hop.givesItemId}, ${position})`,
-      )
-    }
-
-    await tx.execute(sql`insert into threads (trade_id) values (${tradeId})`)
+  for (const [position, hop] of cycle.entries()) {
     await tx.execute(
-      sql`insert into thread_participants (thread_id, user_id)
-          select t.id, p.user_id from threads t
-          join trade_participants p on p.trade_id = t.trade_id
-          where t.trade_id = ${tradeId}`,
+      sql`insert into trade_participants (trade_id, user_id, position)
+          values (${tradeId}, ${hop.userId}, ${position})`,
     )
+  }
 
-    return tradeId
-  })
+  // proposed_by stays null: the cycle search is not a person.
+  const [offer] = await tx.execute<Row>(
+    sql`insert into trade_offers (trade_id, seq) values (${tradeId}, 1) returning id`,
+  )
+
+  for (const [position, hop] of cycle.entries()) {
+    await tx.execute(
+      sql`insert into trade_offer_items (offer_id, item_id, giver_position)
+          values (${offer!['id']!}, ${hop.givesItemId}, ${position})`,
+    )
+  }
+
+  await tx.execute(sql`insert into threads (trade_id) values (${tradeId})`)
+  await tx.execute(
+    sql`insert into thread_participants (thread_id, user_id)
+        select t.id, p.user_id from threads t
+        join trade_participants p on p.trade_id = t.trade_id
+        where t.trade_id = ${tradeId}`,
+  )
+
+  return tradeId
 }
 
 /**
@@ -90,10 +98,28 @@ export async function startTalking(
   opener: string,
   aboutItem: string,
   body: string,
-): Promise<{ tradeId: string; threadId: string }> {
+  opts: {
+    /**
+     * One conversation per pair per listing, asked again under a lock on the
+     * pair and the listing — what the box on 04 wants. Two first messages in
+     * the same moment, a second press while the first was still on its way,
+     * each found none and each opened one. The second now waits for the
+     * first and is handed its conversation, unwritten, for the caller to say
+     * its message in. The test tooling opens a rival on purpose, so it is
+     * asked for rather than always done.
+     */
+    once?: boolean
+  } = {},
+): Promise<{ tradeId: string; threadId: string; isNew: boolean }> {
   return db.transaction(async (tx) => {
     const [item] = await tx.execute<Row>(sql`select owner_id from items where id = ${aboutItem}`)
     const owner = item!['owner_id']!
+
+    if (opts.once) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`talk:${opener}:${aboutItem}`}))`)
+      const existing = await conversationAbout(tx, opener, owner, aboutItem)
+      if (existing) return { ...existing, isNew: false }
+    }
 
     const [trade] = await tx.execute<Row>(sql`insert into trades default values returning id`)
     const tradeId = trade!['id']!
@@ -127,7 +153,7 @@ export async function startTalking(
           values (${threadId}, ${opener}, ${body})`,
     )
 
-    return { tradeId, threadId }
+    return { tradeId, threadId, isNew: true }
   })
 }
 
@@ -298,9 +324,11 @@ export async function acceptOffer(
       `)
     ).map((row) => row['id']!)
 
-    // The trades this yes can push out: every other one with one of the
-    // things it reserves on the table, in any version. A service is never
-    // reserved, so it pushes nothing out.
+    // The trades this yes may push out: every other one with one of the
+    // things it reserves in any version, so that none is missed for having
+    // changed its table while this waited. Which of them it does push out is
+    // judged below, once they are held. A service is never reserved, so it
+    // pushes nothing out.
     const rivals = await tx.execute<Row>(sql`
       select distinct o.trade_id as id
       from items i
@@ -347,11 +375,28 @@ export async function acceptOffer(
       throw conflict('item_unavailable', 'En av tingene i forslaget er ikke tilgjengelig lenger.')
     }
     // Only a negotiation loses its things to another trade's yes, judged as
-    // it stands now that it is held. An agreed trade holding one of them is
+    // it stands now that it is held — and only one that is counting on them:
+    // the table is the newest version (the sweep, `removeListings`), and a
+    // thing a counter-offer dropped is history there, not a claim. Pushed out
+    // for any version, a negotiation that had moved on to something else
+    // entirely ended as displaced. An agreed trade holding one of them is
     // refused below, as `item_reserved`.
-    const displaced = [...states]
-      .filter(([id, now]) => id !== tradeId && ['talking', 'pending', 'countered'].includes(now))
+    const negotiating = [...states]
+      .filter(([id, now]) => id !== tradeId && NEGOTIABLE.includes(now))
       .map(([id]) => id)
+    const displaced =
+      negotiating.length === 0
+        ? []
+        : (
+            await tx.execute<Row>(sql`
+              select distinct o.trade_id as id from trade_offers o
+              join trade_offer_items oi on oi.offer_id = o.id
+              join items i on i.id = oi.item_id
+              where o.trade_id = any(${uuidArray(negotiating)})
+                and i.id = any(${uuidArray(offered)}) and i.kind = 'item'
+                and o.seq = (select max(seq) from trade_offers where trade_id = o.trade_id)
+              order by o.trade_id`)
+          ).map((row) => row['id']!)
 
     // Every listing this is going to write, in one sorted batch: the ones this
     // person gives, and the ones the pushed-out trades were holding.
@@ -427,6 +472,15 @@ export async function acceptOffer(
  *
  * Any single de-accept holds the whole trade, which is why an accepted trade
  * drops back to `pending` rather than staying agreed with a gap in it.
+ *
+ * Judged under the trade's lock, like every other move. A paused trade is
+ * refused, as a yes is: the pause is a question about an agreed trade, and
+ * every answer to it puts the trade back to `accepted` — taken back in the
+ * pause, the yes and the reservation were gone and the trade came back agreed
+ * without them, with the thing free for another trade to take. An ended trade
+ * is refused, and so is one where something has been handed over, which is
+ * the withdrawal question on 08a and not a button; read before the lock, a
+ * marker or an ending landing in the same moment slipped past both.
  */
 export async function revokeAcceptance(
   db: Database,
@@ -440,7 +494,21 @@ export async function revokeAcceptance(
     const tradeId = offer!['trade_id']!
 
     // The one order (`index.ts`): the trade, then what it holds.
-    await lockTrades(tx, [tradeId])
+    const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+    if (!state || state === 'completed' || state === 'cancelled') {
+      throw conflict('trade_closed', 'Byttet er avsluttet.')
+    }
+    if (state === 'paused') {
+      throw conflict('trade_paused', 'Byttet er pauset mens noen svarer på en forespørsel.')
+    }
+    const [handed] = await tx.execute<Row>(
+      sql`select 1 from trade_participants
+          where trade_id = ${tradeId} and (sent_at is not null or received_at is not null)
+          limit 1`,
+    )
+    if (handed) {
+      throw conflict('already_sent', 'Noe er allerede sendt. Be de andre om å avslutte byttet.')
+    }
     await lockItems(tx, sql`i.active_trade_id = ${tradeId} and i.owner_id = ${userId}`)
 
     await tx.execute(
