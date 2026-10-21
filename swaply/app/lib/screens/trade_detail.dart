@@ -576,6 +576,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         trade.state == 'accepted' &&
         withdrawal.state == 'rejected' &&
         withdrawal.blockedBySent;
+    // 06f: a pair everybody has agreed to, which is handed over now.
+    final handover = trade.state == 'accepted' && !chain;
     return [
       // 08b: the trade is paused while the question is answered.
       if (trade.state == 'paused' && withdrawal?.state == 'waiting') _withdrawalBanner(trade),
@@ -619,6 +621,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // and the totals, as if the trade were still going on.
       if (trade.state == 'cancelled') ...[
         _notTradedCard(trade),
+      ] else if (handover) ...[
+        // 06f: what you send, in the place of what you give, with its button
+        // in it. «DU FÅR» and «DU GIR» over «DU SENDER» and «PÅ VEI TIL DEG»
+        // drew every thing twice, and put the buttons under the fold.
+        _sendCard(trade),
+        const SizedBox(height: 7),
+        _valueSummary(
+            anyUnvalued(trade.youGet) ? null : trade.youGetValue,
+            anyUnvalued(trade.youGive) ? null : trade.youGiveValue),
       ] else ...[
         // One card per leg, the kicker inside it beside the first thing.
         _legCard(
@@ -668,9 +679,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         const SizedBox(height: 7),
         _cashSection(trade),
       ],
-      if (trade.state == 'accepted' && !chain) ...[
+      if (handover) ...[
         const SizedBox(height: 7),
-        _handoverSection(trade),
+        _receiveCard(trade),
       ],
       const SizedBox(height: 7),
       _conversationSection(trade,
@@ -915,15 +926,29 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
 
   /// 06f's first two lines: everybody has said yes, and the rest is between
   /// the people in it.
-  Widget _agreedCard() => const Padding(
-        padding: EdgeInsets.only(top: Insets.sm),
-        child: SectionCard(
-          child: Column(
+  Widget _agreedCard() => Padding(
+        padding: const EdgeInsets.only(top: Insets.sm),
+        // Deep green, as the export draws the moment everybody has said yes.
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: SwaplyColors.greenDeep,
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Byttet er godtatt!', style: Type.heading),
+              Text('Byttet er godtatt!',
+                  style: TextStyle(
+                      fontSize: 22,
+                      height: 1.15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                      color: Colors.white)),
               SizedBox(height: 6),
-              Text('Dere kan også avtale å møtes i samtalen.', style: Type.secondary),
+              Text('Dere kan også avtale å møtes i samtalen.',
+                  style: TextStyle(fontSize: 13.5, height: 1.45, color: Color(0xBFFFFFFF))),
             ],
           ),
         ),
@@ -1377,8 +1402,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                   ],
                 ),
                 const SizedBox(height: Insets.sm),
+                // Green-edged, as the export draws it beside «Marker som
+                // mottatt», and a finger's 44 where it draws 40.
                 SecondaryButton(
                   settled ? 'Marker som ikke betalt' : 'Marker som betalt',
+                  accent: true,
+                  height: kTapTarget,
                   onPressed: _busy
                       ? null
                       : () => _run((api) async =>
@@ -1390,64 +1419,95 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     );
   }
 
-  /// 06f. Shipping is a link out and a checkbox: we do not carry anything.
-  Widget _handoverSection(Trade trade) {
+  /// 06f's «DU SENDER»: what you send and to whom, that the sending is
+  /// arranged outside the app, and the mark for it, in one card as drawn.
+  /// Shipping is a link out and a checkbox: we do not carry anything.
+  Widget _sendCard(Trade trade) {
     final sent = trade.youSentAt != null;
+    return _handoverCard(
+      kicker: 'Du sender',
+      colour: SwaplyColors.amberText,
+      items: trade.youGive,
+      line: 'til ${_firstName(trade.givingTo)} · frakt avtales utenfor appen, f.eks. PostNord',
+      button: sent
+          ? SecondaryButton('Marker som ikke sendt',
+              height: kTapTarget,
+              onPressed: _busy ? null : () => _run((api) => _mark(api, trade, 'sent', false)))
+          : PrimaryButton('Marker som sendt',
+              height: kTapTarget,
+              busy: _busy,
+              onPressed: () => _run((api) => _mark(api, trade, 'sent', true))),
+    );
+  }
+
+  /// 06f's «PÅ VEI TIL DEG», and the mark for it.
+  Widget _receiveCard(Trade trade) {
     final received = trade.youReceivedAt != null;
     final theirSent =
         trade.participants.where((p) => p.id == trade.receivingFrom.id).firstOrNull?.sentAt;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Kicker('Du sender'),
-        const SizedBox(height: Insets.sm),
-        SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(trade.youGive.map((i) => i.title).join(' + '), style: Type.heading),
-              const SizedBox(height: 4),
-              Text(
-                'til ${trade.givingTo.displayName.split(' ').first} · frakt avtales utenfor '
-                'appen, f.eks. PostNord',
-                style: Type.small,
-              ),
-              const SizedBox(height: Insets.md),
-              SecondaryButton(sent ? 'Marker som ikke sendt' : 'Marker som sendt',
-                  onPressed: _busy ? null : () => _run((api) => _mark(api, trade, 'sent', !sent))),
-            ],
-          ),
-        ),
-        const SizedBox(height: Insets.lg),
-        const Kicker('På vei til deg'),
-        const SizedBox(height: Insets.sm),
-        SectionCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(trade.youGet.map((i) => i.title).join(' + '), style: Type.heading),
-              const SizedBox(height: 4),
-              // Sent, once the one you receive from has marked it so: «sendt
-              // av Ola i går», as 08c draws it. It said «avtal detaljer i
-              // samtalen» whatever they had marked, and the one waiting
-              // learnt it only by being refused a withdrawal.
-              Text(
-                  theirSent == null
-                      ? 'fra ${_firstName(trade.receivingFrom)} · avtal detaljer i samtalen'
-                      : 'sendt av ${_firstName(trade.receivingFrom)} ${_day(theirSent)}',
-                  style: Type.small),
-              const SizedBox(height: Insets.md),
-              SecondaryButton(received ? 'Marker som ikke mottatt' : 'Marker som mottatt',
-                  onPressed: _busy
-                      ? null
-                      : () => _run((api) => _mark(api, trade, 'received', !received))),
-            ],
-          ),
-        ),
-      ],
+    return _handoverCard(
+      kicker: 'På vei til deg',
+      colour: SwaplyColors.greenText,
+      items: trade.youGet,
+      // Sent, once the one you receive from has marked it so: «sendt av Ola
+      // i går», as 08c draws it. It said «avtal detaljer i samtalen»
+      // whatever they had marked, and the one waiting learnt it only by
+      // being refused a withdrawal.
+      line: theirSent == null
+          ? 'fra ${_firstName(trade.receivingFrom)} · avtal detaljer i samtalen'
+          : 'sendt av ${_firstName(trade.receivingFrom)} ${_day(theirSent)}',
+      button: SecondaryButton(received ? 'Marker som ikke mottatt' : 'Marker som mottatt',
+          accent: true,
+          height: kTapTarget,
+          onPressed: _busy ? null : () => _run((api) => _mark(api, trade, 'received', !received))),
     );
   }
+
+  /// A card of 06f: the first thing's picture, the kicker, the things, a
+  /// line under them, and the card's button.
+  Widget _handoverCard({
+    required String kicker,
+    required Color colour,
+    required List<Item> items,
+    required String line,
+    required Widget button,
+  }) =>
+      SectionCard(
+        radius: 18,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                if (items.isNotEmpty) ...[
+                  ItemThumb(items.first, size: 48, radius: 12),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(kicker.toUpperCase(),
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.66,
+                              color: colour)),
+                      const SizedBox(height: 2),
+                      Text(items.map((i) => i.title).join(' + '),
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                      Text(line, style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 9),
+            button,
+          ],
+        ),
+      );
 
   /// Sets or clears a handover mark. Whichever mark is the last one finishes
   /// the trade, and then 09h comes up: «Marker som sendt» used to leave that

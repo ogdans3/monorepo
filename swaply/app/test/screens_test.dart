@@ -885,6 +885,11 @@ void main() {
       expect(find.text('Marker som mottatt'), findsOneWidget);
       expect(find.text('Marker som betalt'), findsOneWidget);
       expect(find.textContaining('frakt avtales utenfor appen'), findsOneWidget);
+      // Each thing once: «DU FÅR» and «DU GIR» over these drew them twice.
+      expect(find.text('DU FÅR'), findsNothing);
+      expect(find.text('DU GIR'), findsNothing);
+      expect(find.text('Retro spillkonsoll'), findsOneWidget);
+      expect(find.text('Bosch drill 18V'), findsOneWidget);
     });
 
     testWidgets('09e a counter arrived: it says a new proposal is on the table',
