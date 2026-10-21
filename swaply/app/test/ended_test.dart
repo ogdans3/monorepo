@@ -178,4 +178,37 @@ void main() {
       });
     }
   });
+
+  group('09f, what was not traded', () {
+    // An ended trade drew «DU FÅR» and «DU GIR» and the totals between them,
+    // as one still going on. 09f draws one card, «IKKE BYTTET», with whose
+    // each thing is and «Tilgjengelig» beside yours.
+    testWidgets('10. is one card of what was on the table, yours with where it stands',
+        (tester) async {
+      endedWith('declined', reason: 'Byttet ble avslått');
+      server.overrides['GET /trades/trade-1'] = {
+        ...server.overrides['GET /trades/trade-1']! as Map<String, Object?>,
+        'youGive': [
+          FakeServer.drill,
+          // Taken by another trade since.
+          {...FakeServer.drill, 'id': 'item-helmet', 'title': 'Sykkelhjelm', 'estimatedValueNok': 250,
+            'status': 'reserved', 'reserved': true},
+        ],
+      };
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      expect(find.text('IKKE BYTTET'), findsOneWidget);
+      expect(find.text('DU FÅR'), findsNothing);
+      expect(find.text('DU GIR · 2 TING'), findsNothing);
+      expect(find.textContaining('differanse'), findsNothing);
+      expect(find.text('Kari · verdi 1 200 kr'), findsOneWidget);
+      expect(find.text('din · verdi 600 kr'), findsOneWidget);
+      expect(find.text('din · verdi 250 kr'), findsOneWidget);
+      expect(find.text('Tilgjengelig'), findsOneWidget);
+      expect(find.text('Reservert'), findsOneWidget);
+      // Still why it ended, and the way back.
+      expect(find.text('Byttet ble avslått'), findsOneWidget);
+      expect(find.text('Tilbake til Bytter'), findsOneWidget);
+    });
+  });
 }

@@ -209,4 +209,34 @@ void main() {
     expect(find.text('Kari N.'), findsOneWidget);
     expect(find.text('Per H.'), findsOneWidget);
   });
+
+  testWidgets('8. 07l says what each of the two did with you, and 06i that both were rated',
+      (tester) async {
+    // Kari got your drill; Per sent you the bike. 07l said «ga …» of both,
+    // which for Kari is the leg to Per you were never part of.
+    final finished = Trade.fromJson({
+      ...ring(marked: {'me-1', 'kari-1', 'per-1'}),
+      'state': 'completed',
+      'givingTo': {...FakeServer.kari, 'position': 1},
+      'receivingFrom': {'id': 'per-1', 'displayName': 'Per H.', 'position': 2},
+      'youGive': [FakeServer.drill],
+      'youGet': [FakeServer.lockedItem],
+    });
+    server.overrides['POST /trades/trade-chain/reviews'] = {'ok': true};
+    await open(tester, ReviewScreen(trade: finished));
+
+    expect(find.text('fikk Bosch drill 18V'), findsOneWidget);
+    expect(find.text('sendte Bysykkel, dame'), findsOneWidget);
+    expect(find.textContaining('ga '), findsNothing);
+
+    for (final row in [0, 5]) {
+      await tester.tap(find.text('★').at(row + 4));
+      await tester.pump();
+    }
+    await tester.tap(find.text('Ja, send vurdering'));
+    await tester.pumpAndSettle();
+    expect(server.asked('POST /trades/trade-chain/reviews'), 2);
+    expect(find.text('Kari og Per har fått hver sin. Et par sekunder fra deg gjør appen bedre.'),
+        findsOneWidget);
+  });
 }

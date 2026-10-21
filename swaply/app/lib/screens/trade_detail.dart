@@ -570,46 +570,53 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       if (trade.state == 'completed') _completedHeader(trade),
 
       const SizedBox(height: Insets.md),
-      // One card per leg, the kicker inside it beside the first thing.
-      _legCard(
-        kicker: trade.state == 'completed' ? 'Du fikk' : 'Du får',
-        colour: SwaplyColors.greenText,
-        items: got,
-        from: 'fra ${trade.receivingFrom.displayName.split(' ').first}',
-        done: trade.youReceivedAt != null ? 'Mottatt' : null,
-      ),
-      const SizedBox(height: 7),
-      _legCard(
-        kicker: trade.state == 'completed'
-            ? 'Du ga'
-            : trade.youGive.length > 1
-                ? 'Du gir · ${trade.youGive.length} ting'
-                : 'Du gir',
-        colour: SwaplyColors.amberText,
-        items: gave,
-        from: 'til ${trade.givingTo.displayName.split(' ').first}',
-        done: trade.youSentAt != null ? 'Levert' : null,
-        // «Fjern» and «+ Legg til flere» both open the counter-offer, which is
-        // the only way the set of things changes once a trade exists.
-        edit: !chain && ['talking', 'pending', 'countered'].contains(trade.state)
-            ? () => _openCounterOffer(trade)
-            : null,
-      ),
-
-      // 07j: the leg that is neither yours to give nor yours to receive.
-      for (final leg in trade.otherLegs) ...[
+      // 09f: an ended trade is what was not traded, in one card, with whether
+      // each of your things is out there again. It drew «DU FÅR» and «DU GIR»
+      // and the totals, as if the trade were still going on.
+      if (trade.state == 'cancelled') ...[
+        _notTradedCard(trade),
+      ] else ...[
+        // One card per leg, the kicker inside it beside the first thing.
+        _legCard(
+          kicker: trade.state == 'completed' ? 'Du fikk' : 'Du får',
+          colour: SwaplyColors.greenText,
+          items: got,
+          from: 'fra ${trade.receivingFrom.displayName.split(' ').first}',
+          done: trade.youReceivedAt != null ? 'Mottatt' : null,
+        ),
         const SizedBox(height: 7),
         _legCard(
-          kicker: '${leg.giver.displayName.split(' ').first} gir',
-          colour: SwaplyColors.greyLight,
-          items: _traded(trade, _positionOf(trade, leg.giver)) ?? leg.items,
-          from: 'til ${leg.receiver.displayName.split(' ').first}',
+          kicker: trade.state == 'completed'
+              ? 'Du ga'
+              : trade.youGive.length > 1
+                  ? 'Du gir · ${trade.youGive.length} ting'
+                  : 'Du gir',
+          colour: SwaplyColors.amberText,
+          items: gave,
+          from: 'til ${trade.givingTo.displayName.split(' ').first}',
+          done: trade.youSentAt != null ? 'Levert' : null,
+          // «Fjern» and «+ Legg til flere» both open the counter-offer, which is
+          // the only way the set of things changes once a trade exists.
+          edit: !chain && ['talking', 'pending', 'countered'].contains(trade.state)
+              ? () => _openCounterOffer(trade)
+              : null,
         ),
-      ],
 
-      const SizedBox(height: 7),
-      _valueSummary(gotCopy == null ? trade.youGetValue : _sum(got),
-          gaveCopy == null ? trade.youGiveValue : _sum(gave)),
+        // 07j: the leg that is neither yours to give nor yours to receive.
+        for (final leg in trade.otherLegs) ...[
+          const SizedBox(height: 7),
+          _legCard(
+            kicker: '${leg.giver.displayName.split(' ').first} gir',
+            colour: SwaplyColors.greyLight,
+            items: _traded(trade, _positionOf(trade, leg.giver)) ?? leg.items,
+            from: 'til ${leg.receiver.displayName.split(' ').first}',
+          ),
+        ],
+
+        const SizedBox(height: 7),
+        _valueSummary(gotCopy == null ? trade.youGetValue : _sum(got),
+            gaveCopy == null ? trade.youGiveValue : _sum(gave)),
+      ],
       // Not on an ended trade: there is nothing left to pay, and «betales
       // når begge har godtatt» was a promise about a trade that is over.
       if (trade.cash != null && trade.state != 'cancelled') ...[
@@ -1083,6 +1090,70 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       trade.participants.where((p) => p.id == person.id).firstOrNull?.position;
 
   int _sum(List<Item> items) => items.fold(0, (total, i) => total + (i.estimatedValueNok ?? 0));
+
+  /// 09f's «IKKE BYTTET»: everything that was on the table, theirs with
+  /// whose it is and yours with «din», and each of yours with where it stands
+  /// now — «Tilgjengelig» is the export's, and a thing taken by another trade
+  /// since, or traded, says so rather than claiming to be free.
+  Widget _notTradedCard(Trade trade) {
+    final rows = [
+      for (final item in trade.youGet) (item, _firstName(trade.receivingFrom), false),
+      for (final leg in trade.otherLegs)
+        for (final item in leg.items) (item, _firstName(leg.giver), false),
+      for (final item in trade.youGive) (item, 'din', true),
+    ];
+    return SectionCard(
+      radius: 16,
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('IKKE BYTTET',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.66,
+                  color: SwaplyColors.greyLight)),
+          for (final (item, whose, mine) in rows) ...[
+            const SizedBox(height: 9),
+            Row(
+              children: [
+                ItemThumb(item, size: 48, radius: 12),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                      Text(
+                          item.estimatedValueNok == null
+                              ? whose
+                              : '$whose · verdi ${kr(item.estimatedValueNok)}',
+                          style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+                    ],
+                  ),
+                ),
+                if (mine) ...[
+                  const SizedBox(width: 8),
+                  switch (item.status) {
+                    'traded' => const StatePill('Byttet', color: SwaplyColors.inkMuted),
+                    'withdrawn' => const StatePill('Trukket', color: SwaplyColors.inkMuted),
+                    _ when item.reserved || item.status == 'reserved' =>
+                      const StatePill('Reservert', color: SwaplyColors.amberText),
+                    _ => const StatePill('Tilgjengelig'),
+                  },
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   /// «Du får · verdi 1 200 kr» left, the difference in the middle, «Du gir ·
   /// verdi 850 kr» right — a line, not a card. The server's sums, or a

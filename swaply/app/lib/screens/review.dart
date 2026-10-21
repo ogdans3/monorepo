@@ -161,6 +161,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  /// What [person] did with you, as 07l says it from the one rating: the
+  /// one you gave to «fikk drillen din», the one you got from «sendte
+  /// fiskestangen». It said what each of them gave, which for the one you
+  /// gave to is a leg you were never part of.
+  String _withYou(UserRef person) {
+    final trade = widget.trade;
+    String things(List<Item> items) => items.map((i) => i.title).join(' og ');
+    if (person.position == trade.givingTo.position && trade.youGive.isNotEmpty) {
+      return 'fikk ${things(trade.youGive)}';
+    }
+    if (person.position == trade.receivingFrom.position && trade.youGet.isNotEmpty) {
+      return 'sendte ${things(trade.youGet)}';
+    }
+    return 'byttet med deg';
+  }
+
   /// «Byttet ble ikke noe av» on 07l. The export has it free the things
   /// again, asked a week into the chat; here 07l comes once all three have
   /// marked the ring done, and a completed trade has nothing left to free.
@@ -171,9 +187,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       context,
       title: 'Hvem gjelder det?',
       people: _others,
-      describe: (p) => p.gives.isEmpty
-          ? 'byttet med deg'
-          : 'ga ${p.gives.map((i) => i.title).join(' og ')}',
+      describe: _withYou,
     );
     if (person == null || !mounted) return;
     await showReportSheet(context, userId: person.id, personName: person.displayName);
@@ -272,12 +286,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(person.displayName, style: Type.heading),
-                                      Text(
-                                        person.gives.isEmpty
-                                            ? 'byttet med deg'
-                                            : 'ga ${person.gives.map((i) => i.title).join(' og ')}',
-                                        style: Type.small,
-                                      ),
+                                      Text(_withYou(person), style: Type.small),
                                     ],
                                   ),
                                 ),
@@ -467,7 +476,14 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final other = widget.trade.receivingFrom.displayName.split(' ').first;
+    final trade = widget.trade;
+    final others = trade.participants
+        .where((p) => p.position != trade.youPosition)
+        .map((p) => p.displayName.split(' ').first)
+        .toList();
+    final rated = trade.isChain && others.length > 1
+        ? '${others.sublist(0, others.length - 1).join(', ')} og ${others.last}'
+        : trade.receivingFrom.displayName.split(' ').first;
 
     return Scaffold(
       appBar: AppBar(
@@ -491,7 +507,9 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
                 children: [
                   const Text('Hvordan var det å bytte med Swaply?', style: Type.display),
                   const SizedBox(height: Insets.sm),
-                  Text('$other har fått sin. Et par sekunder fra deg gjør appen bedre.',
+                  // In a ring both were rated, not only the one you got from.
+                  Text('$rated har fått ${trade.isChain ? 'hver sin' : 'sin'}. '
+                      'Et par sekunder fra deg gjør appen bedre.',
                       style: Type.secondary),
                   const SizedBox(height: Insets.xl),
                   Row(
