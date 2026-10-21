@@ -7,12 +7,17 @@
 // marked or answered — and the button span on for the asking's whole
 // patience first. The badges are the session's business, and they come with
 // the next answer.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/screens/chat.dart';
+import 'package:swaply_app/screens/notifications.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
+import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
 
 import 'fake_server.dart';
@@ -81,6 +86,47 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Godta byttet'), findsOneWidget);
+    });
+  });
+
+  group('a list that came is not said to have failed', () {
+    Future<void> pullDown(WidgetTester tester) async {
+      unawaited(tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator).first).show());
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('3. Bytter: a pull whose list came and whose badges did not says nothing',
+        (tester) async {
+      await mount(tester, const TradesScreen());
+      server.overrides['GET /me'] = unreachable;
+      final before = server.asked('GET /trades');
+
+      await pullDown(tester);
+
+      expect(server.asked('GET /trades'), before + 1);
+      expect(find.text('Venter · 1'), findsOneWidget);
+      expect(find.text(noContact), findsNothing);
+    });
+
+    testWidgets('4. Chats: nor here', (tester) async {
+      await mount(tester, const ChatsScreen());
+      server.overrides['GET /me'] = unreachable;
+      final before = server.asked('GET /threads');
+
+      await pullDown(tester);
+
+      expect(server.asked('GET /threads'), before + 1);
+      expect(find.text('Jeg kan sende fiskestangen med PostNord i morgen.'), findsOneWidget);
+      expect(find.text(noContact), findsNothing);
+    });
+
+    testWidgets('5. 12a: notifications that came are shown when marking them read gets no answer',
+        (tester) async {
+      server.overrides['POST /notifications/read'] = unreachable;
+      await mount(tester, const NotificationsScreen());
+
+      expect(find.text('Fikk ikke kontakt'), findsNothing);
+      expect(find.text('Kari likte Bosch drill 18V'), findsOneWidget);
     });
   });
 }

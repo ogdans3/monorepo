@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -87,7 +89,9 @@ class _TradesScreenState extends State<TradesScreen>
         _data = data;
         _error = null;
       });
-      await context.read<Session>().refresh();
+      // The bar's badge, quietly: the list came, and a pull that brought it
+      // said «Vi får ikke kontakt» when only this asking after it did not.
+      unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
     } on ApiException catch (e) {
       if (!mounted) return;
       if (_data == null) {
