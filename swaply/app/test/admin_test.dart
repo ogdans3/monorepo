@@ -218,6 +218,23 @@ void main() {
       });
     });
 
+    testWidgets('«Som motparten» that worked is not said to have failed by the reading back',
+        (tester) async {
+      // The other side's move and reading the trade back shared one asking:
+      // with no answer to the reading, «Vi får ikke kontakt» went up over a
+      // move the server had made, and pressed again it was made twice.
+      asAdmin();
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+      server.overrides['GET /trades/trade-1'] = unreachable;
+
+      await tester.tap(find.text('Kari godtar'));
+      await tester.pumpAndSettle();
+
+      expect(server.asked('POST /admin/trades/trade-1/act'), 1);
+      expect(find.text(noContact), findsNothing);
+      expect(find.text('Som motparten'), findsOneWidget);
+    });
+
     testWidgets('«Få noen til å ville ha denne» is offered on your own listing only',
         (tester) async {
       // A test account wanting a stranger's thing puts the two of them in one

@@ -503,6 +503,20 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     }
   }
 
+  /// The trade as it stands after a lever of the tooling's, or [before] when
+  /// there is no answer: the lever worked, and reading back is not the
+  /// lever. Sharing its `try`, no answer said «Vi får ikke kontakt» over a
+  /// move the server had made, and pressed again it was made twice. The next
+  /// asking shows it.
+  Future<Trade> _readBack(SwaplyApi api, Trade before) async {
+    try {
+      return await api.trade(before.id);
+    } on ApiException catch (e) {
+      if (!e.isNoContact) rethrow;
+      return before;
+    }
+  }
+
   /// Who this is, asked again for the bar's badges, and nothing said either
   /// way: what the screen did is what the screen says, and no answer here is
   /// the next asking's to put right.
@@ -734,7 +748,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                       busy: _busy,
                       onPressed: () => _run((api) async {
                             await api.adminExpireWithdrawal(trade.id);
-                            return api.trade(trade.id);
+                            return _readBack(api, trade);
                           })),
                 ),
               ],
@@ -752,7 +766,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                               : () => _run((api) async {
                                     await api.adminAct(trade.id,
                                         as: person.id, action: action.$1);
-                                    return api.trade(trade.id);
+                                    return _readBack(api, trade);
                                   }),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
