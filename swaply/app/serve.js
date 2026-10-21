@@ -51,12 +51,87 @@ const types = {
   '.map': 'application/json; charset=utf-8',
 };
 
+// The fonts the engine asks for: Roboto, and the Noto fonts it falls back on
+// for a glyph Roboto lacks (an arrow, an emoji, another script). The app is
+// told `fontFallbackBaseUrl: 'fonts/'` (web/flutter_bootstrap.js), so it asks
+// us, and this fetches each file once from Google's font server and keeps it.
+// The visitor's browser never talks to Google, which is the point: their IP
+// address is personal data, and Google would be a second processor in the
+// transfer chapter of docs/ARCHITECTURE.md. Only the shape Flutter asks for is
+// relayed — family, version, file — so this is not an open proxy. The file
+// name may carry a dot: the CJK fonts come in slices named `….90.woff2`, and
+// they are where an arrow like ⇄ is found.
+const FONT = /^\/fonts\/([a-z0-9]+\/v\d+\/[A-Za-z0-9_-][A-Za-z0-9_.-]*\.(?:woff2|ttf|otf))$/;
+const FONT_UPSTREAM = 'https://fonts.gstatic.com/s/';
+const FONT_CACHE_BYTES = 64 * 1024 * 1024;
+const fonts = new Map(); // relative path -> Promise<Buffer | null>
+let fontBytes = 0;
+
+function font(rel) {
+  let pending = fonts.get(rel);
+  if (!pending) {
+    pending = fetch(FONT_UPSTREAM + rel)
+      .then(async (upstream) => {
+        if (!upstream.ok) return null;
+        const body = Buffer.from(await upstream.arrayBuffer());
+        fontBytes += body.length;
+        // Kept while there is room. The fallback fonts for a whole script can
+        // run to megabytes each, and a few dozen of them is plenty to hold.
+        if (fontBytes > FONT_CACHE_BYTES) {
+          fonts.delete(rel);
+          fontBytes -= body.length;
+        }
+        return body;
+      })
+      .catch(() => null);
+    fonts.set(rel, pending);
+    // A failure is not kept: the next request tries again.
+    pending.then((body) => body || fonts.delete(rel));
+  }
+  return pending;
+}
+
+// CanvasKit is asked for under the engine revision (canvaskit/<revision>/…, see
+// web/flutter_bootstrap.js) and lives in the build without it. With the
+// revision in the URL a cache may keep it for a year and a Flutter upgrade still
+// reaches people, which is what the gstatic URL used to give us.
+const CANVASKIT = /^\/canvaskit\/[0-9a-f]{40}\//;
+
 http
   .createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
+
+    const wanted = FONT.exec(url.pathname);
+    if (wanted) {
+      font(wanted[1]).then((body) => {
+        if (!body) {
+          res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+          res.end('Fikk ikke tak i skriften.');
+          return;
+        }
+        res.writeHead(200, {
+          'content-type': types[path.extname(wanted[1])],
+          // The version is in the path, so the bytes behind it never change.
+          'cache-control': 'public, max-age=31536000, immutable',
+          'x-content-type-options': 'nosniff',
+        });
+        res.end(body);
+      });
+      return;
+    }
+
+    // Anything else under fonts/ is nothing we have, and the shell in its
+    // place would be read by the engine as a broken font.
+    if (url.pathname.startsWith('/fonts/')) {
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('Fant ikke skriften.');
+      return;
+    }
+
+    const pathname = url.pathname.replace(CANVASKIT, '/canvaskit/');
     // Resolve inside root and check afterwards: `..` in a path is how a static
     // server hands out /etc/passwd.
-    const target = path.join(root, decodeURIComponent(url.pathname));
+    const target = path.join(root, decodeURIComponent(pathname));
     const safe = target.startsWith(root) ? target : root;
 
     fs.stat(safe, (err, stat) => {

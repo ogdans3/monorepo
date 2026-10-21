@@ -583,14 +583,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final other = trade.receivingFrom;
-    final title = trade.isChain ? 'Ditt bytte' : 'Bytte med ${other.displayName.split(' ').first}';
-
     return SwaplyScaffold(
       currentTab: 2,
-      // «‹ Bytte med Ola» and nothing else: the state is told by the cards
-      // and the buttons, not by a pill in the corner.
-      appBar: swaplyAppBar(context, title),
+      appBar: swaplyAppBar(context, _title(trade), status: _status(trade)),
       child: Column(
         children: [
           Expanded(
@@ -864,6 +859,44 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       ),
     );
   }
+
+  /// «Ditt bytte» once you have said yes to it and it is still going — 06e,
+  /// 06f, 08b, 08c — and «Bytte med Ola» while the yes is still yours to give
+  /// (06b, 09e) and once it is over (09f, 09i), as the export titles them. A
+  /// ring is «Ditt bytte» throughout, as 07j is: there are two others in it.
+  String _title(Trade trade) {
+    final yours = switch (trade.state) {
+      'pending' || 'countered' => trade.youAccepted,
+      'accepted' || 'paused' => true,
+      _ => false,
+    };
+    return trade.isChain || yours ? 'Ditt bytte' : 'Bytte med ${_firstName(trade.receivingFrom)}';
+  }
+
+  /// The pill at the right of the header: where the trade stands, in the
+  /// export's words and colours.
+  ///
+  /// None while the next yes is yours and nobody has changed anything: 06b
+  /// draws none, and its buttons say it. A ring that everybody has agreed to
+  /// is handed over in its chat — the app draws no «DU SENDER» for one — and
+  /// says so, as 07j does, where a pair says «Godtatt». An ended trade says
+  /// «Avslått» only for the close code that means it, and «Avsluttet» for
+  /// every other way a trade ends without being done: a block, an account
+  /// deleted, a listing taken down, a thing gone to another trade, a
+  /// withdrawal, the test tooling. The code does not say who declined, so
+  /// neither does the pill.
+  HeaderStatus? _status(Trade trade) => switch (trade.state) {
+        'pending' || 'countered' when trade.youAccepted => (label: 'Venter', tone: PillTone.quiet),
+        'countered' when _counteredByOther(trade) => (label: 'Endret', tone: PillTone.attention),
+        'accepted' when trade.isChain => (label: 'Avtales i chat', tone: PillTone.quiet),
+        'accepted' => (label: 'Godtatt', tone: PillTone.agreed),
+        'paused' => (label: 'Pauset', tone: PillTone.attention),
+        'completed' => (label: 'Gjennomført', tone: PillTone.agreed),
+        'cancelled' when trade.closeCode == Trade.closedByDecline =>
+          (label: 'Avslått', tone: PillTone.ended),
+        'cancelled' => (label: 'Avsluttet', tone: PillTone.ended),
+        _ => null,
+      };
 
   /// 09e: the version on the table was proposed by somebody else, which
   /// since 02.10.2026 also means they have said yes to it.
@@ -1848,7 +1881,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             onPressed: () => _report(trade),
             icon: const Icon(Icons.flag_outlined, size: 17, color: SwaplyColors.red),
             label: const Text('Rapporter et problem med byttet',
-                style: TextStyle(color: SwaplyColors.red)),
+                style: TextStyle(color: SwaplyColors.reportText)),
           ),
         ],
       );

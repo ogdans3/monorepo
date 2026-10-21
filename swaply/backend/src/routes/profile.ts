@@ -12,6 +12,7 @@ import { townOf } from '../lib/postcodes.js'
 import { coverSql, many, one } from '../lib/rows.js'
 import { displayName, emailAddress, phoneNumber } from '../lib/validation.js'
 import { anonymiseUser } from '../trades/erasure.js'
+import { listingOpenTo } from '../trades/ring.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import { publicItem, publicMe, publicUser } from './serialize.js'
 
@@ -302,10 +303,15 @@ export default async function profileRoutes(app: FastifyInstance) {
     const viewer = request.userId
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
 
+    // Not the «[test] …» things a scenario put on an admin's own account,
+    // for anybody outside the admin's test ring (`trades/ring.ts`): the admin
+    // is somebody real people trade with, and 13b is a tap from any of it.
+    const open = listingOpenTo(sql`${viewer ?? null}::uuid`, sql`i.id`)
     const user = await one(
       app.db,
       sql`select u.*,
-                 (select count(*) from items i where i.owner_id = u.id and i.deleted_at is null) as item_count,
+                 (select count(*) from items i
+                  where i.owner_id = u.id and i.deleted_at is null and ${open}) as item_count,
                  (select count(*) from trade_participants p join trades t on t.id = p.trade_id
                   where p.user_id = u.id and t.state = 'completed') as trade_count
           from users u where u.id = ${id}`,
@@ -324,6 +330,7 @@ export default async function profileRoutes(app: FastifyInstance) {
                              and l.from_user = ${viewer ?? null}) as liked_by_me
               from items i
               where i.owner_id = ${id} and i.deleted_at is null and i.status <> 'traded'
+                and ${open}
               order by i.created_at desc`,
         )
     const byYou = viewer

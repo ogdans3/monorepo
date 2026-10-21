@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { blocked, blockedBetween } from '../lib/blocks.js'
 import { MAX_VALUE_NOK, TERMS_VERSION } from '../lib/constants.js'
 import { badRequest, conflict, notFound } from '../lib/errors.js'
-import { coverSql, many, one } from '../lib/rows.js'
+import { coverSql, many, one, uuidArray } from '../lib/rows.js'
 import {
   cancelWithdrawalRequest,
   declineTrade,
@@ -17,7 +17,7 @@ import {
 } from '../trades/actions.js'
 import { acceptTrade, counterAndAgree } from '../trades/accept.js'
 import { conversationAbout, lastMessageIn, postMessage } from '../trades/conversation.js'
-import { ringsApart, testRing } from '../trades/ring.js'
+import { listingApart, listingOpenTo, ringsApart, testListing, testRing } from '../trades/ring.js'
 import { sweepForCycles } from '../trades/sweep.js'
 import {
   completeTrade,
@@ -78,6 +78,8 @@ export default async function tradeRoutes(app: FastifyInstance) {
       // the first message puts two people in one trade, and a test listing is
       // still reachable by a link somebody was handed.
       if (await ringsApart(app.db, userId, item['owner_id'])) throw testRing()
+      // Nor about a «[test] …» thing a scenario made, from outside its ring.
+      if (await listingApart(app.db, userId, id)) throw testListing()
 
       const opened = await startTalking(app.db, userId, id, body.body, { once: true })
       if (opened.isNew) {
@@ -296,11 +298,22 @@ export default async function tradeRoutes(app: FastifyInstance) {
 
     const inOffer = new Set([...view.youGive, ...view.youGet].map((i) => i.id))
 
+    // Not a «[test] …» thing a scenario made, unless everybody in the trade
+    // is in the ring it was made in (`trades/ring.ts`): in a trade between
+    // the admin and a real person it was the admin's to offer and the other's
+    // to ask for, under «DU FÅR». One on the table already stays in the list,
+    // as it stays on the table: the trade is somebody's, and is left as it is.
+    const shown = sql`(not exists (select 1 from trade_participants tp
+                                   where tp.trade_id = ${id}
+                                     and not ${listingOpenTo(sql`tp.user_id`, sql`i.id`)})
+                       or i.id = any(${uuidArray([...inOffer])}))`
+
     const forUser = async (owner: string) => {
       const rows = await many(
         app.db,
         sql`select i.*, ${coverSql('i')} as cover from items i
             where i.owner_id = ${owner} and i.deleted_at is null and i.status <> 'traded'
+              and ${shown}
             order by i.created_at desc`,
       )
       return rows.map((r) => ({

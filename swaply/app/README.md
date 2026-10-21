@@ -68,6 +68,19 @@ several rows below point at the same file with a different `state` behind it.
 | 13 Profil · 13b Annen profil · 17c Tom · 16a Rapporter · 16b Innstillinger, and the «Juridisk og personvern» screen behind it | `screens/profile.dart` |
 | 06h Vurdering · 07l Vurdering B2 · 06i Tilbakemelding · 09h Fullført | `screens/review.dart` |
 
+**The trade screen's header says where the trade stands**, as the export draws
+it. The title is «Ditt bytte» once you have said yes and the trade is still
+going (06e, 06f, 08b, 08c, and a ring throughout, 07j), and «Bytte med Ola»
+while the yes is yours to give and once it is over (06b, 09e, 09f, 09i). The
+pill at its right says «Venter», «Endret», «Godtatt», «Avtales i chat» for a
+ring everybody has agreed to, «Pauset», «Gjennomført» or «Avslått», in the
+export's colours; 06b has none. The export draws one ending and the server has
+eight: the pill says «Avslått» only for `declined`, and «Avsluttet» for every
+other — the app does not know who declined, so it says no more than the code.
+Where the pill does not fit beside the title — a long name, a 320 phone, large
+text — it goes under it rather than cut either. It is read with the title, as
+the screen's heading. `test/trade_header_test.dart` holds it.
+
 **10a comes at the fifth heart, not at the tenth** the export's title names.
 That is a decision, not a drift, and `../docs/DESIGN.md` has it: while nothing
 is listed it comes at five, then at fifteen, twenty-five and on, so «Senere»
@@ -871,6 +884,17 @@ The error tone is **coral**, which is the «no» colour. Not
 `SwaplyColors.red`, which belongs to report and block: an error toast is the
 most tempting place in the app to reach for the stronger red, and the two must
 not collapse into one meaning.
+
+Coral is a shape's colour: an icon, an edge, a ring. **Words in it are
+`SwaplyColors.coralText`**, the same hue darkened to the 4.5:1 WCAG AA asks of
+text, and `coralOnDark` on the deep green, where it goes lighter instead; the
+light coral is 2.8:1 on white and was hard to read under a field. The same goes
+for report and block: «Rapporter», and the filled button that sends a report,
+are `reportText`, and `red` stays on the flag icon and the switch. Decided by
+the product owner on 21.10.2026 («fiks all dårlig kontrast, men hold det pent
+slik det er nå»): every text colour in the palette was darkened in its own hue
+only as far as AA asks — the three greys, the ambers and the three avatar
+colours behind a white initial — so the app looks as it did, a shade firmer.
 
 A toast never lies over the screen's primary action. It sits 14 above the foot
 of its screen — the bar, in a tab, whose screens end where the bar begins; the

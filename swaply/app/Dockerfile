@@ -33,7 +33,9 @@ COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
 COPY . .
-RUN flutter build web --release --dart-define=API_BASE=$API_BASE
+# --no-web-resources-cdn: CanvasKit is served from the build, not from
+# gstatic. web/flutter_bootstrap.js says where, and serve.js serves it.
+RUN flutter build web --release --no-web-resources-cdn --dart-define=API_BASE=$API_BASE
 
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production

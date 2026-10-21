@@ -154,14 +154,25 @@ describe('building a trade in a named state', () => {
     expect(view.body!['youGive']).toHaveLength(1)
     expect(view.body!['youGet']).toHaveLength(1)
 
-    // The likes that closed it are on the record, both of them, pointing the
-    // opposite way to the goods.
+    // The hearts that closed it were pressed, both of them, pointing the
+    // opposite way to the goods: each owner was told of one, by the other.
+    const told = await db.execute<Json>(sql`
+      select n.user_id, n.payload->>'byUserId' as by from notifications n
+      join trade_offer_items oi on oi.item_id = (n.payload->>'itemId')::uuid
+      join trade_offers o on o.id = oi.offer_id
+      where o.trade_id = ${tradeId} and n.type = 'item_liked'`)
+    expect(told).toHaveLength(2)
+    expect(told.every((n) => n['user_id'] !== n['by'])).toBe(true)
+    // And taken back once the trade stood, through «ta tilbake hjertet»: the
+    // trade does not lean on them, and left standing they closed rings with
+    // the next scenario's (3b).
     const likes = await db.execute<Json>(sql`
       select l.from_user from likes l
       join trade_offer_items oi on oi.item_id = l.target_item
       join trade_offers o on o.id = oi.offer_id
       where o.trade_id = ${tradeId}`)
-    expect(likes.length).toBeGreaterThanOrEqual(2)
+    expect(likes).toHaveLength(0)
+    expect(res.body!['steps']).toContain('Hjertene ble tatt tilbake, så de ikke åpner flere bytter')
 
     // Nothing is held: a cycle is a suggestion until an owner says yes.
     const held = await db.execute<Json>(
@@ -169,6 +180,119 @@ describe('building a trade in a named state', () => {
     )
     expect(held).toHaveLength(0)
   })
+
+  /** An account made for one step, so what earlier steps left cannot reach it. */
+  const fresh = async (displayName: string, withItems = 0) =>
+    (await call('POST', '/admin/accounts', { token: gabriel, body: { displayName, withItems } }))
+      .body!['id'] as string
+
+  async function openTradesOf(userId: string): Promise<string[]> {
+    const rows = await db.execute<{ id: string }>(
+      sql`select t.id from trades t join trade_participants p on p.trade_id = t.id
+          where p.user_id = ${userId} and t.state not in ('completed', 'cancelled')
+          order by t.created_at`,
+    )
+    return rows.map((r) => r.id)
+  }
+
+  test('3b. so the next scenario with the same people opens one trade, over the things it made', async () => {
+    // Every scenario used to leave its hearts, and the next one's closed
+    // rings through them: a mixed one, an old «[test]» thing for a new one,
+    // from the heart and then from the hourly sweep, and the scenario could
+    // name one of those as its own.
+    const lise = await fresh('Lise Test')
+    const first = await call('POST', '/admin/scenarios', {
+      token: gabriel, body: { state: 'pending', with: [lise] },
+    })
+    const second = await call('POST', '/admin/scenarios', {
+      token: gabriel, body: { state: 'pending', with: [lise] },
+    })
+    expect(second.status).toBe(200)
+
+    expect(await openTradesOf(lise)).toEqual([first.body!['tradeId'], second.body!['tradeId']])
+    const swept = await call('POST', '/admin/jobs/sweep-cycles/run', { token: gabriel })
+    expect(swept.body!['opened']).toBe(0)
+
+    // Each over its own two «[test]» things, and none of the other's.
+    const things = async (tradeId: string) => {
+      const view = (await call('GET', `/trades/${tradeId}`, { token: gabriel })).body!
+      return [...view['youGive'], ...view['youGet']].map((i: Json) => i['id'] as string)
+    }
+    const a = await things(first.body!['tradeId'])
+    const b = await things(second.body!['tradeId'])
+    expect(a).toHaveLength(2)
+    expect(b).toHaveLength(2)
+    expect(b.filter((id) => a.includes(id))).toEqual([])
+  })
+
+  test('3c. and one whose own ring a heart from before closed first says so, rather than building on that one',
+    async () => {
+      // A heart the scenario did not press — Gabriel's own, by hand, on a
+      // thing of Nils's — stands, and is left alone. In a ring of three the
+      // last heart is Nils's on Gabriel's new thing, and the search finds the
+      // pair through Gabriel's heart before the ring of three: that pair
+      // opens, and the scenario used to build its state on it and call it a
+      // three-way trade.
+      const mia = await fresh('Mia Test')
+      const nils = await fresh('Nils Test', 1)
+      const nilsOwn = (await call('GET', `/users/${nils}`, { token: gabriel })).body!['items'][0]['id']
+      expect((await call('POST', `/items/${nilsOwn}/like`, { token: gabriel })).body!['tradeId']).toBeNull()
+
+      const res = await call('POST', '/admin/scenarios', {
+        token: gabriel, body: { shape: 'three-way', state: 'accepted', with: [mia, nils] },
+      })
+
+      expect(res.status).toBe(409)
+      expect(res.body).toEqual({
+        code: 'no_cycle',
+        message: 'Hjertene lukket en annen sirkel, med ting fra før, i stedet for denne. ' +
+          'Nullstill likes og bytter for kontoene og prøv igjen.',
+      })
+      // Nothing was agreed on the pair it would have taken.
+      const held = await db.execute(
+        sql`select 1 from items where owner_id in (${gabrielId}, ${nils}) and active_trade_id is not null`,
+      )
+      expect(held).toEqual([])
+      // Its own hearts are taken back all the same; Gabriel's stands.
+      const left = await db.execute<Json>(
+        sql`select target_item from likes where from_user in (${gabrielId}, ${mia}, ${nils})`,
+      )
+      expect(left.map((r) => r['target_item'])).toEqual([nilsOwn])
+    })
+
+  test('3d. «Nullstill → bytter» is a no to a ring inside the test ring: nothing opens it again by itself',
+    async () => {
+      // Gabriel and Oda want each other's things — hearts pressed by hand,
+      // which the reset leaves. «Nullstill → bytter» ends the trade, and the
+      // sweep it runs on the way out found the same ring and opened it again
+      // in the same second, so «1 bytter avsluttet» was said about a ring
+      // that was open; the hourly job did the same an hour later.
+      const oda = await fresh('Oda Test', 1)
+      const odas = (await call('GET', `/users/${oda}`, { token: gabriel })).body!['items'][0]['id']
+      const saw = (await call('POST', '/items', {
+        token: gabriel, body: { title: 'Gabriels stikksag', category: 'verktoy', condition: 'good' },
+      })).body!['id']
+      const asOda = (await call('POST', `/admin/accounts/${oda}/session`, { token: gabriel })).body!['token']
+      await call('POST', `/items/${saw}/like`, { token: asOda })
+      const opened = (await call('POST', `/items/${odas}/like`, { token: gabriel })).body!['tradeId']
+      expect(await openTradesOf(oda)).toEqual([opened])
+
+      const res = await call('POST', `/admin/accounts/${oda}/reset`, {
+        token: gabriel, body: { parts: ['trades'] },
+      })
+
+      expect(res.body!['done']).toEqual(['1 bytter avsluttet'])
+      expect(await openTradesOf(oda)).toEqual([])
+      const swept = await call('POST', '/admin/jobs/sweep-cycles/run', { token: gabriel })
+      expect(swept.body!['opened']).toBe(0)
+      expect(await openTradesOf(oda)).toEqual([])
+
+      // A heart pressed again after it is a new wish, as after any no.
+      await call('DELETE', `/items/${odas}/like`, { token: gabriel })
+      const again = await call('POST', `/items/${odas}/like`, { token: gabriel })
+      expect(again.body).toMatchObject({ tradeIsNew: true })
+      expect(await openTradesOf(oda)).toEqual([again.body!['tradeId']])
+    })
 
   test('4. «countered» leaves two offer versions and somebody else’s name on the new one',
     async () => {
@@ -287,8 +411,11 @@ describe('building a trade in a named state', () => {
   test('13. but never in a trade a real person is standing in', async () => {
     // The tool may move a negotiation without asking. The one thing it must
     // never move without asking is somebody else's.
-    const mine = await call('GET', '/me', { token: gabriel })
-    const item = mine.body!['items'][0]
+    // About a real listing of Gabriel's: a «[test]» one is the tool's, and
+    // the stranger cannot write about it at all (test-ring.test.ts).
+    const item = (await call('POST', '/items', {
+      token: gabriel, body: { title: 'Gabriels drill', category: 'verktoy', condition: 'good' },
+    })).body!
     const opened = await call('POST', `/items/${item['id']}/message`, {
       token: stranger, body: { body: 'Hei, er denne ledig?' },
     })
@@ -435,8 +562,9 @@ describe('building a trade in a named state', () => {
 
   test('14g. «Nullstill → avslutt bytter» leaves a real person’s trade standing',
     async () => {
-      const mine = await call('GET', '/me', { token: gabriel })
-      const item = mine.body!['items'].find((i: Json) => i['status'] === 'available')
+      const item = (await call('POST', '/items', {
+        token: gabriel, body: { title: 'Gabriels høvel', category: 'verktoy', condition: 'good' },
+      })).body!
       const opened = await call('POST', `/items/${item['id']}/message`, {
         token: stranger, body: { body: 'Er denne ledig?' },
       })
@@ -472,25 +600,28 @@ describe('building a trade in a named state', () => {
       expect(res.body!['message']).toContain('En Fremmed')
     })
 
-  test('14i. pressed on a listing the account already wants, it names the ring already open',
+  test('14i. pressed on a listing an open ring already gives the account, it names that ring',
     async () => {
-      // A repeat press searches for nothing, which is right for a person, and
-      // the tool said «Ingen sirkel ennå» with a trade open over the very
+      // The tool said «Ingen sirkel ennå» with a trade open over the very
       // wish. Agreed, so its listings are reserved and the cycle search, which
-      // only walks free ones, could not have found it either.
+      // only walks free ones, cannot find it. The scenario took its own heart
+      // back, so the first press is a new wish; the second is a repeat, which
+      // searches for nothing — right for a person — and is answered the same.
       const built = await scenario('accepted')
       const tradeId = built.body!['tradeId']
       const view = await call('GET', `/trades/${tradeId}`, { token: gabriel })
       const yours = view.body!['youGive'][0]['id']
       const other = view.body!['receivingFrom']['id']
 
-      const res = await call('POST', `/admin/items/${yours}/want`, {
-        token: gabriel, body: { as: other },
-      })
+      for (const press of ['first', 'again']) {
+        const res = await call('POST', `/admin/items/${yours}/want`, {
+          token: gabriel, body: { as: other },
+        })
 
-      expect(res.status).toBe(200)
-      // Not new: 06a is for the moment a trade opens, and this one had it.
-      expect(res.body).toMatchObject({ tradeId, tradeIsNew: false })
+        expect(res.status, press).toBe(200)
+        // Not new: 06a is for the moment a trade opens, and this one had it.
+        expect(res.body, press).toMatchObject({ tradeId, tradeIsNew: false })
+      }
     })
 
   test('15. and a stranger can reach none of it', async () => {

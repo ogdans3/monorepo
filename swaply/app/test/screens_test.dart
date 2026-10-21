@@ -1712,8 +1712,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final said = tester.widget<Text>(find.text('Noe gikk galt hos oss.'));
-      expect(said.style!.color, SwaplyColors.coral);
+      // Coral as words, which is coralText; never the report red, as words
+      // or not.
+      expect(said.style!.color, SwaplyColors.coralText);
       expect(said.style!.color, isNot(SwaplyColors.red));
+      expect(said.style!.color, isNot(SwaplyColors.reportText));
     });
 
     testWidgets('04 «Kopier lenke» puts the whole line on the clipboard',
@@ -2073,8 +2076,9 @@ void main() {
 
       expect(find.text('Forside'), findsNothing);
       final said = tester.widget<Text>(find.text('Bildet er for stort. Grensen er 10 MB.'));
-      // Coral is «no». Red is report and block, and this is neither.
-      expect(said.style!.color, SwaplyColors.coral);
+      // Coral is «no», and as words it is coralText. Red is report and block,
+      // and this is neither.
+      expect(said.style!.color, SwaplyColors.coralText);
     });
 
     testWidgets('a device with no profile keeps its photos until 10c has made one',
@@ -2136,7 +2140,7 @@ void main() {
       expect(tester.widget<TextField>(find.byType(TextField).first).controller!.text,
           'Fiskestang');
       expect(find.byType(Image), findsNWidgets(3));
-      expect(tester.widget<Text>(find.text(noContact)).style!.color, SwaplyColors.coral);
+      expect(tester.widget<Text>(find.text(noContact)).style!.color, SwaplyColors.coralText);
       expect(server.requests, isNot(contains('POST /items')));
       expect(server.uploadedNames, ['en.jpg']);
       // The profile is made, so what is left is the last step and not «Neste».

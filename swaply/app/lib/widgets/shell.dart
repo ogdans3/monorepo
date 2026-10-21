@@ -177,12 +177,19 @@ class SwaplyNavBar extends StatelessWidget {
 /// screen. The status bar strip counts where a phone has one, and a browser,
 /// which has none, still gets a whole target — which reaches past the header
 /// into the top of the page, so it is a [TapArea] with `above`.
+///
+/// [status] is the pill at the right of a trade's header — «Venter» on 06e —
+/// on the small kind, in place of a subtitle. The title is the screen's
+/// heading for a screen reader, and a status is read as part of it.
 PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
     {String? subtitle,
+    HeaderStatus? status,
     List<Widget> actions = const [],
     bool showBack = true,
     bool big = false,
     double inset = 22}) {
+  assert(status == null || (!big && subtitle == null && title.isNotEmpty),
+      'a status sits beside a small title, where a subtitle would');
   final under = big && subtitle != null;
   // No title at all — 13b — and the row is just the two glyphs, 21 tall and
   // flush with the status bar.
@@ -200,10 +207,15 @@ PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
           ? 30.0 + grown(26, 1.1)
           : 25.0 + grown(22, 1.15);
   final top = bare ? 0.0 : 6.0;
+  // A status goes under the title where the two do not fit side by side —
+  // a long name, a narrow phone, a large text setting — so the header is
+  // given room for that, and lays itself out no taller than it comes out:
+  // the Scaffold places the page under the header it gets, not under this.
   final height = top +
       rowHeight +
       (under ? 18 + grown(13, 1.2) : 0) +
-      (big ? (under ? 4 : 14) : 0);
+      (big ? (under ? 4 : 14) : 0) +
+      (status != null ? _statusRunGap + HeaderPill.heightAt(scaler) : 0);
   final left = showBack ? inset - 14 : inset;
   return PreferredSize(
     preferredSize: Size.fromHeight(height),
@@ -212,6 +224,38 @@ PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
       final safe = MediaQuery.paddingOf(context);
       final above = safe.top + top;
       final below = math.max(0.0, kTapTarget - top - rowHeight);
+      final back = TapArea(
+        above: true,
+        label: 'Tilbake',
+        reach: EdgeInsets.fromLTRB(safe.left + left, above,
+            math.max(0.0, _headerTargetWidth - left - _backWidth), below),
+        onTap: () => Navigator.of(context).maybePop(),
+        // The row's height, the glyph centred in it where the row used to
+        // centre a box of its own: the area is measured from this box.
+        child: SizedBox(
+          width: _backWidth,
+          height: rowHeight,
+          child: const Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(left: 14),
+              child: Text('‹', style: TextStyle(fontSize: 18, height: 1.15, color: SwaplyColors.ink)),
+            ),
+          ),
+        ),
+      );
+      final name = Text(title,
+          style: big
+              ? Type.screen
+              : const TextStyle(
+                  fontSize: 22,
+                  height: 1.15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                  color: SwaplyColors.greenDeep),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis);
+      final reach = EdgeInsets.fromLTRB(0, above, inset + safe.right, below);
       return Container(
         color: SwaplyColors.bg,
         child: SafeArea(
@@ -219,78 +263,88 @@ PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
           child: Padding(
             padding: EdgeInsets.fromLTRB(left, top, inset, 0),
             child: Column(
+              // No taller than it comes out, where a status may or may not
+              // have gone under the title; see `height`.
+              mainAxisSize: status == null ? MainAxisSize.max : MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  height: rowHeight,
-                  child: _HeaderRow(
-                    reach: EdgeInsets.fromLTRB(0, above, inset + safe.right, below),
+                if (status != null)
+                  _HeaderRow(
+                    reach: reach,
                     rowHeight: rowHeight,
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (showBack)
-                          TapArea(
-                            above: true,
-                            label: 'Tilbake',
-                            reach: EdgeInsets.fromLTRB(safe.left + left, above,
-                                math.max(0.0, _headerTargetWidth - left - _backWidth), below),
-                            onTap: () => Navigator.of(context).maybePop(),
-                            // The row's height, the glyph centred in it where
-                            // the row used to centre a box of its own: the
-                            // area is measured from this box.
-                            child: SizedBox(
-                              width: _backWidth,
-                              height: rowHeight,
-                              child: const Align(
-                                alignment: Alignment.centerLeft,
-                                child: Padding(
-                                  padding: EdgeInsets.only(left: 14),
-                                  child: Text('‹',
-                                      style: TextStyle(
-                                          fontSize: 18, height: 1.15, color: SwaplyColors.ink)),
-                                ),
+                        if (showBack) back,
+                        // At the right of the row, as 06e draws it, while
+                        // there is room for both, and under the title when
+                        // there is not. Kept beside it at any width, the pill
+                        // would cut the title to «Bytte med K…» at 130 % on a
+                        // 320 phone, and to «Ditt…» at 200 %.
+                        Expanded(
+                          child: MergeSemantics(
+                            child: Semantics(
+                              header: true,
+                              child: Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                runSpacing: _statusRunGap,
+                                children: [
+                                  SizedBox(
+                                    height: rowHeight,
+                                    child: Align(
+                                        alignment: Alignment.centerLeft, widthFactor: 1, child: name),
+                                  ),
+                                  HeaderPill(status),
+                                ],
                               ),
                             ),
                           ),
-                        Expanded(
-                          child: Text(title,
-                              style: big
-                                  ? Type.screen
-                                  : const TextStyle(
-                                      fontSize: 22,
-                                      height: 1.15,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.4,
-                                      color: SwaplyColors.greenDeep),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
                         ),
-                        // Half the screen at most, and two lines in it: «Med
-                        // Kristoffer og Marianne», a ring on 06c, took the
-                        // title's room and ran off the screen beside it.
-                        if (!big && subtitle != null)
-                          Container(
-                            constraints: BoxConstraints(
-                                maxWidth: MediaQuery.sizeOf(context).width / 2),
-                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: SwaplyColors.chip,
-                              borderRadius: BorderRadius.circular(Radii.pill),
-                            ),
-                            child: Text(subtitle,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                textWidthBasis: TextWidthBasis.longestLine,
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: SwaplyColors.inkMuted)),
-                          ),
                         ...actions,
                       ],
                     ),
+                  )
+                else
+                  SizedBox(
+                    height: rowHeight,
+                    child: _HeaderRow(
+                      reach: reach,
+                      rowHeight: rowHeight,
+                      child: Row(
+                        children: [
+                          if (showBack) back,
+                          // The screen's name, and its heading for a screen
+                          // reader.
+                          Expanded(
+                              child: Semantics(header: title.isNotEmpty, child: name)),
+                          // Half the screen at most, and two lines in it: «Med
+                          // Kristoffer og Marianne», a ring on 06c, took the
+                          // title's room and ran off the screen beside it.
+                          if (!big && subtitle != null)
+                            Container(
+                              constraints: BoxConstraints(
+                                  maxWidth: MediaQuery.sizeOf(context).width / 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: SwaplyColors.chip,
+                                borderRadius: BorderRadius.circular(Radii.pill),
+                              ),
+                              child: Text(subtitle,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textWidthBasis: TextWidthBasis.longestLine,
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: SwaplyColors.inkMuted)),
+                            ),
+                          ...actions,
+                        ],
+                      ),
+                    ),
                   ),
-                ),
                 if (under)
                   Padding(
                     // Under the title, which a «‹» moves along: 12 is drawn
@@ -318,6 +372,65 @@ const _backWidth = 33.0;
 /// thumb lands least precisely. The few points past the box are the start of
 /// the title, which does nothing when touched.
 const _headerTargetWidth = 48.0;
+
+/// Between the title and a status that has gone under it.
+const _statusRunGap = 4.0;
+
+/// The colours a [HeaderPill] says its word in, as the export draws them:
+/// the words, and the ground under them.
+enum PillTone {
+  /// «Venter» on 06e, «Avtales i chat» on 07j: the chip's grey.
+  quiet(SwaplyColors.inkMuted, SwaplyColors.chip),
+
+  /// «Godtatt» on 06f and 08c, «Gjennomført» on 09i.
+  agreed(SwaplyColors.greenText, SwaplyColors.availableBg),
+
+  /// «Pauset» on 08b, «Endret» on 09e: somebody has a question to answer.
+  attention(SwaplyColors.amberText, SwaplyColors.amberBg),
+
+  /// «Avslått» on 09f, and «Avsluttet».
+  ended(SwaplyColors.redText, SwaplyColors.redSoft);
+
+  const PillTone(this.ink, this.ground);
+
+  final Color ink, ground;
+}
+
+/// What a trade's header says about where it stands, and in which colour.
+typedef HeaderStatus = ({String label, PillTone tone});
+
+/// The pill at the right of a trade's header: 11/700 on a full round, 5
+/// over and under and 11 at the sides, read off 06e.
+///
+/// A word, not a button: it answers nothing, and it is read as part of the
+/// header it sits in. One line always, made smaller rather than cut where
+/// even a line to itself is too narrow for it.
+class HeaderPill extends StatelessWidget {
+  const HeaderPill(this.status, {super.key});
+
+  final HeaderStatus status;
+
+  /// The type, with its line height said: a theme's would make the pill as
+  /// tall as the theme likes and not as tall as [heightAt] says.
+  static const _type = TextStyle(fontSize: 11, height: 1.2, fontWeight: FontWeight.w700);
+
+  /// How tall a pill is at [scaler]'s text size, and no taller.
+  static double heightAt(TextScaler scaler) => scaler.scale(_type.fontSize!) * _type.height! + 10;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+        decoration: BoxDecoration(
+          color: status.tone.ground,
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(status.label,
+              maxLines: 1, softWrap: false, style: _type.copyWith(color: status.tone.ink)),
+        ),
+      );
+}
 
 /// The header row, for a [headerAction] in it: how far a target there reaches
 /// past the row — up to the top of the screen, down to [kTapTarget] under the
