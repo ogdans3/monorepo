@@ -192,6 +192,35 @@ describe('a conversation and the trade it belongs to', () => {
     expect((await call('GET', '/me', { token: ola })).body!['tradesNeedingYou']).toBe(0)
   })
 
+  test('7c. two things from one side are joined with +, and ⇄ stands only between the sides', async () => {
+    // 11a draws «Bytte · drill ⇄ konsoll»: the arrow is between what each
+    // person gives. One arrow per thing made Kari's two things look like a
+    // third person in a ring.
+    const lamp = await list(kari, 'Lampe')
+    const view = await call('GET', `/trades/${tradeId}`, { token: kari })
+    const mine = view.body!['you']['position']
+    const theirs = view.body!['receivingFrom']['position']
+
+    const countered = await call('POST', `/trades/${tradeId}/counter`, {
+      token: kari,
+      body: {
+        items: [
+          { itemId: drill, giverPosition: theirs },
+          { itemId: tent, giverPosition: mine },
+          { itemId: lamp, giverPosition: mine },
+        ],
+      },
+    })
+    expect(countered.status).toBe(200)
+
+    const row = (await call('GET', '/threads', { token: kari })).body!['threads']
+      .find((t: Json) => t['tradeId'] === tradeId)
+    const sides = theirs < mine
+      ? 'Bosch drill 18V ⇄ Lampe + Telt, 3 personer'
+      : 'Lampe + Telt, 3 personer ⇄ Bosch drill 18V'
+    expect(row['subject']).toBe(sides)
+  })
+
   test('8. ending the trade keeps the conversation, which 09g promises in writing',
     async () => {
       // «Ola får beskjed, samtalen beholdes.» A thread that dies with its trade

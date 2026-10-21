@@ -38,12 +38,17 @@ export default async function chatRoutes(app: FastifyInstance) {
                 and (tp.last_read_message_id is null
                      or mm.created_at > (select created_at from messages
                                          where id = tp.last_read_message_id))) as unread,
-             (select string_agg(i.title, ' ⇄ ' order by oi.giver_position)
-              from trade_offers o
-              join trade_offer_items oi on oi.offer_id = o.id
-              join items i on i.id = oi.item_id
-              where o.trade_id = t.id
-                and o.seq = (select max(seq) from trade_offers where trade_id = t.id)) as subject
+             -- ⇄ stands between what each person gives, as 11a draws it, and
+             -- a side with two things joins them with +. One ⇄ per thing made
+             -- two things from one person read as a ring of three.
+             (select string_agg(side.titles, ' ⇄ ' order by side.giver_position)
+              from (select oi.giver_position, string_agg(i.title, ' + ' order by i.title) as titles
+                    from trade_offers o
+                    join trade_offer_items oi on oi.offer_id = o.id
+                    join items i on i.id = oi.item_id
+                    where o.trade_id = t.id
+                      and o.seq = (select max(seq) from trade_offers where trade_id = t.id)
+                    group by oi.giver_position) side) as subject
       from threads th
       join thread_participants tp on tp.thread_id = th.id and tp.user_id = ${userId}
       join trades t on t.id = th.trade_id
