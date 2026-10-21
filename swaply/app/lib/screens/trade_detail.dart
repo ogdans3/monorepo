@@ -402,6 +402,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   /// A message from the card's field is on its way.
   bool _sending = false;
 
+  /// The server's words for a conversation it takes no more messages in,
+  /// once «Send» on the card was refused with them (`conversation_closed`).
+  String? _closedByServer;
+
   /// Which asking for the trade is the newest. The page asks from several
   /// places now, and an answer to an older asking — or a trade an action
   /// handed back after it — must not be overwritten by one that lands late.
@@ -1473,7 +1477,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         _message.clear();
         await _load();
       } on ApiException catch (e) {
-        if (mounted) showError(context, e);
+        if (!mounted) return;
+        if (e.code == ApiException.conversationClosed) {
+          // Nobody left to read it, as the server says: the field gives way
+          // to its words rather than staying to be refused again.
+          setState(() => _closedByServer = e.message);
+        } else {
+          showError(context, e);
+        }
       } finally {
         if (mounted) setState(() => _sending = false);
       }
@@ -1526,8 +1537,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             LastMessage(trade.lastMessage!),
             const SizedBox(height: 8),
           ],
-          // Nobody left to write to; the card above says why.
-          if (trade.conversationClosed)
+          // Nobody left to write to; the card above says why, or the
+          // server did when «Send» was refused.
+          if (_closedByServer case final words?)
+            Text(words, style: Type.small)
+          else if (trade.conversationClosed)
             const Text('Samtalen er stengt.', style: Type.small)
           else
             Row(

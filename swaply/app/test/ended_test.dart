@@ -133,16 +133,95 @@ void main() {
       });
     }
 
-    testWidgets('6. in a ring, it is one of the other two who deleted theirs', (tester) async {
+    // The people in a conversation who have deleted their account come with
+    // no name, as `GET /threads/:id` sends them.
+    void gone(Set<String> ids) {
+      final thread = server.overrides['GET /threads/thread-1']! as Map<String, Object?>;
+      server.overrides['GET /threads/thread-1'] = {
+        ...thread,
+        'participants': [
+          for (final p in thread['participants']! as List)
+            ids.contains((p as Map)['id']) ? {...p, 'displayName': null} : p,
+        ],
+      };
+    }
+
+    testWidgets('6. in a ring one of whose others has gone, the third is still there to write to',
+        (tester) async {
+      // The server takes the message: one of them is still there to read
+      // it. The app closed the conversation all the same.
       ringIn('cancelled');
       server.overrides['GET /trades/trade-1'] = {
         ...server.overrides['GET /trades/trade-1']! as Map<String, Object?>,
         'closeCode': 'account_deleted',
       };
+      gone({'kari-1'});
       await mount(tester, const ThreadScreen(threadId: 'thread-1'));
 
-      expect(find.text('Samtalen er stengt fordi en av de andre i byttet slettet kontoen sin.'),
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.textContaining('Samtalen er stengt'), findsNothing);
+    });
+
+    testWidgets('6b. …and once both have gone, it is closed, in the server\'s words for a ring',
+        (tester) async {
+      ringIn('cancelled');
+      server.overrides['GET /trades/trade-1'] = {
+        ...server.overrides['GET /trades/trade-1']! as Map<String, Object?>,
+        'closeCode': 'account_deleted',
+      };
+      gone({'kari-1', 'per-1'});
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.byType(TextField), findsNothing);
+      expect(
+          find.text('Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.'),
           findsOneWidget);
+    });
+
+    testWidgets('6c. a finished trade whose other side has gone since is closed too',
+        (tester) async {
+      // Deleting an account ends nothing that is finished, so the trade
+      // says nothing of it; its conversation does, and «Send» wrote to nobody.
+      server.overrides['GET /trades/trade-1'] = {
+        ...FakeServer.trade,
+        'state': 'completed',
+        'closedAt': '2026-09-09T08:55:00Z',
+      };
+      server.overrides['GET /threads/thread-1'] = {...FakeServer.thread, 'state': 'completed'};
+      gone({'kari-1'});
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Samtalen er stengt fordi den andre i byttet slettet kontoen sin.'),
+          findsOneWidget);
+    });
+
+    const refusal = Refusal(409, 'conversation_closed',
+        'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.');
+
+    testWidgets('6d. «Send» refused because nobody is left gives the field way to why',
+        (tester) async {
+      server.overrides['POST /threads/thread-1/messages'] = refusal;
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      await tester.enterText(find.byType(TextField), 'Er du der?');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text(refusal.message), findsOneWidget);
+    });
+
+    testWidgets('6e. …and on the trade page\'s card the same', (tester) async {
+      server.overrides['POST /threads/thread-1/messages'] = refusal;
+      await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+      await tester.enterText(find.byType(TextField), 'Er du der?');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text(refusal.message), findsOneWidget);
     });
 
     for (final code in ['declined', 'listing_removed']) {

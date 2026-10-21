@@ -345,7 +345,14 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
       _input.clear();
       await _load(toEnd: true);
     } on ApiException catch (e) {
-      if (mounted) showError(context, e);
+      if (!mounted) return;
+      if (e.code == ApiException.conversationClosed) {
+        // Nobody left to read it: the field gives way to the server's
+        // words, which say why, rather than staying to be refused again.
+        setState(() => _closedByServer = e.message);
+      } else {
+        showError(context, e);
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -488,8 +495,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
               ),
               // What a refusal of «Send» is about, so its toast goes up over
               // the composer rather than on it.
-              if (_trade?.conversationClosed ?? false)
-                _closed(_trade!)
+              if (_closedWords(thread) case final words?)
+                _closed(words)
               else
                 KeepClear(child: _composer()),
             ],
@@ -600,26 +607,47 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
         _ => thread.banner!,
       };
 
-  /// In the composer's place on a trade that ended with nobody left to
-  /// write to: somebody in it deleted their account, or blocked another.
-  /// The field stayed, and what was written there went to nobody.
-  Widget _closed(Trade trade) => Container(
+  /// Why nobody can write here any more, or null while somebody can.
+  ///
+  /// A trade ended by a block, or by the other one in a pair deleting their
+  /// account; and, however the trade ended or whether it is finished,
+  /// everybody else in the conversation having deleted theirs, which the
+  /// conversation's people say with no name. A finished trade whose other
+  /// side has gone kept its field, and «Send» wrote to nobody; a ring one of
+  /// whose two others had gone was closed, while the third was still there
+  /// to read it and the server took the message. And the server's own
+  /// refusal, `conversation_closed`, in its words, should it come first.
+  String? _closedWords(Thread thread) {
+    if (_closedByServer case final words?) return words;
+    final trade = _trade;
+    if (trade?.state == 'cancelled' && trade?.closeCode == Trade.closedByBlock) {
+      // Not who blocked whom: the one blocked reads it too.
+      return 'Samtalen er stengt etter en blokkering.';
+    }
+    final me = context.read<Session>().me?.id;
+    final others = thread.participants.where((p) => p.id != me).toList();
+    final allGone = others.isNotEmpty && others.every((p) => p.gone);
+    if (!allGone && !(trade?.conversationClosed ?? false)) return null;
+    return others.length > 1
+        ? 'Samtalen er stengt fordi de andre i byttet har slettet kontoene sine.'
+        : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.';
+  }
+
+  /// The server's words for a conversation it no longer takes messages in,
+  /// once «Send» has been refused with them.
+  String? _closedByServer;
+
+  /// In the composer's place when nobody is left to write to, saying why
+  /// ([_closedWords]). The field stayed, and what was written there went
+  /// to nobody.
+  Widget _closed(String words) => Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: const BoxDecoration(
           color: SwaplyColors.surface,
           border: Border(top: BorderSide(color: SwaplyColors.barLine)),
         ),
-        child: Text(
-          trade.closeCode == Trade.closedByBlock
-              // Not who blocked whom: the one blocked reads it too.
-              ? 'Samtalen er stengt etter en blokkering.'
-              : trade.isChain
-                  ? 'Samtalen er stengt fordi en av de andre i byttet slettet kontoen sin.'
-                  : 'Samtalen er stengt fordi den andre i byttet slettet kontoen sin.',
-          style: Type.secondary,
-          textAlign: TextAlign.center,
-        ),
+        child: Text(words, style: Type.secondary, textAlign: TextAlign.center),
       );
 
   String _tradeLine(Trade trade) {
