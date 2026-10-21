@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { CATEGORIES, CONDITIONS, MAX_VALUE_NOK } from '../lib/constants.js'
 import { notHiddenFrom } from '../lib/hidden.js'
 import { coverSql, many, one } from '../lib/rows.js'
-import { publicItem } from './serialize.js'
+import { discoveredItem } from './serialize.js'
 
 // Typed into 05b's two boxes. Past what any listing can be worth a filter
 // can only find nothing, and past what an `int` holds it was a 500.
@@ -153,7 +153,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
     const rows = await many(
       app.db,
       args.sort === 'nearest'
-        ? sql`select i.*, ${coverSql('i')} as cover,
+        ? sql`select i.*, ${coverSql('i')} as cover, u.display_name as owner_name,
                      exists (select 1 from likes l where l.target_item = i.id
                              and l.from_user = ${viewer ?? null}) as liked_by_me
               ${from}
@@ -162,13 +162,13 @@ export default async function discoveryRoutes(app: FastifyInstance) {
                          where v.id = ${viewer ?? null})) is true desc,
                        i.created_at desc, i.id
               limit ${args.limit} offset ${args.offset}`
-        : sql`select i.*, ${coverSql('i')} as cover,
+        : sql`select i.*, ${coverSql('i')} as cover, u.display_name as owner_name,
                      exists (select 1 from likes l where l.target_item = i.id
                              and l.from_user = ${viewer ?? null}) as liked_by_me
               ${from} ${order} limit ${args.limit} offset ${args.offset}`,
     )
 
-    return { total: n, items: rows.map(publicItem) }
+    return { total: n, items: rows.map(discoveredItem) }
   })
 
   // The rows shown before anyone has searched: one per interest, in the order
@@ -186,7 +186,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
     for (const { c } of interests) {
       const items = await many(
         app.db,
-        sql`select i.*, ${coverSql('i')} as cover,
+        sql`select i.*, ${coverSql('i')} as cover, u.display_name as owner_name,
                    exists (select 1 from likes l where l.target_item = i.id
                            and l.from_user = ${viewer}) as liked_by_me
             from items i
@@ -194,7 +194,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
             where ${shownTo(viewer)} and i.category = ${c}::category
             order by i.created_at desc, i.id limit 12`,
       )
-      rows.push({ category: c, items: items.map(publicItem) })
+      rows.push({ category: c, items: items.map(discoveredItem) })
     }
     return { rows }
   })
