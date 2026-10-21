@@ -174,7 +174,7 @@ void main() {
       expect(find.textContaining('ANDREASS'), findsNothing);
     });
 
-    testWidgets('8. 09h says whose the things are by name, and «dine» for several',
+    testWidgets('8. 09h says who got what by name, with no guess at a pronoun or a gender',
         (tester) async {
       await mount(
           tester,
@@ -185,8 +185,8 @@ void main() {
           })));
 
       expect(
-          find.text('Du og Kari har begge bekreftet. Retro spillkonsoll og Kabel er dine, '
-              'Bosch drill 18V er Karis.'),
+          find.text('Du og Kari har begge bekreftet. Du fikk Retro spillkonsoll og Kabel, og '
+              'Kari fikk Bosch drill 18V.'),
           findsOneWidget);
       expect(find.textContaining('hans'), findsNothing);
     });
@@ -341,6 +341,48 @@ void main() {
       await tester.pump();
       expect(tester.widget<TextField>(field).controller!.text.length, 2000);
       expect(find.text('2000/2000'), findsOneWidget);
+    });
+  });
+
+  group('sentences the app puts together', () {
+    testWidgets('19. three things are «A, B og C», not «A og B og C»', (tester) async {
+      final three = Trade.fromJson({
+        ...FakeServer.trade,
+        'youGive': [
+          FakeServer.drill,
+          {...FakeServer.drill, 'id': 'd2', 'title': 'Sykkelhjelm'},
+          {...FakeServer.drill, 'id': 'd3', 'title': 'Skateboard'},
+        ],
+      });
+      await mount(tester, TradeCompletedScreen(trade: three));
+
+      expect(find.text('Du og Kari har begge bekreftet. Du fikk Retro spillkonsoll, og Kari fikk '
+          'Bosch drill 18V, Sykkelhjelm og Skateboard.'), findsOneWidget);
+    });
+
+    testWidgets('20. 11a names the two others of a ring «Per og Kari»', (tester) async {
+      server.overrides['GET /threads'] = {
+        'threads': [
+          {
+            'id': 'thread-1',
+            'tradeId': 'trade-chain',
+            'state': 'pending',
+            'kind': 'chain',
+            'others': [
+              {'id': 'per-1', 'displayName': 'Per H.'},
+              {'id': 'kari-1', 'displayName': 'Kari N.'},
+            ],
+            'subject': null,
+            'unread': 0,
+            'lastMessage': null,
+          }
+        ],
+        'unreadTotal': 0,
+      };
+      await mount(tester, const ChatsScreen());
+
+      expect(find.text('Per og Kari'), findsOneWidget);
+      expect(find.text('Per, Kari'), findsNothing);
     });
   });
 }

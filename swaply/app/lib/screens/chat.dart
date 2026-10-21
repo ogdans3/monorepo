@@ -114,7 +114,8 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
     // «Ola N.» — the full name belongs on a profile.
     final name = thread.others.isEmpty
         ? 'Samtale'
-        : thread.others.map((o) => o.split(' ').first).join(', ');
+        // «Per og Kari» for a ring, as 07k's title says it.
+        : andList([for (final o in thread.others) o.split(' ').first]);
     final subtitle = switch (thread.state) {
       'completed' => 'Fullført bytte',
       'cancelled' => 'Avsluttet bytte',
@@ -149,7 +150,7 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(_relative(thread.lastMessage?.createdAt),
+          Text(whenSaid(thread.lastMessage?.createdAt),
               style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
           const SizedBox(height: 6),
           // A dot, not a count: the number is already on the tab in the nav,
@@ -966,7 +967,7 @@ Future<UserRef?> choosePerson(
 /// last week, a date before that. By the calendar's days, not by hours: a
 /// message from Tuesday evening, read on Thursday morning, was under 48
 /// hours old and said «i går».
-String _relative(DateTime? when) {
+String whenSaid(DateTime? when) {
   if (when == null) return '';
   final diff = now().difference(when);
   if (diff.inMinutes < 1) return 'nå';

@@ -1773,7 +1773,13 @@ String _month(DateTime date) => _months[date.month - 1];
 String _whereAndSince(String? town, DateTime? memberSince) => [
       if (town != null && town.trim().isNotEmpty) town.trim(),
       if (memberSince != null)
-        _sameDay(memberSince, now()) ? 'ny i dag' : 'medlem siden ${_month(memberSince)}',
+        _sameDay(memberSince, now())
+            ? 'ny i dag'
+            // With the year when it is not this one: «medlem siden mai» about
+            // a May a year ago read as this spring.
+            : memberSince.year == now().year
+                ? 'medlem siden ${_month(memberSince)}'
+                : 'medlem siden ${_month(memberSince)} ${memberSince.year}',
     ].join(' · ');
 
 bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;

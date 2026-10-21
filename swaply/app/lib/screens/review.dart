@@ -48,14 +48,16 @@ class TradeCompletedScreen extends StatelessWidget {
                     const Text('Byttet er gjennomført!',
                         style: Type.display, textAlign: TextAlign.center),
                     const SizedBox(height: Insets.sm),
-                    // The export's «… er hans» was written for Ola. Said of
-                    // whoever is on the other side a pronoun is a guess, so
-                    // it is their name: «… er Karis».
+                    // The export's «Konsollen er din, drillen og hjelmen er
+                    // hans» was written for Ola and a console. Said of
+                    // whoever is on the other side a pronoun is a guess, and
+                    // «er din» is a guess at the thing's gender, which a
+                    // title does not tell: «Skateboard er din». Who got what
+                    // says the same with neither.
                     Text(
                       'Du og $other har begge bekreftet. '
-                      '${trade.youGet.map((i) => i.title).join(' og ')} '
-                      'er ${trade.youGet.length > 1 ? 'dine' : 'din'}, '
-                      '${trade.youGive.map((i) => i.title).join(' og ')} er ${possessive(other)}.',
+                      'Du fikk ${andList([for (final i in trade.youGet) i.title])}, og $other '
+                      'fikk ${andList([for (final i in trade.youGive) i.title])}.',
                       style: Type.secondary,
                       textAlign: TextAlign.center,
                     ),
@@ -175,7 +177,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   /// gave to is a leg you were never part of.
   String _withYou(UserRef person) {
     final trade = widget.trade;
-    String things(List<Item> items) => items.map((i) => i.title).join(' og ');
+    String things(List<Item> items) => andList([for (final i in items) i.title]);
     if (person.position == trade.givingTo.position && trade.youGive.isNotEmpty) {
       return 'fikk ${things(trade.youGive)}';
     }

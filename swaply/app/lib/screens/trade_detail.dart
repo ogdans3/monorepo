@@ -176,8 +176,9 @@ class _MatchScreenState extends State<MatchScreen> {
   Widget _moment(Trade trade, {required double width}) {
     final chain = trade.isChain;
     final other = trade.receivingFrom.displayName.split(' ').first;
-    final theyGive = trade.youGet.map((i) => i.title).join(' og ');
-    final youGive = trade.youGive.map((i) => i.title).join(' og ');
+    // «A, B og C», as a sentence lists three things, not «A og B og C».
+    final theyGive = andList([for (final i in trade.youGet) i.title]);
+    final youGive = andList([for (final i in trade.youGive) i.title]);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1544,7 +1545,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       if (p.ratingAvg != null) '★ ${p.ratingAvg!.toStringAsFixed(1).replaceAll('.', ',')}',
       if (p.town?.trim().isNotEmpty ?? false) p.town!.trim(),
     ];
-    return parts.isEmpty ? 'gir ${p.gives.map((i) => i.title).join(' og ')}' : parts.join(' · ');
+    return parts.isEmpty ? 'gir ${andList([for (final i in p.gives) i.title])}' : parts.join(' · ');
   }
 
   /// The conversation is available at every stage, including while you wait.

@@ -290,7 +290,9 @@ final _threads = [
     'others': [
       {'id': 'kari-1', 'displayName': 'Kari N.'}
     ],
-    'subject': 'Bytte · drill ⇄ konsoll',
+    // What the server sends: the things, which 11a puts «Bytte ·» in front
+    // of. With it here as well the golden read «Bytte · Bytte · …».
+    'subject': 'drill ⇄ konsoll',
     'unread': 1,
     'lastMessage': {'body': 'Perfekt, sees da!', 'mine': false, 'createdAt': _at(0, 14, 12)},
   },

@@ -84,10 +84,10 @@ class _AgreementScreenState extends State<AgreementScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _line(_thumbs(trade.youGive), 'Du gir',
-                            '${trade.youGive.map((i) => i.title).join(' og ')} til $other'),
+                            '${andList([for (final i in trade.youGive) i.title])} til $other'),
                         const SizedBox(height: 10),
                         _line(_thumbs(trade.youGet), 'Du får',
-                            '${trade.youGet.map((i) => i.title).join(' og ')} fra $from'),
+                            '${andList([for (final i in trade.youGet) i.title])} fra $from'),
                         if (trade.cash != null) ...[
                           const SizedBox(height: 10),
                           _line(

@@ -1575,7 +1575,7 @@ void main() {
           TradeCompletedScreen(trade: Trade.fromJson(FakeServer.trade)));
 
       expect(find.text('Byttet er gjennomført!'), findsOneWidget);
-      expect(find.textContaining('Retro spillkonsoll er din'), findsOneWidget);
+      expect(find.textContaining('Du fikk Retro spillkonsoll'), findsOneWidget);
       expect(find.text('Vurder Kari'), findsOneWidget);
       expect(find.text('Senere'), findsOneWidget);
     });
