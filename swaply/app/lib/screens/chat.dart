@@ -336,7 +336,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   }
 
   Future<void> _send() async {
-    final text = _input.text.trim();
+    final typed = _input.text;
+    final text = typed.trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
@@ -344,7 +345,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
       // Closed while it was on its way: the field went with the screen,
       // and there is no conversation on screen to ask for again.
       if (!mounted) return;
-      _input.clear();
+      // What went, and not what has been typed since; see [takeSent].
+      takeSent(_input, typed);
       await _load(toEnd: true);
     } on ApiException catch (e) {
       if (!mounted) return;

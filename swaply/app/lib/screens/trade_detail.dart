@@ -1502,13 +1502,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     // the return key and then «Send», while the first was on its way sent
     // the same words twice.
     Future<void> send() async {
-      final text = _message.text.trim();
+      final typed = _message.text;
+      final text = typed.trim();
       if (text.isEmpty || trade.threadId == null || _sending) return;
       setState(() => _sending = true);
       try {
         await context.read<SwaplyApi>().sendMessage(trade.threadId!, text);
         if (!mounted) return;
-        _message.clear();
+        // What went, and not what has been typed since; see [takeSent].
+        takeSent(_message, typed);
         await _load();
       } on ApiException catch (e) {
         if (!mounted) return;

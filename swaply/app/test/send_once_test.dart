@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/screens/chat.dart';
+import 'package:swaply_app/screens/item_detail.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/state/session.dart';
 
@@ -115,5 +116,73 @@ void main() {
     // asked for on behalf of a screen that is not there.
     expect(tester.takeException(), isNull);
     expect(server.asked('GET /threads/thread-1'), asked);
+  });
+
+  // What is typed while a message is on its way is the next one. The field
+  // used to be cleared whole once the first had landed, and the next one,
+  // half written, went with it.
+  group('what is typed meanwhile is kept', () {
+    String typed(WidgetTester tester, Finder field) =>
+        tester.widget<TextField>(field).controller!.text;
+
+    testWidgets('3. on 06g', (tester) async {
+      await open(tester, const ThreadScreen(threadId: 'thread-1'));
+      final answer = holdMessages();
+      final field = find.byType(TextField).last;
+
+      await tester.enterText(field, 'Passer bra!');
+      await tester.tap(find.text('Send'));
+      await tester.pump();
+      await tester.enterText(field, 'Passer bra! Kan du ta med laderen?');
+      answer.complete();
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /threads/thread-1/messages']!['body'], 'Passer bra!');
+      expect(typed(tester, field), 'Kan du ta med laderen?');
+    });
+
+    testWidgets('4. on the trade page', (tester) async {
+      await open(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+      final answer = holdMessages();
+      final field = find.byType(TextField);
+
+      await tester.enterText(field, 'Passer bra!');
+      await tester.tap(find.text('Send'));
+      await tester.pump();
+      await tester.enterText(field, 'Passer bra! Kan du ta med laderen?');
+      answer.complete();
+      await tester.pumpAndSettle();
+
+      expect(typed(tester, field), 'Kan du ta med laderen?');
+    });
+
+    testWidgets('5. on 04', (tester) async {
+      await open(tester, const ItemDetailScreen(itemId: 'item-console'));
+      final answer = Completer<void>();
+      server.overrides['POST /items/item-console/message'] =
+          (http.Request _) => answer.future.then((_) => asUsual);
+      final field = find.byType(TextField);
+
+      await tester.enterText(field, 'Hei!');
+      await tester.tap(find.text('Send'));
+      await tester.pump();
+      await tester.enterText(field, 'Hei! Er den fortsatt ledig?');
+      answer.complete();
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /items/item-console/message']!['body'], 'Hei!');
+      expect(typed(tester, field), 'Er den fortsatt ledig?');
+    });
+
+    testWidgets('6. and what was sent goes from a field nobody touched', (tester) async {
+      await open(tester, const ThreadScreen(threadId: 'thread-1'));
+      final field = find.byType(TextField).last;
+
+      await tester.enterText(field, '  Passer bra!  ');
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(typed(tester, field), isEmpty);
+    });
   });
 }
