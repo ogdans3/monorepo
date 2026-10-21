@@ -80,6 +80,18 @@ export type EncodeOptions = {
     signal?: AbortSignal;
 };
 
+/** The colour description the editor's own exports carry. */
+const BT709_TAGS = ["-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709"];
+
+/**
+ * Convert the frames to `format` with the BT.709 matrix. The scale does the
+ * conversion itself, so the format must follow it; accurate rounding keeps
+ * greys grey coming from the JPEG frames.
+ */
+function toBt709(format: string): string {
+    return `scale=out_color_matrix=bt709:out_range=tv:flags=accurate_rnd+full_chroma_int,format=${format}`;
+}
+
 export async function encodeVideo(opts: EncodeOptions): Promise<void> {
     const input = ["-y", "-framerate", String(opts.fps), "-i", opts.framePattern];
 
@@ -89,9 +101,16 @@ export async function encodeVideo(opts: EncodeOptions): Promise<void> {
             "-c:v", "libx264",
             "-preset", "slow",
             "-crf", "18",
+            // No B-frames, like the editor's own MP4s: Playwright's WebKit
+            // showed a colour-tagged file with them as black frames.
+            "-bf", "0",
             "-pix_fmt", "yuv420p",
-            // H.264 needs even dimensions; pad rather than crop so nothing is lost
-            "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+            // H.264 needs even dimensions; pad rather than crop so nothing is
+            // lost. Convert with the BT.709 matrix and say so in the file:
+            // ffmpeg's default is BT.601, untagged, and players read HD video
+            // as BT.709, so saturated colours shifted.
+            "-vf", `pad=ceil(iw/2)*2:ceil(ih/2)*2,${toBt709("yuv420p")}`,
+            ...BT709_TAGS,
             "-movflags", "+faststart",
             opts.output
         ], opts.signal);
@@ -105,6 +124,8 @@ export async function encodeVideo(opts: EncodeOptions): Promise<void> {
             "-crf", "24",
             "-b:v", "0",
             "-pix_fmt", opts.transparent ? "yuva420p" : "yuv420p",
+            "-vf", toBt709(opts.transparent ? "yuva420p" : "yuv420p"),
+            ...BT709_TAGS,
             opts.output
         ], opts.signal);
         return;

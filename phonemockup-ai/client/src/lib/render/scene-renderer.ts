@@ -93,6 +93,8 @@ export class SceneRenderer {
     private readonly resolveModelUrl: (modelPath: string) => string;
 
     private mediaTexture: THREE.Texture | null = null;
+    /** The <img> on the screen, the canvas it is copied into, and which picture that holds. */
+    private screenPicture: {image: HTMLImageElement; canvas: HTMLCanvasElement; drawn: string | null} | null = null;
     private envRT: THREE.WebGLRenderTarget | null = null;
     private pmremGen: THREE.PMREMGenerator | null = null;
 
@@ -465,24 +467,45 @@ export class SceneRenderer {
             this.mediaTexture.dispose();
             this.mediaTexture = null;
         }
+        this.releaseScreenPicture();
 
-        const texture =
-            src.kind === "video" ? makeVideoTexture(src.el) : makeImageTexture(src.el);
+        // A picture is copied into a 2D canvas, which converts its colours to
+        // sRGB. iPhone screenshots are Display P3: uploaded as an <img>,
+        // three.js passes their P3 numbers through as sRGB (it turns the
+        // browser's conversion off for sRGB textures), so saturated colours
+        // came out dull, while the MCP, which drew through a canvas, got them
+        // right. Fully transparent pixels now come out black in both too.
+        let texture: THREE.Texture;
+        if (src.kind === "video") {
+            texture = makeVideoTexture(src.el);
+        } else if (src.el instanceof HTMLImageElement) {
+            const canvas = document.createElement("canvas");
+            this.screenPicture = {image: src.el, canvas, drawn: null};
+            texture = makeImageTexture(canvas);
+        } else {
+            texture = makeImageTexture(src.el);
+        }
+        // Sharper at an angle; the same for the editor and the MCP.
+        texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
         this.mediaTexture = texture;
         this.dirty = true;
+        this.syncScreenPicture();
 
         // A picture still loading, or a recording that seeks while paused,
         // brings new pixels without anything else changing: flag the texture
         // so the next check draws them.
         this.stopWatchingMedia?.();
-        const refresh = () => {
-            if (this.mediaTexture === texture) texture.needsUpdate = true;
-        };
         const el = src.el;
-        if (src.kind === "image" && el instanceof HTMLImageElement && !el.complete) {
-            el.addEventListener("load", refresh, {once: true});
+        if (src.kind === "image" && el instanceof HTMLImageElement) {
+            const refresh = () => {
+                if (this.mediaTexture === texture) this.syncScreenPicture();
+            };
+            el.addEventListener("load", refresh);
             this.stopWatchingMedia = () => el.removeEventListener("load", refresh);
         } else if (src.kind === "video") {
+            const refresh = () => {
+                if (this.mediaTexture === texture) texture.needsUpdate = true;
+            };
             const video = src.el;
             video.addEventListener("seeked", refresh);
             video.addEventListener("loadeddata", refresh);
@@ -500,10 +523,41 @@ export class SceneRenderer {
         }
     }
 
+    /**
+     * Copy the screen's picture into its canvas once it has loaded, and again
+     * whenever it changes. Checked before every frame as well as on load: a
+     * caller that draws the moment the picture loads may run before the load
+     * listener here, and would otherwise get the picture before it.
+     */
+    private syncScreenPicture() {
+        const picture = this.screenPicture;
+        const texture = this.mediaTexture;
+        if (!picture || !texture) return;
+        const {image, canvas} = picture;
+        const showing = image.complete && image.naturalWidth > 0 ? image.currentSrc || image.src : "";
+        if (showing === picture.drawn) return;
+        picture.drawn = showing;
+        // The GL texture is sized at its first upload; a picture of another
+        // size needs a new one.
+        if (drawInSrgb(showing ? image : null, canvas)) texture.dispose();
+        texture.needsUpdate = true;
+        this.dirty = true;
+    }
+
+    /** iOS counts a canvas against its memory limit until it is collected: give it back now. */
+    private releaseScreenPicture() {
+        if (!this.screenPicture) return;
+        this.screenPicture.canvas.width = 0;
+        this.screenPicture.canvas.height = 0;
+        this.screenPicture = null;
+    }
+
     /** Flag the media texture as dirty, e.g. after seeking a video element. */
     markMediaDirty() {
+        if (this.screenPicture) this.screenPicture.drawn = null;
         if (this.mediaTexture) this.mediaTexture.needsUpdate = true;
         this.dirty = true;
+        this.syncScreenPicture();
     }
 
     setGlassReflections(glassReflections: boolean) {
@@ -676,6 +730,7 @@ export class SceneRenderer {
     }
 
     render() {
+        this.syncScreenPicture();
         this.renderer.render(this.scene, this.camera);
         this.dirty = false;
         this.renderedMediaVersion = this.mediaTexture?.version ?? -1;
@@ -683,6 +738,7 @@ export class SceneRenderer {
 
     /** Whether anything changed since the last frame was drawn. */
     get needsRender(): boolean {
+        this.syncScreenPicture();
         if (this.dirty) return true;
         return !!this.mediaTexture && this.mediaTexture.version !== this.renderedMediaVersion;
     }
@@ -765,6 +821,7 @@ export class SceneRenderer {
         this.envRT?.dispose();
         this.pmremGen?.dispose?.();
         this.mediaTexture?.dispose();
+        this.releaseScreenPicture();
         this.renderer.dispose();
         this.scene.clear();
     }
@@ -778,11 +835,39 @@ function makeVideoTexture(el: HTMLVideoElement) {
     const c = 0.5;
     tex.center.set(c, c);
     tex.rotation = Math.PI / 2;
-    tex.minFilter = THREE.LinearFilter;
+    // Mipmapped like a picture: without them a small or tilted screen
+    // shimmered in video exports, while the MCP (which feeds frames as
+    // pictures) came out smooth.
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
-    tex.generateMipmaps = false;
-    tex.needsUpdate = true;
+    tex.generateMipmaps = true;
+    // Uploading before the first frame has arrived fails, and the mipmaps
+    // after it; setMedia's loadeddata refresh uploads it then.
+    if (el.readyState >= el.HAVE_CURRENT_DATA) tex.needsUpdate = true;
     return tex;
+}
+
+/** Longest side a screen picture is drawn at: plenty for any export, and inside iOS's canvas limit. */
+const MAX_SCREEN_SIDE = 4096;
+
+/** Draw a picture into `canvas` in sRGB, or clear it to 1×1; true when its size changed. */
+function drawInSrgb(img: HTMLImageElement | null, canvas: HTMLCanvasElement): boolean {
+    const w = img?.naturalWidth ?? 0;
+    const h = img?.naturalHeight ?? 0;
+    const scale = w && h ? Math.min(1, MAX_SCREEN_SIDE / Math.max(w, h)) : 1;
+    const width = img && w && h ? Math.max(1, Math.round(w * scale)) : 1;
+    const height = img && w && h ? Math.max(1, Math.round(h * scale)) : 1;
+    const resized = canvas.width !== width || canvas.height !== height;
+    if (resized) {
+        canvas.width = width;
+        canvas.height = height;
+    }
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+        ctx.clearRect(0, 0, width, height);
+        if (img && w && h) ctx.drawImage(img, 0, 0, width, height);
+    }
+    return resized;
 }
 
 function makeImageTexture(

@@ -13,7 +13,7 @@ import {dirname, extname, join, resolve} from "node:path";
 import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {z} from "zod";
-import {RenderSession, type Catalog} from "./renderer.js";
+import {RenderSession, type Catalog, type SceneOptions} from "./renderer.js";
 import {resolveStaticDir} from "./paths.js";
 import {existsSync} from "node:fs";
 import {encodeVideo, extractFrames, type VideoFormat} from "./video.js";
@@ -231,7 +231,8 @@ server.registerTool(
 
         await writeFile(output, image);
         return text(
-            `Rendered ${scene.width}x${scene.height} mockup on ${scene.modelId}\n${output}`
+            `Rendered ${scene.width}x${scene.height} mockup on ${scene.modelId}\n${output}` +
+            (await ignoredOptions(scene))
         );
     }, extra.signal)
 );
@@ -369,7 +370,8 @@ server.registerTool(
 
             return text(
                 `Rendered ${frameCount} frames at ${scene.width}x${scene.height} ` +
-                `(${duration}s @ ${args.fps}fps, ${format}) on ${scene.modelId}\n${output}`
+                `(${duration}s @ ${args.fps}fps, ${format}) on ${scene.modelId}\n${output}` +
+                (await ignoredOptions(scene))
             );
         } finally {
             await rm(workDir, {recursive: true, force: true});
@@ -377,6 +379,24 @@ server.registerTool(
         }
     }, extra.signal)
 );
+
+/**
+ * A toggle the model has no part for, named in the reply: the S24 Ultra has
+ * no cutout toggle, and showCameraIsland on it rendered the default without
+ * a word.
+ */
+async function ignoredOptions(scene: SceneOptions): Promise<string> {
+    const {models} = await getCatalog();
+    const model = models.find((m) => m.id === scene.modelId);
+    if (!model) return "";
+    const ignored = [
+        scene.showCameraIsland !== undefined && !model.supportsCameraIsland ? "showCameraIsland" : null,
+        scene.showLogo !== undefined && !model.supportsLogo ? "showLogo" : null
+    ].filter((option) => option !== null);
+    return ignored.length
+        ? `\nIgnored ${ignored.join(" and ")}: ${model.id} has no such part to show or hide.`
+        : "";
+}
 
 /** Both tools take the same ids: the presets list_animations shows. */
 async function requireAnimation(id: string) {

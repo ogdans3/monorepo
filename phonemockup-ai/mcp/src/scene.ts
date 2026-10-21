@@ -41,7 +41,7 @@ export const sceneSchema = {
     caseColor: z
         .string()
         .optional()
-        .describe('Override the phone body colour, e.g. "#1d1d1f".'),
+        .describe('Override the phone body colour as "#RRGGBB", e.g. "#1d1d1f".'),
     showCameraIsland: z.boolean().optional().describe("Show the front camera cutout on supported models (iPhone Dynamic Island or Pixel punch hole). Omit to use the model’s default."),
     showLogo: z.boolean().optional().describe("Show the manufacturer's logo on supported models. Defaults to on; false hides only the logo."),
     lidAngle: z.number().min(0).max(130).optional().describe("Lid opening in degrees for hinged laptops; 0 closes it."),
@@ -79,7 +79,7 @@ export function resolveScene(input: SceneInput, fallback: {width: number; height
         height: input.height ?? preset?.height ?? fallback.height,
         background: parseBackground(input.background),
         glassReflections: input.glassReflections,
-        caseColor: input.caseColor ?? undefined,
+        caseColor: input.caseColor?.trim() ? parseCaseColor(input.caseColor) : undefined,
         showCameraIsland: input.showCameraIsland,
         showLogo: input.showLogo,
         lidAngle: input.lidAngle,
@@ -115,6 +115,19 @@ export function parseBackground(value: string): RGBA {
         channel(2),
         expanded.length === 8 ? channel(3) / 255 : 1
     ];
+}
+
+/**
+ * `#rrggbb` from "#RGB" or "#RRGGBB", the hash optional as for the background.
+ * Anything else used to reach three.js, which paints what it can't parse
+ * white, so a typo gave a white phone and a success message.
+ */
+export function parseCaseColor(value: string): string {
+    const hex = value.trim().toLowerCase().replace(/^#/, "");
+    if (!/^(?:[0-9a-f]{3}|[0-9a-f]{6})$/.test(hex)) {
+        throw new Error(`Invalid caseColor "${value}". Use "#RRGGBB", e.g. "#1d1d1f".`);
+    }
+    return "#" + (hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex);
 }
 
 export function isTransparent(background: RGBA): boolean {
