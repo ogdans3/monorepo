@@ -315,9 +315,11 @@ export async function acceptOffer(
       `)
     ).map((row) => row['id']!)
 
-    // The trades this yes can push out: every other one with one of the
-    // things it reserves on the table, in any version. A service is never
-    // reserved, so it pushes nothing out.
+    // The trades this yes may push out: every other one with one of the
+    // things it reserves in any version, so that none is missed for having
+    // changed its table while this waited. Which of them it does push out is
+    // judged below, once they are held. A service is never reserved, so it
+    // pushes nothing out.
     const rivals = await tx.execute<Row>(sql`
       select distinct o.trade_id as id
       from items i
@@ -364,11 +366,28 @@ export async function acceptOffer(
       throw conflict('item_unavailable', 'En av tingene i forslaget er ikke tilgjengelig lenger.')
     }
     // Only a negotiation loses its things to another trade's yes, judged as
-    // it stands now that it is held. An agreed trade holding one of them is
+    // it stands now that it is held — and only one that is counting on them:
+    // the table is the newest version (the sweep, `removeListings`), and a
+    // thing a counter-offer dropped is history there, not a claim. Pushed out
+    // for any version, a negotiation that had moved on to something else
+    // entirely ended as displaced. An agreed trade holding one of them is
     // refused below, as `item_reserved`.
-    const displaced = [...states]
-      .filter(([id, now]) => id !== tradeId && ['talking', 'pending', 'countered'].includes(now))
+    const negotiating = [...states]
+      .filter(([id, now]) => id !== tradeId && NEGOTIABLE.includes(now))
       .map(([id]) => id)
+    const displaced =
+      negotiating.length === 0
+        ? []
+        : (
+            await tx.execute<Row>(sql`
+              select distinct o.trade_id as id from trade_offers o
+              join trade_offer_items oi on oi.offer_id = o.id
+              join items i on i.id = oi.item_id
+              where o.trade_id = any(${uuidArray(negotiating)})
+                and i.id = any(${uuidArray(offered)}) and i.kind = 'item'
+                and o.seq = (select max(seq) from trade_offers where trade_id = o.trade_id)
+              order by o.trade_id`)
+          ).map((row) => row['id']!)
 
     // Every listing this is going to write, in one sorted batch: the ones this
     // person gives, and the ones the pushed-out trades were holding.

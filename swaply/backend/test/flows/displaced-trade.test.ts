@@ -43,15 +43,22 @@ async function list(token: string, title: string, category = 'verktoy') {
   return res.body!['id'] as string
 }
 
+beforeAll(async () => {
+  await reset()
+  app = await buildApp(db)
+})
+
+afterAll(async () => {
+  await app.close()
+  await close()
+})
+
 describe('a trade that loses the race lets go of what it was holding', () => {
   let ola = '', kari = '', per = ''
   let drill = '', tent = '', bike = ''
   let withKari = '', withPer = ''
 
   beforeAll(async () => {
-    await reset()
-    app = await buildApp(db)
-
     ola = (await register('Ola N.', 'ola@epost.no')).token
     kari = (await register('Kari N.', 'kari@epost.no')).token
     per = (await register('Per N.', 'per@epost.no')).token
@@ -66,11 +73,6 @@ describe('a trade that loses the race lets go of what it was holding', () => {
     withKari = (await call('POST', `/items/${drill}/like`, { token: kari })).body!['tradeId']
     await call('POST', `/items/${bike}/like`, { token: ola })
     withPer = (await call('POST', `/items/${drill}/like`, { token: per })).body!['tradeId']
-  })
-
-  afterAll(async () => {
-    await app.close()
-    await close()
   })
 
   test('1. Per accepts first, and his bicycle is locked to that trade', async () => {
@@ -92,5 +94,55 @@ describe('a trade that loses the race lets go of what it was holding', () => {
 
     expect(row['active_trade_id']).toBeNull()
     expect(row['status']).toBe('available')
+  })
+})
+
+describe('a trade whose table no longer holds the thing is not pushed out by it', () => {
+  // The table is the newest version (`removeListings`, the sweep): a thing a
+  // counter-offer dropped is back on the market, and the version that named
+  // it is history. A yes elsewhere used to push out every trade that had the
+  // thing in any version, so a negotiation about something else entirely
+  // ended «En gjenstand i byttet ble reservert av et annet bytte».
+  let siri = '', tor = '', una = ''
+  let skis = '', saw = '', kayak = '', tent = ''
+  let withTor = '', withUna = ''
+
+  beforeAll(async () => {
+    siri = (await register('Siri N.', 'siri@epost.no')).token
+    tor = (await register('Tor N.', 'tor@epost.no')).token
+    una = (await register('Una N.', 'una@epost.no')).token
+    skis = await list(siri, 'Langrennski')
+    saw = await list(siri, 'Stikksag')
+    kayak = await list(tor, 'Kajakk')
+    tent = await list(una, 'Telt, 2 personer')
+
+    await call('POST', `/items/${kayak}/like`, { token: siri })
+    withTor = (await call('POST', `/items/${skis}/like`, { token: tor })).body!['tradeId']
+    await call('POST', `/items/${tent}/like`, { token: siri })
+    withUna = (await call('POST', `/items/${skis}/like`, { token: una })).body!['tradeId']
+  })
+
+  test('4. Siri and Tor go on talking about the saw instead of the skis', async () => {
+    const view = (await call('GET', `/trades/${withTor}`, { token: siri })).body!
+    const res = await call('POST', `/trades/${withTor}/counter`, {
+      token: siri,
+      body: {
+        items: [
+          { itemId: saw, giverPosition: view['you']['position'] },
+          { itemId: kayak, giverPosition: view['receivingFrom']['position'] },
+        ],
+      },
+    })
+    expect(res.status).toBe(200)
+    expect(res.body!['youGive'].map((i: Json) => i['title'])).toEqual(['Stikksag'])
+  })
+
+  test('5. her yes to Una holds the skis, and the trade about the saw goes on', async () => {
+    const res = await call('POST', `/trades/${withUna}/accept`, { token: siri })
+
+    expect(res.status).toBe(200)
+    expect(res.body!['displaced']).toEqual([])
+    expect((await itemRow(skis))['active_trade_id']).toBe(withUna)
+    expect(await tradeState(withTor)).toBe('countered')
   })
 })
