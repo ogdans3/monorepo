@@ -202,7 +202,7 @@
                     >
                         <Select.Trigger
                                 id="media-select"
-                                class="h-8 w-full max-w-full overflow-hidden whitespace-nowrap text-ellipsis rounded border px-2 text-sm bg-background"
+                                class="ph-no-capture h-8 w-full max-w-full overflow-hidden whitespace-nowrap text-ellipsis rounded border px-2 text-sm bg-background"
                                 aria-labelledby={`${uid}-file-label ${uid}-file-value`}
                         >
                             <span id={`${uid}-file-value`} class="block w-full truncate">
@@ -216,7 +216,7 @@
                         </Select.Trigger>
 
                         <Select.Content aria-label="Files"
-                                class="focus-override border-muted bg-background shadow-popover z-50 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border p-1"
+                                class="ph-no-capture focus-override border-muted bg-background shadow-popover z-50 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border p-1"
                                 sideOffset={8}
                         >
                             {#each project.files as f, i (i)}

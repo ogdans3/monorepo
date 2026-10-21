@@ -244,7 +244,8 @@
           }}>Clear search</button
         >
       </div>
-    {:else}<div class="project-grid">
+    {:else}<!-- Project names are the user's own: keep them out of analytics. -->
+      <div class="project-grid ph-no-capture">
         {#each filtered as entry (entry.key)}
           <article class="project-card" data-project-id={entry.project.id}>
             <a

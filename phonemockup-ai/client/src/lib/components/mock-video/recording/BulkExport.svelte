@@ -404,7 +404,7 @@
                     items={bulkList.map((f, i) => ({ value: String(i), label: f.fileBlob.name }))}
             >
                 <Select.Trigger
-                            class="h-8 w-full rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between overflow-hidden whitespace-nowrap"
+                            class="ph-no-capture h-8 w-full rounded-md border bg-background px-2.5 text-sm inline-flex items-center justify-between overflow-hidden whitespace-nowrap"
                         id={`${uid}-file`}
                         aria-labelledby={`${uid}-file-label ${uid}-file-value`}
                 >
@@ -412,7 +412,7 @@
                         {bulkList[activeBulkIndex]?.fileBlob?.name ?? "Select file"}
                     </span>
                 </Select.Trigger>
-                <Select.Content aria-label="Files to preview" class="min-w-[18rem]">
+                <Select.Content aria-label="Files to preview" class="ph-no-capture min-w-[18rem]">
                     <Select.Group>
                         <Select.Label class="px-2 py-1 text-xs text-muted-foreground">
                             File

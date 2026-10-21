@@ -43,7 +43,7 @@
     >
     <span class="studio-upload-plus">+</span>
   </button>
-  <div class="studio-media-current">
+  <div class="studio-media-current ph-no-capture">
     {#if $file?.type.startsWith("video/")}<Film size={14} />{:else}<ImageIcon
         size={14}
       />{/if}

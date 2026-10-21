@@ -23,7 +23,7 @@
         <Input
                 id="project-name"
                 type="text"
-                class="h-8 w-full"
+                class="h-8 w-full ph-no-capture"
                 value={project.name}
                 oninput={(e) => onNameInput((e.target as HTMLInputElement).value)}
                 placeholder="My project"

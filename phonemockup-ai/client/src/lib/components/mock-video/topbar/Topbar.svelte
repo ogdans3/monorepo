@@ -130,7 +130,7 @@
       >, home</span
     ></a
   >
-  <div class="studio-project-title">
+  <div class="studio-project-title ph-no-capture">
     <span class="studio-project-divider">/</span><span
       >{project.name || "Untitled project"}</span
     >
