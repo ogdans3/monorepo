@@ -1559,6 +1559,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           // Nobody left to read it, as the server says: the field gives way
           // to its words rather than staying to be refused again.
           setState(() => _closedByServer = e.message);
+        } else if (e.code == ApiException.blocked) {
+          // Across a block the trade did not end, having finished: as 06g.
+          setState(() => _closedByServer = closedAfterBlock);
         } else {
           showError(context, e);
         }

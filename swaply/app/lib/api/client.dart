@@ -53,6 +53,11 @@ class ApiException implements Exception {
   /// account: nobody is left to read it.
   static const conversationClosed = 'conversation_closed';
 
+  /// Something that is not possible between two people across a block —
+  /// writing to the other included, in a conversation the block did not end
+  /// because its trade had already finished.
+  static const blocked = 'blocked';
+
   /// A sign-in too soon after a run of wrong passwords for its address. The
   /// password was not looked at, and the message says how long to wait.
   static const tooManyAttempts = 'too_many_attempts';
