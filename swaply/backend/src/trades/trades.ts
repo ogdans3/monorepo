@@ -288,6 +288,11 @@ export type AcceptResult = {
    */
   freed: string[]
   everyoneAccepted: boolean
+  /**
+   * The person's yes already stood on this version, and nothing was done:
+   * a second press, or a retry after an answer that never arrived.
+   */
+  alreadyAccepted: boolean
 }
 
 /**
@@ -357,6 +362,26 @@ export async function acceptOffer(
     // they said yes to is no longer what is proposed; and enough yeses to an
     // old version agreed a trade on a deal nobody had on the table.
     if ((await newestOffer(tx, tradeId)) !== offerId) throw offerChanged()
+    // A yes already standing on this version is answered as it stands. Run
+    // again — a second press of the swipe, a retry after an answer lost in a
+    // tunnel — it pushed out every negotiation opened about the reserved
+    // things since (a reserved thing is still on the market, so somebody may
+    // well be talking about it), told the others «Ola godtok byttet» a second
+    // time, and wrote a new time and terms version over the record of when
+    // the yes was given.
+    const [given] = await tx.execute<Row>(
+      sql`select 1 from trade_acceptances
+          where offer_id = ${offerId} and user_id = ${userId} and revoked_at is null`,
+    )
+    if (given) {
+      return {
+        reserved: [],
+        displaced: [],
+        freed: [],
+        everyoneAccepted: state === 'accepted',
+        alreadyAccepted: true,
+      }
+    }
     // And no yes across a block: a trade the block did not end — agreed, and
     // then taken back — or a block from before blocks ended anything.
     if (await blockedInTrade(tx, tradeId, userId)) throw blocked()
@@ -458,7 +483,7 @@ export async function acceptOffer(
       await tx.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
     }
 
-    return { reserved, displaced, freed, everyoneAccepted }
+    return { reserved, displaced, freed, everyoneAccepted, alreadyAccepted: false }
   })
 }
 

@@ -8,6 +8,7 @@
 // `reservation-race.test.ts` is the same race one level down, against the
 // engine. This one is over HTTP, because the release happens on the way out of
 // the accept route and the re-search happens after it.
+import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
@@ -94,6 +95,43 @@ describe('a trade that loses the race lets go of what it was holding', () => {
 
     expect(row['active_trade_id']).toBeNull()
     expect(row['status']).toBe('available')
+  })
+
+  test('3b. a yes sent again changes nothing: a conversation opened since about the drill goes on', async () => {
+    // The drill is held for Kari's trade, and a held thing is still on the
+    // market: Per writes to Ola about it, in case that trade falls through.
+    // Then Ola's yes arrives a second time — a double press, or a retry
+    // after the first answer was lost — and it used to push Per's
+    // conversation out as displaced, tell Kari «Ola godtok byttet» again and
+    // move the time of the yes.
+    const asking = await call('POST', `/items/${drill}/message`, {
+      token: per, body: { body: 'Si fra om drillen blir ledig igjen.' },
+    })
+    expect(asking.status).toBe(201)
+    const told = async () =>
+      (await call('GET', '/notifications', { token: kari })).body!['notifications'].length
+    const before = await told()
+    const [first] = await db.execute<Record<string, string>>(
+      sql`select a.accepted_at::text as at from trade_acceptances a
+          join trade_offers o on o.id = a.offer_id
+          join users u on u.id = a.user_id
+          where o.trade_id = ${withKari} and u.email = 'ola@epost.no'`,
+    )
+
+    const again = await call('POST', `/trades/${withKari}/accept`, { token: ola })
+
+    expect(again.status).toBe(200)
+    expect(again.body!['alreadyAccepted']).toBe(true)
+    expect(again.body!['displaced']).toEqual([])
+    expect(await tradeState(asking.body!['tradeId'])).toBe('talking')
+    expect(await told()).toBe(before)
+    const [second] = await db.execute<Record<string, string>>(
+      sql`select a.accepted_at::text as at from trade_acceptances a
+          join trade_offers o on o.id = a.offer_id
+          join users u on u.id = a.user_id
+          where o.trade_id = ${withKari} and u.email = 'ola@epost.no'`,
+    )
+    expect(second!['at']).toBe(first!['at'])
   })
 })
 
