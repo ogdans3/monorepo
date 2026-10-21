@@ -606,7 +606,12 @@ class SwaplyApi {
     );
   }
 
-  Future<void> markNotificationsRead() async => _post('/notifications/read');
+  /// Read up to and including [upTo], the newest notification the screen
+  /// has drawn, and no further: one that arrived after the list was asked
+  /// for is not read until it has been on screen. Without it, everything,
+  /// which is also what a server from before the field does with any body.
+  Future<void> markNotificationsRead({String? upTo}) async =>
+      _post('/notifications/read', upTo == null ? null : {'upTo': upTo});
 
   Future<void> review(String tradeId,
           {required String ratee, required int score, String? comment, List<String> chips = const []}) async =>

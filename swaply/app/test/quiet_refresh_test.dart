@@ -154,5 +154,22 @@ void main() {
       expect(find.text('Fikk ikke kontakt'), findsNothing);
       expect(find.text('Kari likte Bosch drill 18V'), findsOneWidget);
     });
+
+    testWidgets('6. 12a marks read as far as it showed, and no further', (tester) async {
+      // Everything was marked read, including a notification that arrived
+      // between loading the list and saying so, which nobody had seen.
+      await mount(tester, const NotificationsScreen());
+
+      expect(server.asked('POST /notifications/read'), 1);
+      expect(server.bodies['POST /notifications/read'], {'upTo': 'n1'});
+    });
+
+    testWidgets('7. …and with nothing on screen, marks nothing', (tester) async {
+      server.overrides['GET /notifications'] = {'notifications': <Object>[], 'unread': 0};
+      await mount(tester, const NotificationsScreen());
+
+      expect(find.text('Ingen varsler'), findsOneWidget);
+      expect(server.asked('POST /notifications/read'), 0);
+    });
   });
 }

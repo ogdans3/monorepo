@@ -269,6 +269,7 @@ class FakeServer {
                   {'id': kari['id'], 'displayName': 'Kari N.'}
                 ],
                 'subject': 'Bosch drill 18V ⇄ Retro spillkonsoll',
+                'closed': null,
                 'unread': 2,
                 'lastMessage': {
                   'body': 'Jeg kan sende fiskestangen med PostNord i morgen.',
@@ -555,6 +556,9 @@ class FakeServer {
       {...kari, 'position': 1, 'accepted': true, 'gives': [console]},
     ],
     'threadId': 'thread-1',
+    // Why nobody can write in its conversation any more: 'blocked',
+    // 'deleted', or null while «Send» works.
+    'conversationClosed': null,
     'lastMessage': {
       'body': 'Legg til hjelmen, så er vi skuls?',
       'senderName': 'Kari N.',
@@ -571,6 +575,8 @@ class FakeServer {
     'tradeId': 'trade-1',
     'state': 'pending',
     'kind': 'direct',
+    // As `conversationClosed` on the trade, for the one asking.
+    'closed': null,
     'banner': null,
     'participants': [
       {'id': 'me-1', 'displayName': 'Ola N.', 'position': 0},
