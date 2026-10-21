@@ -204,6 +204,14 @@ void main() {
       expect(find.text('Bosch drill 18V ⇄ ingenting ennå · under avtale'), findsOneWidget);
     });
 
+    testWidgets('9b. …and an ended trade says «ingenting», since nothing is still to come',
+        (tester) async {
+      server.overrides['GET /trades/trade-1'] = {...firstAsk, 'state': 'cancelled'};
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.text('Bosch drill 18V ⇄ ingenting · avsluttet'), findsOneWidget);
+    });
+
     testWidgets('10. «Jeg vil ha» asks for the first thing, not one more', (tester) async {
       server.overrides['GET /trades/trade-1'] = firstAsk;
       await mount(tester, const ThreadScreen(threadId: 'thread-1'));

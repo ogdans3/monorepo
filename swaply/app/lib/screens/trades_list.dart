@@ -284,7 +284,7 @@ class _TradesScreenState extends State<TradesScreen>
                   children: [
                     Expanded(
                       child: _leg('${trade.receivingFrom.displayName.split(' ').first} gir',
-                          trade.youGet, SwaplyColors.greenText),
+                          trade.youGet, SwaplyColors.greenText, over: _over(trade)),
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
@@ -308,7 +308,7 @@ class _TradesScreenState extends State<TradesScreen>
                     ),
                     Expanded(
                       child: _leg('${trade.givingTo.displayName.split(' ').first} får',
-                          trade.youGive, SwaplyColors.amberText),
+                          trade.youGive, SwaplyColors.amberText, over: _over(trade)),
                     ),
                   ],
                 ),
@@ -326,7 +326,13 @@ class _TradesScreenState extends State<TradesScreen>
 
   /// One side of the row: whose it is, the picture, and what it is. The name
   /// sits *over* the thing, as the export's caption says it should.
-  Widget _leg(String label, List<Item> items, Color labelColour) => Column(
+  /// An ended trade, where a side with nothing on it will stay so.
+  static bool _over(Trade trade) => trade.state == 'completed' || trade.state == 'cancelled';
+
+  /// [over]: the trade has ended, and an empty side is «ingenting», not
+  /// «ingenting ennå», which promised something would still come.
+  Widget _leg(String label, List<Item> items, Color labelColour, {bool over = false}) =>
+      Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(label,
@@ -348,7 +354,9 @@ class _TradesScreenState extends State<TradesScreen>
             ItemThumb(items.first, size: 86, radius: 16),
           const SizedBox(height: 6),
           Text(
-            items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' + '),
+            items.isEmpty
+                ? (over ? 'ingenting' : 'ingenting ennå')
+                : items.map((i) => i.title).join(' + '),
             style: const TextStyle(
                 fontSize: 11.5, fontWeight: FontWeight.w600, color: SwaplyColors.inkBody),
             textAlign: TextAlign.center,

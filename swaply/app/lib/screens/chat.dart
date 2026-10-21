@@ -532,8 +532,11 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   /// things side by side. A ring is agreed in words, so the words of it
   /// stay in view while they are written.
   Widget _ringSummary(Trade trade) {
-    String things(List<Item> items) =>
-        items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' og ');
+    // «ennå» only while something can still come.
+    final over = trade.state == 'completed' || trade.state == 'cancelled';
+    String things(List<Item> items) => items.isEmpty
+        ? (over ? 'ingenting' : 'ingenting ennå')
+        : andList([for (final i in items) i.title]);
     String first(UserRef person) => person.displayName.split(' ').first;
     final pictures = [
       ...trade.youGet.take(1),
@@ -653,8 +656,12 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   String _tradeLine(Trade trade) {
     // A side with nothing on it yet is said, as 11 says it: it was a hole
     // after the ⇄, «Fiskestang med snelle ⇄  · under avtale».
-    String side(List<Item> items) =>
-        items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' + ');
+    // «ennå» only while something can still come: an ended trade said
+    // «ingenting ennå ⇄ Monas lampe · avsluttet».
+    final over = trade.state == 'completed' || trade.state == 'cancelled';
+    String side(List<Item> items) => items.isEmpty
+        ? (over ? 'ingenting' : 'ingenting ennå')
+        : items.map((i) => i.title).join(' + ');
     final give = side(trade.youGive);
     final get = side(trade.youGet);
     final state = switch (trade.state) {
