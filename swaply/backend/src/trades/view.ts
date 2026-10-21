@@ -351,15 +351,17 @@ export async function tradeList(db: Database, viewerId: string) {
     waiting,
     active: views.filter((v) => ['accepted', 'paused'].includes(v.state)),
     done: views.filter((v) => ['completed', 'cancelled'].includes(v.state)),
-    // «Din tur» on screen 11: a deal you could say yes to, and have not. Both
-    // sides have to hold something — an offer with an empty side has no yes in
-    // it, and counting one sends a person to a screen with nothing to press.
+    // «Din tur» on screen 11: a deal you could say yes to, and have not.
+    // Everybody in it has to give something — an offer with an empty side has
+    // no yes in it (`incomplete_offer`), and counting one sends a person to a
+    // screen with nothing to press. Everybody, not only the two sides you
+    // see: in a ring the third can be the empty one. The badge on Bytter
+    // (`tradesNeedingYou` on GET /me) is the same rule.
     yourTurn: waiting.filter(
       (v) =>
         !v.you.accepted &&
         v.state !== 'talking' &&
-        v.youGive.length > 0 &&
-        v.youGet.length > 0,
+        v.participants.every((p) => p.gives.length > 0),
     ).length,
   }
 }
