@@ -9,6 +9,14 @@
   const invite = $derived(data.invite)
   const item = $derived(invite.item)
   const inviterName = $derived(invite.inviter?.displayName ?? null)
+  // The first character as a person sees it. `slice(0, 1)` is a UTF-16 unit,
+  // half of an emoji, which the page drew as «�» for «🌸 Kari»; a grapheme
+  // keeps a flag, a family or an accented letter whole.
+  const ownerInitial = $derived.by(() => {
+    const name = item?.ownerName ?? ''
+    const [first] = new Intl.Segmenter('nb', { granularity: 'grapheme' }).segment(name)
+    return first?.segment ?? ''
+  })
   const openInApp = $derived(`${data.appOrigin}/?invitasjon=${invite.token}`)
 
   const facts = $derived(
@@ -103,7 +111,7 @@
 
         {#if item.ownerName}
           <p class="owner">
-            <span class="avatar" aria-hidden="true">{item.ownerName.slice(0, 1)}</span>
+            <span class="avatar" aria-hidden="true">{ownerInitial}</span>
             <span>{item.ownerName} har lagt den ut</span>
           </p>
         {/if}
@@ -318,6 +326,9 @@
     margin-top: 1.5rem;
     color: var(--ink-soft);
     max-width: var(--measure);
+    /* The lines and paragraphs the owner typed on 10b, as the app shows them.
+       Collapsed, «Linje en» and «Linje to» ran together into one line. */
+    white-space: pre-line;
   }
 
   .owner {
