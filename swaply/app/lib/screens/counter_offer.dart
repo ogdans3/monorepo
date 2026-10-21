@@ -238,44 +238,52 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
     // At three, the unpicked ones on that side stop answering.
     final full = !selected && selection.length >= maxPerSide;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: locked || full
-          ? null
-          : () => setState(() => selected ? selection.remove(item.id) : selection.add(item.id)),
-      child: Opacity(
-        opacity: locked || full ? 0.55 : 1,
-        child: Row(
-          children: [
-            ItemThumb(item, size: 44, radius: 11),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
-                  Text(
-                    [
-                      // Left out for a thing with no value, as 04 and 05 do.
-                      if (item.estimatedValueNok != null) 'verdi ${kr(item.estimatedValueNok)}',
-                      if (locked) 'reservert i annet bytte',
-                      if (item.inOffer && !locked) 'allerede i byttet',
-                    ].join(' · '),
-                    style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey),
-                  ),
-                ],
+    // Chosen is said as well as drawn, as on 02: a screen reader had only a
+    // «✓» in the row to go by, read out as part of the title.
+    return Semantics(
+      container: true,
+      button: true,
+      selected: selected,
+      enabled: !(locked || full),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: locked || full
+            ? null
+            : () => setState(() => selected ? selection.remove(item.id) : selection.add(item.id)),
+        child: Opacity(
+          opacity: locked || full ? 0.55 : 1,
+          child: Row(
+            children: [
+              ItemThumb(item, size: 44, radius: 11),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                    Text(
+                      [
+                        // Left out for a thing with no value, as 04 and 05 do.
+                        if (item.estimatedValueNok != null) 'verdi ${kr(item.estimatedValueNok)}',
+                        if (locked) 'reservert i annet bytte',
+                        if (item.inOffer && !locked) 'allerede i byttet',
+                      ].join(' · '),
+                      style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            if (locked)
-              const StatePill('Låst', color: SwaplyColors.inkMuted)
-            else
-              _tick(selected),
-          ],
+              const SizedBox(width: 12),
+              if (locked)
+                const StatePill('Låst', color: SwaplyColors.inkMuted)
+              else
+                ExcludeSemantics(child: _tick(selected)),
+            ],
+          ),
         ),
       ),
     );

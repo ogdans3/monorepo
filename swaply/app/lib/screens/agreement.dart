@@ -129,48 +129,55 @@ class _AgreementScreenState extends State<AgreementScreen> {
                     ],
                   ),
                   // The consent is a card of its own with a square tick, not a
-                  // Material checkbox.
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(() => _accepted = !_accepted),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: SwaplyColors.cardLine),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 22,
-                            height: 22,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: _accepted ? SwaplyColors.greenPressed : null,
-                              borderRadius: BorderRadius.circular(7),
-                              border: _accepted
-                                  ? null
-                                  : Border.all(color: SwaplyColors.chevron, width: 2),
+                  // Material checkbox, and to a screen reader it is a checkbox
+                  // that says whether it is ticked: it is what unlocks the
+                  // swipe, which is dimmed until it is.
+                  Semantics(
+                    container: true,
+                    checked: _accepted,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => setState(() => _accepted = !_accepted),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: SwaplyColors.cardLine),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _accepted ? SwaplyColors.greenPressed : null,
+                                borderRadius: BorderRadius.circular(7),
+                                border: _accepted
+                                    ? null
+                                    : Border.all(color: SwaplyColors.chevron, width: 2),
+                              ),
+                              child: _accepted
+                                  // Said by the checkbox, not read out as a word.
+                                  ? const ExcludeSemantics(child: Text('✓',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          height: 1.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white)))
+                                  : null,
                             ),
-                            child: _accepted
-                                ? const Text('✓',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        height: 1.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white))
-                                : null,
-                          ),
-                          const SizedBox(width: 10),
-                          const Expanded(
-                            child: Text('Jeg har lest og godtar vilkårene',
-                                style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: SwaplyColors.ink)),
-                          ),
-                        ],
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text('Jeg har lest og godtar vilkårene',
+                                  style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: SwaplyColors.ink)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

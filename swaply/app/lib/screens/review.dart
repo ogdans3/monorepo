@@ -491,25 +491,31 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
                     children: List.generate(5, (i) {
                       final value = i + 1;
                       final selected = _score == value;
-                      return GestureDetector(
-                        onTap: () => setState(() => _score = value),
-                        child: Container(
-                          height: 52,
-                          width: 52,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: selected ? SwaplyColors.greenPressed : Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: selected
-                                    ? SwaplyColors.greenPressed
-                                    : const Color(0x22064E3B)),
+                      // The one chosen is said, not only filled in.
+                      return Semantics(
+                        container: true,
+                        button: true,
+                        selected: selected,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _score = value),
+                          child: Container(
+                            height: 52,
+                            width: 52,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: selected ? SwaplyColors.greenPressed : Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: selected
+                                      ? SwaplyColors.greenPressed
+                                      : const Color(0x22064E3B)),
+                            ),
+                            child: Text('$value',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: selected ? Colors.white : SwaplyColors.ink)),
                           ),
-                          child: Text('$value',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: selected ? Colors.white : SwaplyColors.ink)),
                         ),
                       );
                     }),
