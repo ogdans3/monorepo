@@ -60,6 +60,12 @@ Future<void> mount(WidgetTester tester, Widget screen, {bool signedIn = true}) a
   await tester.pumpAndSettle();
 }
 
+/// [text] in the tool's log at its foot, where every lever writes what it
+/// did. A toast says it as well, where the lever was pressed.
+Finder inLog(String text) => find.descendant(
+    of: find.ancestor(of: find.text('HVA VERKTØYET GJORDE'), matching: find.byType(AdminCard)),
+    matching: find.textContaining(text));
+
 /// Sign in as somebody the server says holds the key.
 void asAdmin() {
   server.overrides['POST /auth/login'] = {'token': 'tok', 'user': FakeServer.admin};
@@ -158,7 +164,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.requests, contains('POST /admin/accounts'));
-      expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
+      expect(inLog('Lagde Testbruker To'), findsOneWidget);
     });
 
     testWidgets('«Nullstill likes» brings 10a back, and nothing else does', (tester) async {
@@ -202,6 +208,34 @@ void main() {
       // And it lands you on the trade it built, rather than telling you it
       // exists somewhere.
       expect(find.byType(TradeDetailScreen), findsOneWidget);
+    });
+
+    testWidgets('what a lever did is said where it was pressed, not only in the log below',
+        (tester) async {
+      // The log is at the foot of a tool taller than the screen, so a
+      // refused scenario, or the sweep's answer, went there and nowhere the
+      // person was looking: the button looked dead.
+      asAdmin();
+      tester.view.physicalSize = const Size(390, 844);
+      await mount(tester, const AdminScreen());
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+      server.overrides['POST /admin/scenarios'] = const Refusal(
+          400, 'not_enough_accounts', 'Et toveis-bytte trenger 2 kontoer. Lag en til først.');
+
+      await tester.ensureVisible(find.text('Samtale'));
+      await tester.tap(find.text('Samtale'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(SwaplyToast),
+              matching: find.text('Et toveis-bytte trenger 2 kontoer. Lag en til først.')),
+          findsOneWidget);
+
+      await tester.ensureVisible(find.text('Kjør sweepen nå'));
+      await tester.tap(find.text('Kjør sweepen nå'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(
+              of: find.byType(SwaplyToast), matching: find.text('Sweepen fant ingen nye sirkler')),
+          findsOneWidget);
     });
 
     testWidgets('«Som motparten» sits at the foot of the trade screen', (tester) async {
@@ -349,7 +383,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('KONTOER'), findsOneWidget);
-      expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
+      expect(inLog('Lagde Testbruker To'), findsOneWidget);
       expect(find.text(noContact), findsOneWidget);
       expect(find.byType(SwaplyToast), findsOneWidget);
     });
@@ -366,7 +400,7 @@ void main() {
       await tester.tap(find.text('Lag testkonto'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Lagde Testbruker To'), findsOneWidget);
+      expect(inLog('Lagde Testbruker To'), findsOneWidget);
       expect(find.textContaining('✕'), findsNothing);
       expect(find.text(noContact), findsNothing);
       expect(tester.takeException(), isNull);
@@ -414,7 +448,7 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Slett testkontoen'));
       await tester.pumpAndSettle();
       expect(server.requests, contains('DELETE /admin/accounts/test-1'));
-      expect(find.text('Slettet Testbruker Én'), findsOneWidget);
+      expect(inLog('Slettet Testbruker Én'), findsOneWidget);
     });
 
     testWidgets('a name that ends in a full stop is not given a second', (tester) async {
