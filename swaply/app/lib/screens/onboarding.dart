@@ -992,30 +992,35 @@ class _InterestsScreenState extends State<InterestsScreen> {
                                         ? SwaplyColors.greenPressed
                                         : SwaplyColors.fieldLine),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(entry.value,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: selected
-                                            ? SwaplyColors.greenDeep
-                                            : SwaplyColors.inkBody,
-                                      )),
-                                  if (selected) ...[
-                                    const SizedBox(width: 6),
-                                    // Said by `selected` above, so not read
-                                    // out as a tick as well.
-                                    const ExcludeSemantics(
-                                      child: Text('✓',
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                              color: SwaplyColors.greenText)),
-                                    ),
+                              // Smaller rather than past the tile's edge when
+                              // the text is set large and the ✓ is beside it.
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(entry.value,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: selected
+                                              ? SwaplyColors.greenDeep
+                                              : SwaplyColors.inkBody,
+                                        )),
+                                    if (selected) ...[
+                                      const SizedBox(width: 6),
+                                      // Said by `selected` above, so not read
+                                      // out as a tick as well.
+                                      const ExcludeSemantics(
+                                        child: Text('✓',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: SwaplyColors.greenText)),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
                             ),
                           ),

@@ -864,6 +864,73 @@ class ItemThumb extends StatelessWidget {
       );
 }
 
+/// A listing's name with its value beside it, as the export captions a card
+/// on 05, 13 and 13b: 7 down and 2 in, the name at 13/700 wrapping, and
+/// «Verdi 600 kr» at 10.5/600 staying put at the top right.
+///
+/// Where the value alone leaves the name next to no room — a narrow column
+/// with the text set large — the value goes under the name. Beside it, it
+/// ran past the edge of the card, and the name had none of the row left.
+class ListingCaption extends StatelessWidget {
+  const ListingCaption(this.item, {super.key, this.maxLines});
+
+  final Item item;
+
+  /// Lines the name may take before it is cut short; all it needs if null.
+  final int? maxLines;
+
+  static const _name =
+      TextStyle(fontSize: 13, height: 1.15, fontWeight: FontWeight.w700, color: SwaplyColors.ink);
+  static const _value =
+      TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: SwaplyColors.grey);
+
+  /// The least the name is left beside the value before the value goes under
+  /// it: a word or two.
+  static const _nameRoom = 48.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = Text(item.title,
+        maxLines: maxLines,
+        overflow: maxLines == null ? null : TextOverflow.ellipsis,
+        style: _name);
+    final value = item.estimatedValueNok;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
+      child: value == null
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Flexible(child: name)])
+          : LayoutBuilder(builder: (context, box) {
+              final words = 'Verdi ${kr(value)}';
+              final painter = TextPainter(
+                text: TextSpan(text: words, style: DefaultTextStyle.of(context).style.merge(_value)),
+                textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+                textScaler: MediaQuery.textScalerOf(context),
+                maxLines: 1,
+              )..layout();
+              final wide = painter.width;
+              painter.dispose();
+              if (wide + 8 + _nameRoom > box.maxWidth) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [name, const SizedBox(height: 2), Text(words, style: _value)],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Flexible(child: name),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(words, style: _value),
+                  ),
+                ],
+              );
+            }),
+    );
+  }
+}
+
 /// A category, a condition, an interest. Filled, never outlined: in the export
 /// the fill is the shape, and a border on top of it makes it look like a button.
 class Pill extends StatelessWidget {

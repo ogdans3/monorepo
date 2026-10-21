@@ -229,26 +229,35 @@ class _LikedScreenState extends State<LikedScreen> {
 
     final drawn = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 44),
-      child: Row(
-        children: [
-          // No initial for nobody in particular.
-          Avatar(liker.anonymous ? '' : user.displayName, size: 36),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
-                if (facts.isNotEmpty)
-                  Text(facts, style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey)),
-              ],
+      child: LayoutBuilder(
+        builder: (context, box) => Row(
+          children: [
+            // No initial for nobody in particular.
+            Avatar(liker.anonymous ? '' : user.displayName, size: 36),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
+                  if (facts.isNotEmpty)
+                    Text(facts, style: const TextStyle(fontSize: 11.5, color: SwaplyColors.grey)),
+                ],
+              ),
             ),
-          ),
-          if (!liker.anonymous) const Text('Se tingene deres ›', style: Type.link),
-        ],
+            // Half the row at most. With the text set large it took all of
+            // it and more, the name had none left, and the row ran past the
+            // card; now it wraps under itself.
+            if (!liker.anonymous)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: box.maxWidth / 2),
+                child: const Text('Se tingene deres ›', style: Type.link),
+              ),
+          ],
+        ),
       ),
     );
     if (liker.anonymous) return drawn;

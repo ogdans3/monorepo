@@ -16,7 +16,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/screens/discover.dart';
 import 'package:swaply_app/screens/item_detail.dart';
+import 'package:swaply_app/screens/liked.dart';
+import 'package:swaply_app/screens/onboarding.dart';
+import 'package:swaply_app/screens/post_item.dart';
+import 'package:swaply_app/screens/profile.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/screens/trades_list.dart';
 import 'package:swaply_app/state/session.dart';
@@ -182,4 +187,62 @@ void main() {
     expect(open.right, lessThanOrEqualTo(card.right));
     expect(find.textContaining('SAMTALE MED'), findsOneWidget);
   });
+
+  group('at 320 across with the text set large, nothing runs past the edge', () {
+    // Measured with real fonts: 12's header cut its subtitle off and a liker's
+    // «Se tingene deres ›» took the whole row, 16b's Testverktøy row was a
+    // fixed 58, 10b's «+ Legg til bilder» ran out of its tile, a chosen
+    // interest on 02 out of its own, and on Oppdag «Verdi 1 200 kr» was wider
+    // than the column it was in.
+    final screens = <(String, double, Widget Function())>[
+      ('12 Likt', 1.3, () => const LikedScreen()),
+      ('12 Likt', 2, () => const LikedScreen()),
+      ('16b as the admin', 1.6, () => const SettingsScreen()),
+      ('10b', 2, () => const PostItemScreen()),
+      ('02 with all chosen', 2, () => const InterestsScreen()),
+      ('05 Oppdag', 2, () => const DiscoverScreen()),
+    ];
+    for (final (name, scale, screen) in screens) {
+      testWidgets('$name at ${(scale * 100).round()} %', (tester) async {
+        final dear = {...FakeServer.drill, 'estimatedValueNok': 1200};
+        server.overrides['GET /discover'] = {
+          'total': 2,
+          'items': [dear, FakeServer.console],
+        };
+        final me = {
+          ...FakeServer.me,
+          'isAdmin': name.startsWith('16b'),
+          'items': [dear],
+          'interests': name.startsWith('02') ? categoryKeys : FakeServer.me['interests'],
+        };
+        server.overrides['POST /auth/login'] = {'token': 'tok', 'user': me};
+        server.overrides['GET /me'] = me;
+        await hold(tester, phones.last, screen(), textScale: scale);
+
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('and at the export\'s size a card\'s value is still beside its name',
+        (tester) async {
+      server.overrides['GET /discover'] = {
+        'total': 1,
+        'items': [
+          {...FakeServer.drill, 'estimatedValueNok': 1200},
+        ],
+      };
+      await hold(tester, phones.last, const DiscoverScreen());
+
+      final name = tester.getRect(find.text('Bosch drill 18V'));
+      final value = tester.getRect(find.text('Verdi 1 200 kr'));
+      expect(value.left, greaterThan(name.right));
+      expect(value.top, lessThan(name.bottom));
+    });
+  });
 }
+
+/// Every category key, in the order 02 lists them.
+const categoryKeys = [
+  'sykling', 'gaming', 'verktoy', 'klaer', 'bat', 'friluft',
+  'barn', 'hjem', 'sport', 'musikk', 'boker', 'diverse',
+];

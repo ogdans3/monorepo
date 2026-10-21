@@ -949,33 +949,7 @@ class _ItemCardState extends State<ItemCard> {
           // The export's caption: 7 down and 2 in, the name at 13/700 with the
           // value at 10.5/600 beside it, and the name wraps while the value
           // stays put at the top right.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Flexible(
-                  child: Text(item.title,
-                      style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.15,
-                          fontWeight: FontWeight.w700,
-                          color: SwaplyColors.ink)),
-                ),
-                if (item.estimatedValueNok != null) ...[
-                  const SizedBox(width: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text('Verdi ${kr(item.estimatedValueNok)}',
-                        style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: SwaplyColors.grey)),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          ListingCaption(item),
         ],
       ),
     );

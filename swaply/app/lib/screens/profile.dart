@@ -409,40 +409,14 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
               ],
             ),
           ),
-          _caption(item),
+          // Title and value on one line under a 166-wide picture, as 13 and
+          // 13b draw it.
+          ListingCaption(item, maxLines: 2),
         ],
       ),
     );
   }
 }
-
-/// 13b Annen profil. Their things are the point of the screen: it is where a
-/// loop gets closed from the other side.
-/// Title and value on one line under a 166-wide picture, as 13 and 13b draw it.
-Widget _caption(Item item) => Padding(
-      padding: const EdgeInsets.fromLTRB(2, 7, 2, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            child: Text(item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13, height: 1.15, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
-          ),
-          if (item.estimatedValueNok != null) ...[
-            const SizedBox(width: 8),
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text('Verdi ${kr(item.estimatedValueNok)}',
-                  style: const TextStyle(
-                      fontSize: 10.5, fontWeight: FontWeight.w600, color: SwaplyColors.grey)),
-            ),
-          ],
-        ],
-      ),
-    );
 
 /// «★★★★★» for 4,6 and up, «★★★★☆» below: the export writes the stars as
 /// text and puts the number beside them.
@@ -452,6 +426,8 @@ String _stars(double? rating) {
   return '★' * full + '☆' * (5 - full);
 }
 
+/// 13b Annen profil. Their things are the point of the screen: it is where a
+/// loop gets closed from the other side.
 class OtherProfileScreen extends StatefulWidget {
   const OtherProfileScreen({super.key, required this.userId});
 
@@ -712,7 +688,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: ItemThumb(item, size: 400, radius: 16)),
-                      _caption(item),
+                      // Title and value on one line under a 166-wide picture, as 13 and
+          // 13b draw it.
+          ListingCaption(item, maxLines: 2),
                     ],
                   ),
                 );
@@ -815,37 +793,41 @@ class SettingsScreen extends StatelessWidget {
                     child: InkWell(
                       onTap: () => Navigator.of(context)
                           .push(MaterialPageRoute(builder: (_) => const AdminScreen())),
-                      child: SizedBox(
+                      child: ConstrainedBox(
                         // Two lines of type rather than the product rows' one,
                         // which is four pixels more than 48 and the reason this
-                        // is not `_tile`.
-                        height: 58,
-                        child: Row(
-                          children: [
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('Testverktøy',
-                                      style: TextStyle(
-                                          fontSize: 14.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: AdminColors.ink)),
-                                  Text('Kontoer · bygg et bytte · tilstand',
-                                      style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
-                                ],
+                        // is not `_tile`. At least that: larger text wraps the
+                        // second line, and a fixed 58 cut it off.
+                        constraints: const BoxConstraints(minHeight: 58),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('Testverktøy',
+                                        style: TextStyle(
+                                            fontSize: 14.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: AdminColors.ink)),
+                                    Text('Kontoer · bygg et bytte · tilstand',
+                                        style: TextStyle(fontSize: 11.5, color: AdminColors.muted)),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const Icon(Icons.chevron_right, size: 20, color: AdminColors.accent),
-                          ],
+                              const Icon(Icons.chevron_right, size: 20, color: AdminColors.accent),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const Divider(height: 1, color: AdminColors.hairline),
-                  SizedBox(
-                    height: 44,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 44),
                     child: Row(
                       children: [
                         Expanded(

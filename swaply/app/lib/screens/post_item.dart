@@ -1071,21 +1071,28 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2.2),
                         ),
                       )
-                    : const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('+',
-                              style: TextStyle(
-                                  fontSize: 26, height: 1, color: SwaplyColors.greenText)),
-                          SizedBox(height: 4),
-                          Text('Legg til bilder',
-                              style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: SwaplyColors.greenText)),
-                          Text('opptil 10',
-                              style: TextStyle(fontSize: 9, color: SwaplyColors.grey)),
-                        ],
+                    // Smaller rather than past the tile's edge when the text is
+                    // set large: the tile is the export's 106 square either way.
+                    : const Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('+',
+                                  style: TextStyle(
+                                      fontSize: 26, height: 1, color: SwaplyColors.greenText)),
+                              SizedBox(height: 4),
+                              Text('Legg til bilder',
+                                  style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: SwaplyColors.greenText)),
+                              Text('opptil 10',
+                                  style: TextStyle(fontSize: 9, color: SwaplyColors.grey)),
+                            ],
+                          ),
+                        ),
                       ),
               ),
             ),

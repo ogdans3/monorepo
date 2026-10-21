@@ -180,9 +180,23 @@ PreferredSizeWidget swaplyAppBar(BuildContext context, String title,
   // No title at all — 13b — and the row is just the two glyphs, 21 tall and
   // flush with the status bar.
   final bare = title.isEmpty;
-  final rowHeight = bare ? 21.0 : big ? 30.0 : 25.0;
+  // What a larger text setting adds to the export's lines, so the header
+  // grows with the words in it instead of cutting them: the title ran past
+  // its row and a subtitle under it was cut off at the foot. Nothing at the
+  // export's own size.
+  final scaler = MediaQuery.maybeTextScalerOf(context) ?? TextScaler.noScaling;
+  double grown(double size, double lineHeight) =>
+      math.max(0.0, (scaler.scale(size) - size) * lineHeight);
+  final rowHeight = bare
+      ? 21.0
+      : big
+          ? 30.0 + grown(26, 1.1)
+          : 25.0 + grown(22, 1.15);
   final top = bare ? 0.0 : 6.0;
-  final height = top + rowHeight + (under ? 18 : 0) + (big ? (under ? 4 : 14) : 0);
+  final height = top +
+      rowHeight +
+      (under ? 18 + grown(13, 1.2) : 0) +
+      (big ? (under ? 4 : 14) : 0);
   final left = showBack ? inset - 14 : inset;
   return PreferredSize(
     preferredSize: Size.fromHeight(height),
