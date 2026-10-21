@@ -214,6 +214,8 @@ void main() {
           isSemantics(label: '4', isSelected: true, isButton: true));
       expect(tester.getSemantics(find.text('3')),
           isSemantics(label: '3', isSelected: false, isButton: true));
+      semantics.dispose();
+    });
 
     testWidgets('7. the chip over Oppdag that is lit is selected, and the others are not',
         (tester) async {
