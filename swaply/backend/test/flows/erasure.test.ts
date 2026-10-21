@@ -98,9 +98,11 @@ describe('deleting an account', () => {
     expect(row!['bankid_subject']).toBe('bankid-subject-ola')
     expect(row!['reason']).toBe('legal_claims')
 
-    // Three years past the day the trade closed, not three years from now.
+    // Three years past the day the trade closed, not three years from now —
+    // the day in Norway, which is not the database's.
     const [expected] = await db.execute<Record<string, string>>(
-      sql`select (closed_at::date + interval '3 years')::date as d from trades where id = ${done}`,
+      sql`select ((closed_at at time zone 'Europe/Oslo')::date + interval '3 years')::date as d
+          from trades where id = ${done}`,
     )
     expect(String(row!['purge_after'])).toBe(String(expected!['d']))
   })

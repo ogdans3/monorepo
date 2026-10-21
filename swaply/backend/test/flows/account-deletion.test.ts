@@ -200,12 +200,13 @@ describe('deleting your own account', () => {
       expect(rows, table).toHaveLength(0)
     }
 
-    // Kept three years from today: Ola never completed a trade — the one he
-    // was in ended with his account — and a trade that went wrong is the
-    // claim the record is for.
+    // Kept three years from today, in Norway: Ola never completed a trade —
+    // the one he was in ended with his account — and a trade that went wrong
+    // is the claim the record is for.
     const [sealed] = await db.execute<Record<string, string | boolean | null>>(
       sql`select email, reason,
-                 purge_after = (current_date + interval '3 years')::date as from_deletion
+                 purge_after = ((now() at time zone 'Europe/Oslo')::date + interval '3 years')::date
+                   as from_deletion
           from retained.identities where user_id = ${olaId}`,
     )
     expect(sealed).toEqual({ email: 'ola@epost.no', reason: 'user_request', from_deletion: true })

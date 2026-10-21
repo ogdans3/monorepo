@@ -9,6 +9,23 @@ import { endTrade } from './trades.js'
 type Row = Record<string, string | null>
 
 /**
+ * The limitation period in foreldelsesloven § 2: how long a claim over a
+ * trade can be brought, and so how long what it would need is kept.
+ */
+const CLAIM_WINDOW = '3 years'
+
+/**
+ * The day [instant] falls on in Norway.
+ *
+ * A claim window is counted in days, and the days are Norwegian ones. The
+ * database's clock is UTC, so `::date` on a timestamp, or `current_date`,
+ * is the day in London: a trade finished at half past midnight on the 22nd
+ * was sealed as finished on the 21st, and its record went a day before its
+ * last day was over — the day that by the rule is still inside.
+ */
+export const osloDate = (instant: SQL) => sql`(${instant} at time zone 'Europe/Oslo')::date`
+
+/**
  * Delete an account, in the two layers Article 17 actually allows.
  *
  * The profile is emptied at once, which is what the person asked for. A minimal
@@ -117,11 +134,11 @@ export async function anonymiseUser(
       select u.id, u.bankid_subject, u.email, u.phone, u.display_name,
              ${opts.reason ?? 'legal_claims'},
              (coalesce(
-                (select max(t.closed_at)::date from trades t
+                (select max(${osloDate(sql`t.closed_at`)}) from trades t
                  join trade_participants p on p.trade_id = t.id
                  where p.user_id = u.id and t.state = 'completed'),
-                current_date
-              ) + interval '3 years')::date
+                ${osloDate(sql`now()`)}
+              ) + ${CLAIM_WINDOW}::interval)::date
       from users u
       where u.id = ${userId}
         -- Nothing to seal, no row: a device that never made a profile.
@@ -274,7 +291,36 @@ export async function eraseInactiveDevices(
  */
 export async function purgeRetained(db: Database): Promise<number> {
   const result = await db.execute(
-    sql`delete from retained.identities where purge_after < current_date`,
+    sql`delete from retained.identities where purge_after < ${osloDate(sql`now()`)}`,
+  )
+  return result.count
+}
+
+/**
+ * Let go of the photograph a completed trade kept of what was traded, once
+ * the claim window over that trade has closed.
+ *
+ * A trade owns a copy of what was traded so that its history outlives the
+ * listings, and one picture comes with it — the counterparty's record of what
+ * they got, which erasure leaves on disk for exactly that reason. «At the
+ * retention horizon the image goes and the text stays» (`docs/ARCHITECTURE.md`):
+ * the title, the value and who gave what are what a history needs, and a
+ * photograph of somebody's living room is not. Nothing did this, so every
+ * such picture was kept for ever, and an erased account's lived on at its
+ * address for anybody holding the link.
+ *
+ * Only the pointer goes here, by the same Norwegian day the sealed record is
+ * counted in: the last day is still inside. The bytes go with the media
+ * sweep, which deletes a file once neither a listing nor a snapshot points
+ * at it — a listing still showing the same picture keeps it.
+ */
+export async function dropSnapshotCovers(db: Database): Promise<number> {
+  const result = await db.execute(
+    sql`update trade_item_snapshots s set cover_url = null
+        from trades t
+        where t.id = s.trade_id and s.cover_url is not null and t.closed_at is not null
+          and (${osloDate(sql`t.closed_at`)} + ${CLAIM_WINDOW}::interval)::date
+              < ${osloDate(sql`now()`)}`,
   )
   return result.count
 }
