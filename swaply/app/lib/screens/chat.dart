@@ -404,8 +404,10 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
         // tall, centred where the row was, so nothing moves.
         title: TapArea(
           onTap: () => _openPerson(thread),
-          child: SizedBox(
-            height: kTapTarget,
+          // At least a finger tall, and taller when the name and the line
+          // under it need it at a large text size, which a fixed 44 clipped.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: kTapTarget),
             child: Row(
               children: [
                 for (final p in faces)
@@ -437,63 +439,80 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            if (thread.kind == 'chain' && _trade != null) _ringSummary(_trade!),
-            if (thread.banner != null)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(Insets.screen, 0, Insets.screen, Insets.sm),
-                padding: const EdgeInsets.all(Insets.md),
-                decoration: BoxDecoration(
-                  color: SwaplyColors.amberSoft,
-                  borderRadius: BorderRadius.circular(Radii.card),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.info_outline, size: 18, color: SwaplyColors.amber),
-                    const SizedBox(width: Insets.sm),
-                    Expanded(
-                      child: Text(_banner(thread),
-                          style: const TextStyle(
-                              fontSize: 12.5, height: 1.4, color: SwaplyColors.amber)),
+        child: LayoutBuilder(
+          builder: (context, box) => Column(
+            children: [
+              // 07k's summary and banner stay over the conversation, but take
+              // a third of its height at most and scroll inside it: on a small
+              // phone with the keyboard up, or at a large text size, they
+              // pushed the field and «Send» under the keyboard.
+              if ((thread.kind == 'chain' && _trade != null) || thread.banner != null)
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: box.maxHeight / 3),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        if (thread.kind == 'chain' && _trade != null) _ringSummary(_trade!),
+                        if (thread.banner != null) _bannerCard(thread),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            Expanded(
-              // Pulled down, it asks at once, as every list in the app does,
-              // and says so in a toast when there is no answer.
-              child: RefreshIndicator(
-                onRefresh: _load,
-                child: ListView.builder(
-                  controller: _scroll,
-                  // A short conversation can be pulled as well.
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                  itemCount: thread.messages.length,
-                  itemBuilder: (context, i) => Column(
-                    children: [
-                      if (i == 0) _dayLabel(thread.messages[i].createdAt),
-                      _bubble(thread.messages[i], thread.kind == 'chain',
-                          read: read && identical(thread.messages[i], newestMine)),
-                    ],
+              Expanded(
+                // Pulled down, it asks at once, as every list in the app does,
+                // and says so in a toast when there is no answer.
+                child: RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.builder(
+                    controller: _scroll,
+                    // A short conversation can be pulled as well.
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                    itemCount: thread.messages.length,
+                    itemBuilder: (context, i) => Column(
+                      children: [
+                        if (i == 0) _dayLabel(thread.messages[i].createdAt),
+                        _bubble(thread.messages[i], thread.kind == 'chain',
+                            read: read && identical(thread.messages[i], newestMine)),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            // What a refusal of «Send» is about, so its toast goes up over
-            // the composer rather than on it.
-            if (_trade?.conversationClosed ?? false)
-              _closed(_trade!)
-            else
-              KeepClear(child: _composer()),
-          ],
+              // What a refusal of «Send» is about, so its toast goes up over
+              // the composer rather than on it.
+              if (_trade?.conversationClosed ?? false)
+                _closed(_trade!)
+              else
+                KeepClear(child: _composer()),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  /// 07k's banner: Swaply is not part of a ring, fixed and not to be closed.
+  Widget _bannerCard(Thread thread) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(Insets.screen, 0, Insets.screen, Insets.sm),
+        padding: const EdgeInsets.all(Insets.md),
+        decoration: BoxDecoration(
+          color: SwaplyColors.amberSoft,
+          borderRadius: BorderRadius.circular(Radii.card),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.info_outline, size: 18, color: SwaplyColors.amber),
+            const SizedBox(width: Insets.sm),
+            Expanded(
+              child: Text(_banner(thread),
+                  style: const TextStyle(fontSize: 12.5, height: 1.4, color: SwaplyColors.amber)),
+            ),
+          ],
+        ),
+      );
 
   /// 07k's card over the conversation: who gives what to whom, with the
   /// things side by side. A ring is agreed in words, so the words of it

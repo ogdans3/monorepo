@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/api/models.dart';
+import 'package:swaply_app/screens/chat.dart';
 import 'package:swaply_app/screens/review.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/state/session.dart';
@@ -168,5 +169,72 @@ void main() {
       expect(position.maxScrollExtent, 0);
       expect(find.text('Byttet er gjennomført!'), findsOneWidget);
     });
+  });
+
+  group('07k, a ring\'s conversation', () {
+    setUp(() {
+      server.overrides['GET /trades/trade-1'] = chainTrade();
+      server.overrides['GET /threads/thread-1'] = {
+        ...FakeServer.thread,
+        'kind': 'chain',
+        'banner': 'Swaply fasiliterer ikke dette byttet. Dere avtaler overlevering, mellomlegg '
+            'og eventuell frakt selv i denne chatten.',
+        'participants': [
+          {'id': 'me-1', 'displayName': 'Ola N.', 'position': 0},
+          {'id': 'kari-1', 'displayName': 'Kari N.', 'position': 1},
+          {'id': 'per-1', 'displayName': 'Per H.', 'position': 2},
+        ],
+      };
+    });
+
+    /// The field and «Send» are above the keyboard, all of them.
+    void composerClear(WidgetTester tester, Phone phone, double keyboard) {
+      for (final target in [find.byType(TextField), find.text('Send')]) {
+        final rect = tester.getRect(target);
+        expect(rect.bottom, lessThanOrEqualTo(phone.size.height - keyboard));
+        expect(rect.top, greaterThanOrEqualTo(0));
+      }
+    }
+
+    for (final scale in [1.0, 1.3]) {
+      testWidgets('on 320×568 with the keyboard up at ${scale}x, the field is over it',
+          (tester) async {
+        await hold(tester, small, const ThreadScreen(threadId: 'thread-1'),
+            scale: scale, keyboard: 260);
+
+        expect(tester.takeException(), isNull);
+        composerClear(tester, small, 260);
+        // Still fixed over the conversation, and still the export's words.
+        expect(find.textContaining('Swaply fasiliterer ikke dette byttet'), findsOneWidget);
+      });
+    }
+
+    for (final phone in [small, se]) {
+      testWidgets('on ${phone.name} at twice the text size, the field is on screen',
+          (tester) async {
+        await hold(tester, phone, const ThreadScreen(threadId: 'thread-1'), scale: 2);
+
+        expect(tester.takeException(), isNull);
+        composerClear(tester, phone, 0);
+      });
+    }
+
+    testWidgets('…and at the export\'s size the summary and the banner are whole', (tester) async {
+      await hold(tester, (name: '390×844', size: const Size(390, 844), statusBar: 46),
+          const ThreadScreen(threadId: 'thread-1'));
+
+      // Nothing in them scrolls: the third they may take is room to spare.
+      final inner = tester.state<ScrollableState>(find.ancestor(
+          of: find.textContaining('Swaply fasiliterer ikke'), matching: find.byType(Scrollable)));
+      expect(inner.position.maxScrollExtent, 0);
+    });
+  });
+
+  testWidgets('06g\'s header grows with the text rather than clipping the line under the name',
+      (tester) async {
+    await hold(tester, small, const ThreadScreen(threadId: 'thread-1'), scale: 1.5);
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('· under avtale'), findsOneWidget);
   });
 }
