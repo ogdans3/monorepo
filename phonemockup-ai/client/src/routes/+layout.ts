@@ -13,7 +13,7 @@ function withoutSearch(url: unknown) {
   }
 }
 
-export const load = async ({ data }) => {
+export const load = async () => {
   if (browser) {
     posthog.init("phc_d6q9UL8mxg9gzlDXUcEz4azOSxawQ4nYGDTUI1n4p57", {
       api_host: "https://e.phonemockup.app",
@@ -35,7 +35,4 @@ export const load = async ({ data }) => {
       },
     });
   }
-
-  // Preserve server-provided runtime configuration for the root layout.
-  return data;
 };

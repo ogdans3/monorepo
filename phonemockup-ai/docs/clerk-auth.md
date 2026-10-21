@@ -65,8 +65,10 @@ To repeat setup on another machine:
    configuration and inject its **production publishable key** into the client
    container as `CLERK_PUBLISHABLE_KEY`. `PUBLIC_CLERK_PUBLISHABLE_KEY` and
    `VITE_CLERK_PUBLISHABLE_KEY` are also supported. Configuration is read at runtime:
-   the Docker image does not need keys at build time. Only this public key is returned
-   by `+layout.server.ts`. The client container does not need a secret key.
+   the Docker image does not need keys at build time. Only this public key reaches
+   the browser: `src/hooks.server.ts` writes it into a `<meta>` tag in every page
+   (there is no server load, so client-rendered pages never fetch `__data.json`).
+   The client container does not need a secret key.
 5. For the Express API, set `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `APP_URL`
    (the exact browser origin, e.g. `https://phonemockup.app`). Keep the existing
    database, B2, and Secret Manager configuration. Never expose the secret key through

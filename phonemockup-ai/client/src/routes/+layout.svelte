@@ -6,7 +6,13 @@
   import { page } from "$app/state";
   import { initializeAuth } from "$lib/auth/clerk.svelte";
 
-  let { children, data } = $props();
+  let { children } = $props();
+
+  /** Written into the page by hooks.server.ts; empty when Clerk isn't set up. */
+  function clerkPublishableKey() {
+    const key = document.querySelector('meta[name="clerk-publishable-key"]')?.getAttribute("content") ?? "";
+    return key.startsWith("%") ? "" : key;
+  }
 
   // Clerk is some 570 KB of script and five third-party requests. The
   // landing page and the guides need it only to show the avatar of someone
@@ -17,7 +23,7 @@
   }
   $effect(() => {
     if (/^\/(sign-in|sign-up|platform)(\/|$)/.test(page.url.pathname) || signedIn()) {
-      void initializeAuth(data.clerkPublishableKey);
+      void initializeAuth(clerkPublishableKey());
     }
   });
 </script>
