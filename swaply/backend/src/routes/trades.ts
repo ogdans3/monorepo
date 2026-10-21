@@ -114,7 +114,15 @@ export default async function tradeRoutes(app: FastifyInstance) {
     const { id } = idParam.parse(request.params)
     const body = z
       .object({
-        termsVersion: z.string().default(TERMS_VERSION),
+        // What the person ticked on 06c, which is the record of the yes and
+        // has to say something: an empty one, or a page of text, was stored
+        // as it came. The counter-offer's has the same bounds.
+        termsVersion: z
+          .string()
+          .min(1)
+          .max(40)
+          .nullish()
+          .transform((v) => v ?? TERMS_VERSION),
         // The version 06c showed. Absent, the yes is for the newest, which is
         // what an app from before this sends.
         offerId: z.string().uuid().nullish(),

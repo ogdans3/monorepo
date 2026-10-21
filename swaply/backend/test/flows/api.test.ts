@@ -3,6 +3,7 @@
 // Two people sign up on screen 10c, list things on 10b, find each other on 05,
 // like on 04, negotiate on 09a, accept on 06c, hand over on 06f and rate each
 // other on 06h. If this passes, every screen has an endpoint behind it.
+import { sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
@@ -336,6 +337,20 @@ describe('the whole journey over HTTP', () => {
     const titles = res.body!['yours'].map((i: Json) => i['title'])
     expect(titles).toContain('Sykkelhjelm')
     expect(res.body!['yours'].every((i: Json) => i['lockedByOtherTrade'] === false)).toBe(true)
+  })
+
+  test('06c — a yes says which terms it was given for, and it says something', async () => {
+    // The terms version is the record of what was ticked. An empty one, or a
+    // page of text, was stored as it came; the counter-offer's was bounded.
+    for (const termsVersion of ['', 'x'.repeat(41)]) {
+      const res = await call('POST', `/trades/${tradeId}/accept`, { token: ola, body: { termsVersion } })
+      expect(res.status, JSON.stringify(termsVersion.length)).toBe(400)
+    }
+    const yes = await db.execute(
+      sql`select 1 from trade_acceptances a join trade_offers o on o.id = a.offer_id
+          where o.trade_id = ${tradeId}`,
+    )
+    expect(yes).toHaveLength(0)
   })
 
   test('06c — accepting reserves only your own things', async () => {
