@@ -116,6 +116,11 @@ describe('a photograph on a listing', () => {
     expect(served.statusCode).toBe(200)
     expect(served.headers['content-type']).toBe('image/png')
     expect(served.headers['cache-control']).toContain('immutable')
+    // Kept by the browser that fetched it, and by no shared cache: the bytes
+    // can be deleted (an erasure, the end of a claim window), and the API is
+    // served through Cloudflare, which held a `public` picture for the year
+    // it was told after the file was gone.
+    expect(served.headers['cache-control']).toMatch(/^private,/)
     expect(served.rawPayload.equals(PNG)).toBe(true)
 
     // No session was needed: the page behind a shared link has none.
