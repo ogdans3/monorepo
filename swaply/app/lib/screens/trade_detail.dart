@@ -630,8 +630,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ],
 
         const SizedBox(height: 7),
-        _valueSummary(gotCopy == null ? trade.youGetValue : _sum(got),
-            gaveCopy == null ? trade.youGiveValue : _sum(gave)),
+        _valueSummary(
+            anyUnvalued(got) ? null : gotCopy == null ? trade.youGetValue : _sum(got),
+            anyUnvalued(gave) ? null : gaveCopy == null ? trade.youGiveValue : _sum(gave)),
       ],
       // Not on an ended trade: there is nothing left to pay, and «betales
       // når begge har godtatt» was a promise about a trade that is over.
@@ -1203,8 +1204,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   /// «Du får · verdi 1 200 kr» left, the difference in the middle, «Du gir ·
   /// verdi 850 kr» right — a line, not a card. The server's sums, or a
   /// finished trade's copy's, whichever the cards above it are drawn from.
-  Widget _valueSummary(int getValue, int giveValue) {
-    final difference = (getValue - giveValue).abs();
+  /// Null is a side with a thing on it whose value nobody gave: «verdi ikke
+  /// oppgitt», and no difference, since nobody has said what it is worth.
+  Widget _valueSummary(int? getValue, int? giveValue) {
+    final difference =
+        getValue == null || giveValue == null ? 0 : (getValue - giveValue).abs();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
@@ -1220,12 +1224,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     );
   }
 
-  Widget _valueCell(String label, Color colour, int value, {bool end = false}) => Text.rich(
+  Widget _valueCell(String label, Color colour, int? value, {bool end = false}) => Text.rich(
         TextSpan(children: [
           TextSpan(
               text: '$label ',
               style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
-          TextSpan(text: 'verdi ${kr(value)}'),
+          TextSpan(text: value == null ? 'verdi ikke oppgitt' : 'verdi ${kr(value)}'),
         ]),
         textAlign: end ? TextAlign.end : TextAlign.start,
         style: const TextStyle(fontSize: 12, color: SwaplyColors.inkMuted),

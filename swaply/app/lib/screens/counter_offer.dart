@@ -132,8 +132,9 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
   @override
   Widget build(BuildContext context) {
     final other = widget.trade.receivingFrom.displayName.split(' ').first;
-    final getValue = _sum(_selectedTheirs);
-    final giveValue = _sum(_selectedMine);
+    // Null for a side with a thing on it whose value nobody gave.
+    final getValue = anyUnvalued(_selectedTheirs) ? null : _sum(_selectedTheirs);
+    final giveValue = anyUnvalued(_selectedMine) ? null : _sum(_selectedMine);
 
     return Scaffold(
       appBar: swaplyAppBar(context, 'Motbytte', subtitle: 'Til $other'),
@@ -162,9 +163,10 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                           child: Row(
                             children: [
                               Expanded(child: _value('Du får', SwaplyColors.greenText, getValue)),
-                              Text('differanse ${kr((getValue - giveValue).abs())}',
-                                  style: const TextStyle(
-                                      fontSize: 11, color: SwaplyColors.greyLight)),
+                              if (getValue != null && giveValue != null)
+                                Text('differanse ${kr((getValue - giveValue).abs())}',
+                                    style: const TextStyle(
+                                        fontSize: 11, color: SwaplyColors.greyLight)),
                               Expanded(
                                   child: _value('Du gir', SwaplyColors.amberText, giveValue,
                                       end: true)),
@@ -215,10 +217,10 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
     );
   }
 
-  Widget _value(String label, Color colour, int value, {bool end = false}) => Text.rich(
+  Widget _value(String label, Color colour, int? value, {bool end = false}) => Text.rich(
         TextSpan(children: [
           TextSpan(text: '$label ', style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
-          TextSpan(text: 'verdi ${kr(value)}'),
+          TextSpan(text: value == null ? 'verdi ikke oppgitt' : 'verdi ${kr(value)}'),
         ]),
         textAlign: end ? TextAlign.end : TextAlign.start,
         style: const TextStyle(fontSize: 12, color: SwaplyColors.inkMuted),

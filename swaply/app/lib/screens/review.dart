@@ -67,9 +67,17 @@ class TradeCompletedScreen extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _value(kr(trade.youGetValue + cashIn),
+                          // «Ikke oppgitt» where a thing has no value given:
+                          // summed as nought, it was a value nobody said.
+                          _value(
+                              anyUnvalued(trade.youGet)
+                                  ? 'Ikke oppgitt'
+                                  : kr(trade.youGetValue + cashIn),
                               cashIn > 0 ? 'verdi inn, med mellomlegg' : 'verdi inn'),
-                          _value(kr(trade.youGiveValue + cashOut),
+                          _value(
+                              anyUnvalued(trade.youGive)
+                                  ? 'Ikke oppgitt'
+                                  : kr(trade.youGiveValue + cashOut),
                               cashOut > 0 ? 'verdi ut, med mellomlegg' : 'verdi ut'),
                         ],
                       ),

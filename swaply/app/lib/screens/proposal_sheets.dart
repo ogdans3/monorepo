@@ -53,7 +53,15 @@ class _ProposalSheetState extends State<_ProposalSheet> {
   List<Item> _mine = const [];
   List<Item> _theirs = const [];
   Item? _chosen;
-  late int _amount = widget.trade.cash?.amountNok ?? widget.trade.difference;
+  late int _amount = widget.trade.cash?.amountNok ?? _difference ?? 0;
+
+  /// The difference between the two sides, or null where a thing on either
+  /// has no value given: the server's sum counts it as nought, and the
+  /// difference that makes is one nobody has said.
+  int? get _difference =>
+      anyUnvalued(widget.trade.youGet) || anyUnvalued(widget.trade.youGive)
+          ? null
+          : widget.trade.difference;
   late bool _iPay = widget.trade.cash?.youPay ?? (widget.trade.youGetValue > widget.trade.youGiveValue);
   bool _loading = true;
   bool _busy = false;
@@ -264,7 +272,10 @@ class _ProposalSheetState extends State<_ProposalSheet> {
   String _cashBlurb() {
     final trade = widget.trade;
     final get = trade.youGet, give = trade.youGive;
-    if (get.isEmpty || give.isEmpty || trade.youGetValue + trade.youGiveValue == 0) {
+    if (get.isEmpty ||
+        give.isEmpty ||
+        _difference == null ||
+        trade.youGetValue + trade.youGiveValue == 0) {
       return 'Mellomlegget avtales mellom dere og betales utenfor appen.';
     }
     final difference = 'Differansen er ${kr(trade.difference)}.';
@@ -381,7 +392,7 @@ class _ProposalSheetState extends State<_ProposalSheet> {
             spacing: Insets.sm,
             alignment: WrapAlignment.center,
             children: [
-              for (final amount in {100, widget.trade.difference, 400}
+              for (final amount in {100, ?_difference, 400}
                   .where((a) => a > 0)
                   .toList()
                 ..sort())

@@ -20,6 +20,11 @@ String andList(List<String> parts) => parts.length < 2
     ? (parts.isEmpty ? '' : parts.single)
     : '${parts.sublist(0, parts.length - 1).join(', ')} og ${parts.last}';
 
+/// Whether any of [items] has no value given. A side with one is not worth
+/// the sum of the others: summed as nought, it read «Du får verdi 0 kr» with a
+/// difference as if the other side gave away something worthless.
+bool anyUnvalued(Iterable<Item> items) => items.any((i) => i.estimatedValueNok == null);
+
 /// [n] of something, in the singular for one: «1 bytte», «3 bytter». A
 /// count read off the server used to keep the plural for one, «1 bytter».
 String counted(int n, String one, String many) => n == 1 ? '1 $one' : '$n $many';
