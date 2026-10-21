@@ -208,6 +208,10 @@
   }
 
   .from {
+    /* A flex child, so it may be narrower than its longest word, and that
+       word breaks rather than pushing the page sideways. */
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: var(--on-green-soft);
     font-size: 0.95rem;
   }
@@ -293,6 +297,12 @@
     font-size: clamp(2.1rem, 5.5vw, 3.1rem);
     font-weight: 700;
     color: var(--green-deep);
+    /* Norwegian joins words: «Oppvaskmaskinkurvhjul» is one, and at this size
+       it is wider than a phone. Hyphenated where the browser knows how, and
+       broken anyway where it does not, rather than cut off at the edge with
+       the whole page dragging sideways. */
+    hyphens: auto;
+    overflow-wrap: anywhere;
   }
 
   .value {
@@ -337,6 +347,16 @@
     align-items: center;
     gap: 0.7rem;
     font-weight: 600;
+  }
+
+  /* Whatever the owner typed — the name beside the mark, the words, the
+     subcategory — wraps inside the column, however long a word in it is. */
+  .owner span:last-child,
+  .description,
+  .facts li,
+  .empty-what {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .avatar {
