@@ -54,6 +54,30 @@ export default async function miscRoutes(app: FastifyInstance) {
 
   app.post('/notifications/read', async (request, reply) => {
     const userId = app.requireUser(request)
+    const body = z
+      .object({
+        // The newest notification the screen had in front of it. Without
+        // it, everything is marked read, including whatever arrived between
+        // loading 12a and saying so — what the app as released sends, and
+        // what this did for everybody. The same as `upTo` on a thread.
+        upTo: z.string().uuid().nullish(),
+      })
+      .parse(request.body ?? {})
+
+    if (body.upTo) {
+      const seen = await one(
+        app.db,
+        sql`select created_at from notifications where id = ${body.upTo} and user_id = ${userId}`,
+      )
+      if (!seen) throw notFound('Fant ikke varselet.')
+      await app.db.execute(
+        sql`update notifications set read_at = now()
+            where user_id = ${userId} and read_at is null
+              and created_at <= (select created_at from notifications where id = ${body.upTo})`,
+      )
+      return reply.code(204).send()
+    }
+
     await app.db.execute(
       sql`update notifications set read_at = now() where user_id = ${userId} and read_at is null`,
     )

@@ -5,7 +5,7 @@ import { mediaUrl } from '../lib/media.js'
 import { coverSql, iso, many, num, uuidArray, type Row } from '../lib/rows.js'
 import { publicItem, publicUser } from '../routes/serialize.js'
 import type { CloseCode } from './close.js'
-import type { LastMessage } from './conversation.js'
+import { closedReason, type Closed, type LastMessage } from './conversation.js'
 
 /**
  * Everything the trade screens render, from one viewer's point of view.
@@ -38,7 +38,7 @@ function byKey(rows: Row[], key: string): Map<string, Row[]> {
  * [tradeView] for several trades at once, in the order given, leaving out any
  * that does not exist or that [viewerId] is not in.
  *
- * Eleven statements for the whole list rather than eleven per trade. Screen
+ * Twelve statements for the whole list rather than twelve per trade. Screen
  * 11 lists every trade a person has ever been in, finished ones included,
  * and anybody can add one to somebody else's list by writing about a listing
  * and declining, over and over: built one trade at a time, 300 of them took
@@ -129,6 +129,19 @@ export async function tradeViews(db: Database, tradeIds: string[], viewerId: str
     ]),
   )
 
+  // Whether the viewer can still write in each conversation, by the rule a
+  // message is refused by (`closedReason`), so the card on the trade page
+  // can give way to a line before «Send» is pressed, as 06g does.
+  const closedOf = new Map(
+    (
+      await many(
+        db,
+        sql`select th.id, ${closedReason(sql`th.id`, sql`${viewerId}::uuid`)} as closed
+            from threads th where th.id = any(${uuidArray([...threads.values()])})`,
+      )
+    ).map((t) => [t['id'] as string, (t['closed'] as Closed) ?? null]),
+  )
+
   const withdrawals = new Map(
     (
       await many(
@@ -176,6 +189,7 @@ export async function tradeViews(db: Database, tradeIds: string[], viewerId: str
       acceptances: offer ? (acceptancesOf.get(offer['id']) ?? []) : [],
       threadId,
       lastMessage: threadId ? (lastOf.get(threadId) ?? null) : null,
+      conversationClosed: threadId ? (closedOf.get(threadId) ?? null) : null,
       withdrawal: withdrawals.get(tradeId) ?? null,
       snapshots: snapshotsOf.get(tradeId) ?? [],
       myReview: reviews.get(tradeId) ?? null,
@@ -196,12 +210,13 @@ function buildView(rows: {
   acceptances: Row[]
   threadId: string | null
   lastMessage: LastMessage | null
+  conversationClosed: Closed
   withdrawal: Row | null
   snapshots: Row[]
   myReview: Row | null
 }) {
   const { viewerId, trade, participants, offer, offerItems, cash, acceptances } = rows
-  const { threadId, lastMessage, withdrawal, snapshots, myReview } = rows
+  const { threadId, lastMessage, conversationClosed, withdrawal, snapshots, myReview } = rows
 
   const me = participants.find((p) => p['user_id'] === viewerId)
   if (!me) return null
@@ -304,6 +319,8 @@ function buildView(rows: {
 
     threadId,
     lastMessage,
+    // `closed` on GET /threads/:id, for the conversation card on this page.
+    conversationClosed,
 
     withdrawal: withdrawal
       ? {
