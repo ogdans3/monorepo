@@ -403,6 +403,10 @@ _Shown _present(ScaffoldMessengerState messenger, ToastTone tone, String message
     ),
     // A way back needs time to be found as well as read.
     duration: Duration(seconds: action == null ? marks.seconds : math.max(marks.seconds, 5)),
+    // And with a screen reader on, as long as it takes: «Angre» after «Ikke
+    // vis meg slike» is the one way back, and five seconds is not enough to
+    // find it by swiping. It stays until it is pressed or put away.
+    persist: action != null && MediaQuery.accessibleNavigationOf(messenger.context),
     backgroundColor: Colors.transparent,
     elevation: 0,
     padding: EdgeInsets.zero,

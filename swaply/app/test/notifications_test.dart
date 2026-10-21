@@ -105,7 +105,7 @@ void main() {
     for (final (reason, words) in [
       ('declined', 'Noen i byttet avslo det.'),
       ('withdrawn_early', 'Noen i byttet trakk seg før det var godtatt.'),
-      ('displaced', 'En av tingene i byttet ble reservert i et annet bytte.'),
+      ('displaced', 'En av tingene i byttet er med i et annet bytte nå.'),
       ('withdrawal_approved', 'Dere ble enige om å avbryte det.'),
       ('blocked', 'Det kan ikke fortsette mellom dere.'),
       ('listing_removed', 'En av tingene i byttet ble tatt ned.'),

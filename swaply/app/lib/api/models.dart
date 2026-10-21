@@ -466,6 +466,10 @@ class Trade {
   /// An owner took down a listing that was on the table.
   static const closedByListingRemoved = 'listing_removed';
 
+  /// A thing on the table went to another trade: held there by its owner's
+  /// yes, or given away when that one was completed.
+  static const closedByDisplacement = 'displaced';
+
   /// Why nobody can write in this trade's conversation any more —
   /// [Thread.closedByBlock] or [Thread.closedByErasure] — or null while
   /// «Send» works. The server's word (`conversationClosed`), by the rule it

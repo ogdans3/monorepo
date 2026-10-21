@@ -76,6 +76,43 @@ void main() {
     expect(tester.widget<Icon>(find.byIcon(Icons.info_outline)).color, SwaplyColors.inkBody);
   });
 
+  group('with a screen reader on', () {
+    // «Angre» after «Ikke vis meg slike» is the one way back, and went in
+    // five seconds, sooner than a screen reader is swiped to it.
+    testWidgets('a toast with «Angre» stays until it is pressed', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(accessibleNavigation: true);
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      var undone = false;
+      await mount(
+          tester,
+          (context) => showDone(context, 'Vi viser deg ikke flere slike.',
+              action: ToastAction('Angre', () => undone = true)));
+      // In, and then long past its five seconds.
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 30));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Angre'), findsOneWidget);
+      await tester.tap(find.text('Angre'));
+      await tester.pumpAndSettle();
+      expect(undone, isTrue);
+      expect(find.byType(SwaplyToast), findsNothing);
+    });
+
+    testWidgets('…and one without goes as it always did', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(accessibleNavigation: true);
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      await mount(tester, (context) => showDone(context, 'Lagt ut.'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 30));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SwaplyToast), findsNothing);
+    });
+  });
+
   testWidgets('a second refusal replaces the first rather than queueing behind it',
       (tester) async {
     await tester.pumpWidget(MaterialApp(

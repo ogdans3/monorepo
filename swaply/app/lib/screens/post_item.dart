@@ -777,8 +777,11 @@ class _PostItemScreenState extends State<PostItemScreen> {
                   alignment: Alignment.centerLeft,
                   child: TapRoom(
                     room: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    // A second row for «Tjeneste» rather than past the edge,
+                    // where it ran at 200 % on a 320 phone.
+                    child: Wrap(
+                      spacing: Insets.sm,
+                      runSpacing: Insets.sm,
                       children: [
                         _pick('Gjenstand', _kind == 'item', () {
                           // With the condition it had as a thing. Made a
@@ -791,7 +794,6 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           });
                           _changed();
                         }),
-                        const SizedBox(width: Insets.sm),
                         _pick('Tjeneste', _kind == 'service', () {
                           // A service has no condition, and it is never reserved.
                           setState(() {
@@ -818,6 +820,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
                           child: DropdownButtonFormField<String>(
                             initialValue: _category,
                             isDense: true,
+                            // The chosen category gives way to the arrow, and
+                            // not past the field's edge at 200 % on a 320.
+                            isExpanded: true,
                             // Not `_fieldText`: a dropdown swaps the ambient
                             // text style for its own, so the family has to
                             // come along explicitly.
@@ -1059,7 +1064,11 @@ class _PostItemScreenState extends State<PostItemScreen> {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            GestureDetector(
+            // A button to a screen reader, which a GestureDetector does not say.
+            Semantics(
+              button: true,
+              enabled: _photos.length < 10,
+              child: GestureDetector(
               onTap: _photos.length >= 10 ? null : _addPhoto,
               child: Container(
                 width: 106,
@@ -1101,6 +1110,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                       ),
               ),
             ),
+            ),
             ..._photos.asMap().entries.map((entry) => Padding(
                   padding: const EdgeInsets.only(left: Insets.sm),
                   child: Stack(
@@ -1116,7 +1126,7 @@ class _PostItemScreenState extends State<PostItemScreen> {
                             initial: entry.key),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(Radii.card),
-                          child: _thumbnail(entry.value),
+                          child: _thumbnail(entry.value, entry.key),
                         ),
                       ),
                       if (identical(entry.value, _refused))
@@ -1141,7 +1151,9 @@ class _PostItemScreenState extends State<PostItemScreen> {
                               color: SwaplyColors.greenDeep,
                               borderRadius: BorderRadius.circular(Radii.pill),
                             ),
+                            // Said with the picture's name, «Bilde 1, forside».
                             child: const Text('Forside',
+                                semanticsLabel: '',
                                 style: TextStyle(
                                     color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
                           ),
@@ -1187,15 +1199,20 @@ class _PostItemScreenState extends State<PostItemScreen> {
   }
 
   /// From memory while the bytes are on the phone, from the server otherwise.
-  Widget _thumbnail(ListingPhoto photo) {
+  /// [at] counts from nought; the first is the cover, as its badge says.
+  Widget _thumbnail(ListingPhoto photo, int at) {
     Widget blank(BuildContext _, Object _, StackTrace? _) =>
         Container(height: 106, width: 106, color: SwaplyColors.greenSoft);
+    // Named for a screen reader, which said «bilde» and nothing more.
+    final label = at == 0 ? 'Bilde 1, forside' : 'Bilde ${at + 1}';
     final bytes = photo.bytes;
     if (bytes != null) {
       return Image.memory(bytes,
+          semanticLabel: label,
           height: 106, width: 106, fit: BoxFit.cover, errorBuilder: blank);
     }
     return Image.network(photo.stored!.url,
+        semanticLabel: label,
         height: 106, width: 106, fit: BoxFit.cover, errorBuilder: blank);
   }
 

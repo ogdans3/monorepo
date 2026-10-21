@@ -115,7 +115,7 @@ void main() {
       final button = tester.getRect(find.widgetWithText(FilledButton, 'Se byttet'));
       // The foot of the table — the two names under the cards — clears the
       // button, and every card is inside the screen.
-      for (final who in ['Du · 2 ting', 'Kari']) {
+      for (final who in ['Du', ' · 2 ting', 'Kari']) {
         expect(tester.getRect(find.text(who)).bottom, lessThanOrEqualTo(button.top), reason: who);
       }
       for (final card in tester.widgetList<ItemThumb>(find.byType(ItemThumb))) {

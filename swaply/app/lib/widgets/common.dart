@@ -14,6 +14,37 @@ import 'toast.dart' show KeepClear;
 // already imports this file, and the toast itself is its own thing.
 export 'toast.dart';
 
+/// A list as a sentence says it: «A», «A og B», «A, B og C». Joined with
+/// «og» between every one, three things read «A og B og C».
+String andList(List<String> parts) => parts.length < 2
+    ? (parts.isEmpty ? '' : parts.single)
+    : '${parts.sublist(0, parts.length - 1).join(', ')} og ${parts.last}';
+
+/// Whether any of [items] has no value given. A side with one is not worth
+/// the sum of the others: summed as nought, it read «Du får verdi 0 kr» with a
+/// difference as if the other side gave away something worthless.
+bool anyUnvalued(Iterable<Item> items) => items.any((i) => i.estimatedValueNok == null);
+
+/// The most a review, a word of feedback or a report may say, and a message:
+/// the server's limits (`backend/src/routes/misc.ts`, `chat.ts`, `trades.ts`).
+/// A field held to one takes no more, and says how far it has got once it is
+/// near: the limit used to be told only after «Send», as «Bruk høyst 1000
+/// tegn.», with the words still in the field to be counted by hand.
+const maxCommentLength = 1000, maxMessageLength = 2000;
+
+/// For a field's `buildCounter`: «950/1000» under it from nine tenths of its
+/// limit on, and nothing before, so the field is drawn as it was until then.
+Widget? nearLimit(BuildContext context,
+    {required int currentLength, required int? maxLength, required bool isFocused}) {
+  if (maxLength == null || currentLength < maxLength * 0.9) return null;
+  return Text('$currentLength/$maxLength',
+      semanticsLabel: '$currentLength av $maxLength tegn',
+      style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+          color: currentLength >= maxLength ? SwaplyColors.redText : SwaplyColors.inkMuted));
+}
+
 /// [n] of something, in the singular for one: «1 bytte», «3 bytter». A
 /// count read off the server used to keep the plural for one, «1 bytter».
 String counted(int n, String one, String many) => n == 1 ? '1 $one' : '$n $many';
@@ -99,11 +130,19 @@ class TapArea extends StatefulWidget {
     this.reach,
     this.above = false,
     this.keepsKeyboard = false,
+    this.button,
   });
 
   final Widget child;
   final VoidCallback? onTap, onLongPress;
   final String? label;
+
+  /// Whether a screen reader is told this is a button. It is when [onTap]
+  /// or [onLongPress] is this target's own; around an [InkWell], which
+  /// answers a tap and says nothing of being a button, it has to be said.
+  /// Left unsaid there, «Tilbake», «Del» and «⋯» on 04, the rows of 16b and
+  /// more were read as words and not as things to press.
+  final bool? button;
   final EdgeInsets room;
   final EdgeInsets? reach;
   final bool above;
@@ -154,7 +193,7 @@ class _TapAreaState extends State<TapArea> {
       // Room without a reach is the whole area; neither is the 44 square.
       reach: widget.room == EdgeInsets.zero ? widget.reach : widget.reach ?? EdgeInsets.zero,
       label: widget.label,
-      button: own,
+      button: widget.button ?? own,
       child: target,
     );
     if (!widget.above) return area;
@@ -635,49 +674,80 @@ class PrimaryButton extends StatelessWidget {
   final IconData? icon;
 
   /// 54 as the export draws «Logg inn» and «Fortsett»; the trade screen's
-  /// «Godta byttet» is 50 and the profile's «Send melding» 44.
+  /// «Godta byttet» is 50 and the profile's «Send melding» 44. A label that
+  /// needs two lines gets them, and the button grows past this.
   final double height;
+
+  static const _label = TextStyle(fontSize: 16, fontWeight: FontWeight.w700);
 
   @override
   Widget build(BuildContext context) {
     final on = enabled && !busy && onPressed != null;
+    // Norwegian labels run long — «Marker byttet som gjennomført» — and a
+    // button is not allowed to overflow because of a word. Nor to hide one:
+    // cut to a line, «Godta endringen» beside «Avslå» read «Godta endri…» on
+    // a 320 phone at the ordinary text size. A label that does not fit on
+    // one line gets two, and the button grows to hold them, from [height]
+    // and no less. Not a LayoutBuilder deciding which: 09h asks its column
+    // for its intrinsic height, which a LayoutBuilder cannot answer.
     return KeepClear(
       child: SizedBox(
-        height: height,
         width: double.infinity,
-        child: FilledButton(
-          onPressed: on ? onPressed : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: SwaplyColors.greenPressed,
-            disabledBackgroundColor: const Color(0xFFD8DEDA),
-            disabledForegroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
-          ),
-          child: busy
-              ? const SizedBox(
-                  height: 20, width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
-                    // Norwegian labels run long — «Marker byttet som gjennomført» —
-                    // and a button is not allowed to overflow because of a word.
-                    Flexible(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: height),
+          child: FilledButton(
+            onPressed: on ? onPressed : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: SwaplyColors.greenPressed,
+              disabledBackgroundColor: const Color(0xFFD8DEDA),
+              disabledForegroundColor: Colors.white,
+              padding: _padding(context, 24),
+              // [height] is the least it is, and nothing else may add to it:
+              // padded, a 44 grew to Material's 48 once it was not held.
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+            ),
+            child: busy
+                ? const SizedBox(
+                    height: 20, width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          // As wide as its longest line, so two lines stand
+                          // in the middle of the button as one does.
+                          textWidthBasis: TextWidthBasis.longestLine,
+                          style: _label,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
   }
+}
+
+/// A button's padding: [ends] at either end, as Material's own scales it
+/// down for larger text, and room over and under a label on two lines, which
+/// otherwise touched the edges of the pill. One line is shorter than the
+/// button's least height and is centred in it as before.
+EdgeInsetsGeometry _padding(BuildContext context, double ends) {
+  final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+  return ButtonStyleButton.scaledPadding(
+    EdgeInsets.symmetric(horizontal: ends, vertical: 8),
+    EdgeInsets.symmetric(horizontal: ends / 2, vertical: 8),
+    EdgeInsets.symmetric(horizontal: ends / 4, vertical: 8),
+    scale,
+  );
 }
 
 /// Three outlined looks from the export: plain, «Avslå» (badge red on a pink
@@ -706,23 +776,31 @@ class SecondaryButton extends StatelessWidget {
         : accent
             ? SwaplyColors.greenPressed
             : const Color(0x22064E3B);
+    // As [PrimaryButton]: a label that needs two lines gets them, and the
+    // button grows to hold them. Held to one line's height, a label at a
+    // large text size ran out of its button.
     return KeepClear(
       child: SizedBox(
-        height: height,
         width: double.infinity,
-        child: OutlinedButton(
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colour,
-            backgroundColor: destructive ? Colors.white : null,
-            side: BorderSide(color: edge),
-            padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: height),
+          child: OutlinedButton(
+            onPressed: onPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colour,
+              backgroundColor: destructive ? Colors.white : null,
+              side: BorderSide(color: edge),
+              padding: _padding(context, 0),
+              // As [PrimaryButton]'s: «Foreslå motbytte» is 42.
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+            ),
+            child: Text(label,
+                textWidthBasis: TextWidthBasis.longestLine,
+                style: TextStyle(
+                    fontSize: accent ? 14 : 15,
+                    fontWeight: destructive || accent ? FontWeight.w700 : FontWeight.w600)),
           ),
-          child: Text(label,
-              style: TextStyle(
-                  fontSize: accent ? 14 : 15,
-                  fontWeight: destructive || accent ? FontWeight.w700 : FontWeight.w600)),
         ),
       ),
     );
@@ -834,7 +912,10 @@ class ItemThumb extends StatelessWidget {
     if (item.cover != null) {
       return ClipRRect(
         borderRadius: shape,
+        // The name is always beside it, and says what the picture is: alone,
+        // a screen reader stopped on it and said «bilde» and nothing more.
         child: Image.network(item.cover!,
+            excludeFromSemantics: true,
             height: size, width: size, fit: BoxFit.cover,
             errorBuilder: (_, _, _) => _placeholder(shape)),
       );

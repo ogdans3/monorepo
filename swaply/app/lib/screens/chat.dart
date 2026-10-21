@@ -116,7 +116,8 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
     // «Ola N.» — the full name belongs on a profile.
     final name = thread.others.isEmpty
         ? 'Samtale'
-        : thread.others.map((o) => o.split(' ').first).join(', ');
+        // «Per og Kari» for a ring, as 07k's title says it.
+        : andList([for (final o in thread.others) o.split(' ').first]);
     final subtitle = switch (thread.state) {
       'completed' => 'Fullført bytte',
       'cancelled' => 'Avsluttet bytte',
@@ -151,7 +152,7 @@ class _ChatsScreenState extends State<ChatsScreen> with RefetchOnTabReturn {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(_relative(thread.lastMessage?.createdAt),
+          Text(whenSaid(thread.lastMessage?.createdAt),
               style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
           const SizedBox(height: 6),
           // A dot, not a count: the number is already on the tab in the nav,
@@ -541,8 +542,11 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   /// things side by side. A ring is agreed in words, so the words of it
   /// stay in view while they are written.
   Widget _ringSummary(Trade trade) {
-    String things(List<Item> items) =>
-        items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' og ');
+    // «ennå» only while something can still come.
+    final over = trade.state == 'completed' || trade.state == 'cancelled';
+    String things(List<Item> items) => items.isEmpty
+        ? (over ? 'ingenting' : 'ingenting ennå')
+        : andList([for (final i in items) i.title]);
     String first(UserRef person) => person.displayName.split(' ').first;
     final pictures = [
       ...trade.youGet.take(1),
@@ -663,8 +667,12 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   String _tradeLine(Trade trade) {
     // A side with nothing on it yet is said, as 11 says it: it was a hole
     // after the ⇄, «Fiskestang med snelle ⇄  · under avtale».
-    String side(List<Item> items) =>
-        items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' + ');
+    // «ennå» only while something can still come: an ended trade said
+    // «ingenting ennå ⇄ Monas lampe · avsluttet».
+    final over = trade.state == 'completed' || trade.state == 'cancelled';
+    String side(List<Item> items) => items.isEmpty
+        ? (over ? 'ingenting' : 'ingenting ennå')
+        : items.map((i) => i.title).join(' + ');
     final give = side(trade.youGive);
     final get = side(trade.youGet);
     final state = switch (trade.state) {
@@ -779,10 +787,10 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   /// The three chips over the field. They are trade actions, not decoration:
   /// this is where a conversation turns into a proposal.
   ///
-  /// Not in a ring. 07k draws them, but each sheet behind them proposes to
-  /// the one person you receive from, which a ring of three has no offer
-  /// for: every tap ended in a toast saying so. A ring is agreed in words,
-  /// which is what the banner over it says.
+  /// Not in a ring. 07k draws them, but each sheet behind them composes an
+  /// offer between you and the one person you receive from, and leaves out
+  /// the leg between the other two. A ring is agreed in words, which is what
+  /// the banner over it says.
   Widget _composer() {
     final trade = _trade;
     final negotiable = trade != null &&
@@ -832,6 +840,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
                       controller: _input,
                       minLines: 1,
                       maxLines: 4,
+                      maxLength: maxMessageLength,
+                      buildCounter: nearLimit,
                       style: const TextStyle(fontSize: 14.5, color: SwaplyColors.ink),
                       decoration: InputDecoration(
                         // 07k as 06g: «Skriv til begge…» is the trade
@@ -983,7 +993,7 @@ Future<UserRef?> choosePerson(
 /// last week, a date before that. By the calendar's days, not by hours: a
 /// message from Tuesday evening, read on Thursday morning, was under 48
 /// hours old and said «i går».
-String _relative(DateTime? when) {
+String whenSaid(DateTime? when) {
   if (when == null) return '';
   final diff = now().difference(when);
   if (diff.inMinutes < 1) return 'nå';

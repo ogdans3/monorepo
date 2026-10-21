@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/design/tokens.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/state/session.dart';
 import 'package:swaply_app/widgets/common.dart';
@@ -249,6 +250,26 @@ void main() {
               'Vi spør Kari om det er greit at du trekker deg.'),
           findsOneWidget);
       expect(find.text('Har Kari allerede sendt, kan du ikke trekke deg'), findsOneWidget);
+    });
+
+    testWidgets('12b. 08a marks what it cannot do with a red ✕, and asks with the destructive '
+        'button', (tester) async {
+      // A green tick stood beside «… kan du ikke trekke deg», and the way out
+      // was the green way on. The export draws ✓ and ✕, and a red button.
+      pair('accepted', const {}, {'withdrawal': null});
+      await mount(tester, 'trade-1');
+      await openSheet(tester);
+
+      Icon markOf(String line) => tester.widget<Icon>(find.descendant(
+          of: find.ancestor(of: find.text(line), matching: find.byType(Row)).first,
+          matching: find.byType(Icon)));
+      final can = markOf('Har Kari ikke sendt noe, avbrytes byttet når svaret er ja');
+      final cannot = markOf('Har Kari allerede sendt, kan du ikke trekke deg');
+      expect(can.icon, Icons.check);
+      expect(cannot.icon, Icons.close);
+      expect(cannot.color, SwaplyColors.redText);
+      expect(find.widgetWithText(SecondaryButton, 'Spør om å trekke meg'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, 'Spør om å trekke meg'), findsNothing);
     });
 
     testWidgets('13. «Angre godkjenningen» in a ring says both are told', (tester) async {

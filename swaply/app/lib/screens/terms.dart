@@ -37,7 +37,7 @@ Future<void> showTradeTerms(BuildContext context, {required String other, bool r
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Versjon $termsVersion', style: Type.small),
+          Text('Versjon ${_versionDate(termsVersion)}', style: Type.small),
           const SizedBox(height: Insets.sm),
           ...tradeTerms(other, ring: ring).map(
             (t) => Padding(
@@ -56,6 +56,18 @@ Future<void> showTradeTerms(BuildContext context, {required String other, bool r
     actions: [TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('Lukk'))],
   ),
 );
+
+/// «6. september 2026» for «2026-09-06», as a Norwegian date is written. The
+/// version is the day the terms were set, and was shown as the ISO string.
+String _versionDate(String version) {
+  final day = DateTime.tryParse(version);
+  if (day == null) return version;
+  const months = [
+    'januar', 'februar', 'mars', 'april', 'mai', 'juni',
+    'juli', 'august', 'september', 'oktober', 'november', 'desember',
+  ];
+  return '${day.day}. ${months[day.month - 1]} ${day.year}';
+}
 
 /// The line over a button that sends a proposal: sending it is agreeing to it.
 /// Without it a person would hold their own things for a deal by pressing

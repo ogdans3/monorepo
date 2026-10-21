@@ -118,7 +118,9 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
       // two «Legg ut» on one empty screen.
       floatingActionButton: me.items.isEmpty ? null : Padding(
         padding: const EdgeInsets.only(right: 4, bottom: 28),
-        child: GestureDetector(
+        child: Semantics(
+          button: true,
+          child: GestureDetector(
           onTap: () => openListingForm(context),
           child: Container(
             height: 50,
@@ -134,6 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                       fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
             ),
           ),
+        ),
         ),
       ),
       child: RefreshIndicator(
@@ -210,7 +213,13 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                               ],
                             ),
                             const SizedBox(height: 4),
+                            // Wraps rather than «★★★★★ 4,9 · 12 vurderin…» on a
+                            // 320 phone, and is read as words, not five stars.
                             Text.rich(
+                              semanticsLabel: me.ratingCount == 0
+                                  ? null
+                                  : '${_ratingWords(me.ratingAvg)}, '
+                                      '${counted(me.ratingCount, 'vurdering', 'vurderinger')}',
                               TextSpan(children: [
                                 if (me.ratingCount == 0)
                                   const TextSpan(text: 'Ingen vurderinger ennå')
@@ -225,8 +234,6 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
                                 ],
                               ]),
                               style: const TextStyle(fontSize: 13, color: SwaplyColors.inkBody),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(_whereAndSince(me.town, me.memberSince), style: Type.secondary),
@@ -242,6 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
             const SizedBox(height: 11 - 2),
             TapArea(
               room: const EdgeInsets.symmetric(vertical: 2),
+              button: true,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 // Asked again on the way back, as from a listing below: a
@@ -339,12 +347,12 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 14,
                   // 166 across, 110 of picture and 36 of caption.
-                  childAspectRatio: 166 / 146,
+                  childAspectRatio: _cellAspect(context),
                 ),
                 itemCount: me.items.length,
                 itemBuilder: (context, i) => _ownItem(me.items[i]),
@@ -423,6 +431,11 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
     );
   }
 }
+
+/// «4,9 av 5 stjerner», what a screen reader says for [_stars] and the
+/// number beside them: the glyphs were read one by one.
+String _ratingWords(double? rating) =>
+    '${(rating ?? 0).toStringAsFixed(1).replaceAll('.', ',')} av 5 stjerner';
 
 /// «★★★★★» for 4,6 and up, «★★★★☆» below: the export writes the stars as
 /// text and puts the number beside them.
@@ -596,6 +609,14 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                         overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 4),
                     Text.rich(
+                      // Read as words, not five stars, as on 13.
+                      semanticsLabel: user.ratingAvg == null
+                          ? null
+                          : [
+                              _ratingWords(user.ratingAvg),
+                              if (user.tradeCount case final trades?)
+                                counted(trades, 'bytte', 'bytter'),
+                            ].join(', '),
                       TextSpan(children: [
                         // Five empty stars would say «rated badly»; no rating
                         // yet says so in words.
@@ -683,11 +704,11 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 14,
-                  childAspectRatio: 166 / 146,
+                  childAspectRatio: _cellAspect(context),
                 ),
                 itemCount: user.items.length,
                 itemBuilder: (context, i) {
@@ -957,7 +978,11 @@ Widget _group(List<Widget> rows) => Container(
 
 /// A 48-tall row: the label, a word at the right if there is one
 /// («2 skjult»), and the chevron.
-Widget _tile(String title, String? value, {VoidCallback? onTap}) => InkWell(
+///
+/// A button to a screen reader, which an InkWell does not say.
+Widget _tile(String title, String? value, {VoidCallback? onTap}) => Semantics(
+    button: true,
+    child: InkWell(
       onTap: onTap,
       child: SizedBox(
         height: 48,
@@ -979,7 +1004,7 @@ Widget _tile(String title, String? value, {VoidCallback? onTap}) => InkWell(
           ],
         ),
       ),
-    );
+    ));
 
 /// «Vis alt på Oppdag igjen» on 16b, with how many kinds are hidden beside
 /// it. The server keeps no way to name one kind back, so it is all of them.
@@ -1500,12 +1525,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 /// The sheet stays up until the server has answered. It used to close as
 /// «Send rapport» was pressed, and a report that did not get through took
 /// the reason, the words and the tick with it.
+/// [reason] and [detail] are what the sheet opens with, for a report that
+/// comes from somewhere that already says what it is about — 07l's «Byttet
+/// ble ikke noe av» — and both can still be changed.
 Future<bool> showReportSheet(
   BuildContext context, {
   String? itemId,
   String? userId,
   String? personName,
   bool alreadyBlocked = false,
+  String reason = 'spam',
+  String? detail,
 }) async {
   final landed = Completer<bool>();
   var sending = false;
@@ -1522,6 +1552,8 @@ Future<bool> showReportSheet(
       userId: userId,
       personName: personName,
       alreadyBlocked: alreadyBlocked,
+      reason: reason,
+      detail: detail,
       api: context.read<SwaplyApi>(),
       messenger: ScaffoldMessenger.of(context),
       landed: landed,
@@ -1546,6 +1578,8 @@ class _ReportSheet extends StatefulWidget {
     this.userId,
     this.personName,
     this.alreadyBlocked = false,
+    this.reason = 'spam',
+    this.detail,
     required this.landed,
     required this.onSending,
   });
@@ -1554,6 +1588,8 @@ class _ReportSheet extends StatefulWidget {
   final ScaffoldMessengerState messenger;
   final String? itemId, userId, personName;
   final bool alreadyBlocked;
+  final String reason;
+  final String? detail;
 
   /// Completed once the server has taken the report: whether a block went
   /// with it. With false when one on its way after the sheet went did not
@@ -1568,8 +1604,8 @@ class _ReportSheet extends StatefulWidget {
 }
 
 class _ReportSheetState extends State<_ReportSheet> {
-  final _detail = TextEditingController();
-  String _reason = 'spam';
+  late final _detail = TextEditingController(text: widget.detail);
+  late String _reason = widget.reason;
   bool _block = false;
   bool _busy = false;
   String? _error;
@@ -1672,6 +1708,8 @@ class _ReportSheetState extends State<_ReportSheet> {
               controller: _detail,
               minLines: 2,
               maxLines: 4,
+              maxLength: maxCommentLength,
+              buildCounter: nearLimit,
               decoration: const InputDecoration(hintText: 'Fortell mer (valgfritt)…'),
             ),
             if (widget.personName != null && !widget.alreadyBlocked) ...[
@@ -1721,6 +1759,12 @@ const _months = [
   'juli', 'august', 'september', 'oktober', 'november', 'desember',
 ];
 
+/// A cell of the grid of things on 13 and 13b: 166 across, 110 of picture
+/// and 36 of caption, the caption as tall as the text is set. Held to 36,
+/// two lines of a name at 200 % ran out of the cell.
+double _cellAspect(BuildContext context) =>
+    166 / (110 + MediaQuery.textScalerOf(context).scale(36));
+
 String _month(DateTime date) => _months[date.month - 1];
 
 /// «Trondheim · medlem siden mai», the line under a name on 13 and 13b, with
@@ -1733,7 +1777,13 @@ String _month(DateTime date) => _months[date.month - 1];
 String _whereAndSince(String? town, DateTime? memberSince) => [
       if (town != null && town.trim().isNotEmpty) town.trim(),
       if (memberSince != null)
-        _sameDay(memberSince, now()) ? 'ny i dag' : 'medlem siden ${_month(memberSince)}',
+        _sameDay(memberSince, now())
+            ? 'ny i dag'
+            // With the year when it is not this one: «medlem siden mai» about
+            // a May a year ago read as this spring.
+            : memberSince.year == now().year
+                ? 'medlem siden ${_month(memberSince)}'
+                : 'medlem siden ${_month(memberSince)} ${memberSince.year}',
     ].join(' · ');
 
 bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;

@@ -735,10 +735,19 @@ words, used now that the other side has agreed by proposing.
 `test/counter_is_a_yes_test.dart` holds it, and the 09a golden has the line.
 
 **No proposal chips in a ring's chat.** 07k draws «Foreslå ting», «Be om
-ekstra» and «Foreslå mellomlegg» under the field as 06g does, but a proposal is
-an offer between two people, and the server refuses one in a ring of three: the
-chips only ever ended in a refusal. A ring is arranged in words, and its trade
-page carries the rest. `test/ring_test.dart` holds it.
+ekstra» and «Foreslå mellomlegg» under the field as 06g does, but each sheet
+behind them composes an offer between two people — you and the one you
+receive from — and a ring has a third leg those sheets know nothing of. The
+server does take a counter-offer in a ring (the test tooling's «Som
+motparten» makes them), so a chip there would have proposed a version that
+left the leg between the other two out. A ring is arranged in words, and its
+trade page carries the rest. `test/ring_test.dart` holds it.
+
+A version with a leg still empty — in a pair or in a ring — is a question
+and not a deal (`docs/DESIGN.md`, 02.10.2026), which nobody can say yes to.
+So 07j offers no «Godta byttet» on one whose leg between the other two is
+empty, says so in words over the cards, and draws that leg as «ingenting
+ennå»; and 11 does not count it as your turn.
 
 **«Lest» without a time.** 06g draws «Lest 14:10» under the last message the
 other side has read. The server keeps how far each person has read, not when,

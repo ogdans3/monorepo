@@ -555,4 +555,18 @@ void main() {
       expect(find.byType(EditProfileScreen), findsNothing);
     });
   });
+
+  testWidgets('5. somebody who joined in another year is a member since the month and the year',
+      (tester) async {
+    // «medlem siden mai» about a May a year ago read as this spring.
+    now = () => DateTime(2027, 3, 2, 15);
+    addTearDown(() => now = DateTime.now);
+    server.overrides['GET /me'] = {
+      ...FakeServer.me,
+      'memberSince': DateTime(2026, 5, 2, 9).toUtc().toIso8601String(),
+    };
+    await mount(tester, const ProfileScreen());
+
+    expect(find.text('Trondheim · medlem siden mai 2026'), findsOneWidget);
+  });
 }

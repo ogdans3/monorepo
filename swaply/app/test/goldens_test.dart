@@ -122,8 +122,20 @@ void main() {
               query: 'sykkel')));
   testWidgets('06a-match',
       (t) => shoot(t, '06a-match', const MatchScreen(tradeId: 'trade-1'), light: true));
+  // The ring the export's 11 draws: Kari's rod to you, your drill to Per.
+  testWidgets('07i-match',
+      (t) => shoot(t, '07i-match', const MatchScreen(tradeId: 'trade-chain'), light: true));
   testWidgets('06b-byttedetalj',
       (t) => shoot(t, '06b-byttedetalj', const TradeDetailScreen(tradeId: 'trade-1')));
+  // 06f: everybody has said yes, and it is handed over.
+  testWidgets('06f-overlevering', (t) async {
+    server.overrides['GET /trades/trade-1'] = {
+      ...fx.exportTrade1(),
+      'state': 'accepted',
+      'you': {...fx.exportTrade1()['you']! as Map, 'accepted': true},
+    };
+    await shoot(t, '06f-overlevering', const TradeDetailScreen(tradeId: 'trade-1'));
+  });
   testWidgets('06c-avtale',
       (t) => shoot(t, '06c-avtale', AgreementScreen(trade: _trade()),
           act: (t) => t.tap(find.text('Jeg har lest og godtar vilkårene'))));
