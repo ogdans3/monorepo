@@ -847,7 +847,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                   Expanded(
                     child: PrimaryButton('Ja, greit',
                         busy: _busy,
-                        onPressed: () => _run((api) => api.respondToWithdrawal(trade.id, true))),
+                        onPressed: () => _run((api) async {
+                              final after = await api.respondToWithdrawal(trade.id, true);
+                              _saidNoFor(after, askedBy: w.requestedBy);
+                              return after;
+                            })),
                   ),
                 ],
               ),
@@ -873,6 +877,25 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           ),
         ),
       );
+
+  /// A yes that the server turned into a no, because something had been
+  /// sent by then — the one answering, or in a ring the third — said, since
+  /// the trade only carried on, and «Ja, greit» looked as if it had been lost.
+  void _saidNoFor(Trade after, {String? askedBy}) {
+    final w = after.withdrawal;
+    if (w == null || w.state != 'rejected' || !w.blockedBySent || !mounted) return;
+    final senders = after.participants
+        .where((p) => p.position != after.youPosition && p.id != askedBy && p.sentAt != null)
+        .toList();
+    showNote(
+        context,
+        after.youSentAt != null
+            ? 'Du har allerede sendt din ting, så svaret ble nei. Byttet fortsetter.'
+            : senders.isEmpty
+                ? 'Noe er allerede sendt, så svaret ble nei. Byttet fortsetter.'
+                : '${_firstNames(senders)} har allerede sendt, så svaret ble nei. '
+                    'Byttet fortsetter.');
+  }
 
   /// «Kari har allerede sendt sin ting.», naming whoever has marked theirs
   /// sent: in a ring that is one of two, and not always the one you receive
