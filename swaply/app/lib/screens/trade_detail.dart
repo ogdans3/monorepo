@@ -1935,11 +1935,17 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         context: context,
         // Over the bar, not inside the tab under it; see `pushOverBar`.
         useRootNavigator: true,
+        // As tall as what is in it, and scrolling past that. Held to nine
+        // sixteenths of the screen and not scrolling, 08a ran 31 points past
+        // its foot on a 360×640 phone at the ordinary text size, and «Avbryt»
+        // was cut off — at 130 % «Spør om å trekke meg» went with it.
+        isScrollControlled: true,
+        useSafeArea: true,
         backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
         builder: (sheet) => SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(Insets.lg),
             child: Column(
               mainAxisSize: MainAxisSize.min,
