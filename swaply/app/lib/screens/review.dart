@@ -190,7 +190,21 @@ class _ReviewScreenState extends State<ReviewScreen> {
       describe: _withYou,
     );
     if (person == null || !mounted) return;
-    await showReportSheet(context, userId: person.id, personName: person.displayName);
+    // Opened on «Annet» and on what it is about, so the report says it was
+    // this trade that did not happen. It opened on «Spam», with nothing tying
+    // it to a trade, the same as any report from 13b.
+    final trade = widget.trade;
+    String first(UserRef p) => p.displayName.split(' ').first;
+    String things(List<Item> items) => andList([for (final i in items) i.title]);
+    await showReportSheet(
+      context,
+      userId: person.id,
+      personName: person.displayName,
+      reason: 'other',
+      detail: 'Byttet ble ikke noe av. Treveisbyttet: jeg skulle få '
+          '${things(trade.youGet)} fra ${first(trade.receivingFrom)} og gi '
+          '${things(trade.youGive)} til ${first(trade.givingTo)}.',
+    );
   }
 
   @override

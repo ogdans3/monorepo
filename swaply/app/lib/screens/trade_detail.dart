@@ -568,8 +568,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       else if (trade.state == 'accepted')
         _agreedCard(),
       // 09e: a new proposal is on the table.
+      // Named for whoever proposed it, which in a ring is not always the one
+      // you receive from: «Ingrid foreslår» read «Nytt forslag fra Kari».
       if (_counteredByOther(trade))
-        _noticeCard('Nytt forslag fra ${trade.receivingFrom.displayName.split(' ').first}. '
+        _noticeCard('Nytt forslag fra ${_firstName(_proposer(trade))}. '
             'Godta, avslå eller foreslå noe annet.'),
       // Nothing to accept yet: one side of the offer is still empty.
       if (['talking', 'pending', 'countered'].contains(trade.state) &&
@@ -780,6 +782,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           trade.participants
               .firstWhere((p) => p.position == trade.youPosition, orElse: () => trade.receivingFrom)
               .id;
+
+  /// Whoever proposed the version on the table: the participant the server
+  /// names, or the one you receive from where it names nobody it sent.
+  UserRef _proposer(Trade trade) =>
+      trade.participants.where((p) => p.id == trade.counterOfferBy).firstOrNull ??
+      trade.receivingFrom;
 
   Widget _noticeCard(String text) => Padding(
         padding: const EdgeInsets.only(top: Insets.sm),
@@ -1235,6 +1243,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
     final payer = cash.payer.displayName.split(' ').first;
     final payee = cash.payee.displayName.split(' ').first;
     final amount = kr(cash.amountNok);
+    // In a ring the mellomlegg may be between the other two: «Kari betaler
+    // deg» said it was yours when it was Ingrid's.
+    final paidToYou = cash.payee.position == null
+        ? !cash.youPay && !trade.isChain
+        : cash.payee.position == trade.youPosition;
+    final to = paidToYou ? 'deg' : payee;
 
     // The kicker lives inside the card, with the note to its right.
     return SectionCard(
@@ -1264,9 +1278,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                         (true, true, true) => 'Du betalte $amount til $payee',
                         (true, true, false) => 'Du skulle betale $amount til $payee',
                         (true, false, _) => 'Du betaler $amount til $payee',
-                        (false, true, true) => '$payer betalte deg $amount',
-                        (false, true, false) => '$payer skulle betale deg $amount',
-                        (false, false, _) => '$payer betaler deg $amount',
+                        (false, true, true) => '$payer betalte $to $amount',
+                        (false, true, false) => '$payer skulle betale $to $amount',
+                        (false, false, _) => '$payer betaler $to $amount',
                       },
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink),
@@ -1286,7 +1300,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                           // a question about getting out is answered.
                           : trade.state == 'accepted' || trade.state == 'paused'
                               ? 'betales direkte mellom dere, før noe sendes'
-                              : 'betales når begge har godtatt',
+                              : trade.isChain || trade.participants.length > 2
+                                  ? 'betales når alle har godtatt'
+                                  : 'betales når begge har godtatt',
                   style: const TextStyle(fontSize: 11.5, height: 1.4, color: SwaplyColors.grey),
                 ),
               ),

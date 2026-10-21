@@ -1521,12 +1521,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 /// The sheet stays up until the server has answered. It used to close as
 /// «Send rapport» was pressed, and a report that did not get through took
 /// the reason, the words and the tick with it.
+/// [reason] and [detail] are what the sheet opens with, for a report that
+/// comes from somewhere that already says what it is about — 07l's «Byttet
+/// ble ikke noe av» — and both can still be changed.
 Future<bool> showReportSheet(
   BuildContext context, {
   String? itemId,
   String? userId,
   String? personName,
   bool alreadyBlocked = false,
+  String reason = 'spam',
+  String? detail,
 }) async {
   final landed = Completer<bool>();
   var sending = false;
@@ -1543,6 +1548,8 @@ Future<bool> showReportSheet(
       userId: userId,
       personName: personName,
       alreadyBlocked: alreadyBlocked,
+      reason: reason,
+      detail: detail,
       api: context.read<SwaplyApi>(),
       messenger: ScaffoldMessenger.of(context),
       landed: landed,
@@ -1567,6 +1574,8 @@ class _ReportSheet extends StatefulWidget {
     this.userId,
     this.personName,
     this.alreadyBlocked = false,
+    this.reason = 'spam',
+    this.detail,
     required this.landed,
     required this.onSending,
   });
@@ -1575,6 +1584,8 @@ class _ReportSheet extends StatefulWidget {
   final ScaffoldMessengerState messenger;
   final String? itemId, userId, personName;
   final bool alreadyBlocked;
+  final String reason;
+  final String? detail;
 
   /// Completed once the server has taken the report: whether a block went
   /// with it. With false when one on its way after the sheet went did not
@@ -1589,8 +1600,8 @@ class _ReportSheet extends StatefulWidget {
 }
 
 class _ReportSheetState extends State<_ReportSheet> {
-  final _detail = TextEditingController();
-  String _reason = 'spam';
+  late final _detail = TextEditingController(text: widget.detail);
+  late String _reason = widget.reason;
   bool _block = false;
   bool _busy = false;
   String? _error;

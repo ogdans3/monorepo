@@ -168,6 +168,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(server.bodies['POST /reports']?['targetUser'], 'per-1');
+      // Not «Spam»: «Annet», and words that say which trade did not happen.
+      expect(server.bodies['POST /reports']?['reason'], 'other');
+      expect(server.bodies['POST /reports']?['detail'],
+          'Byttet ble ikke noe av. Treveisbyttet: jeg skulle få Retro spillkonsoll fra Kari og '
+          'gi Bosch drill 18V til Kari.');
       // Rating is still there to do, or «Senere».
       expect(find.byType(ReviewScreen), findsOneWidget);
     });
@@ -238,5 +243,30 @@ void main() {
     expect(server.asked('POST /trades/trade-chain/reviews'), 2);
     expect(find.text('Kari og Per har fått hver sin. Et par sekunder fra deg gjør appen bedre.'),
         findsOneWidget);
+  });
+
+  testWidgets('9. a version Per proposed in a ring says Per, and the mellomlegg between the other '
+      'two names them both', (tester) async {
+    // «Ingrid foreslår motbytte» read «Nytt forslag fra Kari», whom you
+    // receive from, and «Kari betaler deg 200 kr» about Ingrid's money.
+    final trade = chainTrade();
+    server.overrides['GET /trades/trade-chain'] = {
+      ...trade,
+      'state': 'countered',
+      'counterOfferBy': 'per-1',
+      'cash': {
+        'amountNok': 200,
+        'youPay': false,
+        'payer': {...FakeServer.kari, 'position': 1},
+        'payee': {'id': 'per-1', 'displayName': 'Per H.', 'position': 2},
+      },
+    };
+    await open(tester, const TradeDetailScreen(tradeId: 'trade-chain'));
+
+    expect(find.text('Nytt forslag fra Per. Godta, avslå eller foreslå noe annet.'),
+        findsOneWidget);
+    expect(find.text('Kari betaler Per 200\u00A0kr'), findsOneWidget);
+    expect(find.text('betales når alle har godtatt'), findsOneWidget);
+    expect(find.textContaining('betaler deg'), findsNothing);
   });
 }

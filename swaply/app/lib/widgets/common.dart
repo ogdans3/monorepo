@@ -14,6 +14,12 @@ import 'toast.dart' show KeepClear;
 // already imports this file, and the toast itself is its own thing.
 export 'toast.dart';
 
+/// A list as a sentence says it: «A», «A og B», «A, B og C». Joined with
+/// «og» between every one, three things read «A og B og C».
+String andList(List<String> parts) => parts.length < 2
+    ? (parts.isEmpty ? '' : parts.single)
+    : '${parts.sublist(0, parts.length - 1).join(', ')} og ${parts.last}';
+
 /// [n] of something, in the singular for one: «1 bytte», «3 bytter». A
 /// count read off the server used to keep the plural for one, «1 bytter».
 String counted(int n, String one, String many) => n == 1 ? '1 $one' : '$n $many';

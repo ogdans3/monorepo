@@ -105,10 +105,16 @@ class _AgreementScreenState extends State<AgreementScreen> {
                                       fontWeight: FontWeight.w800,
                                       color: SwaplyColors.inkBody)),
                             ),
-                            trade.cash!.youPay ? 'Du betaler' : '$from betaler',
+                            // Whoever pays and whoever is paid, which in a
+                            // ring need be neither the one you receive from
+                            // nor you.
+                            trade.cash!.youPay
+                                ? 'Du betaler'
+                                : '${trade.cash!.payer.displayName.split(' ').first} betaler',
                             trade.cash!.youPay
                                 ? '${kr(trade.cash!.amountNok)} i mellomlegg via Vipps'
-                                : 'deg ${kr(trade.cash!.amountNok)} i mellomlegg via Vipps',
+                                : '${_paidToYou(trade) ? 'deg' : trade.cash!.payee.displayName.split(' ').first} '
+                                    '${kr(trade.cash!.amountNok)} i mellomlegg via Vipps',
                           ),
                         ],
                       ],
@@ -232,6 +238,14 @@ class _AgreementScreenState extends State<AgreementScreen> {
         ),
       ),
     );
+  }
+
+  /// Whether the mellomlegg is paid to you: by position where the server
+  /// sends one, and otherwise, in a pair, whenever you are not the one paying.
+  bool _paidToYou(Trade trade) {
+    final cash = trade.cash!;
+    final at = cash.payee.position;
+    return at == null ? !cash.youPay && !trade.isChain : at == trade.youPosition;
   }
 
   /// Up to two 40px pictures, the second tucked behind the first.
