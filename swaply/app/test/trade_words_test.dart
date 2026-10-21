@@ -57,14 +57,14 @@ Future<void> openChip(WidgetTester tester, String chip) async {
 }
 
 /// A thing of yours listed without a value.
-const skateboard = {
+final skateboard = <String, Object?>{
   ...FakeServer.drill,
   'id': 'item-skate',
   'title': 'Skateboard',
   'estimatedValueNok': null,
 };
 
-const helmet = {...FakeServer.drill, 'id': 'item-helmet', 'title': 'Sykkelhjelm', 'estimatedValueNok': 250};
+final helmet = <String, Object?>{...FakeServer.drill, 'id': 'item-helmet', 'title': 'Sykkelhjelm', 'estimatedValueNok': 250};
 
 void main() {
   setUp(() {
