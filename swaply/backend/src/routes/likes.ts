@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { listingOpenTo, sameRing } from '../trades/ring.js'
-import { expressWish } from '../trades/wish.js'
+import { expressWish, takeBackWish } from '../trades/wish.js'
 import { coverSql, many } from '../lib/rows.js'
 import { publicItem, publicUser } from './serialize.js'
 
@@ -25,9 +25,7 @@ export default async function likeRoutes(app: FastifyInstance) {
   app.delete('/items/:id/like', async (request, reply) => {
     const userId = app.requireUser(request)
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
-    await app.db.execute(
-      sql`delete from likes where from_user = ${userId} and target_item = ${id}`,
-    )
+    await takeBackWish(app.db, userId, id)
     reply.code(204)
   })
 

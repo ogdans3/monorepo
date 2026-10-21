@@ -11,7 +11,8 @@ import {
 } from '../trades/actions.js'
 import { counterAndAgree } from '../trades/accept.js'
 import { acceptOffer, completeTrade, startTalking } from '../trades/trades.js'
-import { expressWish } from '../trades/wish.js'
+import type { Cycle } from '../trades/cycles.js'
+import { expressWish, openTradeOver, takeBackWish } from '../trades/wish.js'
 import { CATALOGUE } from './fixtures.js'
 
 /**
@@ -24,7 +25,8 @@ import { CATALOGUE } from './fixtures.js'
  *
  * Every one of them is built by pressing the product's own buttons in order —
  * `expressWish`, `acceptOffer`, `counterAndAgree`, `declineTrade`,
- * `markHandover`, `requestWithdrawal`, `completeTrade`. Nothing here writes a
+ * `markHandover`, `requestWithdrawal`, `completeTrade` — and the hearts are
+ * taken back with `takeBackWish` once the trade stands. Nothing here writes a
  * trade, a like, an offer or an acceptance directly. `db/seed.ts` took that
  * shortcut once and advertised a three-way ring that nothing would ever have
  * found, which is the whole argument: a state reached by a different route is
@@ -139,23 +141,91 @@ export async function buildScenario(
     return { tradeId: opened.tradeId, steps, participants: ring.map((p) => p['id']) }
   }
 
-  // Everything else starts from a ring of wishes. Goods travel against them:
-  // person i wants what person i+1 is giving, so i+1 gives to i.
-  let tradeId: string | null = null
+  // Everything else starts from a ring of wishes, and the hearts that make it
+  // are taken back once the trade over it stands — through the product's own
+  // «ta tilbake hjertet», whatever became of the scenario. Left standing, they
+  // were wishes nobody had, and the next scenario's hearts closed new rings
+  // through them: a mixed one, an old «[test]» thing for a new one, opened by
+  // the heart or by the hourly sweep, until «Bytter» held trades nobody asked
+  // for. A trade does not lean on the hearts that opened it, so it stands
+  // without them; «Likt» (12) just no longer shows them on the «[test]» things.
+  const pressed: Array<{ who: string; what: string }> = []
+  const takeBack = async () => {
+    for (const { who, what } of pressed.splice(0)) await takeBackWish(db, who, what)
+  }
+  try {
+    const built = await fromWishes(db, people, scenario, ring, gives, steps, pressed)
+    await takeBack()
+    steps.push('Hjertene ble tatt tilbake, så de ikke åpner flere bytter')
+    return built
+  } catch (err) {
+    // The error the scenario met is the one to say; one from taking back
+    // would only hide it.
+    await takeBack().catch(() => {})
+    throw err
+  }
+}
+
+/**
+ * The scenario from the ring of wishes on: the hearts, the trade over this
+ * scenario's own ring, and the moves that bring it to [scenario.state].
+ * Every heart pressed goes into [pressed] as it is pressed.
+ */
+async function fromWishes(
+  db: Database,
+  people: Row[],
+  scenario: Scenario,
+  ring: Row[],
+  gives: string[],
+  steps: string[],
+  pressed: Array<{ who: string; what: string }>,
+): Promise<Built> {
+  const want = ring.length
+  // Goods travel against the wishes: person i wants what person i+1 is
+  // giving, so i+1 gives to i.
+  const opened = new Set<string>()
   for (let i = 0; i < want; i++) {
     const wanter = ring[i]!
     const wanted = gives[(i + 1) % want]!
     const wish = await expressWish(db, wanter['id'], wanted)
+    pressed.push({ who: wanter['id'], what: wanted })
     steps.push(`${firstName(wanter)} likte en ting`)
-    if (wish.tradeId) tradeId = wish.tradeId
+    if (wish.tradeId && wish.tradeIsNew) opened.add(wish.tradeId)
   }
+
+  // The trade over this scenario's own ring — its own listings, going round
+  // the way its hearts point — and not whichever trade the last heart named.
+  // A heart answers with the first ring it closes, and with an older heart
+  // still standing on an older «[test]» thing that can be a mixed one; the
+  // scenario then built its state on that, and reported it as its own. In
+  // giving order: the admin gives to the last of the ring, and so on back
+  // round to the admin — 0, 1 in a pair and 0, 2, 1 in a ring of three.
+  const seats = [0, ...Array.from({ length: want - 1 }, (_, n) => want - 1 - n)]
+  const own: Cycle = seats.map((at) => ({
+    userId: ring[at]!['id'] as string,
+    givesItemId: gives[at]!,
+  }))
+  const tradeId = await openTradeOver(db, own)
   if (!tradeId) {
     throw conflict(
       'no_cycle',
-      'Ønskene lukket ingen sirkel. Sjekk at tingene er ledige og at ingen er blokkert.',
+      opened.size > 0
+        ? 'Hjertene lukket en annen sirkel, med ting fra før, i stedet for denne. ' +
+          'Nullstill likes og bytter for kontoene og prøv igjen.'
+        : 'Ønskene lukket ingen sirkel. Sjekk at tingene er ledige og at ingen er blokkert.',
     )
   }
   steps.push(want === 3 ? 'Sirkelen lukket seg — treveis' : 'Sirkelen lukket seg — toveis')
+  opened.delete(tradeId)
+  if (opened.size > 0) {
+    // Said, because the tool says what it did: these are the product's answer
+    // to hearts it pressed, inside the ring, and «Nullstill → bytter» ends them.
+    steps.push(
+      opened.size === 1
+        ? 'Hjertene åpnet også et annet bytte, med ting fra før'
+        : `Hjertene åpnet også ${opened.size} andre bytter, med ting fra før`,
+    )
+  }
 
   const participants = await many(
     db,

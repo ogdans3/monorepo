@@ -146,6 +146,18 @@ export async function expressWish(
 }
 
 /**
+ * «Ta tilbake hjertet»: the like goes, and nothing else does.
+ *
+ * Not the trades it helped open — ending those is for the people in them —
+ * and not the notification the owner had when it was pressed. Here rather
+ * than in the route because the test tooling takes back the hearts a
+ * scenario pressed, and one path from a wish to a trade has one path back.
+ */
+export async function takeBackWish(db: Executor, userId: string, itemId: string): Promise<void> {
+  await db.execute(sql`delete from likes where from_user = ${userId} and target_item = ${itemId}`)
+}
+
+/**
  * The search a wish sets off, and the trade it opens when a loop closes.
  *
  * Apart from `expressWish` for the one caller that holds a wish nobody has just

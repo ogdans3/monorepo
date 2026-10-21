@@ -100,6 +100,21 @@ export async function listingAcross(
 }
 
 /**
+ * Whether everybody in the trade [trade] is inside one admin's ring — the
+ * admin and the admin's test accounts, and nobody else. The only trades
+ * «Nullstill → bytter» ends (`resetAccount` leaves the rest standing), and so
+ * the only ones whose ending by it counts as a no (`decidedRing`). True or
+ * false, never null.
+ */
+export function withinOneRing(trade: SQL): SQL {
+  return sql`(select count(*) = 0 from trade_participants p join users u on u.id = p.user_id
+              where p.trade_id = ${trade} and ${sql.raw(ringOf('u'))} is null)
+         and (select count(distinct ${sql.raw(ringOf('u'))}) = 1
+              from trade_participants p join users u on u.id = p.user_id
+              where p.trade_id = ${trade})`
+}
+
+/**
  * 403, with a code the app can switch on, in words true for whoever reads it:
  * the real person who found a test listing through a link, and the admin
  * pressing a heart as one of their test accounts.
