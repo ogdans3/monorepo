@@ -137,7 +137,16 @@ class _ProfileScreenState extends State<ProfileScreen> with RefetchOnTabReturn {
         ),
       ),
       child: RefreshIndicator(
-        onRefresh: () => context.read<Session>().refresh(),
+        // A pull that gets no answer keeps 13 as it was and says so, as every
+        // other list does. Handed straight to the indicator, the refusal went
+        // past everybody: the spinner stopped and nothing was said.
+        onRefresh: () async {
+          try {
+            await context.read<Session>().refresh();
+          } on ApiException catch (e) {
+            if (context.mounted) showError(context, e);
+          }
+        },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 0, 22, Insets.xl),
           children: [
