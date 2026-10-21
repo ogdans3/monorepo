@@ -15,14 +15,18 @@
 // same ring, not the sweep's one-new-trade-per-listing rule. Once the trade
 // over a ring has ended, the ring is free to be found again.
 import { sql } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/postgres-js'
 import type { FastifyInstance } from 'fastify'
+import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { buildApp } from '../../src/app.js'
 import { issueSession } from '../../src/auth/sessions.js'
+import { schema } from '../../src/db/index.js'
+import { env } from '../../src/env.js'
 import { declineTrade } from '../../src/trades/actions.js'
 import { proposeCounterOffer } from '../../src/trades/trades.js'
-import { expressWish } from '../../src/trades/wish.js'
+import { closeLoopThrough, expressWish, type Loop } from '../../src/trades/wish.js'
 import { close, db, like, makeItem, makeUser, reset, tradeState } from '../helpers.js'
 
 type Row = Record<string, string>
@@ -196,6 +200,54 @@ describe('taking a heart back and pressing it again', () => {
       expect(again.tradeId).toBe(ring)
       expect(again.tradeIsNew).toBe(false)
       expect(await openBetween(tor, vid)).toEqual([ring])
+    })
+  })
+
+  describe('two hearts closing one ring in the same moment', () => {
+    let siri: string, nils: string
+    let skis: string, kayak: string
+
+    beforeAll(async () => {
+      siri = await makeUser('Siri')
+      nils = await makeUser('Nils')
+      skis = await makeItem(siri, 'Langrennski')
+      kayak = await makeItem(nils, 'Havkajakk')
+      // Both hearts are in: each search, run after its own like is in, finds
+      // the ring through the other's as well.
+      await like(siri, kayak)
+      await like(nils, skis)
+    })
+
+    test('9. each looks, finds nothing open, and only one of them opens it', async () => {
+      // Each search looked for a trade over the ring, found none, and opened
+      // one: two trades, two «Dere kan swappe!». Opening a trade is held up
+      // here so that both have looked before either has opened anything.
+      await db.execute(sql.raw(`
+        create function liking_again_slow_trade() returns trigger language plpgsql
+          as $$ begin perform pg_sleep(0.3); return new; end $$`))
+      await db.execute(sql.raw(`
+        create trigger liking_again_slow_trade before insert on trades
+          for each row execute function liking_again_slow_trade()`))
+      const client = postgres(env.DATABASE_URL!, { max: 4, onnotice: () => {} })
+      const wide = drizzle(client, { schema })
+      let both: (Loop | null)[]
+      try {
+        await Promise.all([client`select 1`, client`select 1`, client`select 1`, client`select 1`])
+        both = await Promise.all([
+          closeLoopThrough(wide, siri, kayak),
+          closeLoopThrough(wide, nils, skis),
+        ])
+      } finally {
+        await client.end()
+        await db.execute(sql.raw('drop trigger liking_again_slow_trade on trades'))
+        await db.execute(sql.raw('drop function liking_again_slow_trade()'))
+      }
+
+      const trades = await openBetween(siri, nils)
+      expect(trades).toHaveLength(1)
+      expect(both.map((loop) => loop?.tradeId)).toEqual([trades[0], trades[0]])
+      expect(both.map((loop) => loop?.isNew).sort()).toEqual([false, true])
+      expect([await opened(siri), await opened(nils)]).toEqual([1, 1])
     })
   })
 })

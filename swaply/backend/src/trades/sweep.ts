@@ -3,8 +3,7 @@ import { sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { many, one, uuidArray } from '../lib/rows.js'
 import { findCyclesThrough, type Cycle } from './cycles.js'
-import { openTradeFromCycle } from './trades.js'
-import { openTradeOver } from './wish.js'
+import { openRingOnce, openTradeOver } from './wish.js'
 
 /**
  * Whether somebody in this ring has already said no to it.
@@ -125,7 +124,11 @@ export async function sweepForCycles(db: Database, itemIds?: string[]): Promise<
     )
     if (alreadyOpen.length > 0) continue
 
-    const tradeId = await openTradeFromCycle(db, cycle)
+    // Asked once more under the ring's own lock: a heart closing it in the
+    // same moment opens it once between them (`openRingOnce`).
+    const loop = await openRingOnce(db, cycle)
+    if (!loop.isNew) continue
+    const tradeId = loop.tradeId
     opened.push(tradeId)
     for (const hop of cycle) {
       spoken.add(hop.givesItemId)

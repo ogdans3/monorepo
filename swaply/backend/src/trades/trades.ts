@@ -6,6 +6,7 @@ import { conflict } from '../lib/errors.js'
 import { uuidArray } from '../lib/rows.js'
 import { blockedInTrade } from './blocking.js'
 import { TOLD, closeReasonSql, type CloseCode } from './close.js'
+import { conversationAbout } from './conversation.js'
 import type { Cycle } from './cycles.js'
 import { lockItems, lockTrades } from './locks.js'
 import { validateOffer, type OfferCash, type OfferItem } from './offer.js'
@@ -41,41 +42,48 @@ const backOnTheMarket = (rows: Row[]) =>
  * and reserving on a suggestion would freeze people's things on a maybe.
  */
 export async function openTradeFromCycle(db: Database, cycle: Cycle): Promise<string> {
-  return db.transaction(async (tx) => {
-    const [trade] = await tx.execute<Row>(
-      sql`insert into trades (state) values ('pending') returning id`,
-    )
-    const tradeId = trade!['id']!
+  return db.transaction((tx) => insertTradeFromCycle(tx, cycle))
+}
 
-    for (const [position, hop] of cycle.entries()) {
-      await tx.execute(
-        sql`insert into trade_participants (trade_id, user_id, position)
-            values (${tradeId}, ${hop.userId}, ${position})`,
-      )
-    }
+/**
+ * `openTradeFromCycle` inside a transaction the caller holds — for
+ * `openRingOnce`, which asks under a lock whether the ring is already open
+ * before it opens it.
+ */
+export async function insertTradeFromCycle(tx: Tx, cycle: Cycle): Promise<string> {
+  const [trade] = await tx.execute<Row>(
+    sql`insert into trades (state) values ('pending') returning id`,
+  )
+  const tradeId = trade!['id']!
 
-    // proposed_by stays null: the cycle search is not a person.
-    const [offer] = await tx.execute<Row>(
-      sql`insert into trade_offers (trade_id, seq) values (${tradeId}, 1) returning id`,
-    )
-
-    for (const [position, hop] of cycle.entries()) {
-      await tx.execute(
-        sql`insert into trade_offer_items (offer_id, item_id, giver_position)
-            values (${offer!['id']!}, ${hop.givesItemId}, ${position})`,
-      )
-    }
-
-    await tx.execute(sql`insert into threads (trade_id) values (${tradeId})`)
+  for (const [position, hop] of cycle.entries()) {
     await tx.execute(
-      sql`insert into thread_participants (thread_id, user_id)
-          select t.id, p.user_id from threads t
-          join trade_participants p on p.trade_id = t.trade_id
-          where t.trade_id = ${tradeId}`,
+      sql`insert into trade_participants (trade_id, user_id, position)
+          values (${tradeId}, ${hop.userId}, ${position})`,
     )
+  }
 
-    return tradeId
-  })
+  // proposed_by stays null: the cycle search is not a person.
+  const [offer] = await tx.execute<Row>(
+    sql`insert into trade_offers (trade_id, seq) values (${tradeId}, 1) returning id`,
+  )
+
+  for (const [position, hop] of cycle.entries()) {
+    await tx.execute(
+      sql`insert into trade_offer_items (offer_id, item_id, giver_position)
+          values (${offer!['id']!}, ${hop.givesItemId}, ${position})`,
+    )
+  }
+
+  await tx.execute(sql`insert into threads (trade_id) values (${tradeId})`)
+  await tx.execute(
+    sql`insert into thread_participants (thread_id, user_id)
+        select t.id, p.user_id from threads t
+        join trade_participants p on p.trade_id = t.trade_id
+        where t.trade_id = ${tradeId}`,
+  )
+
+  return tradeId
 }
 
 /**
@@ -90,10 +98,19 @@ export async function startTalking(
   opener: string,
   aboutItem: string,
   body: string,
-): Promise<{ tradeId: string; threadId: string }> {
+): Promise<{ tradeId: string; threadId: string; isNew: boolean }> {
   return db.transaction(async (tx) => {
     const [item] = await tx.execute<Row>(sql`select owner_id from items where id = ${aboutItem}`)
     const owner = item!['owner_id']!
+
+    // One conversation per pair per listing, asked again under a lock on the
+    // pair and the listing: two first messages in the same moment — a second
+    // press while the first was still on its way — each found none and each
+    // opened one. The second now waits for the first and is handed its
+    // conversation, unwritten, for the caller to say its message in.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`talk:${opener}:${aboutItem}`}))`)
+    const existing = await conversationAbout(tx, opener, owner, aboutItem)
+    if (existing) return { ...existing, isNew: false }
 
     const [trade] = await tx.execute<Row>(sql`insert into trades default values returning id`)
     const tradeId = trade!['id']!
@@ -127,7 +144,7 @@ export async function startTalking(
           values (${threadId}, ${opener}, ${body})`,
     )
 
-    return { tradeId, threadId }
+    return { tradeId, threadId, isNew: true }
   })
 }
 

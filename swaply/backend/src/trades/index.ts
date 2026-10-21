@@ -41,7 +41,9 @@
 // like or reservation takes on the row it points at does not wait for it, so
 // the inserts that open trades (`startTalking`, `openTradeFromCycle`) stand
 // outside the order without breaking it — the only row lock either takes is
-// its own trade's.
+// its own trade's. The advisory lock each takes first, so that a ring or a
+// conversation is opened once (`openRingOnce`, `startTalking`), is waited on
+// only by another opening, which holds nothing before it asks.
 //
 // Inside one transaction a lock already held costs nothing, so a helper may
 // lock what its caller has locked (`endTrade` under an acceptance or an
