@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/api/models.dart';
 import 'package:swaply_app/screens/agreement.dart';
+import 'package:swaply_app/screens/chat.dart';
 import 'package:swaply_app/screens/counter_offer.dart';
 import 'package:swaply_app/screens/discover.dart';
 import 'package:swaply_app/screens/item_detail.dart';
@@ -278,6 +279,37 @@ void main() {
       expect(tester.getSemantics(find.text('God')),
           isSemantics(hasSelectedState: true, isSelected: true));
       expect(tester.getSemantics(find.text('Slitt')),
+          isSemantics(hasSelectedState: true, isSelected: false));
+      semantics.dispose();
+    });
+  });
+
+  group('the sheets behind the chips say what is chosen', () {
+    // A green mark and a green fill, and nothing said: round 1 gave 06c, 09a
+    // and 06i their selected state and left these out.
+    testWidgets('09c says which of your things is chosen', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      await tester.tap(find.text('Foreslå ting'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bosch drill 18V').last);
+      await tester.pumpAndSettle();
+
+      expect(tester.getSemantics(find.text('Bosch drill 18V').last),
+          isSemantics(isButton: true, hasSelectedState: true, isSelected: true,
+              hasTapAction: true));
+      semantics.dispose();
+    });
+
+    testWidgets('09d says who pays', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      await tester.tap(find.text('Foreslå mellomlegg'));
+      await tester.pumpAndSettle();
+
+      expect(tester.getSemantics(find.text('Jeg betaler')),
+          isSemantics(hasSelectedState: true, isSelected: true));
+      expect(tester.getSemantics(find.text('Kari betaler')),
           isSemantics(hasSelectedState: true, isSelected: false));
       semantics.dispose();
     });
