@@ -288,6 +288,11 @@ export type AcceptResult = {
    */
   freed: string[]
   everyoneAccepted: boolean
+  /**
+   * The person's yes already stood on this version, and nothing was done:
+   * a second press, or a retry after an answer that never arrived.
+   */
+  alreadyAccepted: boolean
 }
 
 /**
@@ -357,6 +362,26 @@ export async function acceptOffer(
     // they said yes to is no longer what is proposed; and enough yeses to an
     // old version agreed a trade on a deal nobody had on the table.
     if ((await newestOffer(tx, tradeId)) !== offerId) throw offerChanged()
+    // A yes already standing on this version is answered as it stands. Run
+    // again — a second press of the swipe, a retry after an answer lost in a
+    // tunnel — it pushed out every negotiation opened about the reserved
+    // things since (a reserved thing is still on the market, so somebody may
+    // well be talking about it), told the others «Ola godtok byttet» a second
+    // time, and wrote a new time and terms version over the record of when
+    // the yes was given.
+    const [given] = await tx.execute<Row>(
+      sql`select 1 from trade_acceptances
+          where offer_id = ${offerId} and user_id = ${userId} and revoked_at is null`,
+    )
+    if (given) {
+      return {
+        reserved: [],
+        displaced: [],
+        freed: [],
+        everyoneAccepted: state === 'accepted',
+        alreadyAccepted: true,
+      }
+    }
     // And no yes across a block: a trade the block did not end — agreed, and
     // then taken back — or a block from before blocks ended anything.
     if (await blockedInTrade(tx, tradeId, userId)) throw blocked()
@@ -458,7 +483,7 @@ export async function acceptOffer(
       await tx.execute(sql`update trades set state = 'accepted' where id = ${tradeId}`)
     }
 
-    return { reserved, displaced, freed, everyoneAccepted }
+    return { reserved, displaced, freed, everyoneAccepted, alreadyAccepted: false }
   })
 }
 
@@ -548,14 +573,64 @@ export async function revokeAcceptance(
  * Returns the listings it let go of rather than marking traded: anything it
  * held that the final version does not give. A counter-offer lets go of what
  * the trade held for the version before, but one made before it did left them
- * held, and completing marked them traded — things the deal had dropped.
+ * held, and completing marked them traded — things the deal had dropped. And
+ * whatever the negotiations it ends were holding: every one still going on
+ * about a thing it gives away is closed as displaced, as a yes closes the
+ * ones there when it reserves.
  */
 export async function completeTrade(db: Database, tradeId: string): Promise<string[]> {
   return db.transaction(async (tx) => {
-    // The one order (`index.ts`): the trade, then what it holds.
-    const state = (await lockTrades(tx, [tradeId])).get(tradeId)
+    // The negotiations this may have to end: every other one with a thing
+    // this trade holds in any version. A thing reserved by a yes is still on
+    // the market — somebody may write to its owner about it in case the
+    // trade falls through — and the yes ended only the negotiations that
+    // were there when it was given. Which of these do end is judged below,
+    // once they are held, as an acceptance judges the trades it pushes out.
+    const rivals = await tx.execute<Row>(sql`
+      select distinct o.trade_id as id
+      from items i
+      join trade_offer_items oi on oi.item_id = i.id
+      join trade_offers o on o.id = oi.offer_id
+      join trades t on t.id = o.trade_id
+      where i.active_trade_id = ${tradeId} and o.trade_id <> ${tradeId}
+        and t.state in ('talking', 'pending', 'countered')
+    `)
+
+    // The one order (`index.ts`): the trades, then what they hold.
+    const states = await lockTrades(tx, [tradeId, ...rivals.map((row) => row['id']!)])
+    const state = states.get(tradeId)
     if (state !== 'accepted' && state !== 'paused') return []
-    await lockItems(tx, sql`i.active_trade_id = ${tradeId}`)
+
+    // Of those, the ones still negotiating with a thing this trade gives
+    // away on their table: their newest version, as for a yes. A thing is
+    // given away when this trade holds it and its final version gives it,
+    // which is what the update below marks traded.
+    const negotiating = [...states]
+      .filter(([id, now]) => id !== tradeId && NEGOTIABLE.includes(now))
+      .map(([id]) => id)
+    const ending =
+      negotiating.length === 0
+        ? []
+        : (
+            await tx.execute<Row>(sql`
+              select distinct o.trade_id as id from trade_offers o
+              join trade_offer_items oi on oi.offer_id = o.id
+              join items i on i.id = oi.item_id
+              where o.trade_id = any(${uuidArray(negotiating)})
+                and o.seq = (select max(seq) from trade_offers where trade_id = o.trade_id)
+                and i.active_trade_id = ${tradeId}
+                and i.id in (select gi.item_id from trade_offers g
+                             join trade_offer_items gi on gi.offer_id = g.id
+                             where g.trade_id = ${tradeId}
+                               and g.seq = (select max(seq) from trade_offers
+                                            where trade_id = ${tradeId}))
+              order by o.trade_id`)
+          ).map((row) => row['id']!)
+
+    await lockItems(
+      tx,
+      sql`i.active_trade_id = ${tradeId} or i.active_trade_id = any(${uuidArray(ending)})`,
+    )
 
     await tx.execute(sql`
       insert into trade_item_snapshots
@@ -594,7 +669,17 @@ export async function completeTrade(db: Database, tradeId: string): Promise<stri
       sql`update trade_withdrawals set state = 'expired', resolved_at = now()
           where trade_id = ${tradeId} and state = 'waiting'`,
     )
-    return backOnTheMarket(released)
+
+    // A negotiation about a thing that has now been given away is about
+    // nothing, and it is closed in words, never left open: it used to stand
+    // in «Venter» for ever, a yes in it refused as item_unavailable, and the
+    // box on 04 went on writing into it. «Displaced»: a yes in another trade
+    // took the thing, and that trade is done. Everybody in it is told.
+    const freed = backOnTheMarket(released)
+    for (const loser of ending) {
+      freed.push(...(await endTrade(tx, loser, 'displaced')))
+    }
+    return freed
   })
 }
 

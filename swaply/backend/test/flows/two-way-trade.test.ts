@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { findCyclesThrough } from '../../src/trades/cycles.js'
 import { acceptOffer, completeTrade, openTradeFromCycle } from '../../src/trades/trades.js'
+import { expressWish } from '../../src/trades/wish.js'
 import { close, currentOffer, db, itemRow, like, makeItem, makeUser, reset, tradeState } from '../helpers.js'
 
 describe('a two-way trade', () => {
@@ -90,6 +91,25 @@ describe('a two-way trade', () => {
     )
     expect(snapshots.map((s) => s['title'])).toEqual(['Telt, 3 personer', 'Bosch drill 18V'])
     expect(snapshots[1]!['cover_url']).toBe('https://img/drill.webp')
+  })
+
+  test('7b. nobody can wish for a thing already given away, and its owner hears nothing', async () => {
+    // The heart went through and Kari was told «Per likte Telt» about a tent
+    // she no longer has: a wish that can never close a loop.
+    const per = await makeUser('Per')
+
+    await expect(expressWish(db, per, tent)).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'item_unavailable',
+      message: 'Denne er allerede byttet bort.',
+    })
+    expect(await db.execute(sql`select 1 from likes where from_user = ${per}`)).toHaveLength(0)
+    expect(
+      await db.execute(
+        sql`select 1 from notifications where user_id = ${kari} and type = 'item_liked'
+              and payload->>'byUserId' = ${per}`,
+      ),
+    ).toHaveLength(0)
   })
 
   test('8. the listing cannot be hard-deleted out from under the record', async () => {

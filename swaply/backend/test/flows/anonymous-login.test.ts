@@ -540,6 +540,40 @@ describe('signing in on a phone that has been looking around', () => {
     expect(await likedBy(res.body!['token'])).toEqual([drill, chair].sort())
   })
 
+  test('20b. and no token the phone had opens the account once it has a password', async () => {
+    // A device id opens a session each time it is sent while nobody has
+    // claimed it: two tabs at once make two, and so does anybody else who has
+    // the id. Only the token the profile was made with used to go, and the
+    // other went on opening the account — the e-mail, listing, all of it —
+    // with no password, after the device id itself was refused.
+    const device = 'device-two-tokens-0123456789abcd'
+    const first = await call('POST', '/auth/anonymous', { body: { deviceId: device } })
+    const second = await call('POST', '/auth/anonymous', { body: { deviceId: device } })
+    expect(second.body!['user']['id']).toBe(first.body!['user']['id'])
+
+    const made = await call('POST', '/auth/register', {
+      token: first.body!['token'],
+      body: { displayName: 'Ragnhild', email: 'ragnhild@epost.no', password: 'byttehandel1' },
+    })
+    expect(made.status).toBe(201)
+
+    for (const old of [first.body!['token'], second.body!['token']]) {
+      expect((await call('GET', '/me', { token: old })).status).toBe(401)
+    }
+    const listing = await call('POST', '/items', {
+      token: second.body!['token'],
+      body: { title: 'Lampe', category: 'hjem', condition: 'good' },
+    })
+    expect(listing.status).toBe(401)
+    expect((await call('POST', '/auth/anonymous', { body: { deviceId: device } })).body!['code']).toBe(
+      'device_claimed',
+    )
+    // The one the profile was answered with is the way in.
+    expect((await call('GET', '/me', { token: made.body!['token'] })).body!['email']).toBe(
+      'ragnhild@epost.no',
+    )
+  })
+
   test('21. a phone whose stranger is already gone signs in as it always did', async () => {
     // Its token died with the fold in step 5: a second tab, or a sign-in
     // tried again after the first one landed. Nothing is left to carry, and

@@ -80,8 +80,17 @@ export default async function miscRoutes(app: FastifyInstance) {
       .parse(request.body)
 
     await participantOf(app.db, id, userId)
-    await participantOf(app.db, id, body.ratee)
     if (body.ratee === userId) throw badRequest('self_review', 'Du kan ikke vurdere deg selv.')
+    // In words about the one being rated. `participantOf` says «Du er ikke
+    // med i dette byttet», which here told the person rating that they were
+    // not in their own trade.
+    const ratee = await one(
+      app.db,
+      sql`select 1 from trade_participants where trade_id = ${id} and user_id = ${body.ratee}`,
+    )
+    if (!ratee) {
+      throw badRequest('ratee_not_in_trade', 'Den du vurderer var ikke med i dette byttet.')
+    }
 
     // Both kinds of feedback come after a completed trade — 06h off 09h, 07l
     // for the chain we were not part of. A rating given before anything

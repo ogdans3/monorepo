@@ -63,9 +63,13 @@ export default async function mediaRoutes(app: FastifyInstance) {
     return reply
       .type(type)
       .header('content-length', info.size)
-      // The name is random and the bytes never change under it, so a cache may
-      // keep it for as long as it likes.
-      .header('cache-control', 'public, max-age=31536000, immutable')
+      // The name is random and the bytes never change under it, so the
+      // browser that fetched it may keep it as long as it likes. Nobody else
+      // may: the bytes can be deleted — an erasure unlinks them, and so does
+      // the end of a claim window — and a shared cache told `public` for a
+      // year went on handing out a deleted person's photograph. The API is
+      // served through Cloudflare, which keeps pictures by their extension.
+      .header('cache-control', 'private, max-age=31536000, immutable')
       .header('x-content-type-options', 'nosniff')
       // Uploaded bytes served from our own origin: even though nothing but
       // JPEG, PNG and WebP gets stored, this says plainly that the file may not

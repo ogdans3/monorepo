@@ -108,4 +108,36 @@ describe('what is waiting on you', () => {
     await call('DELETE', `/trades/${tradeId}/withdrawal`, { token: ola })
     expect(await badge(kari)).toBe(0)
   })
+
+  test('6. in a ring, a deal with somebody\'s side empty is nobody\'s turn, on the badge or on 11', async () => {
+    // Una, Per and Siri close a ring, and Siri proposes a version in which
+    // Una gives nothing. Nobody can say yes to it (`incomplete_offer`). The
+    // badge said so, and «Din tur» on 11 told Siri it was her turn: it looked
+    // only at what she gives and gets, not at Una's side.
+    const una = await register('Una')
+    const per = await register('Per')
+    const siri = await register('Siri')
+    const a = await list(una, 'Kajakk')
+    const b = await list(per, 'Sykkel')
+    const c = await list(siri, 'Gitar')
+    await call('POST', `/items/${b}/like`, { token: siri })
+    await call('POST', `/items/${c}/like`, { token: una })
+    const ring = (await call('POST', `/items/${a}/like`, { token: per })).body!['tradeId']
+
+    const seats = (await call('GET', `/trades/${ring}`, { token: siri })).body!['participants'] as Json[]
+    const seat = (title: string) =>
+      seats.find((p) => (p['gives'] as Json[]).some((i) => i['title'] === title))!['position']
+    const countered = await call('POST', `/trades/${ring}/counter`, {
+      token: siri,
+      body: { items: [{ itemId: b, giverPosition: seat('Sykkel') }, { itemId: c, giverPosition: seat('Gitar') }] },
+    })
+    expect(countered.status).toBe(200)
+
+    for (const token of [una, per, siri]) {
+      expect(await badge(token)).toBe(0)
+      expect((await call('GET', '/trades', { token })).body!['yourTurn']).toBe(0)
+    }
+    const yes = await call('POST', `/trades/${ring}/accept`, { token: siri })
+    expect(yes.body!['code']).toBe('incomplete_offer')
+  })
 })
