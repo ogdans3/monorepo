@@ -528,6 +528,13 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   List<Widget> _sections(Trade trade) {
     final chain = trade.isChain;
 
+    // A finished trade is drawn from the copy taken as it finished, where
+    // the server sent one; anything else from the offer as it stands.
+    final gotCopy = _traded(trade, trade.receivingFrom.position);
+    final gaveCopy = _traded(trade, trade.youPosition);
+    final got = gotCopy ?? trade.youGet;
+    final gave = gaveCopy ?? trade.youGive;
+
     final withdrawal = trade.withdrawal;
     final refusedWithdrawal = withdrawal != null &&
         withdrawal.byYou &&
@@ -567,7 +574,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       _legCard(
         kicker: trade.state == 'completed' ? 'Du fikk' : 'Du får',
         colour: SwaplyColors.greenText,
-        items: trade.youGet,
+        items: got,
         from: 'fra ${trade.receivingFrom.displayName.split(' ').first}',
         done: trade.youReceivedAt != null ? 'Mottatt' : null,
       ),
@@ -579,7 +586,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                 ? 'Du gir · ${trade.youGive.length} ting'
                 : 'Du gir',
         colour: SwaplyColors.amberText,
-        items: trade.youGive,
+        items: gave,
         from: 'til ${trade.givingTo.displayName.split(' ').first}',
         done: trade.youSentAt != null ? 'Levert' : null,
         // «Fjern» and «+ Legg til flere» both open the counter-offer, which is
@@ -595,13 +602,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         _legCard(
           kicker: '${leg.giver.displayName.split(' ').first} gir',
           colour: SwaplyColors.greyLight,
-          items: leg.items,
+          items: _traded(trade, _positionOf(trade, leg.giver)) ?? leg.items,
           from: 'til ${leg.receiver.displayName.split(' ').first}',
         ),
       ],
 
       const SizedBox(height: 7),
-      _valueSummary(trade),
+      _valueSummary(gotCopy == null ? trade.youGetValue : _sum(got),
+          gaveCopy == null ? trade.youGiveValue : _sum(gave)),
       // Not on an ended trade: there is nothing left to pay, and «betales
       // når begge har godtatt» was a promise about a trade that is over.
       if (trade.cash != null && trade.state != 'cancelled') ...[
@@ -1038,22 +1046,63 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         ),
       );
 
+  /// What a finished trade's side at [position] gave, from the copy the
+  /// server took as it finished (`trade_item_snapshots`) rather than the
+  /// listings as they are now. A listing can change after it was traded — a
+  /// service is never «byttet» and stays up to be edited — and an erased
+  /// account's pictures go with it; the copy is what lets the counterparty's
+  /// history outlive both (DESIGN.md). Null where there is nothing to draw it
+  /// from: a trade not finished, or a server that sent no copy.
+  List<Item>? _traded(Trade trade, int? position) {
+    if (trade.state != 'completed' || trade.snapshots.isEmpty || position == null) return null;
+    final listed = [
+      ...trade.youGet,
+      ...trade.youGive,
+      for (final leg in trade.otherLegs) ...leg.items,
+    ];
+    return [
+      for (final (i, copy) in trade.snapshots.indexed)
+        if (copy.giverPosition == position)
+          Item.fromJson({
+            'id': 'traded-$i',
+            'title': copy.title,
+            'estimatedValueNok': copy.estimatedValueNok,
+            'cover': copy.cover,
+            // The copy carries no category, which is the mark drawn on a
+            // thing without a picture. The listing's, while it has the name
+            // it was traded under.
+            'category': listed.where((l) => l.title == copy.title).firstOrNull?.category ??
+                'diverse',
+          }),
+    ];
+  }
+
+  /// Where [person] sits in the ring, from the participants, which carry it.
+  int? _positionOf(Trade trade, UserRef person) =>
+      person.position ??
+      trade.participants.where((p) => p.id == person.id).firstOrNull?.position;
+
+  int _sum(List<Item> items) => items.fold(0, (total, i) => total + (i.estimatedValueNok ?? 0));
+
   /// «Du får · verdi 1 200 kr» left, the difference in the middle, «Du gir ·
-  /// verdi 850 kr» right — a line, not a card.
-  Widget _valueSummary(Trade trade) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(child: _valueCell('Du får', SwaplyColors.greenText, trade.youGetValue)),
-            if (trade.difference > 0)
-              Text('differanse ${kr(trade.difference)}',
-                  style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
-            Expanded(
-                child: _valueCell('Du gir', SwaplyColors.amberText, trade.youGiveValue, end: true)),
-          ],
-        ),
-      );
+  /// verdi 850 kr» right — a line, not a card. The server's sums, or a
+  /// finished trade's copy's, whichever the cards above it are drawn from.
+  Widget _valueSummary(int getValue, int giveValue) {
+    final difference = (getValue - giveValue).abs();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: _valueCell('Du får', SwaplyColors.greenText, getValue)),
+          if (difference > 0)
+            Text('differanse ${kr(difference)}',
+                style: const TextStyle(fontSize: 11, color: SwaplyColors.greyLight)),
+          Expanded(child: _valueCell('Du gir', SwaplyColors.amberText, giveValue, end: true)),
+        ],
+      ),
+    );
+  }
 
   Widget _valueCell(String label, Color colour, int value, {bool end = false}) => Text.rich(
         TextSpan(children: [

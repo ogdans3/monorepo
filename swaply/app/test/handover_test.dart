@@ -6,6 +6,11 @@
 // gjennomført!», came only when «Marker som mottatt» was the last mark set:
 // a trade finished by «Marker som sendt» turned completed under the person
 // with nothing said.
+//
+// And a finished trade, 09i, was drawn from the listings as they are now,
+// not from the copy the server takes as the trade finishes and sends with it:
+// a listing changed after it was traded, or the pictures of an account
+// deleted since, rewrote what the other side had traded.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
 import 'package:swaply_app/screens/review.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
+import 'package:swaply_app/widgets/common.dart';
 import 'package:swaply_app/state/session.dart';
 
 import 'fake_server.dart';
@@ -135,5 +141,117 @@ void main() {
 
     expect(find.byType(TradeCompletedScreen), findsNothing);
     expect(find.text('Marker som ikke sendt'), findsOneWidget);
+  });
+
+  group('09i, from the copy taken as it finished', () {
+    /// Finished, with Kari's console changed since: a new title, a new value
+    /// and no picture any more, while the copy has it as it was traded.
+    Map<String, Object?> finished({bool copy = true}) {
+      final changed = {
+        ...FakeServer.console,
+        'title': 'Retro spillkonsoll, ny pris',
+        'estimatedValueNok': 9900,
+        'cover': null,
+      };
+      return {
+        ...agreed(sent: at, received: at, state: 'completed'),
+        'youGet': [changed],
+        'youGetValue': 9900,
+        'difference': 9300,
+        'cash': null,
+        'snapshots': copy
+            ? [
+                {
+                  'title': 'Bosch drill 18V',
+                  'giverPosition': 0,
+                  'estimatedValueNok': 600,
+                  'cover': null,
+                },
+                {
+                  'title': 'Retro spillkonsoll',
+                  'giverPosition': 1,
+                  'estimatedValueNok': 1200,
+                  'cover': 'http://test/media/console.jpg',
+                },
+              ]
+            : const [],
+      };
+    }
+
+    testWidgets('5. says what was traded, not what the listing says now', (tester) async {
+      server.overrides['GET /trades/trade-1'] = finished();
+      await mount(tester);
+
+      expect(find.text('Retro spillkonsoll'), findsOneWidget);
+      expect(find.text('fra Kari · verdi 1 200 kr'), findsOneWidget);
+      expect(find.textContaining('ny pris'), findsNothing);
+      expect(find.textContaining('9 900'), findsNothing);
+      // The values under them are the copy's too.
+      expect(find.text('differanse 600 kr'), findsOneWidget);
+      // And the picture it was traded with, which the listing no longer has.
+      final console = tester
+          .widgetList<ItemThumb>(find.byType(ItemThumb))
+          .firstWhere((t) => t.item.title == 'Retro spillkonsoll');
+      expect(console.item.cover, 'http://test/media/console.jpg');
+    });
+
+    testWidgets('6. …and from the listings where the server sent no copy', (tester) async {
+      server.overrides['GET /trades/trade-1'] = finished(copy: false);
+      await mount(tester);
+
+      expect(find.text('Retro spillkonsoll, ny pris'), findsOneWidget);
+    });
+
+    testWidgets('7. a trade under way is the offer as it stands', (tester) async {
+      server.overrides['GET /trades/trade-1'] = {
+        ...finished(),
+        'state': 'accepted',
+        'closedAt': null,
+      };
+      await mount(tester);
+
+      // On its card and under «PÅ VEI TIL DEG».
+      expect(find.text('Retro spillkonsoll, ny pris'), findsWidgets);
+      expect(find.text('Retro spillkonsoll'), findsNothing);
+    });
+
+    testWidgets('8. in a ring, the third leg is the copy\'s as well', (tester) async {
+      final ring = chainTrade();
+      server.overrides['GET /trades/trade-chain'] = {
+        ...ring,
+        'state': 'completed',
+        'closedAt': at,
+        'otherLegs': [
+          {
+            'giver': FakeServer.kari,
+            'receiver': FakeServer.me,
+            'items': [
+              {...FakeServer.console, 'title': 'Noe annet nå'}
+            ],
+          }
+        ],
+        'snapshots': [
+          {'title': 'Bosch drill 18V', 'giverPosition': 0, 'estimatedValueNok': 600},
+          {'title': 'Retro spillkonsoll', 'giverPosition': 1, 'estimatedValueNok': 1200},
+          {'title': 'Bysykkel, dame', 'giverPosition': 2, 'estimatedValueNok': 1100},
+        ],
+      };
+      tester.view.physicalSize = const Size(430, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await session.login('ola@epost.no', 'passord');
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider<SwaplyApi>.value(value: api),
+          ChangeNotifierProvider<Session>.value(value: session),
+        ],
+        child: const MaterialApp(home: TradeDetailScreen(tradeId: 'trade-chain')),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('KARI GIR'), findsOneWidget);
+      expect(find.text('Noe annet nå'), findsNothing);
+      expect(find.text('Retro spillkonsoll'), findsWidgets);
+    });
   });
 }
