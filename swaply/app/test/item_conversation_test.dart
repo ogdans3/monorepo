@@ -8,6 +8,7 @@
 // even say that.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
@@ -131,5 +132,36 @@ void main() {
     expect(find.byType(LastMessage), findsNothing);
     expect(find.text('Åpne ›'), findsNothing);
     expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, 'Er den ledig?');
+  });
+
+  testWidgets('6. back from the conversation, the box says what was said there since',
+      (tester) async {
+    // «Åpne ›» opened the thread and nothing happened on the way back: the
+    // box went on showing the message it had opened on, after more had been
+    // written in the thread.
+    var last = 'Den er ledig, ja!';
+    server.overrides['GET /items/item-console'] = (http.Request _) => {
+          ...FakeServer.console,
+          'owner': FakeServer.kari,
+          'conversation': {
+            'tradeId': 'trade-1',
+            'threadId': 'thread-1',
+            'lastMessage': {'body': last, 'senderName': 'Kari N.', 'mine': false},
+          },
+        };
+    await mount(tester);
+    expect(said('Den er ledig, ja!'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Åpne ›'));
+    await tester.tap(find.text('Åpne ›'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ThreadScreen), findsOneWidget);
+
+    last = 'Sees i morgen kl. 17!';
+    Navigator.of(tester.element(find.byType(ThreadScreen))).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ThreadScreen), findsNothing);
+    expect(said('Sees i morgen kl. 17!'), findsOneWidget);
   });
 }

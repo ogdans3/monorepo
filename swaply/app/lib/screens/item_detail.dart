@@ -835,7 +835,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 Flexible(child: Kicker('Samtale med $name', oneLine: true)),
                 if (talk != null)
                   TapArea(
-                    onTap: () => pushOverBar<void>(context, ThreadScreen(threadId: talk.threadId)),
+                    // Asked for again on the way back, quietly: what was said
+                    // in the thread since is what the box says now, and the
+                    // owner may have been blocked from there, which takes the
+                    // listing away; see [_load]. It went on showing the
+                    // message it had opened on.
+                    onTap: () async {
+                      await pushOverBar<void>(context, ThreadScreen(threadId: talk.threadId));
+                      if (mounted) await _load(leaveIfGone: true);
+                    },
                     child: const Text('Åpne ›', style: Type.link),
                   ),
               ],
