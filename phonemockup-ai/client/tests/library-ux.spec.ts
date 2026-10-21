@@ -229,7 +229,7 @@ test("newest saves sort first and unreadable entries do not hide valid projects"
   await expect(
     page.getByText("1 saved project couldn't be read.", { exact: false }),
   ).toBeVisible();
-  await page.getByLabel("Sort projects").selectOption("name");
+  await page.getByLabel("Sort by").selectOption("name");
   await expect(page.locator("[data-project-id]").first()).toHaveAttribute(
     "data-project-id",
     "older",
