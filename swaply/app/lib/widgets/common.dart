@@ -868,9 +868,10 @@ class ItemThumb extends StatelessWidget {
 /// on 05, 13 and 13b: 7 down and 2 in, the name at 13/700 wrapping, and
 /// «Verdi 600 kr» at 10.5/600 staying put at the top right.
 ///
-/// Where the value alone leaves the name next to no room — a narrow column
-/// with the text set large — the value goes under the name. Beside it, it
-/// ran past the edge of the card, and the name had none of the row left.
+/// Where the value leaves the name too little room for its longest word, the
+/// value goes under the name. Beside it on a 320 phone, «Sykkelhjelm» broke
+/// as «Sykkelhjel / m»; with the text set large the value alone ran past
+/// the edge of the card, and the name had none of the row left.
 class ListingCaption extends StatelessWidget {
   const ListingCaption(this.item, {super.key, this.maxLines});
 
@@ -884,9 +885,6 @@ class ListingCaption extends StatelessWidget {
   static const _value =
       TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: SwaplyColors.grey);
 
-  /// The least the name is left beside the value before the value goes under
-  /// it: a word or two.
-  static const _nameRoom = 48.0;
 
   @override
   Widget build(BuildContext context) {
@@ -901,15 +899,25 @@ class ListingCaption extends StatelessWidget {
           ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Flexible(child: name)])
           : LayoutBuilder(builder: (context, box) {
               final words = 'Verdi ${kr(value)}';
-              final painter = TextPainter(
-                text: TextSpan(text: words, style: DefaultTextStyle.of(context).style.merge(_value)),
-                textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
-                textScaler: MediaQuery.textScalerOf(context),
-                maxLines: 1,
-              )..layout();
-              final wide = painter.width;
-              painter.dispose();
-              if (wide + 8 + _nameRoom > box.maxWidth) {
+              final ambient = DefaultTextStyle.of(context).style;
+              double width(String text, TextStyle style) {
+                final painter = TextPainter(
+                  text: TextSpan(text: text, style: ambient.merge(style)),
+                  textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+                  textScaler: MediaQuery.textScalerOf(context),
+                  maxLines: 1,
+                )..layout();
+                final wide = painter.width;
+                painter.dispose();
+                return wide;
+              }
+
+              // The name's longest word, which has to fit beside the value
+              // for the name to break between words and not inside one.
+              final longest = item.title
+                  .split(RegExp(r'\s+'))
+                  .fold<double>(0, (most, word) => math.max(most, width(word, _name)));
+              if (width(words, _value) + 8 + longest + 1 > box.maxWidth) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [name, const SizedBox(height: 2), Text(words, style: _value)],

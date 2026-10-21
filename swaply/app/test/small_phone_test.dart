@@ -301,6 +301,33 @@ void main() {
           lessThanOrEqualTo(phones.last.size.height));
     });
 
+    testWidgets('at 320 a card\'s name breaks between words, not inside one', (tester) async {
+      // Beside its value the name had so little room that «Sykkelhjelm» was
+      // drawn «Sykkelhjel / m», and «Snømåking en vinter» «Snømåki / ng en /
+      // vinter». The value goes under the name when the name's longest word
+      // does not fit beside it.
+      const names = ['Sykkelhjelm', 'Snømåking en vinter', 'Bysykkel, dame', 'Kajakk med åre'];
+      server.overrides['GET /discover'] = {
+        'total': names.length,
+        'items': [
+          for (final (i, name) in names.indexed)
+            {...FakeServer.console, 'id': 'item-$i', 'title': name, 'estimatedValueNok': 1500},
+        ],
+      };
+      await hold(tester, phones.last, const DiscoverScreen());
+
+      for (final name in names) {
+        final paragraph = tester.renderObject<RenderParagraph>(find.text(name));
+        var at = 0;
+        for (final word in name.split(' ')) {
+          final boxes = paragraph.getBoxesForSelection(
+              TextSelection(baseOffset: at, extentOffset: at + word.length));
+          expect(boxes.map((b) => b.top).toSet(), hasLength(1), reason: '«$word» in «$name»');
+          at += word.length + 1;
+        }
+      }
+    });
+
     testWidgets('and at the export\'s size a card\'s value is still beside its name',
         (tester) async {
       server.overrides['GET /discover'] = {
