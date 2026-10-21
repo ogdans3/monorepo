@@ -191,4 +191,62 @@ void main() {
       expect(find.textContaining('hans'), findsNothing);
     });
   });
+
+  group('a side with nothing on it yet', () {
+    // Per wrote first about Kari's listing; seen from Kari's side, she gives
+    // and gets nothing yet. Here: you give the drill and get nothing yet.
+    final firstAsk = {...FakeServer.trade, 'state': 'talking', 'youGet': const [], 'cash': null};
+
+    testWidgets('9. is said in 06g\'s header, not a hole after the ⇄', (tester) async {
+      server.overrides['GET /trades/trade-1'] = firstAsk;
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+
+      expect(find.text('Bosch drill 18V ⇄ ingenting ennå · under avtale'), findsOneWidget);
+    });
+
+    testWidgets('10. «Jeg vil ha» asks for the first thing, not one more', (tester) async {
+      server.overrides['GET /trades/trade-1'] = firstAsk;
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      await openChip(tester, '♥ Jeg vil ha');
+
+      expect(find.text('Vil du ha noe av Kari?'), findsOneWidget);
+      await tester.tap(find.text('Retro spillkonsoll'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Be om Retro spillkonsoll'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /threads/thread-1/messages']?['body'],
+          'Kan jeg få Retro spillkonsoll?');
+    });
+
+    testWidgets('11. …and one more where there is something already', (tester) async {
+      server.overrides['GET /trades/trade-1/candidates'] = {
+        'yours': [FakeServer.drill],
+        'theirs': [
+          {...FakeServer.console, 'inOffer': true},
+          {...FakeServer.console, 'id': 'item-sweater', 'title': 'Ullgenser M'},
+        ],
+        'counterparty': FakeServer.kari,
+      };
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      await openChip(tester, '♥ Jeg vil ha');
+
+      expect(find.text('Vil du ha noe mer av Kari?'), findsOneWidget);
+      await tester.tap(find.text('Ullgenser M'));
+      await tester.pumpAndSettle();
+      expect(find.text('Be om Ullgenser M i tillegg'), findsOneWidget);
+    });
+  });
+
+  testWidgets('12. the totals on a trade page keep an amount on one line', (tester) async {
+    await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
+
+    final cells = tester
+        .widgetList<Text>(find.byType(Text))
+        .where((t) => t.textSpan != null)
+        .map((t) => t.textSpan!.toPlainText())
+        .toList();
+    expect(cells, contains('Du får verdi 1 200 kr'));
+    expect(cells, contains('Du gir verdi 600 kr'));
+  });
 }

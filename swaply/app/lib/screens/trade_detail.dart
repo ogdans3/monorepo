@@ -1109,7 +1109,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           TextSpan(
               text: '$label ',
               style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
-          TextSpan(text: 'verdi ${kr(value)}'),
+          // Kept whole: at 320 across the cell broke «1 200 kr» at its
+          // thousands space, into «verdi 1» and «200 kr».
+          TextSpan(text: 'verdi ${_whole(kr(value))}'),
         ]),
         textAlign: end ? TextAlign.end : TextAlign.start,
         style: const TextStyle(fontSize: 12, color: SwaplyColors.inkMuted),
@@ -1226,6 +1228,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
   Widget _handoverSection(Trade trade) {
     final sent = trade.youSentAt != null;
     final received = trade.youReceivedAt != null;
+    final theirSent =
+        trade.participants.where((p) => p.id == trade.receivingFrom.id).firstOrNull?.sentAt;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1258,8 +1262,15 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             children: [
               Text(trade.youGet.map((i) => i.title).join(' + '), style: Type.heading),
               const SizedBox(height: 4),
-              Text('fra ${trade.receivingFrom.displayName.split(' ').first} · '
-                  'avtal detaljer i samtalen', style: Type.small),
+              // Sent, once the one you receive from has marked it so: «sendt
+              // av Ola i går», as 08c draws it. It said «avtal detaljer i
+              // samtalen» whatever they had marked, and the one waiting
+              // learnt it only by being refused a withdrawal.
+              Text(
+                  theirSent == null
+                      ? 'fra ${_firstName(trade.receivingFrom)} · avtal detaljer i samtalen'
+                      : 'sendt av ${_firstName(trade.receivingFrom)} ${_day(theirSent)}',
+                  style: Type.small),
               const SizedBox(height: Insets.md),
               SecondaryButton(received ? 'Marker som ikke mottatt' : 'Marker som mottatt',
                   onPressed: _busy
@@ -1514,11 +1525,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // The way to rate it is the button at the foot of the
+                      // screen; a second one here opened the same 06h.
                       const Text('Du har ikke vurdert byttet ennå.', style: Type.secondary),
-                      const SizedBox(height: Insets.sm),
-                      SecondaryButton('Vurder byttet',
-                          onPressed: () =>
-                              pushOverBar<void>(context, ReviewScreen(trade: trade))),
                     ],
                   )
                 : Column(
@@ -1877,3 +1886,18 @@ String _firstNames(List<UserRef> people) {
 }
 
 String _longDate(DateTime date) => '${date.day}. ${_months[date.month - 1]} ${date.year}';
+
+/// [amount] with its spaces made ones a line does not break at.
+String _whole(String amount) => amount.replaceAll(' ', '\u00A0');
+
+/// «i dag», «i går», or «4. september»: when something was marked, by the
+/// calendar's days.
+String _day(DateTime when) {
+  final today = now();
+  final days = DateTime.utc(today.year, today.month, today.day)
+      .difference(DateTime.utc(when.year, when.month, when.day))
+      .inDays;
+  if (days == 0) return 'i dag';
+  if (days == 1) return 'i går';
+  return '${when.day}. ${_months[when.month - 1]}';
+}

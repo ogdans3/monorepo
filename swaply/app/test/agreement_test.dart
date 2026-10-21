@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/api/models.dart';
 import 'package:swaply_app/screens/agreement.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/state/session.dart';
@@ -220,5 +221,36 @@ void main() {
     await tick(tester);
     await swipe(tester);
     expect(server.requests, contains('POST /trades/trade-1/accept'));
+  });
+
+  group('in a ring of three', () {
+    // 06c said «Med Kari», the one you receive from or give to, «etter at
+    // begge har godtatt», and that Kari alone had to say yes if you pulled
+    // out. All three say yes, and either of the others answering yes lets
+    // you out.
+    testWidgets('8. names both of the others, and «alle»', (tester) async {
+      await mount(tester, AgreementScreen(trade: Trade.fromJson(chainTrade())));
+
+      expect(find.text('Med Kari og Per'), findsOneWidget);
+      expect(find.textContaining('etter at alle har godtatt'), findsOneWidget);
+      expect(find.textContaining('begge'), findsNothing);
+      expect(find.text('Trekker jeg meg etterpå, må Kari eller Per si ja først. '
+          'Er noe sendt, kan jeg ikke trekke meg'), findsOneWidget);
+
+      // The whole terms behind the link say the same.
+      await tester.tap(find.text('Les hele byttevilkårene ›'));
+      await tester.pumpAndSettle();
+      expect(find.text('• Trekker jeg meg etterpå, må Kari eller Per si ja først. '
+          'Er noe sendt, kan jeg ikke trekke meg'), findsOneWidget);
+    });
+
+    testWidgets('9. …and a pair is as the export has it', (tester) async {
+      await mount(tester, AgreementScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      expect(find.text('Med Kari'), findsOneWidget);
+      expect(find.textContaining('etter at begge har godtatt'), findsOneWidget);
+      expect(find.text('Trekker jeg meg etterpå, må Kari si ja først. '
+          'Er noe sendt, kan jeg ikke trekke meg'), findsOneWidget);
+    });
   });
 }

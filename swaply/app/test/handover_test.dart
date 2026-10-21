@@ -16,10 +16,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/api/models.dart';
 import 'package:swaply_app/screens/review.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/widgets/common.dart';
 import 'package:swaply_app/state/session.dart';
+import 'package:swaply_app/util/clock.dart';
 
 import 'fake_server.dart';
 
@@ -252,6 +254,99 @@ void main() {
       expect(find.text('KARI GIR'), findsOneWidget);
       expect(find.text('Noe annet nå'), findsNothing);
       expect(find.text('Retro spillkonsoll'), findsWidgets);
+    });
+  });
+
+  group('what the one waiting is told', () {
+    setUp(() {
+      // The day after Kari's marks in [agreed].
+      now = () => DateTime.parse('2026-09-10T12:00:00Z').toLocal();
+      addTearDown(() => now = DateTime.now);
+    });
+
+    testWidgets('9. «PÅ VEI TIL DEG» says when Kari sent it, as 08c draws it', (tester) async {
+      // Kari has sent and received in [agreed]; you have marked nothing.
+      server.overrides['GET /trades/trade-1'] = agreed();
+      await mount(tester);
+
+      expect(find.text('sendt av Kari i går'), findsOneWidget);
+      expect(find.textContaining('avtal detaljer i samtalen'), findsNothing);
+    });
+
+    testWidgets('10. …and that details are agreed in the conversation while she has not',
+        (tester) async {
+      final trade = agreed();
+      server.overrides['GET /trades/trade-1'] = {
+        ...trade,
+        'participants': [
+          for (final p in trade['participants']! as List)
+            {...p as Map<String, Object?>, 'sentAt': null, 'receivedAt': null},
+        ],
+      };
+      await mount(tester);
+
+      expect(find.text('fra Kari · avtal detaljer i samtalen'), findsOneWidget);
+      expect(find.textContaining('sendt av'), findsNothing);
+    });
+  });
+
+  testWidgets('11. a finished trade has one way to rate it, at the foot', (tester) async {
+    server.overrides['GET /trades/trade-1'] = agreed(sent: at, received: at, state: 'completed');
+    await mount(tester);
+
+    expect(find.text('Du har ikke vurdert byttet ennå.'), findsOneWidget);
+    expect(find.text('Vurder Kari'), findsOneWidget);
+    expect(find.text('Vurder byttet'), findsNothing);
+  });
+
+  group('09h, what went in and out', () {
+    Trade paidToYou() => Trade.fromJson({
+          ...agreed(sent: at, received: at, state: 'completed'),
+          // Kari's console for your drill, and 450 kr from her to you.
+          'youGetValue': 600,
+          'youGiveValue': 1200,
+          'youGet': [FakeServer.drill],
+          'youGive': [FakeServer.console],
+          'cash': {
+            'amountNok': 450,
+            'youPay': false,
+            'payer': {...FakeServer.kari, 'position': 1},
+            'payee': {...FakeServer.me, 'position': 0},
+            'payeePhone': null,
+          },
+        });
+
+    Future<void> show(WidgetTester tester, Trade trade) async {
+      tester.view.physicalSize = const Size(430, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider<SwaplyApi>.value(value: api),
+          ChangeNotifierProvider<Session>.value(value: session),
+        ],
+        child: MaterialApp(home: TradeCompletedScreen(trade: trade)),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('12. counts a mellomlegg paid to you as come in', (tester) async {
+      await show(tester, paidToYou());
+
+      expect(find.text('1 050 kr'), findsOneWidget);
+      expect(find.text('verdi inn, med mellomlegg'), findsOneWidget);
+      expect(find.text('1 200 kr'), findsOneWidget);
+      expect(find.text('verdi ut'), findsOneWidget);
+    });
+
+    testWidgets('13. …and one you paid as gone out', (tester) async {
+      await show(tester, Trade.fromJson(FakeServer.trade));
+
+      // The drill and 350 kr out, the console in.
+      expect(find.text('950 kr'), findsOneWidget);
+      expect(find.text('verdi ut, med mellomlegg'), findsOneWidget);
+      expect(find.text('1 200 kr'), findsOneWidget);
+      expect(find.text('verdi inn'), findsOneWidget);
     });
   });
 }

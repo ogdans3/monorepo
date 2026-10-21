@@ -78,6 +78,11 @@ class _ProposalSheetState extends State<_ProposalSheet> {
     return _amount != cash.amountNok || (_amount > 0 && _iPay != cash.youPay);
   }
 
+  /// Nothing of theirs is in the trade yet, so what is asked for is the
+  /// first thing and not one more: the owner answering «Jeg vil ha» about
+  /// their own listing, asking for something back.
+  bool get _first => widget.trade.youGet.isEmpty;
+
   int get _theirPosition =>
       widget.trade.receivingFrom.position ?? (widget.trade.youPosition == 0 ? 1 : 0);
 
@@ -181,8 +186,11 @@ class _ProposalSheetState extends State<_ProposalSheet> {
             ? 'Jeg foreslår ${_chosen!.title} i byttet.'
             : 'Jeg foreslår ${_chosen!.title} '
                 '(verdi ${kr(_chosen!.estimatedValueNok)}) i byttet.',
-        ProposalKind.askTheirs =>
-          'Kan jeg få ${_chosen!.title} i tillegg? Da er vi nærmere skuls.',
+        // «i tillegg» only to what you already get: asked first, there is
+        // nothing to add it to, and nothing to be closer to even with.
+        ProposalKind.askTheirs => _first
+            ? 'Kan jeg få ${_chosen!.title}?'
+            : 'Kan jeg få ${_chosen!.title} i tillegg? Da er vi nærmere skuls.',
         ProposalKind.cash => _amount == 0
             ? 'Jeg foreslår at vi dropper mellomlegget.'
             : _iPay
@@ -237,7 +245,7 @@ class _ProposalSheetState extends State<_ProposalSheet> {
 
   String _title() => switch (widget.kind) {
         ProposalKind.offerMine => 'Foreslå en av dine ting',
-        ProposalKind.askTheirs => 'Vil du ha noe mer av $_other?',
+        ProposalKind.askTheirs => _first ? 'Vil du ha noe av $_other?' : 'Vil du ha noe mer av $_other?',
         ProposalKind.cash => 'Foreslå mellomlegg',
       };
 
@@ -274,8 +282,11 @@ class _ProposalSheetState extends State<_ProposalSheet> {
   String _confirmLabel() => switch (widget.kind) {
         ProposalKind.offerMine =>
           _chosen == null ? 'Foreslå' : 'Foreslå ${_chosen!.title}',
-        ProposalKind.askTheirs =>
-          _chosen == null ? 'Be om i tillegg' : 'Be om ${_chosen!.title} i tillegg',
+        ProposalKind.askTheirs => _chosen == null
+            ? (_first ? 'Be om' : 'Be om i tillegg')
+            : _first
+                ? 'Be om ${_chosen!.title}'
+                : 'Be om ${_chosen!.title} i tillegg',
         ProposalKind.cash => _amount == 0 ? 'Foreslå ingen mellomlegg' : 'Foreslå ${kr(_amount)}',
       };
 

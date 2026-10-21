@@ -623,8 +623,12 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
       );
 
   String _tradeLine(Trade trade) {
-    final give = trade.youGive.map((i) => i.title).join(' + ');
-    final get = trade.youGet.map((i) => i.title).join(' + ');
+    // A side with nothing on it yet is said, as 11 says it: it was a hole
+    // after the ⇄, «Fiskestang med snelle ⇄  · under avtale».
+    String side(List<Item> items) =>
+        items.isEmpty ? 'ingenting ennå' : items.map((i) => i.title).join(' + ');
+    final give = side(trade.youGive);
+    final get = side(trade.youGet);
     final state = switch (trade.state) {
       'accepted' => 'godtatt',
       'completed' => 'gjennomført',

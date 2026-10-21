@@ -56,9 +56,21 @@ class _AgreementScreenState extends State<AgreementScreen> {
     final trade = widget.trade;
     final other = trade.givingTo.displayName.split(' ').first;
     final from = trade.receivingFrom.displayName.split(' ').first;
+    // A ring of three is agreed with both of the others: «Med Ingrid og
+    // Kari», and terms that say so. It said «Med Ingrid», whom you give to,
+    // and «begge», as if there were two of you.
+    final ring = trade.isChain || trade.participants.length > 2;
+    final others = trade.participants
+        .where((p) => p.position != trade.youPosition)
+        .map((p) => p.displayName.split(' ').first)
+        .toList();
+    final withWhom = ring && others.length > 1
+        ? '${others.sublist(0, others.length - 1).join(', ')} og ${others.last}'
+        : other;
+    final askWhom = ring && others.length > 1 ? others.join(' eller ') : other;
 
     return Scaffold(
-      appBar: swaplyAppBar(context, 'Avtalen', subtitle: 'Med $other'),
+      appBar: swaplyAppBar(context, 'Avtalen', subtitle: 'Med $withWhom'),
       body: SafeArea(
         child: Column(
           children: [
@@ -112,7 +124,7 @@ class _AgreementScreenState extends State<AgreementScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (final (i, t) in tradeTerms(other).indexed) ...[
+                      for (final (i, t) in tradeTerms(askWhom, ring: ring).indexed) ...[
                         if (i > 0) const SizedBox(height: 8),
                         _term(t),
                       ],
@@ -123,7 +135,7 @@ class _AgreementScreenState extends State<AgreementScreen> {
                         // 06c is in the tab's navigator and the dialog on the
                         // root one, so «Lukk» popping with this screen's
                         // context took 06c down and left the terms up.
-                        onTap: () => showTradeTerms(context, other: other),
+                        onTap: () => showTradeTerms(context, other: askWhom, ring: ring),
                         child: const Text('Les hele byttevilkårene ›', style: Type.link),
                       ),
                     ],

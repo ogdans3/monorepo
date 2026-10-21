@@ -18,6 +18,9 @@ class TradeCompletedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final other = trade.receivingFrom.displayName.split(' ').first;
+    final cash = trade.cash;
+    final cashIn = cash != null && cash.payee.position == trade.youPosition ? cash.amountNok : 0;
+    final cashOut = cash != null && cash.youPay ? cash.amountNok : 0;
 
     return Scaffold(
       body: SafeArea(
@@ -57,12 +60,17 @@ class TradeCompletedScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: Insets.xl),
+                    // With the mellomlegg on the side it went to: without
+                    // it the one paid 450 kr on top read as having given
+                    // more than they got.
                     SectionCard(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _value(kr(trade.youGetValue), 'verdi inn'),
-                          _value(kr(trade.youGiveValue), 'verdi ut'),
+                          _value(kr(trade.youGetValue + cashIn),
+                              cashIn > 0 ? 'verdi inn, med mellomlegg' : 'verdi inn'),
+                          _value(kr(trade.youGiveValue + cashOut),
+                              cashOut > 0 ? 'verdi ut, med mellomlegg' : 'verdi ut'),
                         ],
                       ),
                     ),
