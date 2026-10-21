@@ -55,8 +55,9 @@ rather than believed.
 `app/lib/design/tokens.dart`. Change them together.
 
 **The web serves its own font.** Not a font CDN: a stylesheet from one hands
-every visitor's IP to a third party before the page draws, which reopens the
-transfer chapter that choosing OVH closed. `web/static/fonts/` holds the files
+every visitor's IP to a third party before the page draws, which adds a second
+processor to the transfer chapter. Cloudflare in front of all three hostnames is
+the only one there is, and `docs/ARCHITECTURE.md` says why it stays. `web/static/fonts/` holds the files
 and the licence.
 
 **Every thread belongs to a trade, and the first message creates one.** Writing

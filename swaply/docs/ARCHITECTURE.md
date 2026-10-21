@@ -11,12 +11,16 @@ Decided 09.09.2026.
 
 Our own boxes at OVH, not a managed cloud.
 
-OVH is French and EEA-owned, so there is **no third-country transfer to
-document**: no standard contractual clauses, no transfer impact assessment, no
-argument about the CLOUD Act. With a US-owned cloud that chapter has to be
-written even when the data sits in Frankfurt. For a Norwegian consumer app meant
-to verify identity, an empty transfer chapter is worth more than elastic capacity
-we will not use.
+OVH is French and EEA-owned, so **where the data is kept and computed on
+brings no third-country transfer**: no standard contractual clauses, no
+transfer impact assessment, no argument about the CLOUD Act. With a US-owned
+cloud that chapter has to be written even when the data sits in Frankfurt. For a
+Norwegian consumer app meant to verify identity, a short transfer chapter is
+worth more than elastic capacity we will not use.
+
+Short, not empty: everything a browser or a phone sends passes through
+Cloudflare on the way in, and Cloudflare is American. That is the one transfer
+there is, and it has its own section below.
 
 It is also where we already operate: Docker, a dashboard, Caddy. An invite-only
 app launched into a few Facebook groups does not have the load profile that
@@ -29,6 +33,49 @@ personal data. It gets its own entrance with its own TLS and its own auth.
 One payoff worth naming: deciding not to facilitate payment removes PSD2 and
 Finanstilsynet from the picture entirely. It is probably the most valuable
 architectural decision already taken, and it was taken for other reasons.
+
+### In front of it: Cloudflare, and the one transfer
+
+Written 21.10.2026, after the second test round found that the sentence above
+used to say there was no transfer at all, and the product owner chose to keep
+Cloudflare and write it down rather than take Swaply off it.
+
+**What goes through it.** The three hostnames — the app, the API and the
+public web — are in a zone that Cloudflare proxies, so every request reaches
+Cloudflare before it reaches Caddy on the OVH box. Cloudflare ends the TLS
+connection, which means it handles everything in transit in readable form:
+session tokens, passwords at sign-in, messages, names, the phone number a
+mellomlegg shows, photographs, and the IP address of every visitor. It keeps
+none of that as a service to us, but handling it is processing, and Cloudflare,
+Inc. is a US company. So Cloudflare is a **processor** under Article 28, and
+using it is a **transfer to a third country** under Chapter V.
+
+**What it rests on**, as we read it, and not as a legal opinion. Cloudflare's
+data processing addendum, which is part of its terms for every account, makes
+it a processor and carries the standard contractual clauses. Cloudflare, Inc. is also listed under the EU–U.S. Data
+Privacy Framework, and the adequacy decision behind it applies in the EEA,
+Norway included. Check the listing on dataprivacyframework.gov before launch
+and once a year: an organisation can fall off it, and the framework itself can
+be struck down, as its two predecessors were. If that happens the clauses
+still stand, and a transfer impact assessment has to be written for them.
+
+**What has to be written down because of it.**
+- The record of processing names Cloudflare as a processor, says what passes
+  through it, and gives the transfer basis above.
+- The privacy policy, once it is written, says the same in plain words.
+- Nothing about a person is cached at the edge. Photographs are served
+  `Cache-Control: private` since 21.10.2026, so a deleted picture is not
+  kept in Cloudflare's cache after it is gone from our disk. Before that they
+  were `public` for a year, and the API's cache has to be purged once after
+  that change is deployed.
+
+**What would end it.** Turning the proxy off for the three hostnames (DNS only)
+sends the traffic straight to Caddy, and the transfer chapter is empty again.
+The price is Cloudflare's protection against floods and its hiding of the box's
+address, which is why the zone uses it. The rest of this document keeps the
+rule it was built on: no other third party is added on the way to a person's
+data — no font CDN, no analytics, no hosted error tracker — so this section
+stays one processor long.
 
 ## Database: self-hosted Postgres
 
@@ -52,9 +99,9 @@ development machine.
 
 `DESIGN.md` used to say Backblaze B2. Item photos are personal data — people
 photograph their things at home, with faces, cars and addresses in the frame — so
-storing them with a US provider reintroduces exactly the transfer chapter that
-choosing OVH just closed. Object storage moves to OVH so the whole record of
-processing stays inside the EEA.
+storing them with a US provider would put them in a transfer chapter as
+something kept abroad, not only passing through. Object storage moves to OVH so
+everything we keep stays inside the EEA.
 
 ### Until the bucket exists: our own disk
 
@@ -92,6 +139,12 @@ behind; a job every six hours deletes the ones older than a day that no listing
 and no snapshot points at. Without it the volume only grows, and it grows with
 photographs of the inside of people's homes — which is what makes it a data
 protection problem rather than a disk one.
+
+**There is no cap on how much one account uploads.** The second test round
+asked for one, since nothing else stops a single account from filling the
+volume, and the product owner decided on 21.10.2026 that there is none. The
+sweep above is the only bound, so the free space on the volume is something to
+watch, and a cap is the first thing to reach for if it ever runs low.
 
 A half-written 10b now lives on the phone for as long as the person leaves it,
 which is longer than a day, so the two have to agree. The app keeps the bytes of
@@ -306,8 +359,8 @@ and no browser calls the API from these pages.
 
 **The web font is served from our own origin.** A stylesheet from a font CDN
 hands every visitor's IP address to a third party before the page has drawn,
-which would reopen the transfer chapter that choosing OVH closed for the sake of
-two fewer files in the repository.
+which would add a second processor to the transfer chapter (see *In front of
+it: Cloudflare*) for the sake of two fewer files in the repository.
 
 **`INVITE_ONLY` is a deployment flag, not a product question.** The product is
 invite-only; the flag exists because this repository is also deployed as a demo
