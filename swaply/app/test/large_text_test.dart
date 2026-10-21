@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply_app/api/client.dart';
+import 'package:swaply_app/api/models.dart';
+import 'package:swaply_app/screens/review.dart';
 import 'package:swaply_app/screens/trade_detail.dart';
 import 'package:swaply_app/state/session.dart';
 
@@ -106,6 +108,65 @@ void main() {
       onScreen(tester, find.text('Åpne ›'), small);
       // The kicker gives way, and says as much of the name as fits.
       expect(find.textContaining('SAMTALE MED KRISTOFFER'), findsOneWidget);
+    });
+  });
+
+  group('the stars on 06h and 07l', () {
+    for (final (name, trade) in [
+      ('06h', FakeServer.trade),
+      ('07l', chainTrade()),
+    ]) {
+      testWidgets('$name: all five of each row are on the screen at twice the text size',
+          (tester) async {
+        await hold(tester, se, ReviewScreen(trade: Trade.fromJson(trade)), scale: 2);
+
+        expect(tester.takeException(), isNull);
+        final stars = find.text('★');
+        expect(stars, findsNWidgets(name == '06h' ? 5 : 10));
+        for (final star in stars.evaluate()) {
+          onScreen(tester, find.byWidget(star.widget), se, reason: 'a star');
+        }
+      });
+    }
+
+    testWidgets('06h: the star under the finger is the one given', (tester) async {
+      await hold(tester, se, ReviewScreen(trade: Trade.fromJson(FakeServer.trade)), scale: 2);
+
+      await tester.tap(find.text('★').at(4));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Send vurdering'));
+      await tester.pumpAndSettle();
+
+      expect(server.bodies['POST /trades/trade-1/reviews']?['score'], 5);
+    });
+  });
+
+  group('09h', () {
+    for (final phone in [small, se]) {
+      testWidgets('on ${phone.name} at twice the text size, scrolls to «Vurder Kari» and «Senere»',
+          (tester) async {
+        await hold(tester, phone, TradeCompletedScreen(trade: Trade.fromJson(FakeServer.trade)),
+            scale: 2);
+
+        expect(tester.takeException(), isNull);
+        await tester.scrollUntilVisible(find.text('Senere'), 200);
+        await tester.pumpAndSettle();
+        onScreen(tester, find.text('Vurder Kari'), phone);
+        onScreen(tester, find.text('Senere'), phone);
+
+        await tester.tap(find.text('Vurder Kari'));
+        await tester.pumpAndSettle();
+        expect(find.byType(ReviewScreen), findsOneWidget);
+      });
+    }
+
+    testWidgets('at the export\'s size, nothing scrolls', (tester) async {
+      await hold(tester, (name: '390×844', size: const Size(390, 844), statusBar: 46),
+          TradeCompletedScreen(trade: Trade.fromJson(FakeServer.trade)));
+
+      final position = tester.state<ScrollableState>(find.byType(Scrollable)).position;
+      expect(position.maxScrollExtent, 0);
+      expect(find.text('Byttet er gjennomført!'), findsOneWidget);
     });
   });
 }

@@ -21,62 +21,78 @@ class TradeCompletedScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(Insets.screen),
-          child: Column(
-            children: [
-              const Spacer(),
-              Container(
-                height: 76,
-                width: 76,
-                decoration: const BoxDecoration(
-                    color: SwaplyColors.greenSoft, shape: BoxShape.circle),
-                child: const Icon(Icons.check, size: 40, color: SwaplyColors.greenPressed),
-              ),
-              const SizedBox(height: Insets.lg),
-              const Text('Byttet er gjennomført!',
-                  style: Type.display, textAlign: TextAlign.center),
-              const SizedBox(height: Insets.sm),
-              Text(
-                'Du og $other har begge bekreftet. '
-                '${trade.youGet.map((i) => i.title).join(' og ')} er din, '
-                '${trade.youGive.map((i) => i.title).join(' og ')} er hans.',
-                style: Type.secondary,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: Insets.xl),
-              SectionCard(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+        // Laid out for a screen with room to spare, the words in the middle
+        // and the buttons at the foot. Where it is short — a small phone, a
+        // large text size — it scrolls rather than pushing «Vurder Kari» and
+        // «Senere», the only ways on, off the foot of the screen.
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            padding: const EdgeInsets.all(Insets.screen),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight - 2 * Insets.screen),
+              child: IntrinsicHeight(
+                child: Column(
                   children: [
-                    Column(
-                      children: [
-                        Text(kr(trade.youGetValue), style: Type.title),
-                        const Text('verdi inn', style: Type.small),
-                      ],
+                    const Spacer(),
+                    Container(
+                      height: 76,
+                      width: 76,
+                      decoration: const BoxDecoration(
+                          color: SwaplyColors.greenSoft, shape: BoxShape.circle),
+                      child: const Icon(Icons.check, size: 40, color: SwaplyColors.greenPressed),
                     ),
-                    Column(
-                      children: [
-                        Text(kr(trade.youGiveValue), style: Type.title),
-                        const Text('verdi ut', style: Type.small),
-                      ],
+                    const SizedBox(height: Insets.lg),
+                    const Text('Byttet er gjennomført!',
+                        style: Type.display, textAlign: TextAlign.center),
+                    const SizedBox(height: Insets.sm),
+                    Text(
+                      'Du og $other har begge bekreftet. '
+                      '${trade.youGet.map((i) => i.title).join(' og ')} er din, '
+                      '${trade.youGive.map((i) => i.title).join(' og ')} er hans.',
+                      style: Type.secondary,
+                      textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: Insets.xl),
+                    SectionCard(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _value(kr(trade.youGetValue), 'verdi inn'),
+                          _value(kr(trade.youGiveValue), 'verdi ut'),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    const SizedBox(height: Insets.lg),
+                    PrimaryButton('Vurder $other', onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => ReviewScreen(trade: trade)));
+                    }),
+                    const SizedBox(height: Insets.sm),
+                    SecondaryButton('Senere', onPressed: () => Navigator.of(context).maybePop()),
                   ],
                 ),
               ),
-              const Spacer(),
-              PrimaryButton('Vurder $other', onPressed: () {
-                Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => ReviewScreen(trade: trade)));
-              }),
-              const SizedBox(height: Insets.sm),
-              SecondaryButton('Senere', onPressed: () => Navigator.of(context).maybePop()),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  /// An amount over its words, made smaller rather than run over the card's
+  /// edge when the two of them do not fit side by side.
+  Widget _value(String amount, String words) => Flexible(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            children: [
+              Text(amount, style: Type.title),
+              Text(words, style: Type.small),
+            ],
+          ),
+        ),
+      );
 }
 
 /// 06h Vurdering, and 07l when the trade was a chain and there are two people
@@ -368,7 +384,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   for (var n = 1; n <= 5; n++)
                     Padding(
                       padding: EdgeInsets.only(right: n < 5 ? gap : 0),
+                      // A star is a mark, as an icon is, and keeps its size
+                      // whatever the text size: grown with it, the row ran
+                      // past the screen and the fifth star was cut off.
                       child: Text('★',
+                          textScaler: TextScaler.noScaling,
                           style: TextStyle(
                               fontSize: size,
                               height: 1,
