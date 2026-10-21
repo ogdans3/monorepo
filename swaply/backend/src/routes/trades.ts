@@ -79,7 +79,7 @@ export default async function tradeRoutes(app: FastifyInstance) {
       // still reachable by a link somebody was handed.
       if (await ringsApart(app.db, userId, item['owner_id'])) throw testRing()
 
-      const opened = await startTalking(app.db, userId, id, body.body)
+      const opened = await startTalking(app.db, userId, id, body.body, { once: true })
       if (opened.isNew) {
         await app.db.execute(sql`
           insert into notifications (user_id, type, payload)

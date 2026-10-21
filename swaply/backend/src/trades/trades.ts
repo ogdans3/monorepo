@@ -98,19 +98,28 @@ export async function startTalking(
   opener: string,
   aboutItem: string,
   body: string,
+  opts: {
+    /**
+     * One conversation per pair per listing, asked again under a lock on the
+     * pair and the listing — what the box on 04 wants. Two first messages in
+     * the same moment, a second press while the first was still on its way,
+     * each found none and each opened one. The second now waits for the
+     * first and is handed its conversation, unwritten, for the caller to say
+     * its message in. The test tooling opens a rival on purpose, so it is
+     * asked for rather than always done.
+     */
+    once?: boolean
+  } = {},
 ): Promise<{ tradeId: string; threadId: string; isNew: boolean }> {
   return db.transaction(async (tx) => {
     const [item] = await tx.execute<Row>(sql`select owner_id from items where id = ${aboutItem}`)
     const owner = item!['owner_id']!
 
-    // One conversation per pair per listing, asked again under a lock on the
-    // pair and the listing: two first messages in the same moment — a second
-    // press while the first was still on its way — each found none and each
-    // opened one. The second now waits for the first and is handed its
-    // conversation, unwritten, for the caller to say its message in.
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`talk:${opener}:${aboutItem}`}))`)
-    const existing = await conversationAbout(tx, opener, owner, aboutItem)
-    if (existing) return { ...existing, isNew: false }
+    if (opts.once) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`talk:${opener}:${aboutItem}`}))`)
+      const existing = await conversationAbout(tx, opener, owner, aboutItem)
+      if (existing) return { ...existing, isNew: false }
+    }
 
     const [trade] = await tx.execute<Row>(sql`insert into trades default values returning id`)
     const tradeId = trade!['id']!
