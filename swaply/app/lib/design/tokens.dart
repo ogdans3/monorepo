@@ -230,18 +230,24 @@ class AdminColors {
   static const muted = Color(0xB3FAFAF9);
 }
 
-/// «Verdi 2 500 kr». The export separates thousands with a plain space, not a
-/// thin one — checked against the file rather than guessed.
+/// «Verdi 2 500 kr». The export separates thousands with a space as wide as
+/// a plain one, not a thin one — checked against the file rather than
+/// guessed. It is a no-break space (U+00A0), which draws the same: with a
+/// plain one a line broke inside an amount, «Du får verdi 1» over «200 kr»
+/// on a narrow phone, and between the number and «kr».
 String kr(num? value) {
   if (value == null) return '';
   final digits = value.round().toString();
   final buffer = StringBuffer();
   for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(' ');
+    if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(nbsp);
     buffer.write(digits[i]);
   }
-  return '$buffer kr';
+  return '$buffer${nbsp}kr';
 }
+
+/// The space inside an amount, which a line does not break at.
+const nbsp = '\u00A0';
 
 /// «Olas», and «Andreas'» for a name that ends in s, x or z, which takes the
 /// apostrophe and not a second s: «Du får · Andreas' ting», not «Andreass».

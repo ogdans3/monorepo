@@ -110,7 +110,7 @@ void main() {
       // Something changed: the 350 on the table again is not a proposal.
       await tester.tap(find.byTooltip('50 kr mer'));
       await tester.pump();
-      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400 kr'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400\u00A0kr'));
       await tester.pumpAndSettle();
       expect(server.bodies['POST /trades/trade-1/counter']?['termsVersion'], '2026-09-06');
     });
@@ -176,10 +176,10 @@ void main() {
       await mount(tester, const ThreadScreen(threadId: 'thread-1'));
       await openChip(tester, 'Foreslå mellomlegg');
 
-      expect(live(tester, 'Foreslå 350 kr'), isFalse);
+      expect(live(tester, 'Foreslå 350\u00A0kr'), isFalse);
       await tester.tap(find.text('Kari betaler'));
       await tester.pump();
-      expect(live(tester, 'Foreslå 350 kr'), isTrue);
+      expect(live(tester, 'Foreslå 350\u00A0kr'), isTrue);
       await tester.tap(find.text('Ingen'));
       await tester.pump();
       // Dropping the 350 is a change.
@@ -192,7 +192,7 @@ void main() {
       await openChip(tester, 'Foreslå mellomlegg');
 
       // The difference, as the export suggests it.
-      expect(live(tester, 'Foreslå 600 kr'), isTrue);
+      expect(live(tester, 'Foreslå 600\u00A0kr'), isTrue);
       await tester.tap(find.text('Ingen'));
       await tester.pump();
       expect(live(tester, 'Foreslå ingen mellomlegg'), isFalse);

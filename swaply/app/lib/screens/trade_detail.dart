@@ -1180,9 +1180,7 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           TextSpan(
               text: '$label ',
               style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
-          // Kept whole: at 320 across the cell broke «1 200 kr» at its
-          // thousands space, into «verdi 1» and «200 kr».
-          TextSpan(text: 'verdi ${_whole(kr(value))}'),
+          TextSpan(text: 'verdi ${kr(value)}'),
         ]),
         textAlign: end ? TextAlign.end : TextAlign.start,
         style: const TextStyle(fontSize: 12, color: SwaplyColors.inkMuted),
@@ -1957,9 +1955,6 @@ String _firstNames(List<UserRef> people) {
 }
 
 String _longDate(DateTime date) => '${date.day}. ${_months[date.month - 1]} ${date.year}';
-
-/// [amount] with its spaces made ones a line does not break at.
-String _whole(String amount) => amount.replaceAll(' ', '\u00A0');
 
 /// «i dag», «i går», or «4. september»: when something was marked, by the
 /// calendar's days.

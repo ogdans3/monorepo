@@ -216,8 +216,7 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
   Widget _value(String label, Color colour, int value, {bool end = false}) => Text.rich(
         TextSpan(children: [
           TextSpan(text: '$label ', style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
-          // Kept whole, rather than broken at the thousands space.
-          TextSpan(text: 'verdi ${kr(value).replaceAll(' ', '\u00A0')}'),
+          TextSpan(text: 'verdi ${kr(value)}'),
         ]),
         textAlign: end ? TextAlign.end : TextAlign.start,
         style: const TextStyle(fontSize: 12, color: SwaplyColors.inkMuted),

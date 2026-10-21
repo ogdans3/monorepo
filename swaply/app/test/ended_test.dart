@@ -201,9 +201,9 @@ void main() {
       expect(find.text('DU FÅR'), findsNothing);
       expect(find.text('DU GIR · 2 TING'), findsNothing);
       expect(find.textContaining('differanse'), findsNothing);
-      expect(find.text('Kari · verdi 1 200 kr'), findsOneWidget);
-      expect(find.text('din · verdi 600 kr'), findsOneWidget);
-      expect(find.text('din · verdi 250 kr'), findsOneWidget);
+      expect(find.text('Kari · verdi 1\u00A0200\u00A0kr'), findsOneWidget);
+      expect(find.text('din · verdi 600\u00A0kr'), findsOneWidget);
+      expect(find.text('din · verdi 250\u00A0kr'), findsOneWidget);
       expect(find.text('Tilgjengelig'), findsOneWidget);
       expect(find.text('Reservert'), findsOneWidget);
       // Still why it ended, and the way back.

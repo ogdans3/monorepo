@@ -185,11 +185,11 @@ void main() {
       await mount(tester);
 
       expect(find.text('Retro spillkonsoll'), findsOneWidget);
-      expect(find.text('fra Kari · verdi 1 200 kr'), findsOneWidget);
+      expect(find.text('fra Kari · verdi 1\u00A0200\u00A0kr'), findsOneWidget);
       expect(find.textContaining('ny pris'), findsNothing);
-      expect(find.textContaining('9 900'), findsNothing);
+      expect(find.textContaining('9\u00A0900'), findsNothing);
       // The values under them are the copy's too.
-      expect(find.text('differanse 600 kr'), findsOneWidget);
+      expect(find.text('differanse 600\u00A0kr'), findsOneWidget);
       // And the picture it was traded with, which the listing no longer has.
       final console = tester
           .widgetList<ItemThumb>(find.byType(ItemThumb))
@@ -333,9 +333,9 @@ void main() {
     testWidgets('12. counts a mellomlegg paid to you as come in', (tester) async {
       await show(tester, paidToYou());
 
-      expect(find.text('1 050 kr'), findsOneWidget);
+      expect(find.text('1\u00A0050\u00A0kr'), findsOneWidget);
       expect(find.text('verdi inn, med mellomlegg'), findsOneWidget);
-      expect(find.text('1 200 kr'), findsOneWidget);
+      expect(find.text('1\u00A0200\u00A0kr'), findsOneWidget);
       expect(find.text('verdi ut'), findsOneWidget);
     });
 
@@ -343,9 +343,9 @@ void main() {
       await show(tester, Trade.fromJson(FakeServer.trade));
 
       // The drill and 350 kr out, the console in.
-      expect(find.text('950 kr'), findsOneWidget);
+      expect(find.text('950\u00A0kr'), findsOneWidget);
       expect(find.text('verdi ut, med mellomlegg'), findsOneWidget);
-      expect(find.text('1 200 kr'), findsOneWidget);
+      expect(find.text('1\u00A0200\u00A0kr'), findsOneWidget);
       expect(find.text('verdi inn'), findsOneWidget);
     });
   });

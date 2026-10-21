@@ -83,7 +83,7 @@ void main() {
       await mount(tester, const TradeDetailScreen(tradeId: 'trade-1'));
 
       expect(find.text('til Kari'), findsOneWidget);
-      expect(find.textContaining('verdi 1 200 kr'), findsWidgets);
+      expect(find.textContaining('verdi 1\u00A0200\u00A0kr'), findsWidgets);
       expect(find.text('til Kari · verdi '), findsNothing);
     });
 
@@ -95,7 +95,7 @@ void main() {
       };
       await mount(tester, CounterOfferScreen(trade: Trade.fromJson(FakeServer.trade)));
 
-      expect(find.text('verdi 600 kr'), findsOneWidget);
+      expect(find.text('verdi 600\u00A0kr'), findsOneWidget);
       expect(find.text('verdi '), findsNothing);
       expect(find.text('Skateboard'), findsOneWidget);
     });
@@ -130,8 +130,8 @@ void main() {
       await openChip(tester, 'Foreslå mellomlegg');
 
       expect(
-          find.text('Retro spillkonsoll er verdt 1 200 kr, Bosch drill 18V 600 kr. '
-              'Differansen er 600 kr.'),
+          find.text('Retro spillkonsoll er verdt 1\u00A0200\u00A0kr, Bosch drill 18V 600\u00A0kr. '
+              'Differansen er 600\u00A0kr.'),
           findsOneWidget);
     });
 
@@ -147,9 +147,9 @@ void main() {
       await openChip(tester, 'Foreslå mellomlegg');
 
       expect(
-          find.text('Det du får er verdt 1 200 kr, det du gir 850 kr. Differansen er 350 kr.'),
+          find.text('Det du får er verdt 1\u00A0200\u00A0kr, det du gir 850\u00A0kr. Differansen er 350\u00A0kr.'),
           findsOneWidget);
-      expect(find.textContaining('Bosch drill 18V 600 kr'), findsNothing);
+      expect(find.textContaining('Bosch drill 18V 600\u00A0kr'), findsNothing);
     });
   });
 

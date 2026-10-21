@@ -90,7 +90,7 @@ void main() {
     trade('accepted', payer: 'kari-1', paidAt: paid, phone: null);
     await mount(tester);
 
-    expect(find.text('Kari betaler deg 350 kr'), findsOneWidget);
+    expect(find.text('Kari betaler deg 350\u00A0kr'), findsOneWidget);
     expect(find.text('✓ betalt via Vipps'), findsOneWidget);
     // Marking it is the payer's to do.
     expect(find.text('Marker som betalt'), findsNothing);
@@ -111,7 +111,7 @@ void main() {
     trade('completed', payer: 'me-1', paidAt: paid);
     await mount(tester);
 
-    expect(find.text('Du betalte 350 kr til Kari'), findsOneWidget);
+    expect(find.text('Du betalte 350\u00A0kr til Kari'), findsOneWidget);
     expect(find.text('✓ betalt via Vipps'), findsOneWidget);
     expect(find.text('betales når begge har godtatt'), findsNothing);
   });
@@ -121,9 +121,9 @@ void main() {
     trade('completed', payer: 'kari-1');
     await mount(tester);
 
-    expect(find.text('Kari skulle betale deg 350 kr'), findsOneWidget);
+    expect(find.text('Kari skulle betale deg 350\u00A0kr'), findsOneWidget);
     expect(find.text('ikke markert som betalt'), findsOneWidget);
-    expect(find.text('Kari betalte deg 350 kr'), findsNothing);
+    expect(find.text('Kari betalte deg 350\u00A0kr'), findsNothing);
   });
 
   testWidgets('5. an ended trade has nothing left to pay', (tester) async {

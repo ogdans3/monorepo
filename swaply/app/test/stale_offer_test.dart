@@ -114,7 +114,7 @@ void main() {
       await openChip(tester, 'Foreslå mellomlegg');
       await tester.tap(find.byTooltip('50 kr mer'));
       await tester.pump();
-      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400 kr'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400\u00A0kr'));
       await tester.pumpAndSettle();
 
       expect(server.bodies['POST /trades/trade-1/counter']?['baseOfferId'], 'offer-1');
@@ -162,7 +162,7 @@ void main() {
 
       await tester.tap(find.byTooltip('50 kr mer'));
       await tester.pump();
-      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400 kr'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400\u00A0kr'));
       await tester.pumpAndSettle();
 
       expect(find.text('Jeg betaler'), findsNothing);
@@ -180,7 +180,7 @@ void main() {
 
       await tester.tap(find.byTooltip('50 kr mer'));
       await tester.pump();
-      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400 kr'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Foreslå 400\u00A0kr'));
       await tester.pumpAndSettle();
 
       // The sheet is gone, so «Foreslå» cannot be pressed a second time over
