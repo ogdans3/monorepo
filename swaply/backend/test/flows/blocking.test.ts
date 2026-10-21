@@ -71,6 +71,7 @@ describe('blocking somebody', () => {
   let ola = '', kari = '', per = ''
   let olaId = '', kariId = ''
   let drill = '', tent = '', bike = ''
+  let sharedBefore = ''
 
   beforeAll(async () => {
     const a = await register('Ola N.', 'ola@epost.no')
@@ -83,6 +84,8 @@ describe('blocking somebody', () => {
     drill = await list(ola, 'Bosch drill 18V')
     tent = await list(kari, 'Telt, 3 personer')
     bike = await list(per, 'Bysykkel, dame')
+    // Before anything, Ola shares Kari's tent with somebody.
+    sharedBefore = (await call('POST', `/items/${tent}/share`, { token: ola })).body!['token']
   })
 
   test('1. before anything, each of them can see the others', async () => {
@@ -131,6 +134,20 @@ describe('blocking somebody', () => {
     }
   })
 
+  test('5c. and a link he shared before the block shows nothing of hers any more', async () => {
+    // Refusing to mint one (5b) left the link minted before the block: the
+    // same public page, her name, her photos and her words, under «Ola
+    // inviterer deg». It is answered as a listing that is gone, and it is
+    // still his invitation.
+    const page = await call('GET', `/invites/${sharedBefore}`)
+
+    expect(page.status).toBe(200)
+    expect(page.body!['item']).toBeNull()
+    expect(page.body!['itemRetired']).toBe(true)
+    expect(page.body!['inviter']['displayName']).toBe('Ola N.')
+    expect(page.body!['shareText']).not.toContain('Telt')
+  })
+
   test('6. no wish of his can reach her', async () => {
     const res = await call('POST', `/items/${tent}/like`, { token: ola })
 
@@ -174,6 +191,8 @@ describe('blocking somebody', () => {
     ])
     expect((await call('GET', `/items/${tent}`, { token: ola })).status).toBe(200)
     expect((await call('GET', `/users/${kariId}`, { token: ola })).body!['items']).toHaveLength(1)
+    // The link he shared before shows the tent again.
+    expect((await call('GET', `/invites/${sharedBefore}`)).body!['item']['title']).toBe('Telt, 3 personer')
   })
 
   test('10. and the ring that was refused while blocked closes now', async () => {
