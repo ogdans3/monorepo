@@ -104,6 +104,7 @@ class TapArea extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap, onLongPress;
   final String? label;
+
   final EdgeInsets room;
   final EdgeInsets? reach;
   final bool above;
@@ -644,76 +645,72 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final on = enabled && !busy && onPressed != null;
-    final style = FilledButton.styleFrom(
-      backgroundColor: SwaplyColors.greenPressed,
-      disabledBackgroundColor: const Color(0xFFD8DEDA),
-      disabledForegroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
-    );
     // Norwegian labels run long — «Marker byttet som gjennomført» — and a
     // button is not allowed to overflow because of a word. Nor to hide one:
     // cut to a line, «Godta endringen» beside «Avslå» read «Godta endri…» on
     // a 320 phone at the ordinary text size. A label that does not fit on
-    // one line gets two, centred, and the button grows to hold them; one
-    // that fits is laid out exactly as it always was.
+    // one line gets two, and the button grows to hold them, from [height]
+    // and no less. Not a LayoutBuilder deciding which: 09h asks its column
+    // for its intrinsic height, which a LayoutBuilder cannot answer.
     return KeepClear(
-      child: LayoutBuilder(builder: (context, box) {
-        final oneLine = busy ||
-            _fitsOneLine(context, label, _label,
-                box.maxWidth - 2 * 24 - (icon == null ? 0 : 18 + 8));
-        final button = FilledButton(
-          onPressed: on ? onPressed : null,
-          style: oneLine ? style : style.copyWith(padding: const WidgetStatePropertyAll(_twoLines)),
-          child: busy
-              ? const SizedBox(
-                  height: 20, width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
-                    Flexible(
-                      child: Text(
-                        label,
-                        maxLines: oneLine ? 1 : 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: oneLine ? null : TextAlign.center,
-                        style: _label,
+      child: SizedBox(
+        width: double.infinity,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: height),
+          child: FilledButton(
+            onPressed: on ? onPressed : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: SwaplyColors.greenPressed,
+              disabledBackgroundColor: const Color(0xFFD8DEDA),
+              disabledForegroundColor: Colors.white,
+              padding: _padding(context, 24),
+              // [height] is the least it is, and nothing else may add to it:
+              // padded, a 44 grew to Material's 48 once it was not held.
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+            ),
+            child: busy
+                ? const SizedBox(
+                    height: 20, width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          // As wide as its longest line, so two lines stand
+                          // in the middle of the button as one does.
+                          textWidthBasis: TextWidthBasis.longestLine,
+                          style: _label,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-        );
-        return oneLine
-            ? SizedBox(height: height, width: double.infinity, child: button)
-            : SizedBox(
-                width: double.infinity,
-                child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: height), child: button));
-      }),
+                    ],
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }
 
-/// The room at the ends of a label on two lines, and over and under it.
-const _twoLines = EdgeInsets.symmetric(horizontal: 16, vertical: 6);
-
-/// Whether [label] in [style], as a button draws it, fits in [width] on one
-/// line at the text size the phone is set to.
-bool _fitsOneLine(BuildContext context, String label, TextStyle style, double width) {
-  final painter = TextPainter(
-    text: TextSpan(
-        text: label, style: (Theme.of(context).textTheme.labelLarge ?? const TextStyle()).merge(style)),
-    textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
-    textScaler: MediaQuery.textScalerOf(context),
-    maxLines: 1,
-  )..layout();
-  final wide = painter.width;
-  painter.dispose();
-  return wide <= width;
+/// A button's padding: [ends] at either end, as Material's own scales it
+/// down for larger text, and room over and under a label on two lines, which
+/// otherwise touched the edges of the pill. One line is shorter than the
+/// button's least height and is centred in it as before.
+EdgeInsetsGeometry _padding(BuildContext context, double ends) {
+  final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+  return ButtonStyleButton.scaledPadding(
+    EdgeInsets.symmetric(horizontal: ends, vertical: 8),
+    EdgeInsets.symmetric(horizontal: ends / 2, vertical: 8),
+    EdgeInsets.symmetric(horizontal: ends / 4, vertical: 8),
+    scale,
+  );
 }
-
 
 /// Three outlined looks from the export: plain, «Avslå» (badge red on a pink
 /// edge — the same pair as the ✕ on the item screen) and the green outline of
@@ -741,33 +738,33 @@ class SecondaryButton extends StatelessWidget {
         : accent
             ? SwaplyColors.greenPressed
             : const Color(0x22064E3B);
-    final words = TextStyle(
-        fontSize: accent ? 14 : 15,
-        fontWeight: destructive || accent ? FontWeight.w700 : FontWeight.w600);
-    // As [PrimaryButton]: a label that needs two lines gets them, centred,
-    // and the button grows to hold them. Held to one line's height, a label
-    // at a large text size ran out of its button.
+    // As [PrimaryButton]: a label that needs two lines gets them, and the
+    // button grows to hold them. Held to one line's height, a label at a
+    // large text size ran out of its button.
     return KeepClear(
-      child: LayoutBuilder(builder: (context, box) {
-        final oneLine = _fitsOneLine(context, label, words, box.maxWidth - 2);
-        final button = OutlinedButton(
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colour,
-            backgroundColor: destructive ? Colors.white : null,
-            side: BorderSide(color: edge),
-            padding: oneLine ? EdgeInsets.zero : _twoLines,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+      child: SizedBox(
+        width: double.infinity,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: height),
+          child: OutlinedButton(
+            onPressed: onPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colour,
+              backgroundColor: destructive ? Colors.white : null,
+              side: BorderSide(color: edge),
+              padding: _padding(context, 0),
+              // As [PrimaryButton]'s: «Foreslå motbytte» is 42.
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+            ),
+            child: Text(label,
+                textWidthBasis: TextWidthBasis.longestLine,
+                style: TextStyle(
+                    fontSize: accent ? 14 : 15,
+                    fontWeight: destructive || accent ? FontWeight.w700 : FontWeight.w600)),
           ),
-          child: Text(label, textAlign: oneLine ? null : TextAlign.center, style: words),
-        );
-        return oneLine
-            ? SizedBox(height: height, width: double.infinity, child: button)
-            : SizedBox(
-                width: double.infinity,
-                child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: height), child: button));
-      }),
+        ),
+      ),
     );
   }
 }
