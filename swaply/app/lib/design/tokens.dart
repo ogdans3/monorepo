@@ -114,6 +114,10 @@ class SwaplyColors {
 
   /// «Logg ut», and the red of «Avslått».
   static const redText = Color(0xFFC0271F);
+
+  /// The ground under [redText] in a pill: «Avslått» at the right of 09f's
+  /// header, and «Avsluttet» where a trade ended another way.
+  static const redSoft = Color(0xFFFDEFEE);
 }
 
 class Insets {

@@ -196,6 +196,65 @@ void main() {
       onScreen(tester, find.textContaining('Venter på Kristoffer'), narrow);
     });
 
+    // The pill at the right of a trade's header, beside the title, takes the
+    // title's room on a narrow phone and at a large text size. Beside it,
+    // the title was cut to «Bytte med Kri…» at 320 and «Ditt…» at 200 %, so
+    // the pill goes under the title where the two do not fit; and the pill
+    // is never cut, since what it says is the trade's state.
+    for (final scale in [1.0, 1.3, 2.0]) {
+      final pairDone = {
+        ...FakeServer.trade,
+        'state': 'completed',
+        'receivingFrom': {...long, 'position': 1},
+        'givingTo': {...long, 'position': 1},
+      };
+      final ringAgreed = {
+        ...chainTrade(),
+        'state': 'accepted',
+        'participants': [
+          for (final p in (chainTrade()['participants']! as List).cast<Map<String, Object?>>())
+            switch (p['id']) {
+              'kari-1' => {...p, 'displayName': 'Kristoffer-Alexander H.'},
+              'per-1' => {...p, 'displayName': 'Marianne-Elisabeth K.'},
+              _ => p,
+            },
+        ],
+      };
+      final cases = <(String, String, Map<String, Object?>, String, String)>[
+        ('09i', 'trade-1', {...FakeServer.trade, 'state': 'completed'}, 'Bytte med Kari',
+            'Gjennomført'),
+        ('09i', 'trade-1', pairDone, 'Bytte med Kristoffer-Alexander', 'Gjennomført'),
+        ('07j', 'trade-chain', ringAgreed, 'Ditt bytte', 'Avtales i chat'),
+      ];
+      for (final (frame, id, trade, title, pill) in cases) {
+        testWidgets(
+            '$frame: «$pill» and «$title» are both whole on a 320 at ${(scale * 100).round()} %',
+            (tester) async {
+          server.overrides['GET /trades/$id'] = trade;
+          await hold(tester, narrow, TradeDetailScreen(tradeId: id), scale: scale);
+
+          expect(tester.takeException(), isNull);
+          final words = find.descendant(of: find.byType(HeaderPill), matching: find.text(pill));
+          onScreen(tester, words, narrow);
+          expect(tester.renderObject<RenderParagraph>(words).didExceedMaxLines, isFalse);
+          // Not over the title, and inside the header: the page starts under it.
+          final name = find.text(title);
+          final box = tester.getRect(find.byType(HeaderPill));
+          expect(box.overlaps(tester.getRect(name)), isFalse);
+          expect(box.bottom, lessThanOrEqualTo(tester.getRect(find.byType(ListView).first).top));
+          // A title that fits the row on its own is not cut for the pill. At
+          // 200 % «Bytte med Kari» is wider than a 320 phone with nothing
+          // beside it, and is cut as it always was.
+          final fitsAlone = title != 'Bytte med Kristoffer-Alexander' &&
+              !(scale == 2.0 && title.startsWith('Bytte med'));
+          if (fitsAlone) {
+            expect(tester.renderObject<RenderParagraph>(name).didExceedMaxLines, isFalse,
+                reason: title);
+          }
+        });
+      }
+    }
+
     testWidgets('06c in a ring: «Med … og …» stays on the screen beside «Avtalen»',
         (tester) async {
       final ring = chainTrade();

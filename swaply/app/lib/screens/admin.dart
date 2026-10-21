@@ -400,7 +400,8 @@ class _AdminScreenState extends State<AdminScreen> {
   Widget _scenarios() => AdminCard(
         title: 'Bygg et bytte',
         note: 'Bygges ved å trykke produktets egne knapper i rekkefølge — ikke ved å '
-            'skrive en tilstand rett i databasen. Du er alltid med i byttet.',
+            'skrive en tilstand rett i databasen. Du er alltid med i byttet. Etterpå '
+            'tar den tilbake hjertene den trykket, så «Likt» er tom for «[test]»-tingene.',
         children: [
           Wrap(
             spacing: 8,
