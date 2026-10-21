@@ -322,6 +322,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> with RefetchOnTabReturn
     final grid = _grid;
     if (!mounted || grid == null || _loadingMore || _moreFailed || _loading) return;
     if (_error != null || _end || _next >= _total || _asked != _settled) return;
+    // A kind hidden since the grid was asked for is out of the server's order
+    // now, and everything after it has moved up as many places as it had
+    // listings above [_next]: the next page from there started past those,
+    // and they were never shown. So the grid is asked for again behind
+    // itself, as far down as it has been read, which also takes the kind out
+    // of «N treff»; the page after it is asked for from what that says.
+    if (_hidden.any((h) => h.until != null && _shown <= h.until!)) {
+      unawaited(_load(quiet: true));
+      return;
+    }
     final api = context.read<SwaplyApi>();
     final asked = _asked;
     setState(() => _loadingMore = true);
