@@ -263,8 +263,14 @@ class _LikedScreenState extends State<LikedScreen> {
     if (liker.anonymous) return drawn;
     return TapArea(
       child: InkWell(
-        onTap: () => Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: user.id))),
+        // Asked for again on the way back, quietly: a block made on 13b
+        // takes the person off this list, and they stood on it with «Se
+        // tingene deres ›» to things the block had just hidden.
+        onTap: () async {
+          await Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => OtherProfileScreen(userId: user.id)));
+          if (mounted) await _load();
+        },
         child: drawn,
       ),
     );
