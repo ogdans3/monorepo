@@ -471,7 +471,14 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
                     itemCount: thread.messages.length,
                     itemBuilder: (context, i) => Column(
                       children: [
-                        if (i == 0) _dayLabel(thread.messages[i].createdAt),
+                        // Over the first message, and over each one said on
+                        // a later day than the one before it: one label over
+                        // a conversation of several days made it all one.
+                        if (i == 0)
+                          _dayLabel(thread.messages[i].createdAt)
+                        else if (_newDay(thread.messages[i - 1].createdAt,
+                            thread.messages[i].createdAt))
+                          _dayLabel(thread.messages[i].createdAt, first: false),
                         _bubble(thread.messages[i], thread.kind == 'chain',
                             read: read && identical(thread.messages[i], newestMine)),
                       ],
@@ -629,8 +636,19 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
     return '$give ⇄ $get · $state';
   }
 
-  /// «I dag 14:02» over the first message, as the export sets the scene.
-  Widget _dayLabel(DateTime? when) {
+  /// Whether [after] was said on another day of the calendar than [before].
+  /// Unknown either way is the same day: no label is drawn for a time the
+  /// server did not send.
+  bool _newDay(DateTime? before, DateTime? after) {
+    if (before == null || after == null) return false;
+    final a = before.toLocal(), b = after.toLocal();
+    return a.year != b.year || a.month != b.month || a.day != b.day;
+  }
+
+  /// «I dag 14:02» over the first message, as the export sets the scene, and
+  /// over the first of each later day, with room over it to part it from the
+  /// day before.
+  Widget _dayLabel(DateTime? when, {bool first = true}) {
     if (when == null) return const SizedBox.shrink();
     final local = when.toLocal();
     final time =
@@ -641,7 +659,7 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
       _ => '${local.day}.${local.month}. $time',
     };
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: EdgeInsets.only(top: first ? 0 : 10, bottom: 5),
       child: Center(
         child: Text(label,
             style: const TextStyle(
