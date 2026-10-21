@@ -193,7 +193,9 @@ class _TradesScreenState extends State<TradesScreen>
     final canAccept = !trade.youAccepted &&
         ['pending', 'countered'].contains(trade.state) &&
         trade.youGive.isNotEmpty &&
-        trade.youGet.isNotEmpty;
+        trade.youGet.isNotEmpty &&
+        // In a ring, the leg between the other two as well.
+        trade.otherLegs.every((leg) => leg.items.isNotEmpty);
     // Somebody else has asked to be let out, and the answer is yours: the
     // trade waits on it, as the badge counts it.
     final w = trade.withdrawal;

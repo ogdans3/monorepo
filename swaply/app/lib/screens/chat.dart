@@ -776,10 +776,10 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
   /// The three chips over the field. They are trade actions, not decoration:
   /// this is where a conversation turns into a proposal.
   ///
-  /// Not in a ring. 07k draws them, but each sheet behind them proposes to
-  /// the one person you receive from, which a ring of three has no offer
-  /// for: every tap ended in a toast saying so. A ring is agreed in words,
-  /// which is what the banner over it says.
+  /// Not in a ring. 07k draws them, but each sheet behind them composes an
+  /// offer between you and the one person you receive from, and leaves out
+  /// the leg between the other two. A ring is agreed in words, which is what
+  /// the banner over it says.
   Widget _composer() {
     final trade = _trade;
     final negotiable = trade != null &&

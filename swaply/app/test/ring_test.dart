@@ -292,4 +292,32 @@ void main() {
     expect(find.text('til Per i Stjørdal'), findsOneWidget);
     expect(find.textContaining(' gir '), findsNothing);
   });
+
+  testWidgets('11. a version of a ring with the other two\'s leg empty cannot be accepted, '
+      'and says why', (tester) async {
+    // A version with a side still empty is a question, not a deal
+    // (DESIGN.md, 02.10.2026): 07j offered «Godta byttet» on one, and the
+    // leg was a kicker with nothing under it.
+    final trade = chainTrade();
+    server.overrides['GET /trades/trade-chain'] = {
+      ...trade,
+      'state': 'countered',
+      'counterOfferBy': 'per-1',
+      'otherLegs': [
+        {
+          'giver': {'id': 'per-1', 'displayName': 'Per H.', 'position': 2},
+          'receiver': {...FakeServer.kari, 'position': 1},
+          'items': const [],
+        },
+      ],
+    };
+    await open(tester, const TradeDetailScreen(tradeId: 'trade-chain'));
+
+    expect(find.text('Per gir ingenting til Kari i dette forslaget, så det kan ikke godtas '
+        'ennå. Avtal resten i chatten.'), findsOneWidget);
+    expect(find.text('ingenting ennå · til Kari'), findsOneWidget);
+    expect(find.text('Godta byttet'), findsNothing);
+    expect(find.text('Godta endringen'), findsNothing);
+    expect(find.text('Avslå'), findsOneWidget);
+  });
 }

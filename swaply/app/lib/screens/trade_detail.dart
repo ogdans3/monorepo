@@ -600,7 +600,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
             ? 'Du har ikke lagt noe i byttet ennå. Velg hva du vil gi, så kan '
                 '${trade.receivingFrom.displayName.split(' ').first} godta.'
             : '${trade.receivingFrom.displayName.split(' ').first} har ikke lagt noe i '
-                'byttet ennå. Foreslå hva dere skal bytte.'),
+                'byttet ennå. Foreslå hva dere skal bytte.')
+      // In a ring the leg between the other two can be the empty one: a
+      // version with a side still empty is a question, which nobody can say
+      // yes to (DESIGN.md, 02.10.2026), and 07j offered «Godta byttet» on it.
+      else if (_emptyLeg(trade) case final leg?
+          when ['talking', 'pending', 'countered'].contains(trade.state))
+        _noticeCard('${_firstName(leg.giver)} gir ingenting til ${_firstName(leg.receiver)} i '
+            'dette forslaget, så det kan ikke godtas ennå. Avtal resten i chatten.'),
       // 09f: it ended.
       if (trade.state == 'cancelled') _cancelledCard(trade),
       if (trade.state == 'completed') _completedHeader(trade),
@@ -803,6 +810,10 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
           trade.participants
               .firstWhere((p) => p.position == trade.youPosition, orElse: () => trade.receivingFrom)
               .id;
+
+  /// The leg of a ring between the other two that has nothing on it, if any.
+  TradeLeg? _emptyLeg(Trade trade) =>
+      trade.otherLegs.where((leg) => leg.items.isEmpty).firstOrNull;
 
   /// Whoever proposed the version on the table: the participant the server
   /// names, or the one you receive from where it names nobody it sent.
@@ -1045,10 +1056,14 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (items.isEmpty)
+            if (items.isEmpty) ...[
               Text(kicker.toUpperCase(),
                   style: TextStyle(
                       fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.66, color: colour)),
+              // Said, not a card with a kicker and nothing under it.
+              Text('ingenting ennå · $from',
+                  style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
+            ],
             for (final (i, item) in items.indexed) ...[
               if (i > 0) const SizedBox(height: 9),
               Row(
@@ -1718,7 +1733,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // nothing back. There is nothing to accept there yet — offering it as
       // one tap was offering to give a thing away for nothing — so the whole
       // action is «Foreslå motbytte» until both sides have something in it.
-      final halfFilled = trade.youGive.isEmpty || trade.youGet.isEmpty;
+      final halfFilled =
+          trade.youGive.isEmpty || trade.youGet.isEmpty || _emptyLeg(trade) != null;
       // On every negotiation you have not said yes to. It was only beside
       // «Godta byttet», so a conversation, or an offer with a side still
       // empty, could not be closed from here at all; the server declines a
