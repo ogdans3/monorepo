@@ -45,10 +45,14 @@ class TradeCompletedScreen extends StatelessWidget {
                     const Text('Byttet er gjennomført!',
                         style: Type.display, textAlign: TextAlign.center),
                     const SizedBox(height: Insets.sm),
+                    // The export's «… er hans» was written for Ola. Said of
+                    // whoever is on the other side a pronoun is a guess, so
+                    // it is their name: «… er Karis».
                     Text(
                       'Du og $other har begge bekreftet. '
-                      '${trade.youGet.map((i) => i.title).join(' og ')} er din, '
-                      '${trade.youGive.map((i) => i.title).join(' og ')} er hans.',
+                      '${trade.youGet.map((i) => i.title).join(' og ')} '
+                      'er ${trade.youGet.length > 1 ? 'dine' : 'din'}, '
+                      '${trade.youGive.map((i) => i.title).join(' og ')} er ${possessive(other)}.',
                       style: Type.secondary,
                       textAlign: TextAlign.center,
                     ),

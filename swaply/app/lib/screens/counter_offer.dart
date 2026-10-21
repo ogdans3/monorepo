@@ -134,7 +134,7 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                               fontSize: 13, height: 1.5, color: SwaplyColors.inkMuted),
                         ),
                         const SizedBox(height: 9),
-                        _side('Du får · ${other}s ting', SwaplyColors.greenText, _theirs,
+                        _side('Du får · ${possessive(other)} ting', SwaplyColors.greenText, _theirs,
                             _chosenTheirs),
                         const SizedBox(height: 9),
                         _side('Du gir · dine ting', SwaplyColors.amberText, _mine, _chosenMine),
@@ -260,7 +260,8 @@ class _CounterOfferScreenState extends State<CounterOfferScreen> {
                           fontSize: 14, fontWeight: FontWeight.w700, color: SwaplyColors.ink)),
                   Text(
                     [
-                      'verdi ${kr(item.estimatedValueNok)}',
+                      // Left out for a thing with no value, as 04 and 05 do.
+                      if (item.estimatedValueNok != null) 'verdi ${kr(item.estimatedValueNok)}',
                       if (locked) 'reservert i annet bytte',
                       if (item.inOffer && !locked) 'allerede i byttet',
                     ].join(' · '),

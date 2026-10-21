@@ -995,7 +995,12 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 color: SwaplyColors.ink)),
-                        Text('$from · verdi ${kr(item.estimatedValueNok)}',
+                        // A thing may have no value, and «verdi » with
+                        // nothing after it read as a hole.
+                        Text(
+                            item.estimatedValueNok == null
+                                ? from
+                                : '$from · verdi ${kr(item.estimatedValueNok)}',
                             style: const TextStyle(fontSize: 12, color: SwaplyColors.grey)),
                       ],
                     ),

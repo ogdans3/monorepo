@@ -243,6 +243,11 @@ String kr(num? value) {
   return '$buffer kr';
 }
 
+/// «Olas», and «Andreas'» for a name that ends in s, x or z, which takes the
+/// apostrophe and not a second s: «Du får · Andreas' ting», not «Andreass».
+String possessive(String name) =>
+    RegExp(r'[sxz]$', caseSensitive: false).hasMatch(name) ? "$name'" : '${name}s';
+
 /// The one theme, here rather than inside a widget so the golden screenshots
 /// render what the app renders.
 ThemeData swaplyTheme() {

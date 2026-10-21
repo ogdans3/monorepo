@@ -165,8 +165,12 @@ class _ProposalSheetState extends State<_ProposalSheet> {
   }
 
   String _messageLine() => switch (widget.kind) {
-        ProposalKind.offerMine => 'Jeg foreslår ${_chosen!.title} '
-            '(verdi ${kr(_chosen!.estimatedValueNok)}) i byttet.',
+        // Kept in the conversation and read by the other side, so a thing
+        // with no value is named without «(verdi )».
+        ProposalKind.offerMine => _chosen!.estimatedValueNok == null
+            ? 'Jeg foreslår ${_chosen!.title} i byttet.'
+            : 'Jeg foreslår ${_chosen!.title} '
+                '(verdi ${kr(_chosen!.estimatedValueNok)}) i byttet.',
         ProposalKind.askTheirs =>
           'Kan jeg få ${_chosen!.title} i tillegg? Da er vi nærmere skuls.',
         ProposalKind.cash => _amount == 0
@@ -235,14 +239,26 @@ class _ProposalSheetState extends State<_ProposalSheet> {
         ProposalKind.cash => _cashBlurb(),
       };
 
+  /// 09d's sentence: what each side is worth, and the difference between
+  /// them. One thing a side is the export's, by name. With more on a side it
+  /// is the side's sum: the first thing alone gave two values that did not
+  /// make the difference it named.
   String _cashBlurb() {
-    final get = widget.trade.youGet.firstOrNull;
-    final give = widget.trade.youGive.firstOrNull;
-    if (get == null || give == null) {
+    final trade = widget.trade;
+    final get = trade.youGet, give = trade.youGive;
+    if (get.isEmpty || give.isEmpty || trade.youGetValue + trade.youGiveValue == 0) {
       return 'Mellomlegget avtales mellom dere og betales utenfor appen.';
     }
-    return '${get.title} er verdt ${kr(get.estimatedValueNok)}, ${give.title} '
-        '${kr(give.estimatedValueNok)}. Differansen er ${kr(widget.trade.difference)}.';
+    final difference = 'Differansen er ${kr(trade.difference)}.';
+    if (get.length == 1 &&
+        give.length == 1 &&
+        get.single.estimatedValueNok != null &&
+        give.single.estimatedValueNok != null) {
+      return '${get.single.title} er verdt ${kr(get.single.estimatedValueNok)}, '
+          '${give.single.title} ${kr(give.single.estimatedValueNok)}. $difference';
+    }
+    return 'Det du får er verdt ${kr(trade.youGetValue)}, det du gir '
+        '${kr(trade.youGiveValue)}. $difference';
   }
 
   String _confirmLabel() => switch (widget.kind) {
@@ -281,7 +297,8 @@ class _ProposalSheetState extends State<_ProposalSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(item.title, style: Type.heading),
-                            Text('Verdi ${kr(item.estimatedValueNok)}', style: Type.small),
+                            if (item.estimatedValueNok != null)
+                              Text('Verdi ${kr(item.estimatedValueNok)}', style: Type.small),
                           ],
                         ),
                       ),
