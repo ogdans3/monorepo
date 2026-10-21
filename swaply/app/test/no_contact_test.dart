@@ -470,6 +470,17 @@ void main() {
       expect(find.text('Prøv igjen'), findsOneWidget);
     });
 
+    testWidgets('13. a refusal in the title\'s own words is said once', (tester) async {
+      // «Fant ikke gjenstanden» over «Fant ikke gjenstanden.» said one thing
+      // twice.
+      server.overrides['GET /items/item-console'] =
+          const Refusal(404, 'not_found', 'Fant ikke gjenstanden.');
+      await mount(tester, const ItemDetailScreen(itemId: 'item-console'));
+
+      expect(find.text('Fant ikke gjenstanden'), findsOneWidget);
+      expect(find.text('Fant ikke gjenstanden.'), findsNothing);
+    });
+
     for (final page in pages) {
       testWidgets('5. ${page.name}: no contact is not «${page.missing}», and asks again',
           (tester) async {

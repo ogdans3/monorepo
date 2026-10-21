@@ -1290,8 +1290,11 @@ class EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: Insets.lg),
           Text(title, style: Type.title, textAlign: TextAlign.center),
-          const SizedBox(height: Insets.sm),
-          Text(body, style: Type.secondary, textAlign: TextAlign.center),
+          // Nothing to add to the title is no line under it.
+          if (body.isNotEmpty) ...[
+            const SizedBox(height: Insets.sm),
+            Text(body, style: Type.secondary, textAlign: TextAlign.center),
+          ],
           if (actionLabel != null) ...[
             const SizedBox(height: Insets.lg),
             SizedBox(width: 230, child: PrimaryButton(actionLabel!, onPressed: onAction)),
@@ -1342,5 +1345,16 @@ class LoadFailure extends StatelessWidget {
           body: error.message,
           actionLabel: 'Prøv igjen',
           onAction: onRetry)
-      : EmptyState(icon: Icons.error_outline, title: missing, body: error.message);
+      : EmptyState(
+          icon: Icons.error_outline,
+          title: missing,
+          // The server's own sentence, unless it is the title over again:
+          // «Fant ikke gjenstanden» over «Fant ikke gjenstanden.» said one
+          // thing twice.
+          body: _sameWords(error.message, missing) ? '' : error.message);
+
+  static bool _sameWords(String a, String b) {
+    String bare(String s) => s.trim().replaceFirst(RegExp(r'[.!]$'), '').toLowerCase();
+    return bare(a) == bare(b);
+  }
 }

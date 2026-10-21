@@ -382,6 +382,22 @@ void main() {
       expect(forgotten, 1);
     });
 
+    testWidgets('7e. a shared listing the server will not show this person is said as gone',
+        (tester) async {
+      // Its owner has blocked them since the link went out. The link still
+      // names the listing, and 04 opened on «Fant ikke gjenstanden» where a
+      // listing traded away gets a word about it.
+      server.overrides['GET /items/item-drill'] =
+          const Refusal(404, 'not_found', 'Fant ikke gjenstanden.');
+      session.pendingInvite = FakeServer.shareToken;
+      await boot(tester, saved: {'token': 'tok'});
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ItemDetailScreen), findsNothing);
+      expect(find.text('Tingen som ble delt med deg er ikke lenger ute.'), findsOneWidget);
+      expect(find.byType(DiscoverScreen), findsOneWidget);
+    });
+
     testWidgets('7b. a link sent for a listing gone since says so on the invitation',
         (tester) async {
       server.overrides['GET /invites/${FakeServer.shareToken}'] = {
