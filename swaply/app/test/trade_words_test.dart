@@ -314,4 +314,33 @@ void main() {
       expect(find.text(kr(600)), findsOneWidget);
     });
   });
+
+  group('a field with a limit', () {
+    // The limit was told only after «Send», as «Bruk høyst 1000 tegn.», with
+    // nothing in the field to say how far over it was.
+    testWidgets('17. 06h takes no more than the server will, and says so near the end',
+        (tester) async {
+      await mount(tester, ReviewScreen(trade: Trade.fromJson(FakeServer.trade)));
+      final field = find.byType(TextField);
+
+      await tester.enterText(field, 'Rask og hyggelig');
+      await tester.pump();
+      expect(find.textContaining('/1000'), findsNothing);
+
+      await tester.enterText(field, 'a' * 2400);
+      await tester.pump();
+      expect(tester.widget<TextField>(field).controller!.text.length, 1000);
+      expect(find.text('1000/1000'), findsOneWidget);
+    });
+
+    testWidgets('18. so does 06g\'s field, at 2000', (tester) async {
+      await mount(tester, const ThreadScreen(threadId: 'thread-1'));
+      final field = find.byType(TextField);
+
+      await tester.enterText(field, 'a' * 2600);
+      await tester.pump();
+      expect(tester.widget<TextField>(field).controller!.text.length, 2000);
+      expect(find.text('2000/2000'), findsOneWidget);
+    });
+  });
 }

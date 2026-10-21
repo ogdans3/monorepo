@@ -1603,6 +1603,8 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                   child: TapArea(
                     child: TextField(
                       controller: _message,
+                      maxLength: maxMessageLength,
+                      buildCounter: nearLimit,
                       style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
                       onSubmitted: (_) => send(),
                       decoration: InputDecoration(

@@ -325,6 +325,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     controller: _comment,
                     minLines: 4,
                     maxLines: 6,
+                    maxLength: maxCommentLength,
+                    buildCounter: nearLimit,
                     style: const TextStyle(fontSize: 14, color: SwaplyColors.ink),
                     decoration: InputDecoration(
                       hintText: 'Si et par ord (valgfritt)…',
@@ -608,6 +610,8 @@ class _AppFeedbackScreenState extends State<AppFeedbackScreen> {
                     controller: _comment,
                     minLines: 3,
                     maxLines: 5,
+                    maxLength: maxCommentLength,
+                    buildCounter: nearLimit,
                     decoration: const InputDecoration(
                         hintText: 'Noe mer du vil si oss? (valgfritt)'),
                   ),

@@ -1704,6 +1704,8 @@ class _ReportSheetState extends State<_ReportSheet> {
               controller: _detail,
               minLines: 2,
               maxLines: 4,
+              maxLength: maxCommentLength,
+              buildCounter: nearLimit,
               decoration: const InputDecoration(hintText: 'Fortell mer (valgfritt)…'),
             ),
             if (widget.personName != null && !widget.alreadyBlocked) ...[

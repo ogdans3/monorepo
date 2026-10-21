@@ -829,6 +829,8 @@ class _ThreadScreenState extends State<ThreadScreen> with WidgetsBindingObserver
                       controller: _input,
                       minLines: 1,
                       maxLines: 4,
+                      maxLength: maxMessageLength,
+                      buildCounter: nearLimit,
                       style: const TextStyle(fontSize: 14.5, color: SwaplyColors.ink),
                       decoration: InputDecoration(
                         // 07k as 06g: «Skriv til begge…» is the trade

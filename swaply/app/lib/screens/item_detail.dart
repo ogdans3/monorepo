@@ -905,6 +905,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       controller: _message,
                       minLines: 1,
                       maxLines: 3,
+                      maxLength: maxMessageLength,
+                      buildCounter: nearLimit,
                       style: const TextStyle(fontSize: 13, color: SwaplyColors.ink),
                       decoration: InputDecoration(
                         hintText: 'Skriv en melding til $name…',

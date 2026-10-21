@@ -25,6 +25,26 @@ String andList(List<String> parts) => parts.length < 2
 /// difference as if the other side gave away something worthless.
 bool anyUnvalued(Iterable<Item> items) => items.any((i) => i.estimatedValueNok == null);
 
+/// The most a review, a word of feedback or a report may say, and a message:
+/// the server's limits (`backend/src/routes/misc.ts`, `chat.ts`, `trades.ts`).
+/// A field held to one takes no more, and says how far it has got once it is
+/// near: the limit used to be told only after «Send», as «Bruk høyst 1000
+/// tegn.», with the words still in the field to be counted by hand.
+const maxCommentLength = 1000, maxMessageLength = 2000;
+
+/// For a field's `buildCounter`: «950/1000» under it from nine tenths of its
+/// limit on, and nothing before, so the field is drawn as it was until then.
+Widget? nearLimit(BuildContext context,
+    {required int currentLength, required int? maxLength, required bool isFocused}) {
+  if (maxLength == null || currentLength < maxLength * 0.9) return null;
+  return Text('$currentLength/$maxLength',
+      semanticsLabel: '$currentLength av $maxLength tegn',
+      style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+          color: currentLength >= maxLength ? SwaplyColors.redText : SwaplyColors.inkMuted));
+}
+
 /// [n] of something, in the singular for one: «1 bytte», «3 bytter». A
 /// count read off the server used to keep the plural for one, «1 bytter».
 String counted(int n, String one, String many) => n == 1 ? '1 $one' : '$n $many';
