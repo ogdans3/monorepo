@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -482,13 +483,23 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
       // Newer than any asking still on its way.
       _asking++;
       setState(() => _trade = trade);
-      await context.read<Session>().refresh();
+      // The bar's counts, quietly and not waited for. Inside the action's
+      // `try` it was the action's failure: a decline that had gone through
+      // said «Vi får ikke kontakt» over the trade it had just ended, after
+      // the button had spun for the whole of the asking's patience.
+      _askSessionAgain();
     } on ApiException catch (e) {
       if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  /// Who this is, asked again for the bar's badges, and nothing said either
+  /// way: what the screen did is what the screen says, and no answer here is
+  /// the next asking's to put right.
+  void _askSessionAgain() =>
+      unawaited(context.read<Session>().refresh().then((_) {}, onError: (Object _) {}));
 
   @override
   Widget build(BuildContext context) {
@@ -1698,7 +1709,9 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> with WidgetsBindi
                     // may still have reached the server, and only the
                     // server can say. Quietly then, as there is no news.
                     if (mounted) await _load(quiet: accepted != true);
-                    await session.refresh();
+                    // The badges too, as quietly: waited for with nothing
+                    // round it, no answer was an error nobody caught.
+                    unawaited(session.refresh().then((_) {}, onError: (Object _) {}));
                   }),
             ),
           ],
