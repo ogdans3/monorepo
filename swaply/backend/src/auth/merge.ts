@@ -106,7 +106,7 @@ export async function mergeDeviceAccount(
   db: Database,
   device: string,
   into: string,
-): Promise<{ likes: string[] } | null> {
+): Promise<{ likes: string[]; blocks: { blocker: string; blocked: string }[] } | null> {
   if (device === into) return null
 
   return db.transaction(async (tx) => {
@@ -150,18 +150,26 @@ export async function mergeDeviceAccount(
     // Blocks before likes, so the likes are judged against the blocks the
     // account is about to have. A block between the two accounts would be a
     // block on oneself, and goes with the phone's account.
-    await tx.execute(
-      sql`insert into blocks (blocker, blocked, created_at)
-          select ${into}::uuid, blocked, created_at from blocks
-          where blocker = ${device} and blocked <> ${into}
-          on conflict do nothing`,
-    )
-    await tx.execute(
-      sql`insert into blocks (blocker, blocked, created_at)
-          select blocker, ${into}::uuid, created_at from blocks
-          where blocked = ${device} and blocker <> ${into}
-          on conflict do nothing`,
-    )
+    //
+    // Each one that came along is handed back: the account may be
+    // negotiating with somebody the phone blocked, and a block ends that
+    // (`endNegotiationsAcross`, which the caller runs after the commit).
+    const blocks = [
+      ...(await tx.execute<Row>(
+        sql`insert into blocks (blocker, blocked, created_at)
+            select ${into}::uuid, blocked, created_at from blocks
+            where blocker = ${device} and blocked <> ${into}
+            on conflict do nothing
+            returning blocker, blocked`,
+      )),
+      ...(await tx.execute<Row>(
+        sql`insert into blocks (blocker, blocked, created_at)
+            select blocker, ${into}::uuid, created_at from blocks
+            where blocked = ${device} and blocker <> ${into}
+            on conflict do nothing
+            returning blocker, blocked`,
+      )),
+    ].map((row) => ({ blocker: row['blocker'] as string, blocked: row['blocked'] as string }))
     await tx.execute(sql`delete from blocks where blocker = ${device} or blocked = ${device}`)
 
     // Copied with their own dates, so «Likt» keeps its order, and then
@@ -228,6 +236,6 @@ export async function mergeDeviceAccount(
     // signed in to has a profile of its own, and that one wins.
     await tx.execute(sql`delete from users where id = ${device}`)
 
-    return { likes: moved.map((row) => row['target_item'] as string) }
+    return { likes: moved.map((row) => row['target_item'] as string), blocks }
   })
 }

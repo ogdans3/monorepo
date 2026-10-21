@@ -13,7 +13,8 @@
 // `endTrade` — and so `cancelTrade`, «Avslå», «Trekk deg», a yes to a
 // withdrawal, the tool's «Nullstill → bytter» and a trade pushed out by
 // somebody else's yes — every answer to a withdrawal question
-// (`openTradeFor`), erasure (`anonymiseUser`), a block (`blockAndEnd`), and
+// (`openTradeFor`), erasure (`anonymiseUser`), a block (`blockAndEnd`, and
+// `endNegotiationsAcross` for one a sign-in carries over), and
 // removing listings (`removeListings`), which the owner's «Fjern annonsen»
 // and the tool's «Nullstill → gjenstander» both go through.
 //

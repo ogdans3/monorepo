@@ -12,6 +12,8 @@ import { ApiError, conflict } from '../lib/errors.js'
 import { townOf } from '../lib/postcodes.js'
 import { one } from '../lib/rows.js'
 import { displayName, emailAddress, phoneNumber } from '../lib/validation.js'
+import { endNegotiationsAcross } from '../trades/actions.js'
+import { sweepForCycles } from '../trades/sweep.js'
 import { closeLoopThrough } from '../trades/wish.js'
 import { publicMe } from './serialize.js'
 
@@ -256,6 +258,18 @@ export default async function authRoutes(
     const carried = device ? await mergeDeviceAccount(app.db, device, user['id']) : null
 
     const token = await issueSession(app.db, user['id'])
+
+    // A block the phone made, or that was made against it, is the person's
+    // now, and a block ends what the two were negotiating — on this account
+    // too, where nobody pressed «Blokkér». Before the wishes are searched, so
+    // no loop is looked for through a negotiation that is about to end. After
+    // the commit, like the search: a move across the block is refused
+    // meanwhile (`blocking.ts`), and a failure must not cost the sign-in.
+    for (const { blocker, blocked } of carried?.blocks ?? []) {
+      await endNegotiationsAcross(app.db, blocker, blocked)
+        .then((freed) => sweepForCycles(app.db, freed))
+        .catch((err) => request.log.warn({ err, blocker, blocked }, 'ending across a carried block failed'))
+    }
 
     // Each wish that moved is a wish from somebody who can now give something
     // back, so it gets the search a heart gets, in the order they were
